@@ -4,7 +4,7 @@ logging:
   pattern.console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){yellow} %-5level [%thread]: %message%n%ex{4}"
 
 server:
-  port: 8085
+  port: 6463
   tomcat.max-threads: 5
   connection-timeout: 120000
 
@@ -33,7 +33,7 @@ logging:
   config: classpath:logback-spring.xml
 
 server:
-  port: 8085
+  port: 6463
   tomcat.max-threads: 50
   address: 127.0.0.1 #keep it behind proxy
   tomcat:

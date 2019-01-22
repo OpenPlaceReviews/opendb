@@ -11,12 +11,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 @EnableJpaAuditing
-public class Application  {
+public class OpenDBServer  {
 
 	
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
-		SpringApplication.run(Application.class, args);
+		SpringApplication.run(OpenDBServer.class, args);
 	}
 
 	@Bean
