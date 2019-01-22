@@ -1,0 +1,46 @@
+logging:
+  file: logs/server.log
+  config: classpath:logback-spring.xml
+  pattern.console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){yellow} %-5level [%thread]: %message%n%ex{4}"
+
+server:
+  port: 8085
+  tomcat.max-threads: 5
+  connection-timeout: 120000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+spring:
+  jpa:
+    properties.hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+    properties.hibernate.jdbc.lob.non_contextual_creation: true
+    hibernate.ddl-auto: update
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/opengeoreviews}
+    username: ${DB_USER:test}
+    password: ${DB_PWD:test}
+# classpath:/static/
+
+---
+spring.jpa.hibernate.ddl-auto: validate
+spring:
+  profiles: productions
+
+logging:
+  config: classpath:logback-spring.xml
+
+server:
+  port: 8085
+  tomcat.max-threads: 50
+  address: 127.0.0.1 #keep it behind proxy
+  tomcat:
+    protocol_header: x-forwarded-proto
+    remote_ip_header: x-forwarded-for
+    accesslog:
+      enabled: true
+      rotate: false
+      pattern: '%h %l %u %t "%r" %s %b %D "%{Referer}i" "%{User-Agent}i"'
+

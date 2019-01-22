@@ -1,0 +1,13 @@
+build/
+.gradle
+*/out
+*/.classpath
+*/.gradle
+*/gradle
+*/.project
+*/.settings
+*/.idea
+*/bin
+*/build
+/local.properties
+.idea
