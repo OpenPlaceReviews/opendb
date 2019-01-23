@@ -1,0 +1,17 @@
+{
+	"block_id":1,
+	"date":"25-01-2019 00:00:00",
+	"operations": [
+		{
+			"type" : "ddl",
+			"query" : "create_table",
+			"name" : "blocks",
+			"comment" : "create table to store info about blocks",
+			"columns" : {
+				"id" : "integer",
+				"date" : "timestamp",
+				"summary" : "jsonb"
+			}
+		}
+	]
+}
