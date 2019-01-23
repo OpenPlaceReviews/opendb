@@ -4,8 +4,8 @@
 	"operations": [
 		{
 			"type" : "ddl",
-			"query" : "create_table",
-			"name" : "blocks",
+			"operation" : "create_table",
+			"table_name" : "blocks",
 			"comment" : "create table to store info about blocks",
 			"columns" : {
 				"id" : "integer",
