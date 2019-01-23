@@ -36,6 +36,7 @@ public class CreateTableOperation implements IOpenDBOperation {
 
 	@Override
 	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
+		this.definition = definition;
 		tableName = definition.getStringValue(FIELD_TABLE_NAME);
 		if(Utils.isEmpty(tableName)) {
 			errorMessage.append(String.format("Field '%s' is not specified which is necessary to create table", FIELD_TABLE_NAME));

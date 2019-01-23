@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 @Service
 public class OperationsManager {
@@ -25,6 +26,14 @@ public class OperationsManager {
 	public JdbcTemplate jdbcTemplate;
 	
 	public int CURRENT_BLOCK_ID = 0;
+
+	private Gson gson;
+	
+	public OperationsManager() {
+		GsonBuilder builder = new GsonBuilder();
+		builder.registerTypeAdapter(OpDefinitionBean.class, new OpDefinitionBean.OpDefinitionBeanAdapter());
+		gson = builder.create();
+	}
 	
 	public InputStream getBlock(String id) {
     	return ApiController.class.getResourceAsStream("/bootstrap/ogr-"+id+".json");
@@ -32,7 +41,7 @@ public class OperationsManager {
 	
 	
 	public OpBlock parseBootstrapBlock(String id) {
-		return new Gson().fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
+		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
 	}
 
 

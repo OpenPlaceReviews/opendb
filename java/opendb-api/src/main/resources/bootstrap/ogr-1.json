@@ -7,7 +7,7 @@
 			"operation" : "create_table",
 			"table_name" : "blocks",
 			"comment" : "create table to store info about blocks",
-			"columns" : {
+			"table_columns" : {
 				"id" : "integer",
 				"date" : "timestamp",
 				"summary" : "jsonb"

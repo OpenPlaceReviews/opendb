@@ -18,21 +18,26 @@ public class OperationsRegistry {
 	
 	Map<String, Class<? extends IOpenDBOperation>> operations = new TreeMap<>();
 	
+	@SuppressWarnings("unchecked")
 	public OperationsRegistry() {
 		LOGGER.info("Scanning for registered operations...");
-		
-		ClassPathScanningCandidateComponentProvider scanner =
-				new ClassPathScanningCandidateComponentProvider(true);
 
+		ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
 		scanner.addIncludeFilter(new AnnotationTypeFilter(OpenDBOperation.class));
-			for (BeanDefinition bd : scanner.findCandidateComponents("org.opengeoreviews")) {
-				LOGGER.info("Found " + bd.getBeanClassName());
-				
+		for (BeanDefinition bd : scanner.findCandidateComponents("org.opengeoreviews")) {
+			try {
+				Class<? extends IOpenDBOperation> cl = (Class<? extends IOpenDBOperation>) Class.forName(bd.getBeanClassName());
+				String op = cl.getAnnotation(OpenDBOperation.class).value();
+				LOGGER.info(String.format("Register op '%s' -> %s ", op, bd.getBeanClassName()));
+				operations.put(op, cl);
+			} catch (Exception e) {
+				LOGGER.warn(e.getMessage(), e);
 			}
+		}
 	}
 
 	public IOpenDBOperation createOperation(OpDefinitionBean def) {
-		Class<? extends IOpenDBOperation> cl = operations.get(def.getName());
+		Class<? extends IOpenDBOperation> cl = operations.get(def.getOperationName());
 		if(cl != null) {
 			try {
 				return cl.newInstance();
