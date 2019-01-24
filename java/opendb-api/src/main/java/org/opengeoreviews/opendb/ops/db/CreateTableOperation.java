@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import org.opengeoreviews.opendb.ops.IOpenDBOperation;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
 import org.opengeoreviews.opendb.ops.OpenDBOperation;
+import org.opengeoreviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import wiremock.com.jayway.jsonpath.internal.Utils;
@@ -16,15 +17,13 @@ import wiremock.com.jayway.jsonpath.internal.Utils;
 public class CreateTableOperation implements IOpenDBOperation {
 
 	protected static final Log LOGGER = LogFactory.getLog(CreateTableOperation.class);
-	
 	public static final String OP_ID = "create_table";
 	
-	private static final String FIELD_TABLE_NAME = "table_name";
+	private static final String FIELD_TABLE_NAME = "name";
 	private static final String FIELD_TABLE_COLUMNS = "table_columns";
 	private OpDefinitionBean definition;
 	private String tableName;
 	private Map<String, String> tableColumns;
-	
 	
 	
 	@Override
@@ -32,8 +31,11 @@ public class CreateTableOperation implements IOpenDBOperation {
 		return OP_ID;
 	}
 	
+	@Override
+	public String getType() {
+		return OperationsRegistry.OP_TYPE_DDL;
+	}
 	
-
 	@Override
 	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
 		this.definition = definition;
@@ -57,7 +59,7 @@ public class CreateTableOperation implements IOpenDBOperation {
 		return "This operation creates table in DB. Supported fields:"+
 				"<br>'table_columns' : map of 'name' and 'type' " +
 				"<br>'comment' : comment for table " +
-				"<br>'table_name' : table name";
+				"<br>'name' : table name";
 	}
 
 	@Override
@@ -87,12 +89,6 @@ public class CreateTableOperation implements IOpenDBOperation {
 		return definition;
 	}
 	
-
-	@Override
-	public String getApprovalType() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 
 }

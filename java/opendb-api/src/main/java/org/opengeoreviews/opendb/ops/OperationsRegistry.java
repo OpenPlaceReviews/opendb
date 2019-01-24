@@ -16,6 +16,9 @@ public class OperationsRegistry {
 	public static final int VERSION = 1;
 	protected static final Log LOGGER = LogFactory.getLog(OperationsRegistry.class);
 	
+	public static final String OP_TYPE_DDL = "ddl";
+	public static final String OP_TYPE_AUTH = "auth";
+	
 	Map<String, Class<? extends IOpenDBOperation>> operations = new TreeMap<>();
 	
 	@SuppressWarnings("unchecked")

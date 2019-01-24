@@ -33,6 +33,10 @@ public class OpDefinitionBean {
 		return (Map<String, String>) otherFields.get(field);
 	}
 	
+	public Number getNumberValue(String field) {
+		return (Number) otherFields.get(field);
+	}
+	
 	public String getStringValue(String field) {
 		return (String) otherFields.get(field);
 	}

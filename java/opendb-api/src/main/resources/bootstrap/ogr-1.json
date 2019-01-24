@@ -5,11 +5,21 @@
 		{
 			"type" : "ddl",
 			"operation" : "create_table",
-			"table_name" : "blocks",
+			"name" : "blocks",
 			"comment" : "create table to store info about blocks",
 			"table_columns" : {
 				"id" : "integer",
 				"date" : "timestamp",
+				"summary" : "jsonb"
+			}
+		},
+		{
+			"type" : "ddl",
+			"operation" : "create_table",
+			"name" : "users",
+			"comment" : "create table to store info about users",
+			"table_columns" : {
+				"uid" : "serial8 primary key",
 				"summary" : "jsonb"
 			}
 		}

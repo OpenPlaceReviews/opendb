@@ -10,6 +10,11 @@ public interface IOpenDBOperation {
 	public String getName();
 	
 	/**
+	 * Operation type 
+	 */
+	public String getType();
+	
+	/**
 	 *  Will be used for documentation
 	 */
 	public String getDescription();
@@ -35,11 +40,9 @@ public interface IOpenDBOperation {
 	 * @return definition of the operation
 	 */
 	public OpDefinitionBean getDefinition();
+
 	
 	
-	/**
-	 * @return TODO
-	 */
-	public String getApprovalType();
+	
 	
 }
