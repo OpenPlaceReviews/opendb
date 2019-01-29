@@ -2,13 +2,13 @@ package org.opengeoreviews.opendb.ops.db;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.opengeoreviews.opendb.Utils;
 import org.opengeoreviews.opendb.ops.IOpenDBOperation;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
 import org.opengeoreviews.opendb.ops.OpenDBOperation;
 import org.opengeoreviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import wiremock.com.jayway.jsonpath.internal.Utils;
 
 @OpenDBOperation(CreateSequenceOperation.OP_ID)
 public class CreateSequenceOperation implements IOpenDBOperation {
@@ -38,8 +38,7 @@ public class CreateSequenceOperation implements IOpenDBOperation {
 	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
 		this.definition = definition;
 		seqName = definition.getStringValue(FIELD_SEQ_NAME);
-		if(Utils.isEmpty(seqName)) {
-			errorMessage.append(String.format("Field '%s' is not specified which is necessary to create sequence", FIELD_SEQ_NAME));
+		if(!Utils.validateSqlIdentifier(seqName, errorMessage, FIELD_SEQ_NAME, "create sequence")) {
 			return false;
 		}
 		minValue = definition.getNumberValue(FIELD_SEQ_MINVALUE);

@@ -1,17 +1,18 @@
 package org.opengeoreviews.opendb.ops.db;
 
+
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.opengeoreviews.opendb.Utils;
 import org.opengeoreviews.opendb.ops.IOpenDBOperation;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
 import org.opengeoreviews.opendb.ops.OpenDBOperation;
 import org.opengeoreviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import wiremock.com.jayway.jsonpath.internal.Utils;
 
 @OpenDBOperation(CreateTableOperation.OP_ID)
 public class CreateTableOperation implements IOpenDBOperation {
@@ -40,14 +41,18 @@ public class CreateTableOperation implements IOpenDBOperation {
 	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
 		this.definition = definition;
 		tableName = definition.getStringValue(FIELD_TABLE_NAME);
-		if(Utils.isEmpty(tableName)) {
-			errorMessage.append(String.format("Field '%s' is not specified which is necessary to create table", FIELD_TABLE_NAME));
+		if(!Utils.validateSqlIdentifier(tableName, errorMessage, FIELD_TABLE_NAME, "create table")) {
 			return false;
 		}
 		tableColumns = definition.getStringMap(FIELD_TABLE_COLUMNS);
 		if(tableColumns == null || tableColumns.isEmpty()) {
 			errorMessage.append(String.format("Field '%s' is not specified which is necessary to create table", FIELD_TABLE_COLUMNS));
 			return false;
+		}
+		for(String col: tableColumns.keySet()) {
+			if(!Utils.validateSqlIdentifier(col, errorMessage, FIELD_TABLE_COLUMNS, "create table")) {
+				return false;
+			}	
 		}
 		return true;
 	}
