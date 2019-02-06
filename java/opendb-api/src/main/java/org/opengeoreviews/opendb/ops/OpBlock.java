@@ -9,24 +9,21 @@ public class OpBlock {
 
 	
 	@SerializedName("block_id")
-	private int blockId = -1;
-	
+	public int blockId = -1;
 	
 	@SerializedName("date")
-	private String date;
+	public String date;
+	
+	@SerializedName("previous_block_hash")
+	public String previousBlockHash;
+	
+	@SerializedName("block_hash")
+	public String blockHash;
 	
 	
 	private List<OpDefinitionBean> operations = new ArrayList<OpDefinitionBean>();
 	
-	
-	public String getDate() {
-		return date;
-	}
-	
-	public int getBlockId() {
-		return blockId;
-	}
-	
+
 	
 	public List<OpDefinitionBean> getOperations() {
 		return operations;

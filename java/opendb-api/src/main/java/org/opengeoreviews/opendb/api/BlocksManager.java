@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opengeoreviews.opendb.SecUtils;
 import org.opengeoreviews.opendb.ops.IOpenDBOperation;
 import org.opengeoreviews.opendb.ops.OpBlock;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
@@ -17,43 +18,44 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 @Service
-public class OperationsManager {
+public class BlocksManager {
 
 	@Autowired
-	public OperationsQueue cache;
+	public OperationsQueue queue;
 	
 	@Autowired
 	public OperationsRegistry registry;
 	
 	@Autowired
+	public LogOperationService logSystem;
+	
+	@Autowired
+	public BlocksFormatting formatting;
+	
+	
+	@Autowired
 	public JdbcTemplate jdbcTemplate;
 	
-	public int CURRENT_BLOCK_ID = 0;
+	public List<OpBlock> blocks = new ArrayList<OpBlock>(); 
 
-	private Gson gson;
-	
-	public OperationsManager() {
-		GsonBuilder builder = new GsonBuilder();
-		builder.registerTypeAdapter(OpDefinitionBean.class, new OpDefinitionBean.OpDefinitionBeanAdapter());
-		gson = builder.create();
+	public synchronized String createBlock() {
+		OpBlock bl = new OpBlock();
+		while(!queue.getOperationsQueue().isEmpty()) {
+			
+		}
+		
+		return executeBlock(bl);
 	}
-	
-	public InputStream getBlock(String id) {
-    	return ApiController.class.getResourceAsStream("/bootstrap/ogr-"+id+".json");
-    }	
-	
-	
-	public Gson getGson() {
-		return gson;
-	}
-	
-	
-	public OpBlock parseBootstrapBlock(String id) {
-		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
-	}
-	
 
-	public void executeBlock(OpBlock block) {
+	
+	public synchronized String replicateBlock(OpBlock remoteBlock) {
+		
+		return executeBlock(remoteBlock);
+		
+	}
+
+
+	private String executeBlock(OpBlock block) {
 		List<IOpenDBOperation> operations = new ArrayList<IOpenDBOperation>();
 		StringBuilder errorMessage = new StringBuilder();
 		for(OpDefinitionBean def : block.getOperations()) {
@@ -64,6 +66,7 @@ public class OperationsManager {
 				operations.add(op);
 			} else {
 				// should be informed that operation is not valid
+				logSystem.operationFailed(op);
 			}
 		}
 		for(IOpenDBOperation o : operations) {
@@ -71,6 +74,10 @@ public class OperationsManager {
 			o.execute(jdbcTemplate, errorMessage);
 		}
 		// serialize and confirm block execution
-		CURRENT_BLOCK_ID++;
+		return formatting.toJson(block);
 	}
+	
+
+
+	
 }

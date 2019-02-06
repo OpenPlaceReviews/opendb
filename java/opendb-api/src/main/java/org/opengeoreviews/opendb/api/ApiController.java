@@ -2,7 +2,6 @@ package org.opengeoreviews.opendb.api ;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.opengeoreviews.opendb.SecUtils;
 import org.opengeoreviews.opendb.ops.OpBlock;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.google.gson.Gson;
-
 @Controller
 @RequestMapping("/api")
 public class ApiController {
@@ -26,10 +23,13 @@ public class ApiController {
     private JdbcTemplate jdbcTemplate;
     
     @Autowired
-    private OperationsManager manager;
+    private BlocksManager manager;
     
     @Autowired
     private OperationsQueue queue;
+    
+    @Autowired
+    private BlocksFormatting formatter;
 
 
     @GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
@@ -42,7 +42,7 @@ public class ApiController {
     @GetMapping(path = "/queue/add")
     @ResponseBody
     public String addToQueue(@RequestParam(required = true) String id) {
-    	OpBlock block = manager.parseBootstrapBlock(id);
+    	OpBlock block = formatter.parseBootstrapBlock(id);
     	queue.addOperations(block.getOperations());
         return "OK";
     }
@@ -58,29 +58,32 @@ public class ApiController {
     @ResponseBody
     public String queueList() {
     	OpBlock bl = new OpBlock();
-    	Gson gson = manager.getGson();
     	for(OpDefinitionBean ob : queue.getOperationsQueue()) {
-    		ob.remove(OpDefinitionBean.F_HASH);
-    		String hash = SecUtils.calculateSha1(gson.toJson(ob));
-    		ob.putStringValue(OpDefinitionBean.F_HASH, hash);
+    		formatter.calculateOperationHash(ob);
     		bl.getOperations().add(ob);	
     	}
-    	
-    	return gson.toJson(bl);
+    	return formatter.toJson(bl);
+    }
+    
+    
+    @GetMapping(path = "/block/create", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public String createBlock() {
+    	return manager.createBlock();
     }
     
     
     @GetMapping(path = "/block/content", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public InputStreamResource block(@RequestParam(required = true) String id) {
-        return new InputStreamResource(manager.getBlock(id));
+        return new InputStreamResource(formatter.getBlock(id));
     }
     
     @GetMapping(path = "/block/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public String bootstrap() {
-    	OpBlock block = manager.parseBootstrapBlock("1");
-    	manager.executeBlock(block);
+    	OpBlock block = formatter.parseBootstrapBlock("1");
+    	manager.replicateBlock(block);
         return "OK";
     }
 }
