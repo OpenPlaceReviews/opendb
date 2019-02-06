@@ -24,8 +24,10 @@ public class SignUpOperation implements IOpenDBOperation {
 
 	@Override
 	public String getDescription() {
-		// TODO Auto-generated method stub
-		return null;
+		return "This operation signs up new user in DB. Supported fields:"+
+		"<br>'auth_method' : authorization method (osm, google, pwd, fb)" +
+		"<br>'nickname' : unique nickname" + 
+		"<br>list of other fields";
 	}
 
 	@Override
@@ -35,9 +37,9 @@ public class SignUpOperation implements IOpenDBOperation {
 		return false;
 	}
 
+	// TODO validate 
 	@Override
 	public boolean execute(JdbcTemplate template, StringBuilder errorMessage) {
-		// TODO Auto-generated method stub
 		// TODO make separate api to create keys
 		// SecUtils.validateSignature(keyPair, msg, signature)
 		return false;

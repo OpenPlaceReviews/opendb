@@ -14,7 +14,8 @@ import com.google.gson.JsonSerializer;
 
 public class OpDefinitionBean {
 	
-
+	public static final String F_HASH = "hash";
+	
 	private String type;
 	private String operation;
 	
@@ -39,6 +40,14 @@ public class OpDefinitionBean {
 	
 	public String getStringValue(String field) {
 		return (String) otherFields.get(field);
+	}
+	
+	public void putStringValue(String key, String value) {
+		otherFields.put(key, value);
+	}
+	
+	public Object remove(String key) {
+		return otherFields.remove(key);
 	}
 	
 	

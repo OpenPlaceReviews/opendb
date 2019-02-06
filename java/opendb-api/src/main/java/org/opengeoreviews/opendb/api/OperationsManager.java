@@ -1,11 +1,14 @@
-package org.opengeoreviews.opendb.ops;
+package org.opengeoreviews.opendb.api;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opengeoreviews.opendb.api.ApiController;
+import org.opengeoreviews.opendb.ops.IOpenDBOperation;
+import org.opengeoreviews.opendb.ops.OpBlock;
+import org.opengeoreviews.opendb.ops.OpDefinitionBean;
+import org.opengeoreviews.opendb.ops.OperationsRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -17,7 +20,7 @@ import com.google.gson.GsonBuilder;
 public class OperationsManager {
 
 	@Autowired
-	public OperationsCache cache;
+	public OperationsQueue cache;
 	
 	@Autowired
 	public OperationsRegistry registry;
@@ -40,10 +43,15 @@ public class OperationsManager {
     }	
 	
 	
+	public Gson getGson() {
+		return gson;
+	}
+	
+	
 	public OpBlock parseBootstrapBlock(String id) {
 		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
 	}
-
+	
 
 	public void executeBlock(OpBlock block) {
 		List<IOpenDBOperation> operations = new ArrayList<IOpenDBOperation>();

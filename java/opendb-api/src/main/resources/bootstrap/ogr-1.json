@@ -10,7 +10,7 @@
 			"table_columns" : {
 				"id" : "integer",
 				"date" : "timestamp",
-				"summary" : "jsonb"
+				"details" : "jsonb"
 			}
 		},
 		{
@@ -20,7 +20,25 @@
 			"comment" : "create table to store info about users",
 			"table_columns" : {
 				"uid" : "serial8 primary key",
-				"summary" : "jsonb"
+				"nickname" : "text",
+				"details" : "jsonb"
+			}
+		},
+		{
+			"type" : "auth",
+			"operation" : "signup",
+			"nickname" : "openplacereviews",
+			"pubkey_format" : "BASE64:X509",
+			"pubkey" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEJhKdMihjGWQwniL38tBpHWdRQ+V/dfaFeNcqyXB6sE+/PG9NFPKmomZMOi1au74lohdQuTGv/hpHHPLj1mng5w==",
+			"algo" : "EC",
+			"auth_method" : "pwd",
+			"salt" : "openplacereviews",
+			"keygen_method" : "EC256K1_S17R8",
+			"signature" : {
+				"algo" : "SHA1withECDSA",
+				"signed_by" : "openplacereviews",
+				"format" : "BASE64",
+				"digest" : "MEUCIQC3TzuSDF9F+QSb2EKvbihMEkNtKwX/qfBHhJTH+j9vLgIgXLYcICarZDH6mRI2sspI+rQb7rZrtikC/Tjh59zhpaw="
 			}
 		}
 	]

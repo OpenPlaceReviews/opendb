@@ -1,5 +1,6 @@
 package org.opengeoreviews.opendb.ops;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
@@ -15,7 +16,7 @@ public class OpBlock {
 	private String date;
 	
 	
-	private List<OpDefinitionBean> operations;
+	private List<OpDefinitionBean> operations = new ArrayList<OpDefinitionBean>();
 	
 	
 	public String getDate() {
