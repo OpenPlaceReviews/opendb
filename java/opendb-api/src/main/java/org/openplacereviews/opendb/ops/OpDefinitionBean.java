@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb.ops;
+package org.openplacereviews.opendb.ops;
 
 import java.lang.reflect.Type;
 import java.util.Map;

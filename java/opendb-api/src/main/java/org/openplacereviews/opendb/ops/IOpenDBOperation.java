@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb.ops;
+package org.openplacereviews.opendb.ops;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 

@@ -1,6 +1,6 @@
-package org.opengeoreviews.opendb.api;
+package org.openplacereviews.opendb.api;
 
-import org.opengeoreviews.opendb.ops.IOpenDBOperation;
+import org.openplacereviews.opendb.ops.IOpenDBOperation;
 import org.springframework.stereotype.Service;
 
 @Service

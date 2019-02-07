@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb.ops;
+package org.openplacereviews.opendb.ops;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

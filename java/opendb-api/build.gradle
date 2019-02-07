@@ -33,9 +33,9 @@ bootJar {
     dependsOn generateGitProperties
     launchScript()
 
-    baseName = 'opengeoreviews-server-boot'
+    baseName = 'openplacereviews-server-boot'
     version =  version
-    mainClassName = 'org.opengeoreviews.server.Application'
+    mainClassName = 'org.openplacereviews.opendb.app.OpenDBServer'
 }
 
 

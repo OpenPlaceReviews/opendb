@@ -1,9 +1,9 @@
-package org.opengeoreviews.opendb.api;
+package org.openplacereviews.opendb.api;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import org.opengeoreviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.stereotype.Service;
 
 @Service

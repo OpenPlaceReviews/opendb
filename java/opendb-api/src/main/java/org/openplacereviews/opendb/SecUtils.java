@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb;
+package org.openplacereviews.opendb;
 
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;

@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb.api ;
+package org.openplacereviews.opendb.api ;
 
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
@@ -12,9 +12,9 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.opengeoreviews.opendb.SecUtils;
-import org.opengeoreviews.opendb.ops.OpBlock;
-import org.opengeoreviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.jdbc.core.JdbcTemplate;

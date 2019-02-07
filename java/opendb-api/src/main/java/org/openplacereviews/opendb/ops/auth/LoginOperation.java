@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb.ops.auth;
+package org.openplacereviews.opendb.ops.auth;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
@@ -17,10 +17,10 @@ import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.bouncycastle.crypto.prng.FixedSecureRandom;
 import org.bouncycastle.jce.spec.ECParameterSpec;
-import org.opengeoreviews.opendb.ops.IOpenDBOperation;
-import org.opengeoreviews.opendb.ops.OpDefinitionBean;
-import org.opengeoreviews.opendb.ops.OpenDBOperation;
-import org.opengeoreviews.opendb.ops.OperationsRegistry;
+import org.openplacereviews.opendb.ops.IOpenDBOperation;
+import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpenDBOperation;
+import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @OpenDBOperation(LoginOperation.OP_ID)

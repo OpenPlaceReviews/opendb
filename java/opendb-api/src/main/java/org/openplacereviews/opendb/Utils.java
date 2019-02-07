@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb;
+package org.openplacereviews.opendb;
 
 public class Utils {
 

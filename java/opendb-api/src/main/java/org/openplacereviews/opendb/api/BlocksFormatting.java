@@ -1,11 +1,11 @@
-package org.opengeoreviews.opendb.api;
+package org.openplacereviews.opendb.api;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import org.opengeoreviews.opendb.SecUtils;
-import org.opengeoreviews.opendb.ops.OpBlock;
-import org.opengeoreviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;

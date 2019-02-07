@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb.ops.db;
+package org.openplacereviews.opendb.ops.db;
 
 
 import java.util.Map;
@@ -6,11 +6,11 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.opengeoreviews.opendb.Utils;
-import org.opengeoreviews.opendb.ops.IOpenDBOperation;
-import org.opengeoreviews.opendb.ops.OpDefinitionBean;
-import org.opengeoreviews.opendb.ops.OpenDBOperation;
-import org.opengeoreviews.opendb.ops.OperationsRegistry;
+import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.ops.IOpenDBOperation;
+import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpenDBOperation;
+import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
