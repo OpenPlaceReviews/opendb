@@ -29,7 +29,7 @@ Password: <input type="text" id="sign-message-pwd"/>
 
 
 function loadData() {
-	$.getJSON( "queue/list", function( data ) {
+	$.getJSON( "/queue/list", function( data ) {
   		var items = "";
   		for(var i = 0; i < data.operations.length; i++)  {
   			let op = data.operations[i];
@@ -56,13 +56,13 @@ function loadData() {
 $( document ).ready(function() {
     loadData();
     $("#clear-list").click(function(){
-    	 $.post("queue/clear", {},  function(data, status){
+    	 $.post("/queue/clear", {},  function(data, status){
     	 	loadData();
     	 });
     });
 
     $("#load").click(function(){
-    	 $.post("queue/add?id=1", {},  function(data, status){
+    	 $.post("/queue/add?id=1", {},  function(data, status){
     	 	loadData();
     	 });
     });
@@ -72,7 +72,7 @@ $( document ).ready(function() {
     		"pwd":$("#sign-message-pwd").val(),
     		"json":$("#sign-message-txt").val()	
     	};
-    	$.post("msg/sign", obj,  function(data, status){
+    	$.post("/op/sign", obj,  function(data, status){
     		$("#sign-message-result").html(data);
     	});
     });
