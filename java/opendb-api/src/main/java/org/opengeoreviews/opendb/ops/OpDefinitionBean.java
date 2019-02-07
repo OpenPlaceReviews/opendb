@@ -16,9 +16,23 @@ public class OpDefinitionBean {
 	
 	public static final String F_HASH = "hash";
 	public static final String F_SIGNATURE = "signature";
+	public static final String F_SIGNED_BY = "signed_by";
+	
+	// user / signup
+	public static final String F_SALT = "salt";
+	public static final String F_KEYGEN_METHOD = "keygen_method";
+	public static final String F_PUBKEY = "pubkey";
+	public static final String F_PUBKEY_FORMAT = "pubkey_format";
+	
+	// signature section
+	public static final String F_FORMAT = "format";
+	public static final String F_ALGO = "algo";
+	public static final String F_TYPE = "type";
+	public static final String F_DIGEST = "digest";
 	
 	private String type;
 	private String operation;
+	private String signedBy;
 	
 	private Map<String, Object> otherFields = new TreeMap<>();
 	
@@ -28,6 +42,10 @@ public class OpDefinitionBean {
 	
 	public String getOperationName() {
 		return operation;
+	}
+	
+	public String getSignedBy() {
+		return signedBy;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -68,6 +86,9 @@ public class OpDefinitionBean {
 			OpDefinitionBean bn = new OpDefinitionBean();
 			bn.operation = o.get(F_OPERATION).getAsString();
 			bn.type = o.get(F_TYPE).getAsString();
+			if(o.has(F_SIGNED_BY)) {
+				bn.signedBy = o.get(F_SIGNED_BY).getAsString();
+			}
 			bn.otherFields = context.deserialize(o, Map.class); 
 			return bn;
 		}

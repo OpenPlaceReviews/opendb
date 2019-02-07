@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb;
+package org.opengeoreviews.opendb.app;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

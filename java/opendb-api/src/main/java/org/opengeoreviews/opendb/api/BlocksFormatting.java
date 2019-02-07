@@ -30,24 +30,39 @@ public class BlocksFormatting {
 	public OpBlock parseBootstrapBlock(String id) {
 		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
 	}
+	
+	public OpDefinitionBean parseOperation(String opJson) {
+		return gson.fromJson(opJson, OpDefinitionBean.class);
+	}
 
 	
 	public String calculateOperationHash(OpDefinitionBean ob, boolean set) {
 		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
 		
-		String hash = SecUtils.calculateSha256(gson.toJson(ob));
+		String hash = "sha256:" + SecUtils.calculateSha256(gson.toJson(ob));
 		if(set) {
-			ob.putStringValue(OpDefinitionBean.F_HASH, "sha256:" + hash);
+			ob.putStringValue(OpDefinitionBean.F_HASH,  hash);
 		} else {
 			ob.putStringValue(OpDefinitionBean.F_HASH, oldHash);
 		}
 		ob.putObjectValue(OpDefinitionBean.F_SIGNATURE, sig);
 		return hash;
 	}
+	
+	public String toValidateSignatureJson(OpDefinitionBean op) {
+		Object sig = op.remove(OpDefinitionBean.F_SIGNATURE);
+		String json = gson.toJson(op);
+		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, sig);
+		return json;
+	}
 
 	public String toJson(OpBlock bl) {
 		return gson.toJson(bl);
+	}
+	
+	public String toJson(OpDefinitionBean op) {
+		return gson.toJson(op);
 	}
 
 

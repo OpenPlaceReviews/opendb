@@ -25,6 +25,8 @@ import org.bouncycastle.crypto.prng.FixedSecureRandom;
 public class SecUtils {
 	public static final String SIG_ALGO_SHA1_EC = "SHA1withECDSA";
 	
+	public static final String DECODE_BASE64 = "base64";
+	
 	public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeySpecException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
 		KeyPair kp = generateKeyPairFromPassword("openplacereviews", "", null);
 		System.out.println(kp.getPrivate().getFormat());
@@ -57,17 +59,34 @@ public class SecUtils {
 		throw new IllegalArgumentException(format);
 	}
 	
+	public static String encodeBase64(byte[] data) {
+		return Base64.getEncoder().encodeToString(data);
+	}
+	
 	public static KeyPair getKeyPair(String algo, String format, String prKey, 
 			String pubformat, String pbKey) throws InvalidKeySpecException, NoSuchAlgorithmException {
 		KeyFactory keyFactory = KeyFactory.getInstance(algo);
 		PublicKey pb = null; 
 		PrivateKey pr = null; 
 		if(pbKey != null) {
-			byte[] bytes = Base64.getDecoder().decode(pbKey);
+			byte[] bytes;
+			if (pubformat.startsWith(DECODE_BASE64 + ":")) {
+				bytes = Base64.getDecoder().decode(pbKey);
+				pubformat = pubformat.substring(DECODE_BASE64.length() + 1);
+			} else {
+				throw new IllegalArgumentException("Illegal decoding algorith");
+			}
+			bytes = Base64.getDecoder().decode(pbKey);
 			pb = keyFactory.generatePublic(getKeySpecByFormat(pubformat, bytes));
 		}
 		if(prKey != null) {
-			byte[] bytes = Base64.getDecoder().decode(prKey);
+			byte[] bytes;
+			if(pubformat.startsWith(DECODE_BASE64)) {
+				bytes = Base64.getDecoder().decode(prKey);
+				pubformat = pubformat.substring(DECODE_BASE64.length());
+			} else {
+				throw new IllegalArgumentException("Illegal decoding algorith");
+			}
 			pr = keyFactory.generatePrivate(getKeySpecByFormat(format, bytes));
 		}
 		return new KeyPair(pb, pr);
@@ -87,7 +106,10 @@ public class SecUtils {
 	}
 	
 
-	// algorithm - SHA1withECDSA
+	public static String signMessageWithKeyBase64(KeyPair keyPair, String msg, String hashAlgo) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
+        return Base64.getEncoder().encodeToString(signMessageWithKey(keyPair, msg, hashAlgo));
+	}
+	
 	public static byte[] signMessageWithKey(KeyPair keyPair, String msg, String hashAlgo) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
         Signature sig = Signature.getInstance(hashAlgo);
         sig.initSign(keyPair.getPrivate());
@@ -117,6 +139,18 @@ public class SecUtils {
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+
+
+	public static byte[] decodeSignature(String format, String digest) {
+		try {
+			if(format.equals(DECODE_BASE64)) {
+				return Base64.getDecoder().decode(digest.getBytes("UTF-8"));
+			}
+		} catch (UnsupportedEncodingException e) {
+			throw new IllegalStateException(e);
+		}
+		throw new IllegalArgumentException(format);
 	}
 
 }

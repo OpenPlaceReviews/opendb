@@ -1,4 +1,4 @@
-package org.opengeoreviews.opendb;
+package org.opengeoreviews.opendb.app;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

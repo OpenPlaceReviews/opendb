@@ -1,7 +1,18 @@
 package org.opengeoreviews.opendb.api ;
 
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.opengeoreviews.opendb.SecUtils;
 import org.opengeoreviews.opendb.ops.OpBlock;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +50,33 @@ public class ApiController {
         return "OK";
     }
     
+    @GetMapping(path = "/test", produces = "text/html;charset=UTF-8")
+    @ResponseBody
+    public InputStreamResource testHarness() {
+        return new InputStreamResource(ApiController.class.getResourceAsStream("/test.html"));
+    }
+    
+    @PostMapping(path = "/msg/sign")
+    @ResponseBody
+    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+    	OpDefinitionBean op = formatter.parseOperation(json);
+    	String hash = formatter.calculateOperationHash(op, true);
+    	KeyPair keyPair = SecUtils.generateKeyPairFromPassword(op.getStringValue(
+    			OpDefinitionBean.F_SALT), pwd, OpDefinitionBean.F_KEYGEN_METHOD);
+    	op.remove(OpDefinitionBean.F_SIGNATURE);
+    	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
+    	OpDefinitionBean sig = new OpDefinitionBean();
+    	sig.putStringValue(OpDefinitionBean.F_HASH, hash);
+    	sig.putStringValue(OpDefinitionBean.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
+    	sig.putStringValue(OpDefinitionBean.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
+    	Map<String, String> signatureMap = new TreeMap<>();
+    	signatureMap.put(OpDefinitionBean.F_DIGEST, signature);
+    	signatureMap.put(OpDefinitionBean.F_TYPE, "json");
+    	signatureMap.put(OpDefinitionBean.F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
+    	signatureMap.put(OpDefinitionBean.F_FORMAT, SecUtils.DECODE_BASE64);
+    	sig.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);
+        return formatter.toJson(sig);
+    }
     
     @PostMapping(path = "/queue/add")
     @ResponseBody
@@ -57,10 +95,21 @@ public class ApiController {
     
     @GetMapping(path = "/queue/list", produces = "text/json;charset=UTF-8")
     @ResponseBody
-    public String queueList() {
+    public String queueList() throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeySpecException {
     	OpBlock bl = new OpBlock();
     	for(OpDefinitionBean ob : queue.getOperationsQueue()) {
 //    		formatter.calculateOperationHash(ob, false);
+    		Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
+    		if(sig != null) {
+//    			pubkey_format
+    			String algo = ob.getStringValue(OpDefinitionBean.F_ALGO);
+    			String pubformat = ob.getStringValue(OpDefinitionBean.F_PUBKEY_FORMAT);
+    			String pbKey = ob.getStringValue(OpDefinitionBean.F_PUBKEY);
+    			KeyPair kp = SecUtils.getKeyPair(algo, null, null, pubformat, pbKey);
+    			byte[] signature = SecUtils.decodeSignature(sig.get(OpDefinitionBean.F_FORMAT), sig.get(OpDefinitionBean.F_DIGEST));
+    			boolean validate = SecUtils.validateSignature(kp, formatter.toValidateSignatureJson(ob), sig.get(OpDefinitionBean.F_ALGO), signature);
+    			sig.put("valid", validate + "");
+    		}
     		bl.getOperations().add(ob);	
     	}
     	return formatter.toJson(bl);
@@ -81,11 +130,7 @@ public class ApiController {
     }
     
     
-    @GetMapping(path = "/test", produces = "text/html;charset=UTF-8")
-    @ResponseBody
-    public InputStreamResource testHarness() {
-        return new InputStreamResource(ApiController.class.getResourceAsStream("/test.html"));
-    }
+
     
     @PostMapping(path = "/block/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
