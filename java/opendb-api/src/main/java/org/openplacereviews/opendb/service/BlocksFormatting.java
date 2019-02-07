@@ -1,9 +1,10 @@
-package org.openplacereviews.opendb.api;
+package org.openplacereviews.opendb.service;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.stereotype.Service;

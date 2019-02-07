@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.api;
+package org.openplacereviews.opendb.service;
 
 import java.util.ArrayList;
 import java.util.List;

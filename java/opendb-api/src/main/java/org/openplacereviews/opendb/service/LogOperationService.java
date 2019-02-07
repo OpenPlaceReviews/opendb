@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.api;
+package org.openplacereviews.opendb.service;
 
 import org.openplacereviews.opendb.ops.IOpenDBOperation;
 import org.springframework.stereotype.Service;
