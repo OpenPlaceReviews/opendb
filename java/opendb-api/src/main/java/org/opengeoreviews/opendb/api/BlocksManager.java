@@ -1,11 +1,8 @@
 package org.opengeoreviews.opendb.api;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opengeoreviews.opendb.SecUtils;
 import org.opengeoreviews.opendb.ops.IOpenDBOperation;
 import org.opengeoreviews.opendb.ops.OpBlock;
 import org.opengeoreviews.opendb.ops.OpDefinitionBean;
@@ -13,9 +10,6 @@ import org.opengeoreviews.opendb.ops.OperationsRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 @Service
 public class BlocksManager {
@@ -31,7 +25,6 @@ public class BlocksManager {
 	
 	@Autowired
 	public BlocksFormatting formatting;
-	
 	
 	@Autowired
 	public JdbcTemplate jdbcTemplate;

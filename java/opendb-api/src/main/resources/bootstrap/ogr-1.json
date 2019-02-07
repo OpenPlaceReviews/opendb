@@ -7,6 +7,7 @@
 			"operation" : "create_table",
 			"name" : "blocks",
 			"comment" : "create table to store info about blocks",
+			"hash" : "sha256:69a56ce2fc4f649f950a8407fdbd31996c9fb7c2ffde146e33fb1377ce2f80d0",
 			"table_columns" : {
 				"id" : "integer",
 				"date" : "timestamp",
@@ -18,6 +19,7 @@
 			"operation" : "create_table",
 			"name" : "users",
 			"comment" : "create table to store info about users",
+			"hash" : "sha256:6dacb8ce249634ddfb1dc7d74e30761b7f2d6320eab029f874bbedadb2cfcc81",
 			"table_columns" : {
 				"uid" : "serial8 primary key",
 				"nickname" : "text",
@@ -33,12 +35,14 @@
 			"algo" : "EC",
 			"auth_method" : "pwd",
 			"salt" : "openplacereviews",
+			"hash" : "sha256:038ba44f9792fac9ff9086f21a77484392156e95e04417a88e87712c382306da",
+			"signed_by" : "openplacereviews",
 			"keygen_method" : "EC256K1_S17R8",
 			"signature" : {
+				"type" : "json",
 				"algo" : "SHA1withECDSA",
-				"signed_by" : "openplacereviews",
 				"format" : "BASE64",
-				"digest" : "MEUCIQC3TzuSDF9F+QSb2EKvbihMEkNtKwX/qfBHhJTH+j9vLgIgXLYcICarZDH6mRI2sspI+rQb7rZrtikC/Tjh59zhpaw="
+				"digest" : "MEUCIQC3TzuSDF9F+QSb2EKvbihMEkNtKwX/qfBHhJTH+j9vLgIgXLYcICarZDH6mRI2sspI+rQb7rZrtikC/Tjh59zhpaw="				
 			}
 		}
 	]

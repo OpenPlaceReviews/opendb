@@ -9,6 +9,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -39,7 +40,7 @@ public class ApiController {
     }
     
     
-    @GetMapping(path = "/queue/add")
+    @PostMapping(path = "/queue/add")
     @ResponseBody
     public String addToQueue(@RequestParam(required = true) String id) {
     	OpBlock block = formatter.parseBootstrapBlock(id);
@@ -47,7 +48,7 @@ public class ApiController {
         return "OK";
     }
     
-    @GetMapping(path = "/queue/clear")
+    @PostMapping(path = "/queue/clear")
     @ResponseBody
     public String addToQueue() {
     	queue.clearOperations();
@@ -59,14 +60,14 @@ public class ApiController {
     public String queueList() {
     	OpBlock bl = new OpBlock();
     	for(OpDefinitionBean ob : queue.getOperationsQueue()) {
-    		formatter.calculateOperationHash(ob);
+//    		formatter.calculateOperationHash(ob, false);
     		bl.getOperations().add(ob);	
     	}
     	return formatter.toJson(bl);
     }
     
     
-    @GetMapping(path = "/block/create", produces = "text/json;charset=UTF-8")
+    @PostMapping(path = "/block/create", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String createBlock() {
     	return manager.createBlock();
@@ -79,7 +80,14 @@ public class ApiController {
         return new InputStreamResource(formatter.getBlock(id));
     }
     
-    @GetMapping(path = "/block/bootstrap", produces = "text/html;charset=UTF-8")
+    
+    @GetMapping(path = "/test", produces = "text/html;charset=UTF-8")
+    @ResponseBody
+    public InputStreamResource testHarness() {
+        return new InputStreamResource(ApiController.class.getResourceAsStream("/test.html"));
+    }
+    
+    @PostMapping(path = "/block/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public String bootstrap() {
     	OpBlock block = formatter.parseBootstrapBlock("1");

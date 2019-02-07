@@ -18,7 +18,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     
     @Override
 	protected void configure(HttpSecurity http) throws Exception {
-    	// http.csrf().disable().antMatcher("/**");
+    	http.csrf().disable().antMatcher("/**");
     	// all top level are accessible without login
     	http.authorizeRequests().antMatchers("/actuator/**", "/admin/**").hasAuthority(ROLE_ADMIN)
     							.antMatchers("/u/**").hasAuthority(ROLE_ADMIN) // user

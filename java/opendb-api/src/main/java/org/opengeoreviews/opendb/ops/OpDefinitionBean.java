@@ -15,6 +15,7 @@ import com.google.gson.JsonSerializer;
 public class OpDefinitionBean {
 	
 	public static final String F_HASH = "hash";
+	public static final String F_SIGNATURE = "signature";
 	
 	private String type;
 	private String operation;
@@ -43,6 +44,10 @@ public class OpDefinitionBean {
 	}
 	
 	public void putStringValue(String key, String value) {
+		otherFields.put(key, value);
+	}
+	
+	public void putObjectValue(String key, Object value) {
 		otherFields.put(key, value);
 	}
 	

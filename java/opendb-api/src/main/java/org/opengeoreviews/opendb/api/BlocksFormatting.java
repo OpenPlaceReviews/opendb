@@ -18,6 +18,7 @@ public class BlocksFormatting {
 	
 	public BlocksFormatting() {
 		GsonBuilder builder = new GsonBuilder();
+		builder.disableHtmlEscaping();
 		builder.registerTypeAdapter(OpDefinitionBean.class, new OpDefinitionBean.OpDefinitionBeanAdapter());
 		gson = builder.create();
 	}
@@ -31,10 +32,18 @@ public class BlocksFormatting {
 	}
 
 	
-	public void calculateOperationHash(OpDefinitionBean ob) {
-		ob.remove(OpDefinitionBean.F_HASH);
-		String hash = SecUtils.calculateSha1(gson.toJson(ob));
-		ob.putStringValue(OpDefinitionBean.F_HASH, hash);		
+	public String calculateOperationHash(OpDefinitionBean ob, boolean set) {
+		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
+		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
+		
+		String hash = SecUtils.calculateSha256(gson.toJson(ob));
+		if(set) {
+			ob.putStringValue(OpDefinitionBean.F_HASH, "sha256:" + hash);
+		} else {
+			ob.putStringValue(OpDefinitionBean.F_HASH, oldHash);
+		}
+		ob.putObjectValue(OpDefinitionBean.F_SIGNATURE, sig);
+		return hash;
 	}
 
 	public String toJson(OpBlock bl) {

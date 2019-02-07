@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+ <script src="https://code.jquery.com/jquery-1.9.1.min.js"></script>
+
+<head>
+</head>
+
+<body>
+<h1>Test harness for OpenDB</h1>
+<h3>Operations in Queue</h3>
+<ul id="operations-list">
+</ul>
+
+<input type="submit" value="Clear" id="clear-list" />
+
+<input type="submit" value="Load 1st block"  id="load"/>
+
+</body>
+<script>
+
+
+function loadData() {
+	$.getJSON( "queue/list", function( data ) {
+  		var items = "";
+  		for(var i = 0; i < data.operations.length; i++)  {
+  			let op = data.operations[i];
+  			let clone = JSON.parse(JSON.stringify(op));
+  			delete clone.hash ;
+  			delete clone.signature ;
+  			sha256(JSON.stringify(clone)).then(digestValue => {
+  				if(("sha256:" + digestValue) != op.hash) {
+  					alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'sha256:" + digestValue +"'");
+  				}
+			});
+  			items += "<br><li><b>Hash</b>: " + op.hash + " ";
+  			items += "<br><b>Operation</b>: " + op.operation;
+  			items += "<br><b>Signed by</b>: " + op.signed_by;
+  			
+  			items += "<br><b>Details</b>: " + JSON.stringify(clone);
+  			items += "<br></li>";
+  		}
+ 		$("#operations-list").html(items);
+  		
+});
+}
+
+$( document ).ready(function() {
+    loadData();
+    $("#clear-list").click(function(){
+    	 $.post("queue/clear", {},  function(data, status){
+    	 	loadData();
+    	 });
+    });
+
+    $("#load").click(function(){
+    	 $.post("queue/add?id=1", {},  function(data, status){
+    	 	loadData();
+    	 });
+    });
+});
+
+async function sha256(message) {
+    // encode as UTF-8
+    const msgBuffer = new TextEncoder('utf-8').encode(message);                    
+
+    // hash the message
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+
+    // convert ArrayBuffer to Array
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+    // convert bytes to hex string                  
+    const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('');
+    return hashHex;
+}
+</script>
+
+</html>

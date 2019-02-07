@@ -110,5 +110,13 @@ public class SecUtils {
 			throw new IllegalStateException(e);
 		}
 	}
+	
+	public static String calculateSha256(String msg) {
+		 try {
+			return DigestUtils.sha256Hex(msg.getBytes("UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			throw new IllegalStateException(e);
+		}
+	}
 
 }
