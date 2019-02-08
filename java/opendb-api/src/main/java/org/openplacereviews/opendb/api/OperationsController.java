@@ -39,7 +39,7 @@ public class OperationsController {
     private BlocksManager manager;
     
     @Autowired
-    private OpenDBValidator formatter;
+    private OpenDBValidator validation;
     
     @Autowired
     private OperationsQueue queue;
@@ -50,8 +50,8 @@ public class OperationsController {
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-    	OpDefinitionBean sig = formatter.generateSignatureFromPwd(json, pwd);
-        return formatter.toJson(sig);
+    	OpDefinitionBean sig = validation.generateSignatureFromPwd(json, pwd);
+        return validation.toJson(sig);
     }
     
     @PostMapping(path = "/signup")
@@ -72,9 +72,10 @@ public class OperationsController {
     	op.putStringValue(SignUpOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
     	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
     	
-    	formatter.generateHashAndSignatureFromPwd(op, keyPair);
+    	validation.generateHashAndSignatureFromPwd(op, keyPair);
+    	validation.addAuthOperation(name, op);
     	queue.addOperation(op);
-        return formatter.toJson(op);
+        return validation.toJson(op);
     }
     
     
@@ -90,16 +91,17 @@ public class OperationsController {
     	op.putStringValue(LoginOperation.F_ALGO, DEFAULT_LOGIN_ALGO);
     	op.setSignedBy(name);
     	KeyPair loginPair = SecUtils.generateEC256K1KeyPair();
-    	KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
-    			SignUpOperation.F_SALT), pwd, op.getStringValue(SignUpOperation.F_KEYGEN_METHOD));
+    	
     	op.putStringValue(LoginOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPublic().getFormat());
     	op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeBase64(loginPair.getPublic().getEncoded()));
     	
-    	formatter.generateHashAndSignatureFromPwd(op, keyPair);
+    	validation.generateHashAndSignatureFromPwd(op, name, pwd);
+    	validation.addAuthOperation(name, op);
     	queue.addOperation(op);
+    	OpDefinitionBean copy = new OpDefinitionBean(op);
     	
-    	op.putStringValue(LoginOperation.F_PRIVATEKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPrivate().getFormat());
-    	op.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeBase64(loginPair.getPrivate().getEncoded()));
-        return formatter.toJson(op);
+    	copy.putStringValue(LoginOperation.F_PRIVATEKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPrivate().getFormat());
+    	copy.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeBase64(loginPair.getPrivate().getEncoded()));
+        return validation.toJson(copy);
     }
 }

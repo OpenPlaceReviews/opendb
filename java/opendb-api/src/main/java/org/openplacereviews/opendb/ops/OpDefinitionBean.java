@@ -24,6 +24,16 @@ public class OpDefinitionBean {
 	
 	private Map<String, Object> otherFields = new TreeMap<>();
 	
+	public OpDefinitionBean() {
+	}
+	
+	public OpDefinitionBean(OpDefinitionBean cp) {
+		this.type = cp.type;
+		this.operation = cp.operation;
+		this.signedBy = cp.signedBy;
+		this.otherFields.putAll(cp.otherFields);
+	}
+	
 	public String getType() {
 		return type;
 	}
