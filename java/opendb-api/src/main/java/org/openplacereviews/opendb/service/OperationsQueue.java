@@ -15,6 +15,10 @@ public class OperationsQueue {
 		operationsQueue.addAll(operations);
 	}
 	
+	public void addOperation(OpDefinitionBean op) {
+		operationsQueue.add(op);
+	}
+	
 	public ConcurrentLinkedQueue<OpDefinitionBean> getOperationsQueue() {
 		return operationsQueue;
 	}

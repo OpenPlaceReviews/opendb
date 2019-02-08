@@ -6,15 +6,17 @@ import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
-import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.service.BlocksFormatting;
+import org.openplacereviews.opendb.ops.OperationsRegistry;
+import org.openplacereviews.opendb.ops.auth.LoginOperation;
+import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.OpenDBValidator;
+import org.openplacereviews.opendb.service.OperationsQueue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,32 +30,76 @@ public class OperationsController {
 	
     protected static final Log LOGGER = LogFactory.getLog(OperationsController.class);
     
+    public static final String DEFAULT_SIGNUP_METHOD = "EC256K1_S17R8";
+    public static final String DEFAULT_LOGIN_METHOD = "EC256K1";
+    public static final String DEFAULT_SIGNUP_ALGO = "EC";
+    public static final String DEFAULT_LOGIN_ALGO = "EC";
+    
     @Autowired
     private BlocksManager manager;
     
     @Autowired
-    private BlocksFormatting formatter;
+    private OpenDBValidator formatter;
+    
+    @Autowired
+    private OperationsQueue queue;
+
+    
     
     @PostMapping(path = "/sign")
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-    	OpDefinitionBean op = formatter.parseOperation(json);
-    	String hash = formatter.calculateOperationHash(op, true);
-    	KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
-    			OpDefinitionBean.F_SALT), pwd, OpDefinitionBean.F_KEYGEN_METHOD);
-    	op.remove(OpDefinitionBean.F_SIGNATURE);
-    	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
-    	OpDefinitionBean sig = new OpDefinitionBean();
-    	sig.putStringValue(OpDefinitionBean.F_HASH, hash);
-    	sig.putStringValue(OpDefinitionBean.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
-    	sig.putStringValue(OpDefinitionBean.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
-    	Map<String, String> signatureMap = new TreeMap<>();
-    	signatureMap.put(OpDefinitionBean.F_DIGEST, signature);
-    	signatureMap.put(OpDefinitionBean.F_TYPE, "json");
-    	signatureMap.put(OpDefinitionBean.F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
-    	signatureMap.put(OpDefinitionBean.F_FORMAT, SecUtils.DECODE_BASE64);
-    	sig.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);
+    	OpDefinitionBean sig = formatter.generateSignatureFromPwd(json, pwd);
         return formatter.toJson(sig);
+    }
+    
+    @PostMapping(path = "/signup")
+    @ResponseBody
+    public String signup(@RequestParam(required = true) String name, 
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+    	OpDefinitionBean op = new OpDefinitionBean();
+    	op.setType(SignUpOperation.OP_ID);
+    	op.setOperation(OperationsRegistry.OP_TYPE_AUTH);
+    	op.putStringValue(SignUpOperation.F_NAME, name);
+    	op.putStringValue(SignUpOperation.F_SALT, name);
+    	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, DEFAULT_SIGNUP_METHOD);
+    	op.putStringValue(SignUpOperation.F_ALGO, DEFAULT_SIGNUP_ALGO);
+    	op.putStringValue(SignUpOperation.F_AUTH_METHOD, "pwd");
+    	op.setSignedBy(name);
+    	KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
+    			SignUpOperation.F_SALT), pwd, op.getStringValue(SignUpOperation.F_KEYGEN_METHOD));
+    	op.putStringValue(SignUpOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
+    	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
+    	
+    	formatter.generateHashAndSignatureFromPwd(op, keyPair);
+    	queue.addOperation(op);
+        return formatter.toJson(op);
+    }
+    
+    
+    @PostMapping(path = "/login")
+    @ResponseBody
+    public String login(@RequestParam(required = true) String name, 
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+    	OpDefinitionBean op = new OpDefinitionBean();
+    	op.setType(LoginOperation.OP_ID);
+    	op.setOperation(OperationsRegistry.OP_TYPE_AUTH);
+    	op.putStringValue(LoginOperation.F_NAME, name);
+    	op.putStringValue(LoginOperation.F_KEYGEN_METHOD, DEFAULT_LOGIN_METHOD);
+    	op.putStringValue(LoginOperation.F_ALGO, DEFAULT_LOGIN_ALGO);
+    	op.setSignedBy(name);
+    	KeyPair loginPair = SecUtils.generateEC256K1KeyPair();
+    	KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
+    			SignUpOperation.F_SALT), pwd, op.getStringValue(SignUpOperation.F_KEYGEN_METHOD));
+    	op.putStringValue(LoginOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPublic().getFormat());
+    	op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeBase64(loginPair.getPublic().getEncoded()));
+    	
+    	formatter.generateHashAndSignatureFromPwd(op, keyPair);
+    	queue.addOperation(op);
+    	
+    	op.putStringValue(LoginOperation.F_PRIVATEKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPrivate().getFormat());
+    	op.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeBase64(loginPair.getPrivate().getEncoded()));
+        return formatter.toJson(op);
     }
 }

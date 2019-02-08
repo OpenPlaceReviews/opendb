@@ -15,15 +15,27 @@
 
 <input type="submit" value="Load 1st into queue"  id="load"/>
 
-<h3>Sign message</h3>
+<p id="result"></p>
+
+<h3>Signup</h3>
 <div>
-Text as json without spaces: <input type="text" id="sign-message-txt"/> 
+Nickname: <input type="text" id="signup-name"/> 
 <br>
-Password: <input type="text" id="sign-message-pwd"/> 
+Password: <input type="text" id="signup-pwd"/> 
 <br>
-<input type="submit" value="Sign message" id="sign-message-btn"/>
+<input type="submit" value="Signup" id="signup-btn"/>
 </div>
-<p id="sign-message-result"></p>
+
+<h3>Login</h3>
+<div>
+Nickname: <input type="text" id="login-name"/> 
+<br>
+Password: <input type="text" id="login-pwd"/> 
+<br>
+<input type="submit" value="Login" id="login-btn"/>
+</div>
+
+
 </body>
 <script>
 
@@ -67,13 +79,23 @@ $( document ).ready(function() {
     	 });
     });
 
-    $("#sign-message-btn").click(function() {
+    $("#signup-btn").click(function() {
+      var obj = {
+        "pwd":$("#signup-pwd").val(),
+        "name":$("#signup-name").val() 
+      };
+      $.post("/op/signup", obj,  function(data, status){
+        $("#result").html(data);
+      });
+    });
+
+    $("#login-btn").click(function() {
     	var obj = {
-    		"pwd":$("#sign-message-pwd").val(),
-    		"json":$("#sign-message-txt").val()	
+    		"pwd":$("#login-pwd").val(),
+    		"name":$("#login-name").val()	
     	};
-    	$.post("/op/sign", obj,  function(data, status){
-    		$("#sign-message-result").html(data);
+    	$.post("/op/login", obj,  function(data, status){
+    		$("#result").html(data);
     	});
     });
 });

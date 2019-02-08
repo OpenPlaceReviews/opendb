@@ -13,7 +13,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.service.BlocksFormatting;
+import org.openplacereviews.opendb.service.OpenDBValidator;
 import org.openplacereviews.opendb.service.OperationsQueue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -33,7 +33,7 @@ public class QueueController {
     private OperationsQueue queue;
     
     @Autowired
-    private BlocksFormatting formatter;
+    private OpenDBValidator formatter;
 
     @PostMapping(path = "/add")
     @ResponseBody
@@ -59,12 +59,7 @@ public class QueueController {
     		// TODO
     		Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
     		if(sig != null) {
-    			String algo = ob.getStringValue(OpDefinitionBean.F_ALGO);
-    			String pubformat = ob.getStringValue(OpDefinitionBean.F_PUBKEY_FORMAT);
-    			String pbKey = ob.getStringValue(OpDefinitionBean.F_PUBKEY);
-    			KeyPair kp = SecUtils.getKeyPair(algo, null, null, pubformat, pbKey);
-    			byte[] signature = SecUtils.decodeSignature(sig.get(OpDefinitionBean.F_FORMAT), sig.get(OpDefinitionBean.F_DIGEST));
-    			boolean validate = SecUtils.validateSignature(kp, formatter.toValidateSignatureJson(ob), sig.get(OpDefinitionBean.F_ALGO), signature);
+    			boolean validate = formatter.validateSignature(ob);
     			sig.put("valid", validate + "");
     		}
     		bl.getOperations().add(ob);	

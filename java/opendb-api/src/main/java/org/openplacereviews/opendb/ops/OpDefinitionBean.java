@@ -18,18 +18,6 @@ public class OpDefinitionBean {
 	public static final String F_SIGNATURE = "signature";
 	public static final String F_SIGNED_BY = "signed_by";
 	
-	// user / signup
-	public static final String F_SALT = "salt";
-	public static final String F_KEYGEN_METHOD = "keygen_method";
-	public static final String F_PUBKEY = "pubkey";
-	public static final String F_PUBKEY_FORMAT = "pubkey_format";
-	
-	// signature section
-	public static final String F_FORMAT = "format";
-	public static final String F_ALGO = "algo";
-	public static final String F_TYPE = "type";
-	public static final String F_DIGEST = "digest";
-	
 	private String type;
 	private String operation;
 	private String signedBy;
@@ -46,6 +34,18 @@ public class OpDefinitionBean {
 	
 	public String getSignedBy() {
 		return signedBy;
+	}
+	
+	public void setOperation(String operation) {
+		this.operation = operation;
+	}
+	
+	public void setType(String type) {
+		this.type = type;
+	}
+	
+	public void setSignedBy(String signedBy) {
+		this.signedBy = signedBy;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -98,6 +98,7 @@ public class OpDefinitionBean {
 			JsonObject o = new JsonObject();
 			o.addProperty(F_OPERATION, src.operation);
 			o.addProperty(F_TYPE, src.type);
+			o.addProperty(F_SIGNED_BY, src.signedBy);
 			for(String k : src.otherFields.keySet()) {
 				Object ob = src.otherFields.get(k);
 				o.add(k, context.serialize(ob));

@@ -3,7 +3,7 @@ package org.openplacereviews.opendb.api ;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.service.BlocksFormatting;
+import org.openplacereviews.opendb.service.OpenDBValidator;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OperationsQueue;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ public class BlockController {
     private OperationsQueue queue;
     
     @Autowired
-    private BlocksFormatting formatter;
+    private OpenDBValidator formatter;
 
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
     @ResponseBody

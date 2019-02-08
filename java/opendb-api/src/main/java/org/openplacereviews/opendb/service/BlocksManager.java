@@ -24,7 +24,7 @@ public class BlocksManager {
 	public LogOperationService logSystem;
 	
 	@Autowired
-	public BlocksFormatting formatting;
+	public OpenDBValidator formatting;
 	
 	@Autowired
 	public JdbcTemplate jdbcTemplate;

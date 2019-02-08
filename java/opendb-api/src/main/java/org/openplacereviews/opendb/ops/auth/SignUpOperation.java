@@ -2,7 +2,6 @@ package org.openplacereviews.opendb.ops.auth;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.IOpenDBOperation;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
@@ -15,6 +14,14 @@ public class SignUpOperation implements IOpenDBOperation {
 	protected static final Log LOGGER = LogFactory.getLog(SignUpOperation.class);
 	
 	public static final String OP_ID = "signup";
+	public static final String F_NAME = "name";
+	public static final String F_SALT = "salt";
+ 	public static final String F_KEYGEN_METHOD = "keygen_method";
+ 	public static final String F_PUBKEY = "pubkey";
+ 	public static final String F_PUBKEY_FORMAT = "pubkey_format";
+	public static final String F_ALGO = "algo";
+	public static final String F_AUTH_METHOD = "auth_method";
+	
 	private OpDefinitionBean definition;
 
 	@Override

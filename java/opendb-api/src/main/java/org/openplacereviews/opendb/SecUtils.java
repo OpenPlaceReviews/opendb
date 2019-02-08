@@ -93,7 +93,7 @@ public class SecUtils {
 		return new KeyPair(pb, pr);
 	}
 
-    // "EC:secp256k1:scrypt(salt,N:17,r:8,p:1,len:256)" algorшthm - EC256K1_S17R8
+    // "EC:secp256k1:scrypt(salt,N:17,r:8,p:1,len:256)" algorithm - EC256K1_S17R8
 	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd, String algo) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
 		KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
         ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256k1");
@@ -107,7 +107,7 @@ public class SecUtils {
 	}
 	
 	
-	public static KeyPair generateEC256K1KeyPair(String salt, String pwd, String algo)
+	public static KeyPair generateEC256K1KeyPair()
 			throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
 		KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
 		ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256k1");

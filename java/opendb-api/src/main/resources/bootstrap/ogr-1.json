@@ -29,6 +29,25 @@
 		{
 			"type" : "auth",
 			"operation" : "signup",
+			"name" : "openplacereviews",
+			"pubkey_format" : "base64:X.509",
+			"pubkey" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEJhKdMihjGWQwniL38tBpHWdRQ+V/dfaFeNcqyXB6sE+/PG9NFPKmomZMOi1au74lohdQuTGv/hpHHPLj1mng5w==",
+			"algo" : "EC",
+			"auth_method" : "pwd",
+			"salt" : "openplacereviews",
+			"hash" : "sha256:7c1eacad600758bf60212a47a9702ef5b60e2bbed85bd807f4d0183aa1a93240",
+			"signed_by" : "openplacereviews",
+			"keygen_method" : "EC256K1_S17R8",
+			"signature" : {
+				"type" : "json",
+				"algo" : "SHA1withECDSA",
+				"format" : "base64",
+				"digest" : "MEQCICUSO2xqDEwt7aVBsAA+H5l9oJmcMmcRs4OF+DncindBAiAhTCbpKSyLOfAgzSQURi3vdisrbPhHBvCj/CuyRdM2kQ=="
+			}
+		},
+		{
+			"type" : "auth",
+			"operation" : "login",
 			"nickname" : "openplacereviews",
 			"pubkey_format" : "base64:X.509",
 			"pubkey" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEJhKdMihjGWQwniL38tBpHWdRQ+V/dfaFeNcqyXB6sE+/PG9NFPKmomZMOi1au74lohdQuTGv/hpHHPLj1mng5w==",
@@ -45,5 +64,6 @@
 				"digest" : "MEQCICUSO2xqDEwt7aVBsAA+H5l9oJmcMmcRs4OF+DncindBAiAhTCbpKSyLOfAgzSQURi3vdisrbPhHBvCj/CuyRdM2kQ=="
 			}
 		}
+
 	]
 }
