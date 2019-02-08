@@ -36,10 +36,11 @@ public class OperationsController {
     
     @PostMapping(path = "/sign")
     @ResponseBody
-    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+    public String signMessage(@RequestParam(required = true) String json, 
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
     	OpDefinitionBean op = formatter.parseOperation(json);
     	String hash = formatter.calculateOperationHash(op, true);
-    	KeyPair keyPair = SecUtils.generateKeyPairFromPassword(op.getStringValue(
+    	KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
     			OpDefinitionBean.F_SALT), pwd, OpDefinitionBean.F_KEYGEN_METHOD);
     	op.remove(OpDefinitionBean.F_SIGNATURE);
     	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);

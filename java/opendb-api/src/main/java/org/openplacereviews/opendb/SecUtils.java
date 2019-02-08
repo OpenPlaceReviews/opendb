@@ -28,7 +28,7 @@ public class SecUtils {
 	public static final String DECODE_BASE64 = "base64";
 	
 	public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeySpecException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
-		KeyPair kp = generateKeyPairFromPassword("openplacereviews", "", null);
+		KeyPair kp = generateEC256K1KeyPairFromPassword("openplacereviews", "", null);
 		System.out.println(kp.getPrivate().getFormat());
 		System.out.println(kp.getPrivate().getAlgorithm());
 		String pr = Base64.getEncoder().encodeToString(kp.getPrivate().getEncoded());
@@ -48,6 +48,7 @@ public class SecUtils {
 		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", 
 				nk.getPrivate().getFormat(), pr, nk.getPublic().getFormat(), pk));
 		System.out.println(validateSignature(nk, signMessageTest, SIG_ALGO_SHA1_EC, signature));
+		
 	}
 	
 	
@@ -93,7 +94,7 @@ public class SecUtils {
 	}
 
     // "EC:secp256k1:scrypt(salt,N:17,r:8,p:1,len:256)" algorшthm - EC256K1_S17R8
-	public static KeyPair generateKeyPairFromPassword(String salt, String pwd, String algo) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
+	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd, String algo) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
 		KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
         ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256k1");
         if(pwd.length() < 10) {
@@ -103,6 +104,15 @@ public class SecUtils {
         byte[] scrypt = SCrypt.generate(bytes, salt.getBytes("UTF-8"), 1 << 17, 8, 1, 256);
         kpg.initialize(ecSpec, new FixedSecureRandom(scrypt));
         return kpg.genKeyPair();
+	}
+	
+	
+	public static KeyPair generateEC256K1KeyPair(String salt, String pwd, String algo)
+			throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
+		KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+		ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256k1");
+		kpg.initialize(ecSpec);
+		return kpg.genKeyPair();
 	}
 	
 

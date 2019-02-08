@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.app;
+package org.openplacereviews.opendb;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

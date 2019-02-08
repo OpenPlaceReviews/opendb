@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.app;
+package org.openplacereviews.opendb;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

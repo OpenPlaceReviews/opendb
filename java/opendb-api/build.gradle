@@ -35,7 +35,7 @@ bootJar {
 
     baseName = 'openplacereviews-server-boot'
     version =  version
-    mainClassName = 'org.openplacereviews.opendb.app.OpenDBServer'
+    mainClassName = 'org.openplacereviews.opendb.OpenDBServer'
 }
 
 
