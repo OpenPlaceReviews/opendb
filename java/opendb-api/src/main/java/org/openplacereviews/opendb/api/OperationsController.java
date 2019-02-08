@@ -10,6 +10,7 @@ import java.security.SignatureException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.Utils;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.LoginOperation;
@@ -30,10 +31,6 @@ public class OperationsController {
 	
     protected static final Log LOGGER = LogFactory.getLog(OperationsController.class);
     
-    public static final String DEFAULT_SIGNUP_METHOD = "EC256K1_S17R8";
-    public static final String DEFAULT_LOGIN_METHOD = "EC256K1";
-    public static final String DEFAULT_SIGNUP_ALGO = "EC";
-    public static final String DEFAULT_LOGIN_ALGO = "EC";
     
     @Autowired
     private BlocksManager manager;
@@ -44,31 +41,45 @@ public class OperationsController {
     @Autowired
     private OperationsQueue queue;
 
-    
-    
     @PostMapping(path = "/sign")
     @ResponseBody
-    public String signMessage(@RequestParam(required = true) String json, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-    	OpDefinitionBean sig = validation.generateSignatureFromPwd(json, pwd);
-        return validation.toJson(sig);
+    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
+    		@RequestParam(required = false) String pwd, 
+    		@RequestParam(required = false) String privateKey, @RequestParam(required = false) String privateKeyFormat) throws Exception {
+    	KeyPair kp = null;
+		if (!Utils.isEmpty(pwd)) {
+			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
+		} else if (!Utils.isEmpty(privateKey)) {
+			kp = validation.getSignUpKeyPair(name, privateKey, privateKeyFormat);
+		}
+		if (kp == null) {
+			throw new IllegalArgumentException("Couldn't validate sign up key");
+		}
+		OpDefinitionBean op = validation.parseOperation(json);
+		op.setSignedBy(name);
+    	validation.generateHashAndSign(op, kp);
+        return validation.toJson(op);
     }
-    
+
+    // TODO signup oauth, by keys
     @PostMapping(path = "/signup")
     @ResponseBody
     public String signup(@RequestParam(required = true) String name, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+    		@RequestParam(required = false) String pwd, 
+    		@RequestParam(required = false) String privateKey, @RequestParam(required = false) String privateKeyFormat) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
     	OpDefinitionBean op = new OpDefinitionBean();
-    	op.setType(SignUpOperation.OP_ID);
-    	op.setOperation(OperationsRegistry.OP_TYPE_AUTH);
+    	String salt = name;
+    	String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
+    	String algo = SecUtils.ALGO_EC;
+    	op.setType(OperationsRegistry.OP_TYPE_AUTH);
+    	op.setOperation(SignUpOperation.OP_ID);
     	op.putStringValue(SignUpOperation.F_NAME, name);
-    	op.putStringValue(SignUpOperation.F_SALT, name);
-    	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, DEFAULT_SIGNUP_METHOD);
-    	op.putStringValue(SignUpOperation.F_ALGO, DEFAULT_SIGNUP_ALGO);
-    	op.putStringValue(SignUpOperation.F_AUTH_METHOD, "pwd");
+    	op.putStringValue(SignUpOperation.F_SALT, salt);
+    	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, keyGen);
+    	op.putStringValue(SignUpOperation.F_ALGO, algo);
+    	op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PWD);
     	op.setSignedBy(name);
-    	KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
-    			SignUpOperation.F_SALT), pwd, op.getStringValue(SignUpOperation.F_KEYGEN_METHOD));
+    	KeyPair keyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
     	op.putStringValue(SignUpOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
     	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
     	
@@ -78,24 +89,34 @@ public class OperationsController {
         return validation.toJson(op);
     }
     
-    
+    // TODO login oauth, provide login Public Key
     @PostMapping(path = "/login")
     @ResponseBody
     public String login(@RequestParam(required = true) String name, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String prKey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-    	OpDefinitionBean op = new OpDefinitionBean();
-    	op.setType(LoginOperation.OP_ID);
-    	op.setOperation(OperationsRegistry.OP_TYPE_AUTH);
-    	op.putStringValue(LoginOperation.F_NAME, name);
-    	op.putStringValue(LoginOperation.F_KEYGEN_METHOD, DEFAULT_LOGIN_METHOD);
-    	op.putStringValue(LoginOperation.F_ALGO, DEFAULT_LOGIN_ALGO);
-    	op.setSignedBy(name);
-    	KeyPair loginPair = SecUtils.generateEC256K1KeyPair();
+    		@RequestParam(required = false) String pwd, 
+    		@RequestParam(required = false) String privateKey, @RequestParam(required = false) String privateKeyFormat) throws Exception {
+		KeyPair kp = null;
+		if (!Utils.isEmpty(pwd)) {
+			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
+		} else if (!Utils.isEmpty(privateKey)) {
+			kp = validation.getSignUpKeyPair(name, privateKey, privateKeyFormat);
+		}
+		if (kp == null) {
+			throw new IllegalArgumentException("Couldn't validate sign up key");
+		}
     	
+    	OpDefinitionBean op = new OpDefinitionBean();
+    	op.setType(OperationsRegistry.OP_TYPE_AUTH);
+    	op.setOperation(LoginOperation.OP_ID);
+    	op.putStringValue(LoginOperation.F_NAME, name);
+    	op.setSignedBy(name);
+    	op.putStringValue(LoginOperation.F_ALGO, SecUtils.ALGO_EC);
+    	KeyPair loginPair = SecUtils.generateRandomEC256K1KeyPair();
     	op.putStringValue(LoginOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPublic().getFormat());
     	op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeBase64(loginPair.getPublic().getEncoded()));
     	
-    	validation.generateHashAndSignatureFromPwd(op, name, pwd);
+    	
+    	validation.generateHashAndSignatureFromPwd(op, kp);
     	validation.addAuthOperation(name, op);
     	queue.addOperation(op);
     	OpDefinitionBean copy = new OpDefinitionBean(op);

@@ -55,8 +55,6 @@ public class QueueController {
     public String queueList() throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeySpecException {
     	OpBlock bl = new OpBlock();
     	for(OpDefinitionBean ob : queue.getOperationsQueue()) {
-//    		formatter.calculateOperationHash(ob, false);
-    		// TODO
     		Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
     		if(sig != null) {
     			boolean validate = formatter.validateSignature(ob);

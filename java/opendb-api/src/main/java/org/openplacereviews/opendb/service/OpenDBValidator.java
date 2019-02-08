@@ -118,51 +118,45 @@ public class OpenDBValidator {
 		return gson.toJson(op);
 	}
 
-	public OpDefinitionBean generateSignatureFromPwd(String json, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-		OpDefinitionBean op = parseOperation(json);
-    	String hash = calculateOperationHash(op, true);
-		KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(op.getStringValue(
-    			SignUpOperation.F_SALT), pwd, SignUpOperation.F_KEYGEN_METHOD);
-    	op.remove(OpDefinitionBean.F_SIGNATURE);
-    	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
-    	OpDefinitionBean sig = new OpDefinitionBean();
-    	sig.putStringValue(OpDefinitionBean.F_HASH, hash);
-    	sig.putStringValue(SignUpOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
-    	sig.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
-    	Map<String, String> signatureMap = new TreeMap<>();
-    	signatureMap.put(F_DIGEST, signature);
-    	signatureMap.put(F_TYPE, JSON_MSG_TYPE);
-    	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
-    	signatureMap.put(F_FORMAT, SecUtils.DECODE_BASE64);
-    	sig.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);		
-    	return sig;
-	}
-	
 	
 	public OpDefinitionBean generateHashAndSignatureFromPwd(OpDefinitionBean op, KeyPair keyPair) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-    	calculateOperationHash(op, true);
-    	String json = toValidateSignatureJson(op);
-    	op.remove(OpDefinitionBean.F_SIGNATURE);
-    	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
-    	Map<String, String> signatureMap = new TreeMap<>();
-    	signatureMap.put(F_DIGEST, signature);
-    	signatureMap.put(F_TYPE, "json");
-    	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
-    	signatureMap.put(F_FORMAT, SecUtils.DECODE_BASE64);
-    	op.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);		
+    	generateHashAndSign(op, keyPair);		
     	return op;
 	}
 	
 	
-	public OpDefinitionBean generateHashAndSignatureFromPwd(OpDefinitionBean op, String name, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+	public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
 		ActiveUser au = activeUsers.get(name);
 		if(au == null || au.signUp == null) {
 			throw new IllegalStateException(String.format("User '%s' is not signed up", name));
 		}
 		
-		KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(au.signUp.getStringValue(
-    			SignUpOperation.F_SALT), pwd, au.signUp.getStringValue(SignUpOperation.F_KEYGEN_METHOD));
-    	calculateOperationHash(op, true);
+		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(
+				au.signUp.getStringValue(SignUpOperation.F_ALGO), au.signUp.getStringValue(SignUpOperation.F_KEYGEN_METHOD), 
+				au.signUp.getStringValue(SignUpOperation.F_SALT), pwd);
+		return keyPair;
+	}
+	
+	public KeyPair getSignUpKeyPair(String name, 
+			String privatekey, String privateKeyFormat) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException, InvalidKeySpecException {
+		ActiveUser au = activeUsers.get(name);
+		if(au == null || au.signUp == null) {
+			throw new IllegalStateException(String.format("User '%s' is not signed up", name));
+		}
+		String algo = au.signUp.getStringValue(SignUpOperation.F_ALGO);
+		KeyPair kp = SecUtils.getKeyPair(algo, privateKeyFormat, privatekey, 
+				au.signUp.getStringValue(SignUpOperation.F_PUBKEY_FORMAT), au.signUp.getStringValue(SignUpOperation.F_PUBKEY));
+		if(SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
+			return kp;
+		}
+		return null;
+	}
+
+
+
+	public OpDefinitionBean generateHashAndSign(OpDefinitionBean op, KeyPair keyPair) throws InvalidKeyException,
+			SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
+		calculateOperationHash(op, true);
     	String json = toValidateSignatureJson(op);
     	op.remove(OpDefinitionBean.F_SIGNATURE);
     	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
@@ -171,9 +165,11 @@ public class OpenDBValidator {
     	signatureMap.put(F_TYPE, "json");
     	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
     	signatureMap.put(F_FORMAT, SecUtils.DECODE_BASE64);
-    	op.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);		
+    	op.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);
     	return op;
 	}
+	
+	
 
 	public boolean validateSignature(OpDefinitionBean ob) throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
 		Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
@@ -220,8 +216,6 @@ public class OpenDBValidator {
 		
 	}
 
-
-
 	private KeyPair getPublicKeyFromOp(OpDefinitionBean ob) throws InvalidKeySpecException, NoSuchAlgorithmException {
 		KeyPair kp;
 		String signUpalgo = ob.getStringValue(F_ALGO);
@@ -230,8 +224,5 @@ public class OpenDBValidator {
 		kp = SecUtils.getKeyPair(signUpalgo, null, null, pubformat, pbKey);
 		return kp;
 	}
-
-	
-
 
 }

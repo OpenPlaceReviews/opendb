@@ -21,6 +21,8 @@ public class SignUpOperation implements IOpenDBOperation {
  	public static final String F_PUBKEY_FORMAT = "pubkey_format";
 	public static final String F_ALGO = "algo";
 	public static final String F_AUTH_METHOD = "auth_method";
+
+	public static final String METHOD_PWD = "pwd";
 	
 	private OpDefinitionBean definition;
 
