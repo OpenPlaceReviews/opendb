@@ -41,6 +41,7 @@ public class OpenDBValidator {
  	public static final String JSON_MSG_TYPE = "json";
  	
  	
+ 	// TODO support operations chain
  	private static class ActiveUser {
  		protected String name;
  		protected OpDefinitionBean signUp;
@@ -66,12 +67,12 @@ public class OpenDBValidator {
 			au.name = name;
 			activeUsers.put(name, au);
 		}
-		if(op.getType().equals(SignUpOperation.OP_ID)) {
+		if(op.getOperationId().equals(SignUpOperation.OP_ID)) {
 			if(au.signUp != null) {
 				throw new IllegalArgumentException("User was already signed up");
 			}
 			au.signUp = op;
-		} else if(op.getType().equals(SignUpOperation.OP_ID)) {
+		} else if(op.getOperationId().equals(SignUpOperation.OP_ID)) {
 			au.logins.add(op);
 		}
 	}
@@ -159,14 +160,22 @@ public class OpenDBValidator {
 		calculateOperationHash(op, true);
     	String json = toValidateSignatureJson(op);
     	op.remove(OpDefinitionBean.F_SIGNATURE);
-    	String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
+    	Map<String, String> signatureMap = getSignature(keyPair, json);
+    	op.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);
+    	return op;
+	}
+
+
+
+	private Map<String, String> getSignature(KeyPair keyPair, String json) throws InvalidKeyException,
+			SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
+		String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
     	Map<String, String> signatureMap = new TreeMap<>();
     	signatureMap.put(F_DIGEST, signature);
     	signatureMap.put(F_TYPE, "json");
     	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
     	signatureMap.put(F_FORMAT, SecUtils.DECODE_BASE64);
-    	op.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);
-    	return op;
+		return signatureMap;
 	}
 	
 	
@@ -189,7 +198,7 @@ public class OpenDBValidator {
 		} else {
 			msg = toValidateSignatureJson(ob);
 		}
-		if(ob.getType().equals(SignUpOperation.OP_ID)) {
+		if(ob.getOperationId().equals(SignUpOperation.OP_ID)) {
 			// signup operation is validated by itself
 			KeyPair kp = getPublicKeyFromOp(ob);
 			return SecUtils.validateSignature(kp, msg, sigAlgo, signature); 
@@ -197,7 +206,7 @@ public class OpenDBValidator {
 			ActiveUser au = activeUsers.get(name);
 			if(au != null && au.signUp != null) {
 				// login operation is validated only by sign up
-				if(ob.getType().equals(LoginOperation.OP_ID)) {
+				if(ob.getOperationId().equals(LoginOperation.OP_ID)) {
 					KeyPair kp = getPublicKeyFromOp(au.signUp);
 					return SecUtils.validateSignature(kp, msg, sigAlgo, signature);
 				} else {

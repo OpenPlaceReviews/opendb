@@ -1,9 +1,12 @@
 package org.openplacereviews.opendb.ops;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -21,6 +24,7 @@ public class OpDefinitionBean {
 	private String type;
 	private String operation;
 	private String signedBy;
+	private List<String> otherSignedBy;
 	
 	private Map<String, Object> otherFields = new TreeMap<>();
 	
@@ -38,12 +42,23 @@ public class OpDefinitionBean {
 		return type;
 	}
 	
-	public String getOperationName() {
+	public String getOperationId() {
 		return operation;
 	}
 	
 	public String getSignedBy() {
 		return signedBy;
+	}
+	
+	public List<String> getOtherSignedBy() {
+		return otherSignedBy;
+	}
+	
+	public void addOtherSignedBy(String signedBy) {
+		if(otherSignedBy == null) {
+			otherSignedBy = new ArrayList<String>();
+		}
+		otherSignedBy.add(signedBy);
 	}
 	
 	public void setOperation(String operation) {
@@ -97,7 +112,20 @@ public class OpDefinitionBean {
 			bn.operation = o.get(F_OPERATION).getAsString();
 			bn.type = o.get(F_TYPE).getAsString();
 			if(o.has(F_SIGNED_BY)) {
-				bn.signedBy = o.get(F_SIGNED_BY).getAsString();
+				if(o.get(F_SIGNED_BY).isJsonArray()) {
+					bn.otherSignedBy = new ArrayList<String>();
+					JsonArray array = o.get(F_SIGNED_BY).getAsJsonArray();
+					for (int i = 0; i < array.size(); i++) {
+						String signedBy = array.get(i).getAsString();
+						if (i == 0) {
+							bn.signedBy = signedBy;
+						} else {
+							bn.otherSignedBy.add(signedBy);
+						}
+					}
+				} else {
+					bn.signedBy = o.get(F_SIGNED_BY).getAsString();
+				}
 			}
 			bn.otherFields = context.deserialize(o, Map.class); 
 			return bn;
@@ -108,7 +136,16 @@ public class OpDefinitionBean {
 			JsonObject o = new JsonObject();
 			o.addProperty(F_OPERATION, src.operation);
 			o.addProperty(F_TYPE, src.type);
-			o.addProperty(F_SIGNED_BY, src.signedBy);
+			if(src.otherSignedBy == null || src.otherSignedBy.size() == 0) {
+				o.addProperty(F_SIGNED_BY, src.signedBy);
+			} else {
+				JsonArray arr = new JsonArray();
+				arr.add(src.signedBy);
+				for (String s : src.otherSignedBy) {
+					arr.add(s);
+				}
+				o.add(F_SIGNED_BY, arr);
+			}
 			for(String k : src.otherFields.keySet()) {
 				Object ob = src.otherFields.get(k);
 				o.add(k, context.serialize(ob));

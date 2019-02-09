@@ -1,22 +1,7 @@
 package org.openplacereviews.opendb.ops.auth;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.Signature;
-import java.security.spec.ECGenParameterSpec;
-import java.util.Arrays;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.bouncycastle.crypto.generators.ECKeyPairGenerator;
-import org.bouncycastle.crypto.generators.HKDFBytesGenerator;
-import org.bouncycastle.crypto.generators.SCrypt;
-import org.bouncycastle.crypto.params.ECDomainParameters;
-import org.bouncycastle.crypto.prng.FixedSecureRandom;
-import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.openplacereviews.opendb.ops.IOpenDBOperation;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;

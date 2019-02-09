@@ -40,7 +40,7 @@ public class OperationsRegistry {
 	}
 
 	public IOpenDBOperation createOperation(OpDefinitionBean def) {
-		Class<? extends IOpenDBOperation> cl = operations.get(def.getOperationName());
+		Class<? extends IOpenDBOperation> cl = operations.get(def.getOperationId());
 		if(cl != null) {
 			try {
 				return cl.newInstance();

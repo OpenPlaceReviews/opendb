@@ -1,11 +1,6 @@
 package org.openplacereviews.opendb.api ;
 
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +26,6 @@ public class OperationsController {
 	
     protected static final Log LOGGER = LogFactory.getLog(OperationsController.class);
     
-    
     @Autowired
     private BlocksManager manager;
     
@@ -41,6 +35,7 @@ public class OperationsController {
     @Autowired
     private OperationsQueue queue;
 
+    // TODO support login Key Pair!
     @PostMapping(path = "/sign")
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
@@ -61,25 +56,42 @@ public class OperationsController {
         return validation.toJson(op);
     }
 
-    // TODO signup oauth, by keys
+    // TODO signup oauth
+    // TODO sign by server relay
     @PostMapping(path = "/signup")
     @ResponseBody
     public String signup(@RequestParam(required = true) String name, 
     		@RequestParam(required = false) String pwd, 
-    		@RequestParam(required = false) String privateKey, @RequestParam(required = false) String privateKeyFormat) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
+    		@RequestParam(required = false) String algo, 
+    		@RequestParam(required = false) String privateKey, @RequestParam(required = false) String privateKeyFormat,
+    		@RequestParam(required = false) String publicKey, @RequestParam(required = false) String publicKeyFormat) throws Exception {
     	OpDefinitionBean op = new OpDefinitionBean();
+    	name = name.trim(); // reduce errors by having trailing spaces
+    	if(!SignUpOperation.validateNickname(name)) {
+    		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
+    	}
     	String salt = name;
     	String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
-    	String algo = SecUtils.ALGO_EC;
+    	
     	op.setType(OperationsRegistry.OP_TYPE_AUTH);
     	op.setOperation(SignUpOperation.OP_ID);
     	op.putStringValue(SignUpOperation.F_NAME, name);
     	op.putStringValue(SignUpOperation.F_SALT, salt);
     	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, keyGen);
+    	if(Utils.isEmpty(algo )) {
+    		algo = SecUtils.ALGO_EC;
+    	}
+    	KeyPair keyPair;
+    	if(!Utils.isEmpty(pwd)) {
+    		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PWD);
+    		algo = SecUtils.ALGO_EC;
+    		keyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
+    	} else {
+    		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PROVIDED);
+    		keyPair = SecUtils.getKeyPair(algo, privateKeyFormat, privateKey, publicKeyFormat, publicKey);
+    	}
     	op.putStringValue(SignUpOperation.F_ALGO, algo);
-    	op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PWD);
     	op.setSignedBy(name);
-    	KeyPair keyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
     	op.putStringValue(SignUpOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + keyPair.getPublic().getFormat());
     	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeBase64(keyPair.getPublic().getEncoded()));
     	
@@ -89,17 +101,20 @@ public class OperationsController {
         return validation.toJson(op);
     }
     
-    // TODO login oauth, provide login Public Key
+    // TODO login oauth
+    // TODO sign by server relay
     @PostMapping(path = "/login")
     @ResponseBody
     public String login(@RequestParam(required = true) String name, 
     		@RequestParam(required = false) String pwd, 
-    		@RequestParam(required = false) String privateKey, @RequestParam(required = false) String privateKeyFormat) throws Exception {
+    		@RequestParam(required = false) String signUpPrivateKey, @RequestParam(required = false) String signUpPrivateKeyFormat,
+    		@RequestParam(required = false) String loginAlgo, 
+    		@RequestParam(required = false) String loginPubKey, @RequestParam(required = false) String loginPubKeyFormat) throws Exception {
 		KeyPair kp = null;
 		if (!Utils.isEmpty(pwd)) {
 			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
-		} else if (!Utils.isEmpty(privateKey)) {
-			kp = validation.getSignUpKeyPair(name, privateKey, privateKeyFormat);
+		} else if (!Utils.isEmpty(signUpPrivateKey)) {
+			kp = validation.getSignUpKeyPair(name, signUpPrivateKey, signUpPrivateKeyFormat);
 		}
 		if (kp == null) {
 			throw new IllegalArgumentException("Couldn't validate sign up key");
@@ -110,19 +125,25 @@ public class OperationsController {
     	op.setOperation(LoginOperation.OP_ID);
     	op.putStringValue(LoginOperation.F_NAME, name);
     	op.setSignedBy(name);
-    	op.putStringValue(LoginOperation.F_ALGO, SecUtils.ALGO_EC);
-    	KeyPair loginPair = SecUtils.generateRandomEC256K1KeyPair();
+    	KeyPair loginPair ;
+		if (!Utils.isEmpty(loginAlgo)) {
+    		loginPair = SecUtils.getKeyPair(loginAlgo, null, null, loginPubKeyFormat, loginPubKey);
+    	} else {
+    		op.putStringValue(LoginOperation.F_ALGO, SecUtils.ALGO_EC);
+    		loginPair = SecUtils.generateRandomEC256K1KeyPair();
+    	}
     	op.putStringValue(LoginOperation.F_PUBKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPublic().getFormat());
-    	op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeBase64(loginPair.getPublic().getEncoded()));
+		op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeBase64(loginPair.getPublic().getEncoded()));
     	
     	
     	validation.generateHashAndSignatureFromPwd(op, kp);
     	validation.addAuthOperation(name, op);
     	queue.addOperation(op);
     	OpDefinitionBean copy = new OpDefinitionBean(op);
-    	
-    	copy.putStringValue(LoginOperation.F_PRIVATEKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPrivate().getFormat());
-    	copy.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeBase64(loginPair.getPrivate().getEncoded()));
+    	if(loginPair.getPrivate() != null) {
+    		copy.putStringValue(LoginOperation.F_PRIVATEKEY_FORMAT, SecUtils.DECODE_BASE64 + ":" + loginPair.getPrivate().getFormat());
+    		copy.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeBase64(loginPair.getPrivate().getEncoded()));
+    	}
         return validation.toJson(copy);
     }
 }

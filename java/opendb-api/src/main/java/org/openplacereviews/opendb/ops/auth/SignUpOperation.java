@@ -23,6 +23,7 @@ public class SignUpOperation implements IOpenDBOperation {
 	public static final String F_AUTH_METHOD = "auth_method";
 
 	public static final String METHOD_PWD = "pwd";
+	public static final String METHOD_PROVIDED = "provided";
 	
 	private OpDefinitionBean definition;
 
@@ -54,6 +55,19 @@ public class SignUpOperation implements IOpenDBOperation {
 		return false;
 	}
 	
+	
+	public static boolean validateNickname(String name) {
+		if(name.trim().length() == 0) {
+			return false;
+		}
+		for(int i = 0; i < name.length(); i++) {
+			char c = name.charAt(i);
+			if(c != ' ' && c != '.' && c != '-' && !Character.isLetter(c) && !Character.isDigit(c)) {
+				return false;
+			}
+		}
+		return true;
+	}
 	
 	
 	
