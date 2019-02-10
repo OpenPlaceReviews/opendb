@@ -228,7 +228,7 @@ public class SecUtils {
 			throw new IllegalArgumentException(String.format("Hash %s doesn't contain algorithm of hashing to verify", s));
 		}
 		String v = calculateHash(hash.substring(0, s), salt, msg);
-		return hash.substring(s + 1).equals(v);
+		return hash.equals(v);
 	}
 
 

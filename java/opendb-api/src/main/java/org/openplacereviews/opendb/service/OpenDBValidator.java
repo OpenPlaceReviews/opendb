@@ -222,25 +222,25 @@ public class OpenDBValidator {
 		} else {
 			msg = toValidateSignatureJson(ob);
 		}
-		if(ob.getOperationId().equals(SignUpOperation.OP_ID)) {
+		if(ob.getOperationId().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// signup operation is validated by itself
 			KeyPair kp = getPublicKeyFromOp(ob);
 			return SecUtils.validateSignature(kp, msg, sigAlgo, signature); 
-		} else {
-			ActiveUser au = activeUsers.get(name);
-			if(au != null && au.signUp != null) {
-				// login operation is validated only by sign up
-				if(ob.getOperationId().equals(LoginOperation.OP_ID)) {
-					KeyPair kp = getPublicKeyFromOp(au.signUp);
-					return SecUtils.validateSignature(kp, msg, sigAlgo, signature);
-				} else {
-					// other operations are validated by any login
-					for (OpDefinitionBean login : au.logins) {
-						KeyPair kp = getPublicKeyFromOp(login);
-						boolean vl = SecUtils.validateSignature(kp, msg, sigAlgo, signature);
-						if (vl) {
-							return vl;
-						}
+		}
+		ActiveUser au = activeUsers.get(name);
+		if(au != null && au.signUp != null) {
+			// login operation is validated only by sign up
+			if(ob.getOperationId().equals(LoginOperation.OP_ID) 
+					&& ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
+				KeyPair kp = getPublicKeyFromOp(au.signUp);
+				return SecUtils.validateSignature(kp, msg, sigAlgo, signature);
+			} else {
+				// other operations are validated by any login
+				for (OpDefinitionBean login : au.logins) {
+					KeyPair kp = getPublicKeyFromOp(login);
+					boolean vl = SecUtils.validateSignature(kp, msg, sigAlgo, signature);
+					if (vl) {
+						return vl;
 					}
 				}
 			}
