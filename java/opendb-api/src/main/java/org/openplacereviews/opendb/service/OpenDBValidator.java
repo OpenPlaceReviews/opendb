@@ -94,7 +94,7 @@ public class OpenDBValidator {
 		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
 		
-		String hash = "sha256:" + SecUtils.calculateSha256(gson.toJson(ob));
+		String hash = SecUtils.calculateHash(SecUtils.HASH_SHA256, null, gson.toJson(ob));
 		if(set) {
 			ob.putStringValue(OpDefinitionBean.F_HASH,  hash);
 		} else {
@@ -120,54 +120,77 @@ public class OpenDBValidator {
 	}
 
 	
-	public OpDefinitionBean generateHashAndSignatureFromPwd(OpDefinitionBean op, KeyPair keyPair) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-    	generateHashAndSign(op, keyPair);		
-    	return op;
-	}
+
 	
 	
-	public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException {
-		ActiveUser au = activeUsers.get(name);
-		if(au == null || au.signUp == null) {
-			throw new IllegalStateException(String.format("User '%s' is not signed up", name));
-		}
-		
-		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(
-				au.signUp.getStringValue(SignUpOperation.F_ALGO), au.signUp.getStringValue(SignUpOperation.F_KEYGEN_METHOD), 
-				au.signUp.getStringValue(SignUpOperation.F_SALT), pwd);
-		return keyPair;
-	}
-	
-	public KeyPair getSignUpKeyPair(String name, 
-			String privatekey, String privateKeyFormat) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException, InvalidKeySpecException {
+	public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException, InvalidKeySpecException {
 		ActiveUser au = activeUsers.get(name);
 		if(au == null || au.signUp == null) {
 			throw new IllegalStateException(String.format("User '%s' is not signed up", name));
 		}
 		String algo = au.signUp.getStringValue(SignUpOperation.F_ALGO);
-		KeyPair kp = SecUtils.getKeyPair(algo, privateKeyFormat, privatekey, 
-				au.signUp.getStringValue(SignUpOperation.F_PUBKEY_FORMAT), au.signUp.getStringValue(SignUpOperation.F_PUBKEY));
+		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(
+				algo, au.signUp.getStringValue(SignUpOperation.F_KEYGEN_METHOD), 
+				au.signUp.getStringValue(SignUpOperation.F_SALT), pwd);
+		KeyPair kp = SecUtils.getKeyPair(algo, null, au.signUp.getStringValue(SignUpOperation.F_PUBKEY));
+		if(SecUtils.validateKeyPair(algo, keyPair.getPrivate(), kp.getPublic())) {
+			return keyPair;
+		}
+		return null;
+	}
+	
+	public KeyPair getSignUpKeyPair(String name, 
+			String privatekey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException, InvalidKeySpecException {
+		ActiveUser au = activeUsers.get(name);
+		if(au == null || au.signUp == null) {
+			throw new IllegalStateException(String.format("User '%s' is not signed up", name));
+		}
+		String algo = au.signUp.getStringValue(SignUpOperation.F_ALGO);
+		KeyPair kp = SecUtils.getKeyPair(algo, privatekey, au.signUp.getStringValue(SignUpOperation.F_PUBKEY));
 		if(SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
 			return kp;
+		}
+		return null;
+	}
+	
+	public KeyPair getLoginKeyPair(String name, String privateKey)
+			throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException, InvalidKeySpecException {
+		ActiveUser au = activeUsers.get(name);
+		if(au == null || au.signUp == null) {
+			throw new IllegalStateException(String.format("User '%s' is not signed up", name));
+		}
+		for (OpDefinitionBean op : au.logins) {
+			String algo = op.getStringValue(SignUpOperation.F_ALGO);
+			KeyPair kp = SecUtils.getKeyPair(algo, privateKey,op.getStringValue(SignUpOperation.F_PUBKEY));
+			if (SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
+				return kp;
+			}
 		}
 		return null;
 	}
 
 
 
-	public OpDefinitionBean generateHashAndSign(OpDefinitionBean op, KeyPair keyPair) throws InvalidKeyException,
+	public OpDefinitionBean generateHashAndSign(OpDefinitionBean op, KeyPair... keyPair) throws InvalidKeyException,
 			SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
 		calculateOperationHash(op, true);
     	String json = toValidateSignatureJson(op);
     	op.remove(OpDefinitionBean.F_SIGNATURE);
-    	Map<String, String> signatureMap = getSignature(keyPair, json);
-    	op.putObjectValue(OpDefinitionBean.F_SIGNATURE, signatureMap);
+    	if(keyPair.length == 1) {
+    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, getSignature(json, keyPair[0]));
+    	} else {
+    		List<Map<String, String>> lst = new ArrayList<Map<String,String>>();
+    		for(KeyPair k : keyPair) {
+    			lst.add(getSignature(json, k));
+    		}
+    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, lst);
+    	}
     	return op;
 	}
 
 
 
-	private Map<String, String> getSignature(KeyPair keyPair, String json) throws InvalidKeyException,
+	private Map<String, String> getSignature(String json, KeyPair keyPair) throws InvalidKeyException,
 			SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
 		String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
     	Map<String, String> signatureMap = new TreeMap<>();
@@ -226,12 +249,9 @@ public class OpenDBValidator {
 	}
 
 	private KeyPair getPublicKeyFromOp(OpDefinitionBean ob) throws InvalidKeySpecException, NoSuchAlgorithmException {
-		KeyPair kp;
 		String signUpalgo = ob.getStringValue(F_ALGO);
-		String pubformat = ob.getStringValue(SignUpOperation.F_PUBKEY_FORMAT);
 		String pbKey = ob.getStringValue(SignUpOperation.F_PUBKEY);
-		kp = SecUtils.getKeyPair(signUpalgo, null, null, pubformat, pbKey);
-		return kp;
+		return SecUtils.getKeyPair(signUpalgo, null, pbKey);
 	}
 
 }

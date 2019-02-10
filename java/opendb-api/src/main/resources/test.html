@@ -17,6 +17,11 @@
 
 <p id="result"></p>
 
+<!-- 
+  TEST: oauth params
+  TEST: user details
+  TEST: signup by server
+-->
 <h3>Signup</h3>
 <div>
 Nickname: <input type="text" id="signup-name"/> 
@@ -84,9 +89,9 @@ $( document ).ready(function() {
         "pwd":$("#signup-pwd").val(),
         "name":$("#signup-name").val() 
       };
-      $.post("/op/signup", obj,  function(data, status){
-        $("#result").html(data);
-      });
+      $.post("/op/signup", obj)
+          .done(function(data){  $("#result").html(data); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
     });
 
     $("#login-btn").click(function() {
@@ -94,9 +99,9 @@ $( document ).ready(function() {
     		"pwd":$("#login-pwd").val(),
     		"name":$("#login-name").val()	
     	};
-    	$.post("/op/login", obj,  function(data, status){
-    		$("#result").html(data);
-    	});
+    	$.post("/op/login", obj)
+          .done(function(data){  $("#result").html(data); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
     });
 });
 

@@ -17,11 +17,9 @@ public class LoginOperation implements IOpenDBOperation {
 	public static final String F_NAME = "name";
  	public static final String F_KEYGEN_METHOD = "keygen_method";
  	public static final String F_ALGO = "algo";
- 	public static final String F_PUBKEY = "pubkey";
- 	public static final String F_PUBKEY_FORMAT = "pubkey_format";
  	
+ 	public static final String F_PUBKEY = "pubkey";
  	public static final String F_PRIVATEKEY = "privatekey";
- 	public static final String F_PRIVATEKEY_FORMAT = "privatekey_format";
 	
 	
 	private OpDefinitionBean definition;

@@ -18,10 +18,13 @@ public class SignUpOperation implements IOpenDBOperation {
 	public static final String F_SALT = "salt";
  	public static final String F_KEYGEN_METHOD = "keygen_method";
  	public static final String F_PUBKEY = "pubkey";
- 	public static final String F_PUBKEY_FORMAT = "pubkey_format";
 	public static final String F_ALGO = "algo";
 	public static final String F_AUTH_METHOD = "auth_method";
+	public static final String F_OAUTH_PROVIDER = "oauth_provider";
+	public static final String F_OAUTH_HASH_ID = "oauth_hash_id";
+	public static final String F_DETAILS = "details";
 
+	public static final String METHOD_OAUTH = "oauth";
 	public static final String METHOD_PWD = "pwd";
 	public static final String METHOD_PROVIDED = "provided";
 	

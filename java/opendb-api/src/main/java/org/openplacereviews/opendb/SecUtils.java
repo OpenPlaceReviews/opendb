@@ -30,13 +30,19 @@ public class SecUtils {
 	
 	public static final String KEYGEN_PWD_METHOD_1 = "EC256K1_S17R8";
 	public static final String DECODE_BASE64 = "base64";
+	public static final String HASH_SHA256_SALT = "sha256_salt";
+	public static final String HASH_SHA256 = "sha256";
+	public static final String HASH_SHA1 = "sha1";
+	
+	public static final String KEY_BASE64 = DECODE_BASE64;
+	
 	
 	public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeySpecException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
 		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
 		System.out.println(kp.getPrivate().getFormat());
 		System.out.println(kp.getPrivate().getAlgorithm());
-		String pr = Base64.getEncoder().encodeToString(kp.getPrivate().getEncoded());
-		String pk = Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
+		String pr = encodeKey(KEY_BASE64, kp.getPrivate());
+		String pk = encodeKey(KEY_BASE64, kp.getPublic());
 		String algo = kp.getPrivate().getAlgorithm();
 		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", 
 				kp.getPrivate().getFormat(), pr, kp.getPublic().getFormat(), pk));
@@ -45,7 +51,7 @@ public class SecUtils {
 		System.out.println(String.format("Signed message: %s %s", Base64.getEncoder().encodeToString(signature), signMessageTest) );
 		
 		
-		KeyPair nk = getKeyPair(algo, kp.getPrivate().getFormat(), pr, kp.getPublic().getFormat(), pk);
+		KeyPair nk = getKeyPair(algo, pr, pk);
 		// validate
 		pr = Base64.getEncoder().encodeToString(nk.getPrivate().getEncoded());
 		pk = Base64.getEncoder().encodeToString(nk.getPublic().getEncoded());
@@ -55,6 +61,32 @@ public class SecUtils {
 		
 	}
 	
+	public static EncodedKeySpec decodeKey(String key) {
+		if(key.startsWith(KEY_BASE64 + ":")) {
+			key = key.substring(KEY_BASE64.length() + 1);
+			int s = key.indexOf(':');
+			if (s == -1) {
+				throw new IllegalArgumentException(String.format("Key doesn't contain algorithm of hashing to verify"));
+			}
+			return getKeySpecByFormat(key.substring(0, s), Base64.getDecoder().decode(key.substring(s + 1)));
+		}
+		throw new IllegalArgumentException(String.format("Key doesn't contain algorithm of hashing to verify"));
+	}
+	
+	
+	public static String encodeKey(String algo, PublicKey pk) {
+		if(algo.equals(KEY_BASE64)) {
+			return SecUtils.KEY_BASE64 + ":" + pk.getFormat() + ":" + encodeBase64(pk.getEncoded());
+		}
+		throw new UnsupportedOperationException("Algorithm is not supported: " + algo);
+	}
+	
+	public static String encodeKey(String algo, PrivateKey pk) {
+		if(algo.equals(KEY_BASE64)) {
+			return SecUtils.KEY_BASE64 + ":" + pk.getFormat() + ":" + encodeBase64(pk.getEncoded());
+		}
+		throw new UnsupportedOperationException("Algorithm is not supported: " + algo);
+	}
 	
 	public static EncodedKeySpec getKeySpecByFormat(String format, byte[] data) {
 		switch(format) {
@@ -90,31 +122,16 @@ public class SecUtils {
 		return keyPairMatches;
 	}
 	
-	public static KeyPair getKeyPair(String algo, String prKeyformat, String prKey, 
-			String pbKeyformat, String pbKey) throws InvalidKeySpecException, NoSuchAlgorithmException {
+	public static KeyPair getKeyPair(String algo, String prKey, 
+			String pbKey) throws InvalidKeySpecException, NoSuchAlgorithmException {
 		KeyFactory keyFactory = KeyFactory.getInstance(algo);
 		PublicKey pb = null; 
 		PrivateKey pr = null; 
 		if(pbKey != null) {
-			byte[] bytes;
-			if (pbKeyformat.startsWith(DECODE_BASE64 + ":")) {
-				bytes = Base64.getDecoder().decode(pbKey);
-				pbKeyformat = pbKeyformat.substring(DECODE_BASE64.length() + 1);
-			} else {
-				throw new IllegalArgumentException("Illegal decoding algorith");
-			}
-			bytes = Base64.getDecoder().decode(pbKey);
-			pb = keyFactory.generatePublic(getKeySpecByFormat(pbKeyformat, bytes));
+			pb = keyFactory.generatePublic(decodeKey(pbKey));
 		}
 		if(prKey != null) {
-			byte[] bytes;
-			if(pbKeyformat.startsWith(DECODE_BASE64)) {
-				bytes = Base64.getDecoder().decode(prKey);
-				pbKeyformat = pbKeyformat.substring(DECODE_BASE64.length());
-			} else {
-				throw new IllegalArgumentException("Illegal decoding algorith");
-			}
-			pr = keyFactory.generatePrivate(getKeySpecByFormat(prKeyformat, bytes));
+			pr = keyFactory.generatePrivate(decodeKey(prKey));
 		}
 		return new KeyPair(pb, pr);
 	}
@@ -184,12 +201,34 @@ public class SecUtils {
 		}
 	}
 	
+	
+	
 	public static String calculateSha256(String msg) {
 		 try {
 			return DigestUtils.sha256Hex(msg.getBytes("UTF-8"));
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+	
+	public static String calculateHash(String algo, String salt, String msg) {
+		if(algo.equals(HASH_SHA256)) {
+			return HASH_SHA256 + ":" + calculateSha256(msg);
+		} else if(algo.equals(HASH_SHA1)) {
+			return HASH_SHA1 + ":" + calculateSha1(msg);
+		} else if(algo.equals(HASH_SHA256_SALT)) {
+			return HASH_SHA256_SALT + ":" + calculateSha256(salt + msg);
+		}
+		throw new UnsupportedOperationException();
+	}
+	
+	public static boolean validateHash(String hash, String salt, String msg) {
+		int s = hash.indexOf(":");
+		if (s == -1) {
+			throw new IllegalArgumentException(String.format("Hash %s doesn't contain algorithm of hashing to verify", s));
+		}
+		String v = calculateHash(hash.substring(0, s), salt, msg);
+		return hash.substring(s + 1).equals(v);
 	}
 
 
@@ -203,5 +242,7 @@ public class SecUtils {
 		}
 		throw new IllegalArgumentException(format);
 	}
+
+
 
 }
