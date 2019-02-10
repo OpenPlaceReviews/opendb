@@ -69,7 +69,7 @@ public class OpenDBValidator {
 				throw new IllegalArgumentException("User was already signed up");
 			}
 			au.signUp = op;
-		} else if(op.getOperationId().equals(SignUpOperation.OP_ID)) {
+		} else if(op.getOperationId().equals(LoginOperation.OP_ID)) {
 			au.logins.add(op);
 		}
 	}
@@ -206,12 +206,10 @@ public class OpenDBValidator {
 	
 	
 
-	public boolean validateSignature(OpDefinitionBean ob) throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
-		Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
+	public boolean validateSignature(OpDefinitionBean ob, Map<String, String> sig, String name) throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
 		if(sig == null) {
 			return false;
 		}
-		String name = ob.getSignedBy();
 		if(name == null) {
 			return false;
 		}

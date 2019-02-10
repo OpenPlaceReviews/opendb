@@ -54,6 +54,10 @@ public class OpDefinitionBean {
 		return otherSignedBy;
 	}
 	
+	public boolean hasOneSignature() {
+		return otherSignedBy == null || otherSignedBy.isEmpty();
+	}
+	
 	public void addOtherSignedBy(String signedBy) {
 		if(otherSignedBy == null) {
 			otherSignedBy = new ArrayList<String>();
@@ -76,6 +80,11 @@ public class OpDefinitionBean {
 	@SuppressWarnings("unchecked")
 	public Map<String, String> getStringMap(String field) {
 		return (Map<String, String>) otherFields.get(field);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<Map<String, String>> getListStringMap(String field) {
+		return (List<Map<String, String>>) otherFields.get(field);
 	}
 	
 	public Number getNumberValue(String field) {

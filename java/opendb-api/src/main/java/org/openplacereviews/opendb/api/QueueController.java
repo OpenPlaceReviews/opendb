@@ -5,6 +5,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -31,12 +32,12 @@ public class QueueController {
     private OperationsQueue queue;
     
     @Autowired
-    private OpenDBValidator formatter;
+    private OpenDBValidator validator;
 
     @PostMapping(path = "/add")
     @ResponseBody
     public String addToQueue(@RequestParam(required = true) String id) {
-    	OpBlock block = formatter.parseBootstrapBlock(id);
+    	OpBlock block = validator.parseBootstrapBlock(id);
     	queue.addOperations(block.getOperations());
         return "OK";
     }
@@ -53,14 +54,27 @@ public class QueueController {
     public String queueList() throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeySpecException {
     	OpBlock bl = new OpBlock();
     	for(OpDefinitionBean ob : queue.getOperationsQueue()) {
-    		Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
-    		if(sig != null) {
-    			boolean validate = formatter.validateSignature(ob);
-    			sig.put("valid", validate + "");
+    		if(ob.hasOneSignature()) {
+    			Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
+    			if(sig != null) {
+    				boolean validate = validator.validateSignature(ob, sig, ob.getSignedBy());
+        			sig.put("valid", validate + "");    				
+    			}
+    		} else {
+    			List<Map<String, String>> sigs = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
+    			for(int i = 0; i < sigs.size(); i++) {
+    				Map<String, String> sig  = sigs.get(i);
+    				if(sig != null) {
+        				boolean validate = validator.validateSignature(ob, sig, i == 0 ? 
+        						ob.getSignedBy() : ob.getOtherSignedBy().get(i - 1));
+            			sig.put("valid", validate + "");    				
+        			}	
+    			}
     		}
+    		
     		bl.getOperations().add(ob);	
     	}
-    	return formatter.toJson(bl);
+    	return validator.toJson(bl);
     }
     
 }

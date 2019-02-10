@@ -96,9 +96,13 @@ public class OperationsController {
     		op.putStringValue(SignUpOperation.F_SALT, salt);
         	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, keyGen);
     		op.setSignedBy(name);
-    		if(serverName != null) {
+    		if(!Utils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
     			otherKeyPair = validation.getLoginKeyPair(serverName, privateKey);
+    			if(otherKeyPair == null) {
+    				throw new IllegalArgumentException(
+    						String.format("Server %s to signup user doesn't have valid login key", serverName));
+    			}
     		}
     	} else if(!Utils.isEmpty(oauthId)) {
     		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_OAUTH);
@@ -112,6 +116,10 @@ public class OperationsController {
     		op.setSignedBy(name);
     		keyPair = SecUtils.getKeyPair(algo, privateKey, publicKey);
     	}
+    	if(keyPair == null) {
+			throw new IllegalArgumentException(
+					String.format("Signup private / public key could not be generated"));
+		}
     	op.putStringValue(SignUpOperation.F_ALGO, algo);
     	
     	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
@@ -143,9 +151,13 @@ public class OperationsController {
 		if (!Utils.isEmpty(pwd)) {
 			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
 			op.setSignedBy(name);
-			if(serverName != null) {
+			if(!Utils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
     			otherKeyPair = validation.getLoginKeyPair(serverName, privateKey);
+    			if(otherKeyPair == null) {
+    				throw new IllegalArgumentException(
+    						String.format("Server %s to signup user doesn't have valid login key", serverName));
+    			}
     		}
 		} else if (!Utils.isEmpty(oauthId)) {
 			kp = validation.getLoginKeyPair(serverName, privateKey);
@@ -163,8 +175,6 @@ public class OperationsController {
 		if (kp == null) {
 			throw new IllegalArgumentException("Couldn't validate sign up key or server key for oauth");
 		}
-    	
-    	
     	
     	KeyPair loginPair;
 		if (!Utils.isEmpty(loginAlgo)) {

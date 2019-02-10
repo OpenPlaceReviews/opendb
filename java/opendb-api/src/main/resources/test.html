@@ -18,15 +18,20 @@
 <p id="result"></p>
 
 <!-- 
-  TEST: oauth params
-  TEST: user details
-  TEST: signup by server
 -->
 <h3>Signup</h3>
 <div>
 Nickname: <input type="text" id="signup-name"/> 
 <br>
 Password: <input type="text" id="signup-pwd"/> 
+<br>
+OAuth provider: <input type="text" id="signup-oauth-p"/>  
+OAuth Id: <input type="text" id="signup-oauth-id"/> 
+<br>
+Server username: <input type="text" id="signup-server-name"/>  
+Server private key: <input type="text" id="signup-server-pk"/>  
+<br>
+User details (raw json): <input type="text" id="signup-details"/>  
 <br>
 <input type="submit" value="Signup" id="signup-btn"/>
 </div>
@@ -36,6 +41,12 @@ Password: <input type="text" id="signup-pwd"/>
 Nickname: <input type="text" id="login-name"/> 
 <br>
 Password: <input type="text" id="login-pwd"/> 
+<br>
+OAuth provider: <input type="text" id="login-oauth-p"/>  
+OAuth Id: <input type="text" id="login-oauth-id"/> 
+<br>
+Server username: <input type="text" id="login-server-name"/>  
+Server private key: <input type="text" id="login-server-pk"/>  
 <br>
 <input type="submit" value="Login" id="login-btn"/>
 </div>
@@ -87,7 +98,13 @@ $( document ).ready(function() {
     $("#signup-btn").click(function() {
       var obj = {
         "pwd":$("#signup-pwd").val(),
-        "name":$("#signup-name").val() 
+        "name":$("#signup-name").val(),
+        "oauthProvider":$("#signup-oauth-p").val(),
+        "oauthId":$("#signup-oauth-id").val(),
+        "privateKey":$("#signup-server-pk").val(),
+        "serverName":$("#signup-server-name").val(),
+        "userDetails":$("#signup-details").val()
+        
       };
       $.post("/op/signup", obj)
           .done(function(data){  $("#result").html(data); })
@@ -97,7 +114,11 @@ $( document ).ready(function() {
     $("#login-btn").click(function() {
     	var obj = {
     		"pwd":$("#login-pwd").val(),
-    		"name":$("#login-name").val()	
+    		"name":$("#login-name").val(),
+        "oauthProvider":$("#login-oauth-p").val(),
+        "oauthId":$("#login-oauth-id").val(),
+        "privateKey":$("#login-server-pk").val(),
+        "serverName":$("#login-server-name").val()
     	};
     	$.post("/op/login", obj)
           .done(function(data){  $("#result").html(data); })
