@@ -31,7 +31,6 @@ public class OpenDBValidator {
 
 	private Gson gson;
     
- 	
  	// signature section
  	public static final String F_FORMAT = "format";
  	public static final String F_ALGO = "algo";
@@ -41,8 +40,7 @@ public class OpenDBValidator {
  	public static final String JSON_MSG_TYPE = "json";
  	
  	
- 	// TODO support operations chain
- 	private static class ActiveUser {
+ 	protected static class ActiveUser {
  		protected String name;
  		protected OpDefinitionBean signUp;
  		protected List<OpDefinitionBean> logins = new ArrayList<OpDefinitionBean>();
@@ -50,7 +48,6 @@ public class OpenDBValidator {
  	}
  	
  	Map<String, ActiveUser> activeUsers = new ConcurrentHashMap<String, ActiveUser>();
-	
 	public OpenDBValidator() {
 		GsonBuilder builder = new GsonBuilder();
 		builder.disableHtmlEscaping();
@@ -138,6 +135,12 @@ public class OpenDBValidator {
 		}
 		return null;
 	}
+	
+	public OpDefinitionBean getSignUpOperation(String name) {
+		ActiveUser au = activeUsers.get(name);
+		return au == null ? null : au.signUp;
+	}
+	
 	
 	public KeyPair getSignUpKeyPair(String name, 
 			String privatekey) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException, InvalidKeyException, SignatureException, InvalidKeySpecException {
@@ -245,7 +248,6 @@ public class OpenDBValidator {
 			}
 		}
 		return false;
-		
 	}
 
 	private KeyPair getPublicKeyFromOp(OpDefinitionBean ob) throws InvalidKeySpecException, NoSuchAlgorithmException {

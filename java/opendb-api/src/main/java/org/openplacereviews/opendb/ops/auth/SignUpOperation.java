@@ -21,7 +21,7 @@ public class SignUpOperation implements IOpenDBOperation {
 	public static final String F_ALGO = "algo";
 	public static final String F_AUTH_METHOD = "auth_method";
 	public static final String F_OAUTH_PROVIDER = "oauth_provider";
-	public static final String F_OAUTH_HASH_ID = "oauth_hash_id";
+	public static final String F_OAUTHID_HASH = "oauthid_hash";
 	public static final String F_DETAILS = "details";
 
 	public static final String METHOD_OAUTH = "oauth";

@@ -41,12 +41,10 @@ public class OperationsController {
     
     private Gson gson = new GsonBuilder().create();
 
-    // TODO support login Key Pair!
     @PostMapping(path = "/sign")
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
-    		@RequestParam(required = false) String pwd, 
-    		@RequestParam(required = false) String privateKey) throws Exception {
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey) throws Exception {
     	KeyPair kp = null;
 		if (!Utils.isEmpty(pwd)) {
 			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
@@ -62,10 +60,6 @@ public class OperationsController {
         return validation.toJson(op);
     }
 
-    // FUTURE: validation about uniqueness
-    // FUTURE: add role for oauth signup / login
-    // FUTURE: change nickname, details op
-    
     @PostMapping(path = "/signup")
     @ResponseBody
     public String signup(@RequestParam(required = true) String name, @RequestParam(required = false) String serverName, 
@@ -109,7 +103,7 @@ public class OperationsController {
     	} else if(!Utils.isEmpty(oauthId)) {
     		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_OAUTH);
     		op.putStringValue(SignUpOperation.F_SALT, name);
-			op.putStringValue(SignUpOperation.F_OAUTH_HASH_ID, SecUtils.calculateHash(SecUtils.HASH_SHA256_SALT, name, oauthId));
+			op.putStringValue(SignUpOperation.F_OAUTHID_HASH, SecUtils.calculateHash(SecUtils.HASH_SHA256_SALT, name, oauthId));
 			op.putStringValue(SignUpOperation.F_OAUTH_PROVIDER, oauthProvider);
     		keyPair = validation.getLoginKeyPair(serverName, privateKey);
     		op.setSignedBy(serverName);
@@ -140,27 +134,43 @@ public class OperationsController {
     		@RequestParam(required = false) String privateKey, 
     		@RequestParam(required = false) String loginAlgo, 
     		@RequestParam(required = false) String loginPubKey) throws Exception {
-		KeyPair kp = null;
-		if (!Utils.isEmpty(pwd)) {
-			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
-		} else if (!Utils.isEmpty(oauthId)) {
-			validation.getLoginKeyPair(serverName, privateKey);
-		} else if (!Utils.isEmpty(privateKey)) {
-			kp = validation.getSignUpKeyPair(name, privateKey);
-		}
-		if (kp == null) {
-			throw new IllegalArgumentException("Couldn't validate sign up key");
-		}
-    	
     	OpDefinitionBean op = new OpDefinitionBean();
     	op.setType(OperationsRegistry.OP_TYPE_AUTH);
     	op.setOperation(LoginOperation.OP_ID);
     	op.putStringValue(LoginOperation.F_NAME, name);
-    	op.setSignedBy(name);
+		KeyPair kp = null;
+		KeyPair otherKeyPair = null;
+		if (!Utils.isEmpty(pwd)) {
+			kp = validation.getSignUpKeyPairFromPwd(name, pwd);
+			op.setSignedBy(name);
+			if(serverName != null) {
+    			op.addOtherSignedBy(serverName);
+    			otherKeyPair = validation.getLoginKeyPair(serverName, privateKey);
+    		}
+		} else if (!Utils.isEmpty(oauthId)) {
+			kp = validation.getLoginKeyPair(serverName, privateKey);
+			OpDefinitionBean sop = validation.getSignUpOperation(name);
+			if(!SecUtils.validateHash(sop.getStringValue(SignUpOperation.F_OAUTHID_HASH), 
+					sop.getStringValue(SignUpOperation.F_SALT), oauthId) || 
+					!oauthProvider.equals(sop.getStringValue(SignUpOperation.F_OAUTH_PROVIDER))) {
+				throw new IllegalArgumentException("User was registered with different oauth id");
+			}
+			op.setSignedBy(serverName);
+		} else if (!Utils.isEmpty(privateKey)) {
+			kp = validation.getSignUpKeyPair(name, privateKey);
+			op.setSignedBy(name);
+		}
+		if (kp == null) {
+			throw new IllegalArgumentException("Couldn't validate sign up key or server key for oauth");
+		}
+    	
+    	
+    	
     	KeyPair loginPair;
 		if (!Utils.isEmpty(loginAlgo)) {
 			op.putStringValue(LoginOperation.F_ALGO, loginAlgo);
     		loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
+			
     	} else {
     		op.putStringValue(LoginOperation.F_ALGO, SecUtils.ALGO_EC);
     		loginPair = SecUtils.generateRandomEC256K1KeyPair();
@@ -168,7 +178,11 @@ public class OperationsController {
 		op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
     	
     	
-    	validation.generateHashAndSign(op, kp);
+    	if(otherKeyPair == null) {
+    		validation.generateHashAndSign(op, kp);
+    	} else {
+    		validation.generateHashAndSign(op, kp, otherKeyPair);
+    	}
     	validation.addAuthOperation(name, op);
     	queue.addOperation(op);
     	// private key won't be stored on opendb
