@@ -58,6 +58,11 @@ public class SignUpOperation implements IOpenDBOperation {
 		return false;
 	}
 	
+	private static boolean isAllowedNicknameSymbol(char c) {
+		return c == ' ' || c == '$'  || c == '_' ||  
+				c == '.' || c == '-' ;
+	}
+	
 	
 	public static boolean validateNickname(String name) {
 		if(name.trim().length() == 0) {
@@ -65,7 +70,7 @@ public class SignUpOperation implements IOpenDBOperation {
 		}
 		for(int i = 0; i < name.length(); i++) {
 			char c = name.charAt(i);
-			if(c != ' ' && c != '.' && c != '-' && !Character.isLetter(c) && !Character.isDigit(c)) {
+			if(!Character.isLetter(c) && !Character.isDigit(c) && !isAllowedNicknameSymbol(c)) {
 				return false;
 			}
 		}

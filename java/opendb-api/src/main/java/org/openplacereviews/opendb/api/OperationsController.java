@@ -121,7 +121,6 @@ public class OperationsController {
 					String.format("Signup private / public key could not be generated"));
 		}
     	op.putStringValue(SignUpOperation.F_ALGO, algo);
-    	
     	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
     	
     	if(otherKeyPair == null) {

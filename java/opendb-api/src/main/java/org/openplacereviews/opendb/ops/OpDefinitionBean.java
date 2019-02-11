@@ -20,6 +20,7 @@ public class OpDefinitionBean {
 	public static final String F_HASH = "hash";
 	public static final String F_SIGNATURE = "signature";
 	public static final String F_SIGNED_BY = "signed_by";
+	public static final String SYSTEM_TYPE= "system";
 	
 	private String type;
 	private String operation;
@@ -111,15 +112,21 @@ public class OpDefinitionBean {
 	public static class OpDefinitionBeanAdapter implements JsonDeserializer<OpDefinitionBean>,
 			JsonSerializer<OpDefinitionBean> {
 		private static final String F_OPERATION = "operation";
-		private static final String F_TYPE = "type";
 		
 		@Override
 		public OpDefinitionBean deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
 			JsonObject o = json.getAsJsonObject();
 			OpDefinitionBean bn = new OpDefinitionBean();
-			bn.operation = o.get(F_OPERATION).getAsString();
-			bn.type = o.get(F_TYPE).getAsString();
+			String op = o.get(F_OPERATION).getAsString();
+			int s = op.indexOf(':');
+			if(s == -1) {
+				bn.type = SYSTEM_TYPE;
+				bn.operation = op;
+			} else {
+				bn.type = op.substring(0, s);
+				bn.operation = op.substring(s+1);
+			}
 			if(o.has(F_SIGNED_BY)) {
 				if(o.get(F_SIGNED_BY).isJsonArray()) {
 					bn.otherSignedBy = new ArrayList<String>();
@@ -143,8 +150,7 @@ public class OpDefinitionBean {
 		@Override
 		public JsonElement serialize(OpDefinitionBean src, Type typeOfSrc, JsonSerializationContext context) {
 			JsonObject o = new JsonObject();
-			o.addProperty(F_OPERATION, src.operation);
-			o.addProperty(F_TYPE, src.type);
+			o.addProperty(F_OPERATION, src.type + ":" + src.operation);
 			if(src.otherSignedBy == null || src.otherSignedBy.size() == 0) {
 				o.addProperty(F_SIGNED_BY, src.signedBy);
 			} else {

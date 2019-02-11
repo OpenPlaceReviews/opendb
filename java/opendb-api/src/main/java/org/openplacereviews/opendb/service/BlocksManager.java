@@ -42,9 +42,7 @@ public class BlocksManager {
 
 	
 	public synchronized String replicateBlock(OpBlock remoteBlock) {
-		
 		return executeBlock(remoteBlock);
-		
 	}
 
 
