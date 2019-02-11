@@ -55,6 +55,10 @@ public class OpDefinitionBean {
 		return otherSignedBy;
 	}
 	
+	public String getHash() {
+		return getStringValue(F_HASH);
+	}
+	
 	public boolean hasOneSignature() {
 		return otherSignedBy == null || otherSignedBy.isEmpty();
 	}

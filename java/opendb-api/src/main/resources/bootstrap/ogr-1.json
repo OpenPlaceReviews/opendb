@@ -48,7 +48,7 @@
 			"table_columns": {
 				"nickname" : ".name",
 				"block" : "$block",
-				"op_hash" : "hashlast_to_int(.hash)",
+				"op_hash" : "hashlast_to_int4(.hash)",
 				"details" : ".details"
 			}
 		},
@@ -61,7 +61,7 @@
 			"table_columns": {
 				"nickname" : ".name",
 				"block" : "$block",
-				"op_hash" : "hashlast_to_int(.hash)",
+				"op_hash" : "hashlast_to_int4(.hash)",
 				"details" : ".details"
 			}
 		}

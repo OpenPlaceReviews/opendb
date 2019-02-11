@@ -37,7 +37,7 @@ public class SecUtils {
 	public static final String KEY_BASE64 = DECODE_BASE64;
 	
 	
-	public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeySpecException, InvalidKeyException, SignatureException, UnsupportedEncodingException {
+	public static void main(String[] args) throws FailedVerificationException {
 		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
 		System.out.println(kp.getPrivate().getFormat());
 		System.out.println(kp.getPrivate().getAlgorithm());
@@ -100,51 +100,64 @@ public class SecUtils {
 		return Base64.getEncoder().encodeToString(data);
 	}
 	
-	public static boolean validateKeyPair(String algo, PrivateKey privateKey, PublicKey publicKey) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException {
+	public static boolean validateKeyPair(String algo, PrivateKey privateKey, PublicKey publicKey) throws FailedVerificationException {
 		if(!algo.equals(ALGO_EC)) {
-			throw new UnsupportedOperationException("Algorithm is not supported: " + algo);
+			throw new FailedVerificationException("Algorithm is not supported: " + algo);
 		}
 		// create a challenge
 		byte[] challenge = new byte[512];
 		ThreadLocalRandom.current().nextBytes(challenge);
 
-		// sign using the private key
-		Signature sig = Signature.getInstance(SIG_ALGO_SHA1_EC);
-		sig.initSign(privateKey);
-		sig.update(challenge);
-		byte[] signature = sig.sign();
+		try {
+			// sign using the private key
+			Signature sig = Signature.getInstance(SIG_ALGO_SHA1_EC);
+			sig.initSign(privateKey);
+			sig.update(challenge);
+			byte[] signature = sig.sign();
 
-		// verify signature using the public key
-		sig.initVerify(publicKey);
-		sig.update(challenge);
+			// verify signature using the public key
+			sig.initVerify(publicKey);
+			sig.update(challenge);
 
-		boolean keyPairMatches = sig.verify(signature);
-		return keyPairMatches;
+			boolean keyPairMatches = sig.verify(signature);
+			return keyPairMatches;
+		} catch (InvalidKeyException e) {
+			throw new FailedVerificationException(e);
+		} catch (NoSuchAlgorithmException e) {
+			throw new FailedVerificationException(e);
+		} catch (SignatureException e) {
+			throw new FailedVerificationException(e);
+		}
 	}
 	
-	public static KeyPair getKeyPair(String algo, String prKey, 
-			String pbKey) throws InvalidKeySpecException, NoSuchAlgorithmException {
-		KeyFactory keyFactory = KeyFactory.getInstance(algo);
-		PublicKey pb = null; 
-		PrivateKey pr = null; 
-		if(pbKey != null) {
-			pb = keyFactory.generatePublic(decodeKey(pbKey));
+	public static KeyPair getKeyPair(String algo, String prKey, String pbKey) throws FailedVerificationException {
+		try {
+			KeyFactory keyFactory = KeyFactory.getInstance(algo);
+			PublicKey pb = null;
+			PrivateKey pr = null;
+			if (pbKey != null) {
+				pb = keyFactory.generatePublic(decodeKey(pbKey));
+			}
+			if (prKey != null) {
+				pr = keyFactory.generatePrivate(decodeKey(prKey));
+			}
+			return new KeyPair(pb, pr);
+		} catch (NoSuchAlgorithmException e) {
+			throw new FailedVerificationException(e);
+		} catch (InvalidKeySpecException e) {
+			throw new FailedVerificationException(e);
 		}
-		if(prKey != null) {
-			pr = keyFactory.generatePrivate(decodeKey(prKey));
-		}
-		return new KeyPair(pb, pr);
 	}
 
 	
-	public static KeyPair generateKeyPairFromPassword(String algo, String keygenMethod, String salt, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
+	public static KeyPair generateKeyPairFromPassword(String algo, String keygenMethod, String salt, String pwd) throws FailedVerificationException {
 		if(algo.equals(ALGO_EC)) {
 			return generateECKeyPairFromPassword(keygenMethod, salt, pwd);
 		}
 		throw new UnsupportedOperationException("Unsupported algo keygen method: " + algo);
 	}
 	
-	public static KeyPair generateECKeyPairFromPassword(String keygenMethod, String salt, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
+	public static KeyPair generateECKeyPairFromPassword(String keygenMethod, String salt, String pwd) throws FailedVerificationException {
 		if(keygenMethod.equals(KEYGEN_PWD_METHOD_1)) {
 			return generateEC256K1KeyPairFromPassword(salt, pwd);
 		}
@@ -152,45 +165,81 @@ public class SecUtils {
 	}
 	
     // "EC:secp256k1:scrypt(salt,N:17,r:8,p:1,len:256)" algorithm - EC256K1_S17R8
-	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
-		KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC);
-        ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
-        if(pwd.length() < 10) {
-        	throw new IllegalArgumentException("Less than 10 characters produces only 50 bit entropy");
-        }
-        byte[] bytes = pwd.getBytes("UTF-8");
-        byte[] scrypt = SCrypt.generate(bytes, salt.getBytes("UTF-8"), 1 << 17, 8, 1, 256);
-        kpg.initialize(ecSpec, new FixedSecureRandom(scrypt));
-        return kpg.genKeyPair();
+	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd) throws FailedVerificationException {
+		try {
+			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC);
+			ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
+			if(pwd.length() < 10) {
+				throw new IllegalArgumentException("Less than 10 characters produces only 50 bit entropy");
+			}
+			byte[] bytes = pwd.getBytes("UTF-8");
+			byte[] scrypt = SCrypt.generate(bytes, salt.getBytes("UTF-8"), 1 << 17, 8, 1, 256);
+			kpg.initialize(ecSpec, new FixedSecureRandom(scrypt));
+			return kpg.genKeyPair();
+		} catch (NoSuchAlgorithmException e) {
+			throw new FailedVerificationException(e);
+		} catch (UnsupportedEncodingException e) {
+			throw new FailedVerificationException(e);
+		} catch (InvalidAlgorithmParameterException e) {
+			throw new FailedVerificationException(e);
+		}
 	}
 	
 	
-	public static KeyPair generateRandomEC256K1KeyPair()
-			throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnsupportedEncodingException {
-		KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC);
-		ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
-		kpg.initialize(ecSpec);
-		return kpg.genKeyPair();
+	public static KeyPair generateRandomEC256K1KeyPair() throws FailedVerificationException {
+		try {
+			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC);
+			ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
+			kpg.initialize(ecSpec);
+			return kpg.genKeyPair();
+		} catch (NoSuchAlgorithmException e) {
+			throw new FailedVerificationException(e);
+		} catch (InvalidAlgorithmParameterException e) {
+			throw new FailedVerificationException(e);
+		}
 	}
 	
 
-	public static String signMessageWithKeyBase64(KeyPair keyPair, String msg, String hashAlgo) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
+	public static String signMessageWithKeyBase64(KeyPair keyPair, String msg, String hashAlgo) throws FailedVerificationException {
         return Base64.getEncoder().encodeToString(signMessageWithKey(keyPair, msg, hashAlgo));
 	}
 	
-	public static byte[] signMessageWithKey(KeyPair keyPair, String msg, String hashAlgo) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException {
+	public static byte[] signMessageWithKey(KeyPair keyPair, String msg, String hashAlgo) throws FailedVerificationException {
+		try {
         Signature sig = Signature.getInstance(hashAlgo);
         sig.initSign(keyPair.getPrivate());
         sig.update(msg.getBytes("UTF-8"));
         byte[] signatureBytes = sig.sign();
         return signatureBytes;
+		} catch (NoSuchAlgorithmException e) {
+			throw new FailedVerificationException(e);
+		} catch (InvalidKeyException e) {
+			throw new FailedVerificationException(e);
+		} catch (SignatureException e) {
+			throw new FailedVerificationException(e);
+		} catch (UnsupportedEncodingException e) {
+			throw new FailedVerificationException(e);
+		}
 	}
 	
-	public static boolean validateSignature(KeyPair keyPair, String msg, String hashAlgo, byte[] signature) throws SignatureException, InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException {
-		Signature sig = Signature.getInstance(hashAlgo);
-        sig.initVerify(keyPair.getPublic());
-        sig.update(msg.getBytes("UTF-8"));
-        return sig.verify(signature);
+	public static boolean validateSignature(KeyPair keyPair, String msg, String hashAlgo, byte[] signature) throws FailedVerificationException {
+		if(keyPair == null) {
+			return false;
+		}
+		try {
+			Signature sig = Signature.getInstance(hashAlgo);
+			sig.initVerify(keyPair.getPublic());
+			sig.update(msg.getBytes("UTF-8"));
+			return sig.verify(signature);
+		} catch (NoSuchAlgorithmException e) {
+			throw new FailedVerificationException(e);
+		} catch (InvalidKeyException e) {
+			throw new FailedVerificationException(e);
+		} catch (SignatureException e) {
+			throw new FailedVerificationException(e);
+		} catch (UnsupportedEncodingException e) {
+			throw new FailedVerificationException(e);
+		}
 	}
 	
 	public static String calculateSha1(String msg) {

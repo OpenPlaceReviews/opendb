@@ -34,4 +34,11 @@ public class Utils {
 	    return true;
 	}
 
+	public static boolean equals(String s1, String s2) {
+		if(s1 == null) {
+			return s1 == s2;
+		}
+		return s1.equals(s2);
+	}
+
 }

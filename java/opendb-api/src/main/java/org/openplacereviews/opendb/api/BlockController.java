@@ -7,7 +7,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.OpenDBValidator;
+import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
 import org.openplacereviews.opendb.service.OperationsQueue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.jayway.jsonpath.internal.Utils;
 
 @Controller
 @RequestMapping("/block")
@@ -31,7 +33,7 @@ public class BlockController {
     private OperationsQueue queue;
     
     @Autowired
-    private OpenDBValidator validator;
+    private OpenDBUsersRegistry usersRegistry;
 
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
     @ResponseBody
@@ -43,23 +45,27 @@ public class BlockController {
     @GetMapping(path = "/content", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public InputStreamResource block(@RequestParam(required = true) String id) {
-        return new InputStreamResource(validator.getBlock(id));
+        return new InputStreamResource(usersRegistry.getBlock(id));
     }
     
     
     @PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
-    public String bootstrap(@RequestParam(required = true) String serverName,
-    		@RequestParam(required = true) String privateKey) throws Exception {
-    	OpBlock block = validator.parseBootstrapBlock("1");
-    	KeyPair kp = validator.getLoginKeyPair(serverName, privateKey);
-    	for(OpDefinitionBean o : block.getOperations()) {
-    		o.setSignedBy(serverName);
-    		OpDefinitionBean op = validator.generateHashAndSign(o, kp);
-    		queue.addOperation(op);
-    	}
-    	//TODO
-//    	manager.replicateBlock(block);
+    public String bootstrap(@RequestParam(required = false) String serverName,
+    		@RequestParam(required = false) String privateKey) throws Exception {
+    	OpBlock block = usersRegistry.parseBootstrapBlock("1");
+		if (!Utils.isEmpty(serverName)) {
+			KeyPair kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
+			for (OpDefinitionBean o : block.getOperations()) {
+				OpDefinitionBean op = o;
+				if (!Utils.isEmpty(serverName)) {
+					op.setSignedBy(serverName);
+					op = usersRegistry.generateHashAndSign(op, kp);
+					queue.addOperation(op);
+				}
+			}
+		}
+		manager.createBlock();
         return "OK";
     }
 }

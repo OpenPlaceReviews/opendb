@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,11 +12,16 @@ public class OperationsQueue {
 
 	ConcurrentLinkedQueue<OpDefinitionBean> operationsQueue = new ConcurrentLinkedQueue<OpDefinitionBean>();
 	
+    @Autowired
+    private OpenDBUsersRegistry validation;
+
+	
 	public void addOperations(List<OpDefinitionBean> operations) {
 		operationsQueue.addAll(operations);
 	}
 	
 	public void addOperation(OpDefinitionBean op) {
+		validation.getQueueUsers().addAuthOperation(op);
 		operationsQueue.add(op);
 	}
 	
