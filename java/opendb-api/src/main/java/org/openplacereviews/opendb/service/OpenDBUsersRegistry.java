@@ -221,7 +221,7 @@ public class OpenDBUsersRegistry {
 				parent.getLoginOperations(name, list);
 			}
 			ActiveUser au = users.get(name);
-			if (au == null || au.signUp == null) {
+			if (au != null && au.signUp != null) {
 				list.addAll(au.logins);
 			}
 			return list;
