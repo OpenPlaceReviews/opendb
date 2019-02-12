@@ -7,7 +7,7 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.Utils;
-import org.openplacereviews.opendb.ops.IOpenDBOperation;
+import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 
 @OpenDBOperation(CreateTableOperation.OP_ID)
-public class CreateTableOperation implements IOpenDBOperation {
+public class CreateTableOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(CreateTableOperation.class);
 	public static final String OP_ID = "create_table";
@@ -38,20 +38,20 @@ public class CreateTableOperation implements IOpenDBOperation {
 	}
 	
 	@Override
-	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
+	public boolean prepare(OpDefinitionBean definition) {
 		this.definition = definition;
 		tableName = definition.getStringValue(FIELD_TABLE_NAME);
+		StringBuilder errorMessage = new StringBuilder();
 		if(!Utils.validateSqlIdentifier(tableName, errorMessage, FIELD_TABLE_NAME, "create table")) {
-			return false;
+			throw new IllegalArgumentException(errorMessage.toString());
 		}
 		tableColumns = definition.getStringMap(FIELD_TABLE_COLUMNS);
 		if(tableColumns == null || tableColumns.isEmpty()) {
-			errorMessage.append(String.format("Field '%s' is not specified which is necessary to create table", FIELD_TABLE_COLUMNS));
-			return false;
+			throw new IllegalArgumentException(String.format("Field '%s' is not specified which is necessary to create table", FIELD_TABLE_COLUMNS));
 		}
 		for(String col: tableColumns.keySet()) {
 			if(!Utils.validateSqlIdentifier(col, errorMessage, FIELD_TABLE_COLUMNS, "create table")) {
-				return false;
+				throw new IllegalArgumentException(errorMessage.toString());
 			}	
 		}
 		return true;
@@ -68,7 +68,7 @@ public class CreateTableOperation implements IOpenDBOperation {
 	}
 
 	@Override
-	public boolean execute(JdbcTemplate template, StringBuilder errorMessage) {
+	public boolean execute(JdbcTemplate template) {
 		StringBuilder sql = new StringBuilder("create table " + tableName);
 		StringBuilder columnsDef = new StringBuilder();
 		for(Entry<String, String> e : this.tableColumns.entrySet()) {
@@ -83,8 +83,7 @@ public class CreateTableOperation implements IOpenDBOperation {
 			template.execute(sql.toString());
 		} catch(RuntimeException e) {
 			LOGGER.warn("DDL failed: " + e.getMessage(), e);
-			errorMessage.append("Failed to execute DDL: " + e.getMessage());
-			return false;
+			throw e;
 		}
 		return true;
 	}

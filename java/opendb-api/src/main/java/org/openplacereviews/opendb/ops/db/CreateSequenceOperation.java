@@ -3,7 +3,7 @@ package org.openplacereviews.opendb.ops.db;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.Utils;
-import org.openplacereviews.opendb.ops.IOpenDBOperation;
+import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 
 @OpenDBOperation(CreateSequenceOperation.OP_ID)
-public class CreateSequenceOperation implements IOpenDBOperation {
+public class CreateSequenceOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(CreateSequenceOperation.class);
 	public static final String OP_ID = "create_sequence";
@@ -35,11 +35,12 @@ public class CreateSequenceOperation implements IOpenDBOperation {
 	
 	
 	@Override
-	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
+	public boolean prepare(OpDefinitionBean definition) {
 		this.definition = definition;
 		seqName = definition.getStringValue(FIELD_SEQ_NAME);
+		StringBuilder errorMessage = new StringBuilder();
 		if(!Utils.validateSqlIdentifier(seqName, errorMessage, FIELD_SEQ_NAME, "create sequence")) {
-			return false;
+			throw new IllegalArgumentException(errorMessage.toString());
 		}
 		minValue = definition.getNumberValue(FIELD_SEQ_MINVALUE);
 		return true;
@@ -56,7 +57,7 @@ public class CreateSequenceOperation implements IOpenDBOperation {
 	}
 
 	@Override
-	public boolean execute(JdbcTemplate template, StringBuilder errorMessage) {
+	public boolean execute(JdbcTemplate template) {
 		StringBuilder sql = new StringBuilder("create sequence " + seqName);
 		if(minValue != null) {
 			sql.append(" MINVALUE ").append(minValue.intValue());
@@ -64,10 +65,9 @@ public class CreateSequenceOperation implements IOpenDBOperation {
 		try {
 			LOGGER.info("DDL executed: " + sql);
 			template.execute(sql.toString());
-		} catch(RuntimeException e) {
+		} catch (RuntimeException e) {
 			LOGGER.warn("DDL failed: " + e.getMessage(), e);
-			errorMessage.append("Failed to execute DDL: " + e.getMessage());
-			return false;
+			throw e;
 		}
 		return true;
 	}

@@ -2,7 +2,7 @@ package org.openplacereviews.opendb.ops;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
-public interface IOpenDBOperation {
+public interface OpenDBOperationExec {
 
 	/** 
 	 * Operation name / id
@@ -25,7 +25,7 @@ public interface IOpenDBOperation {
 	 * @return whether operation is valid for execution or not
 	 * error message describes if there is an error 
 	 */
-	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage);
+	public boolean prepare(OpDefinitionBean definition);
 	
 	
 	/**
@@ -33,7 +33,7 @@ public interface IOpenDBOperation {
 	 * and should be included in the block or not.
 	 * @return true if everything was successful
 	 */
-	public boolean execute(JdbcTemplate template, StringBuilder errorMessage);
+	public boolean execute(JdbcTemplate template);
 
 	
 	/**

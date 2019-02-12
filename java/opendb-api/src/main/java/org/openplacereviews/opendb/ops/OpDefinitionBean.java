@@ -21,11 +21,13 @@ public class OpDefinitionBean {
 	public static final String F_SIGNATURE = "signature";
 	public static final String F_SIGNED_BY = "signed_by";
 	public static final String SYSTEM_TYPE= "system";
+	public static final String F_DEPENDENCIES = "dependencies";
 	
 	private String type;
 	private String operation;
 	private String signedBy;
 	private List<String> otherSignedBy;
+	private List<String> transientTxDependencies;
 	
 	private Map<String, Object> otherFields = new TreeMap<>();
 	
@@ -41,6 +43,14 @@ public class OpDefinitionBean {
 	
 	public String getType() {
 		return type;
+	}
+	
+	public void setTransientTxDependencies(List<String> transientTxDependencies) {
+		this.transientTxDependencies = transientTxDependencies;
+	}
+	
+	public List<String> getTransientTxDependencies() {
+		return transientTxDependencies;
 	}
 	
 	public String getOperationId() {
@@ -85,6 +95,11 @@ public class OpDefinitionBean {
 	@SuppressWarnings("unchecked")
 	public Map<String, String> getStringMap(String field) {
 		return (Map<String, String>) otherFields.get(field);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<String> getStringList(String field) {
+		return (List<String>) otherFields.get(field);
 	}
 	
 	@SuppressWarnings("unchecked")

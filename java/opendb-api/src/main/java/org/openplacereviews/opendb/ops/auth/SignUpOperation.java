@@ -2,14 +2,14 @@ package org.openplacereviews.opendb.ops.auth;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.IOpenDBOperation;
+import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @OpenDBOperation(SignUpOperation.OP_ID)
-public class SignUpOperation implements IOpenDBOperation {
+public class SignUpOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(SignUpOperation.class);
 	
@@ -44,7 +44,7 @@ public class SignUpOperation implements IOpenDBOperation {
 	}
 
 	@Override
-	public boolean prepare(OpDefinitionBean definition, StringBuilder errorMessage) {
+	public boolean prepare(OpDefinitionBean definition) {
 		this.definition = definition;
 		// TODO Auto-generated method stub
 		return false;
@@ -52,7 +52,7 @@ public class SignUpOperation implements IOpenDBOperation {
 
 	// TODO validate 
 	@Override
-	public boolean execute(JdbcTemplate template, StringBuilder errorMessage) {
+	public boolean execute(JdbcTemplate template) {
 		// TODO make separate api to create keys
 		// SecUtils.validateSignature(keyPair, msg, signature)
 		return false;

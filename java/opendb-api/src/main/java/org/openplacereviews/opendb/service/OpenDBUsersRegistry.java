@@ -141,8 +141,11 @@ public class OpenDBUsersRegistry {
 					}
 			}
 		}
-
 		return true;
+	}
+	
+	public boolean validateHash(OpDefinitionBean o) {
+		return Utils.equals(calculateOperationHash(o, false), o.getHash());
 	}
 	
 	public boolean validateSignature(ActiveUsersContext ctx, OpDefinitionBean ob, Map<String, String> sig, String name) throws FailedVerificationException {
@@ -349,5 +352,8 @@ public class OpenDBUsersRegistry {
 
 
  	}
+
+
+	
  	
 }

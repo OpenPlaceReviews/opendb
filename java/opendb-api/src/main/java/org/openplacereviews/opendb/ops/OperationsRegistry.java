@@ -19,7 +19,7 @@ public class OperationsRegistry {
 	public static final String OP_TYPE_DDL = "ddl";
 	public static final String OP_TYPE_AUTH = "auth";
 	
-	Map<String, Class<? extends IOpenDBOperation>> operations = new TreeMap<>();
+	Map<String, Class<? extends OpenDBOperationExec>> operations = new TreeMap<>();
 	
 	@SuppressWarnings("unchecked")
 	public OperationsRegistry() {
@@ -29,7 +29,7 @@ public class OperationsRegistry {
 		scanner.addIncludeFilter(new AnnotationTypeFilter(OpenDBOperation.class));
 		for (BeanDefinition bd : scanner.findCandidateComponents("org.opengeoreviews")) {
 			try {
-				Class<? extends IOpenDBOperation> cl = (Class<? extends IOpenDBOperation>) Class.forName(bd.getBeanClassName());
+				Class<? extends OpenDBOperationExec> cl = (Class<? extends OpenDBOperationExec>) Class.forName(bd.getBeanClassName());
 				String op = cl.getAnnotation(OpenDBOperation.class).value();
 				LOGGER.info(String.format("Register op '%s' -> %s ", op, bd.getBeanClassName()));
 				operations.put(op, cl);
@@ -39,8 +39,8 @@ public class OperationsRegistry {
 		}
 	}
 
-	public IOpenDBOperation createOperation(OpDefinitionBean def) {
-		Class<? extends IOpenDBOperation> cl = operations.get(def.getOperationId());
+	public OpenDBOperationExec createOperation(OpDefinitionBean def) {
+		Class<? extends OpenDBOperationExec> cl = operations.get(def.getOperationId());
 		if(cl != null) {
 			try {
 				return cl.newInstance();
