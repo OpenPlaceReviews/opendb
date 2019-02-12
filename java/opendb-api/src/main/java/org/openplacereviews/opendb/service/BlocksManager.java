@@ -25,6 +25,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class BlocksManager {
 
+	private int BLOCK_ID = 1;
+	private String PREV_BLOCK_HASH = "";
+	
+	
 	@Autowired
 	public OperationsQueue queue;
 	
@@ -39,7 +43,7 @@ public class BlocksManager {
 	
 	@Autowired
 	public JdbcTemplate jdbcTemplate;
-	
+
 	public static final int MAX_BLOCK_SIZE = 1000;
 	
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
@@ -123,7 +127,20 @@ public class BlocksManager {
 	private String executeBlock(OpBlock block, boolean exceptionOnFail) {
 		List<OpenDBOperationExec> operations = prepareOperationCtxToExec(block);
 		executeOperations(block, operations, exceptionOnFail);
-		// TODO calculate hash, serialize, save db block, save db operation?
+		if(block.blockId == 0) {
+			block.date = System.currentTimeMillis();
+			block.blockId = BLOCK_ID++;
+			block.previousBlockHash = PREV_BLOCK_HASH;
+			block.hash = "TODO";
+			block.merkleTreeHash = "TODO";
+		} else {
+			// validate merkle tree hash 
+			// validate hash
+			// validate prev block hash
+		}
+		
+		PREV_BLOCK_HASH = block.hash;
+		// TODO calculate hash, serialize, save db block, save folder block, save db operation?
 		// later we shouldn't keep blocks in memory
 //		blocks.add(block);
 		return usersRegistry.toJson(block);

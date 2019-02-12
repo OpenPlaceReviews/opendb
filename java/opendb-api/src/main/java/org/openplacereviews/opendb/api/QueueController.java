@@ -32,9 +32,9 @@ public class QueueController {
 
     @PostMapping(path = "/add")
     @ResponseBody
-    public String addToQueue(@RequestParam(required = true) String id) {
-    	OpBlock block = validator.parseBootstrapBlock(id);
-    	queue.addOperations(block.getOperations());
+    public String addToQueue(@RequestParam(required = true) String json) {
+    	OpDefinitionBean op = validator.parseOperation(json);
+    	queue.addOperation(op);
         return "OK";
     }
     
