@@ -72,7 +72,7 @@ function loadData() {
   			delete clone.hash ;
   			delete clone.signature ;
   			sha256(JSON.stringify(clone)).then(digestValue => {
-  				if(("sha256:" + digestValue) != op.hash) {
+  				if(("json:sha256:" + digestValue) != op.hash) {
   					alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'sha256:" + digestValue +"'");
   				}
 			});
