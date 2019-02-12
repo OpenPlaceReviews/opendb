@@ -30,9 +30,7 @@ public class OpenDBUsersRegistry {
 	private Gson gson;
     
  	// signature section
- 	public static final String F_FORMAT = "format";
  	public static final String F_ALGO = "algo";
- 	public static final String F_TYPE = "type";
  	public static final String F_DIGEST = "digest";
  	
  	public static final String JSON_MSG_TYPE = "json";
@@ -78,7 +76,7 @@ public class OpenDBUsersRegistry {
 		
 		String hash = SecUtils.calculateHash(SecUtils.HASH_SHA256, null, gson.toJson(ob));
 		if(set) {
-			ob.putStringValue(OpDefinitionBean.F_HASH,  hash);
+			ob.putStringValue(OpDefinitionBean.F_HASH, JSON_MSG_TYPE + ":" + hash);
 		} else {
 			ob.putStringValue(OpDefinitionBean.F_HASH, oldHash);
 		}
@@ -95,15 +93,15 @@ public class OpenDBUsersRegistry {
 
 	
 	public OpDefinitionBean generateHashAndSign(OpDefinitionBean op, KeyPair... keyPair) throws FailedVerificationException {
-		calculateOperationHash(op, true);
-    	String json = toValidateSignatureJson(op);
+		String hsh = calculateOperationHash(op, true);
+		byte[] hashBytes = SecUtils.getHashBytes(hsh);
     	op.remove(OpDefinitionBean.F_SIGNATURE);
     	if(keyPair.length == 1) {
-    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, getSignature(json, keyPair[0]));
+    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, getSignature(hashBytes, keyPair[0]));
     	} else {
     		List<Map<String, String>> lst = new ArrayList<Map<String,String>>();
     		for(KeyPair k : keyPair) {
-    			lst.add(getSignature(json, k));
+    			lst.add(getSignature(hashBytes, k));
     		}
     		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, lst);
     	}
@@ -112,13 +110,11 @@ public class OpenDBUsersRegistry {
 
 
 
-	private Map<String, String> getSignature(String json, KeyPair keyPair) throws FailedVerificationException {
-		String signature = SecUtils.signMessageWithKeyBase64(keyPair, json, SecUtils.SIG_ALGO_SHA1_EC);
+	private Map<String, String> getSignature(byte[] hash, KeyPair keyPair) throws FailedVerificationException {
+		String signature = SecUtils.signMessageWithKeyBase64(keyPair, hash, SecUtils.SIG_ALGO_NONE_EC);
     	Map<String, String> signatureMap = new TreeMap<>();
     	signatureMap.put(F_DIGEST, signature);
-    	signatureMap.put(F_TYPE, "json");
-    	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_SHA1_EC);
-    	signatureMap.put(F_FORMAT, SecUtils.DECODE_BASE64);
+    	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_NONE_EC);
 		return signatureMap;
 	}
 	
@@ -156,30 +152,24 @@ public class OpenDBUsersRegistry {
 			return false;
 		}
 		String sigAlgo = sig.get(F_ALGO);
-		byte[] signature = SecUtils.decodeSignature(sig.get(F_FORMAT), sig.get(F_DIGEST));
-		String msgType = sig.get(F_TYPE);
-		String msg;
-		if (!JSON_MSG_TYPE.equals(msgType)) {
-			return false;
-		} else {
-			msg = toValidateSignatureJson(ob);
-		}
+		byte[] txHash = SecUtils.getHashBytes(ob.getHash());		
+		byte[] signature = SecUtils.decodeSignature(sig.get(F_DIGEST));
 		if (ob.getOperationId().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// signup operation is validated by itself
 			KeyPair kp = getPublicKeyFromOp(ob);
-			return SecUtils.validateSignature(kp, msg, sigAlgo, signature);
+			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 		} else if (ob.getOperationId().equals(LoginOperation.OP_ID)
 				&& ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// login operation is validated only by sign up
 			OpDefinitionBean signUp = ctx.getSignUpOperation(name);
 			KeyPair kp = getPublicKeyFromOp(signUp);
-			return SecUtils.validateSignature(kp, msg, sigAlgo, signature);
+			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 		} else {
 			List<OpDefinitionBean> logins = ctx.getLoginOperations(name, new ArrayList<OpDefinitionBean>());
 			// other operations are validated by any login
 			for (OpDefinitionBean login : logins) {
 				KeyPair kp = getPublicKeyFromOp(login);
-				boolean vl = SecUtils.validateSignature(kp, msg, sigAlgo, signature);
+				boolean vl = SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 				if (vl) {
 					return vl;
 				}

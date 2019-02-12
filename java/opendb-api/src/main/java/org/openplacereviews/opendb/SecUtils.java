@@ -19,12 +19,15 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.crypto.prng.FixedSecureRandom;
 
 public class SecUtils {
 	public static final String SIG_ALGO_SHA1_EC = "SHA1withECDSA";
+	public static final String SIG_ALGO_NONE_EC = "NonewithECDSA";
 	public static final String ALGO_EC = "EC";
 	public static final String EC_256SPEC_K1 = "secp256k1";
 	
@@ -47,7 +50,7 @@ public class SecUtils {
 		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", 
 				kp.getPrivate().getFormat(), pr, kp.getPublic().getFormat(), pk));
 		String signMessageTest = "Hello this is a registration message test";
-		byte[] signature = signMessageWithKey(kp, signMessageTest, SIG_ALGO_SHA1_EC);
+		byte[] signature = signMessageWithKey(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC);
 		System.out.println(String.format("Signed message: %s %s", Base64.getEncoder().encodeToString(signature), signMessageTest) );
 		
 		
@@ -57,7 +60,7 @@ public class SecUtils {
 		pk = Base64.getEncoder().encodeToString(nk.getPublic().getEncoded());
 		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", 
 				nk.getPrivate().getFormat(), pr, nk.getPublic().getFormat(), pk));
-		System.out.println(validateSignature(nk, signMessageTest, SIG_ALGO_SHA1_EC, signature));
+		System.out.println(validateSignature(nk, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, signature));
 		
 	}
 	
@@ -200,44 +203,41 @@ public class SecUtils {
 	}
 	
 
-	public static String signMessageWithKeyBase64(KeyPair keyPair, String msg, String hashAlgo) throws FailedVerificationException {
-        return Base64.getEncoder().encodeToString(signMessageWithKey(keyPair, msg, hashAlgo));
+	public static String signMessageWithKeyBase64(KeyPair keyPair, byte[] msg, String signAlgo) throws FailedVerificationException {
+        String signature = Base64.getEncoder().encodeToString(signMessageWithKey(keyPair, msg, signAlgo));
+        return DECODE_BASE64 + ":" +signature;
 	}
 	
-	public static byte[] signMessageWithKey(KeyPair keyPair, String msg, String hashAlgo) throws FailedVerificationException {
+	public static byte[] signMessageWithKey(KeyPair keyPair, byte[] msg, String signAlgo) throws FailedVerificationException {
 		try {
-        Signature sig = Signature.getInstance(hashAlgo);
-        sig.initSign(keyPair.getPrivate());
-        sig.update(msg.getBytes("UTF-8"));
-        byte[] signatureBytes = sig.sign();
-        return signatureBytes;
+			Signature sig = Signature.getInstance(signAlgo);
+			sig.initSign(keyPair.getPrivate());
+			sig.update(msg);
+			byte[] signatureBytes = sig.sign();
+			return signatureBytes;
 		} catch (NoSuchAlgorithmException e) {
 			throw new FailedVerificationException(e);
 		} catch (InvalidKeyException e) {
 			throw new FailedVerificationException(e);
 		} catch (SignatureException e) {
 			throw new FailedVerificationException(e);
-		} catch (UnsupportedEncodingException e) {
-			throw new FailedVerificationException(e);
 		}
 	}
 	
-	public static boolean validateSignature(KeyPair keyPair, String msg, String hashAlgo, byte[] signature) throws FailedVerificationException {
+	public static boolean validateSignature(KeyPair keyPair, byte[] msg, String hashAlgo, byte[] signature) throws FailedVerificationException {
 		if(keyPair == null) {
 			return false;
 		}
 		try {
 			Signature sig = Signature.getInstance(hashAlgo);
 			sig.initVerify(keyPair.getPublic());
-			sig.update(msg.getBytes("UTF-8"));
+			sig.update(msg);
 			return sig.verify(signature);
 		} catch (NoSuchAlgorithmException e) {
 			throw new FailedVerificationException(e);
 		} catch (InvalidKeyException e) {
 			throw new FailedVerificationException(e);
 		} catch (SignatureException e) {
-			throw new FailedVerificationException(e);
-		} catch (UnsupportedEncodingException e) {
 			throw new FailedVerificationException(e);
 		}
 	}
@@ -271,6 +271,17 @@ public class SecUtils {
 		throw new UnsupportedOperationException();
 	}
 	
+	
+	public static byte[] getHashBytes(String msg) {
+		int i = msg.lastIndexOf(':');
+		String s = i >= 0 ? msg.substring(i+1) : msg;
+		try {
+			return Hex.decodeHex(s);
+		} catch (DecoderException e) {
+			throw new IllegalArgumentException(e);
+		}
+	}
+	
 	public static boolean validateHash(String hash, String salt, String msg) {
 		int s = hash.indexOf(":");
 		if (s == -1) {
@@ -281,15 +292,15 @@ public class SecUtils {
 	}
 
 
-	public static byte[] decodeSignature(String format, String digest) {
+	public static byte[] decodeSignature(String digest) {
 		try {
-			if(format.equals(DECODE_BASE64)) {
-				return Base64.getDecoder().decode(digest.getBytes("UTF-8"));
+			if(digest.startsWith(DECODE_BASE64  + ":")) {
+				return Base64.getDecoder().decode(digest.substring(DECODE_BASE64.length() + 1).getBytes("UTF-8"));
 			}
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);
 		}
-		throw new IllegalArgumentException(format);
+		throw new IllegalArgumentException("Unknown format for signature " + digest);
 	}
 
 

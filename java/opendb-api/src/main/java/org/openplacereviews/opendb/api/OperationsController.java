@@ -46,6 +46,35 @@ public class OperationsController {
     @PostMapping(path = "/sign")
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey,
+    		@RequestParam(required = false) String altName, @RequestParam(required = false) String altPrivateKey) throws FailedVerificationException {
+    	KeyPair kp = null;
+		if (!Utils.isEmpty(pwd)) {
+			kp = validation.getQueueUsers().getSignUpKeyPairFromPwd(name, pwd);
+		} else if (!Utils.isEmpty(privateKey)) {
+			kp = validation.getQueueUsers().getSignUpKeyPair(name, privateKey);
+		}
+		if (kp == null) {
+			throw new IllegalArgumentException("Couldn't validate sign up key");
+		}
+		OpDefinitionBean op = validation.parseOperation(json);
+		op.setSignedBy(name);
+		KeyPair altKp = null;
+		if(!Utils.isEmpty(altName)) {
+			op.addOtherSignedBy(altName);
+			altKp = validation.getQueueUsers().getLoginKeyPair(altName, altPrivateKey);
+		}
+		if(altKp != null) {
+			validation.generateHashAndSign(op, kp);
+		} else{
+			validation.generateHashAndSign(op, altKp);
+		}
+        return validation.toJson(op);
+    }
+    
+    @PostMapping(path = "/double-sign")
+    @ResponseBody
+    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey) throws FailedVerificationException {
     	KeyPair kp = null;
 		if (!Utils.isEmpty(pwd)) {
