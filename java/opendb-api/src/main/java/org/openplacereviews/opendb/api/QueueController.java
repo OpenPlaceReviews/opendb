@@ -1,11 +1,13 @@
 package org.openplacereviews.opendb.api ;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.Utils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
@@ -42,35 +44,42 @@ public class QueueController {
     @ResponseBody
     public String addToQueue() {
     	queue.clearOperations();
-        return "OK";
+        return "{\"status\":\"OK\"}";
     }
     
     @GetMapping(path = "/list", produces = "text/json;charset=UTF-8")
     @ResponseBody
-    public String queueList() throws FailedVerificationException {
-    	OpBlock bl = new OpBlock();
-    	for(OpDefinitionBean ob : queue.getOperationsQueue()) {
-    		if(ob.hasOneSignature()) {
-    			Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
-    			if(sig != null) {
-    				boolean validate = validator.validateSignature(validator.getQueueUsers(), ob, sig, ob.getSignedBy());
-        			sig.put("valid", validate + "");    				
-    			}
-    		} else {
-    			List<Map<String, String>> sigs = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
-    			for(int i = 0; i < sigs.size(); i++) {
-    				Map<String, String> sig  = sigs.get(i);
-    				if(sig != null) {
-    					boolean validate = validator.validateSignature(validator.getQueueUsers(), ob, 
-    							sig, i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy().get(i - 1));
-            			sig.put("valid", validate + "");    				
-        			}	
-    			}
-    		}
-    		
-    		bl.getOperations().add(ob);	
-    	}
-    	return validator.toJson(bl);
-    }
+	public String queueList() throws FailedVerificationException {
+		OpBlock bl = new OpBlock();
+		for (OpDefinitionBean ob : queue.getOperationsQueue()) {
+			Map<String, String> validation = new LinkedHashMap<String, String>();
+			if (ob.hasOneSignature()) {
+				Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
+				if (sig != null) {
+					boolean validate = validator
+							.validateSignature(validator.getQueueUsers(), ob, sig, ob.getSignedBy());
+					validation.put("validate_signature", validate + "");
+				}
+			} else {
+				List<Map<String, String>> sigs = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
+				for (int i = 0; i < sigs.size(); i++) {
+					Map<String, String> sig = sigs.get(i);
+					if (sig != null) {
+						boolean validate = validator.validateSignature(validator.getQueueUsers(), ob, sig,
+								i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy().get(i - 1));
+						validation.put("validate_signature_" + (i + 1), validate + "");
+					}
+				}
+			}
+			validation.put("validate_hash", Utils.equals(validator.calculateOperationHash(ob, false), ob.getHash())
+					+ "");
+			validation.put("validate_sig_hash",
+					Utils.equals(validator.calculateSigOperationHash(ob), ob.getSignatureHash()) + "");
+			ob.putObjectValue("validation", validation);
+
+			bl.getOperations().add(ob);
+		}
+		return validator.toJson(bl);
+	}
     
 }

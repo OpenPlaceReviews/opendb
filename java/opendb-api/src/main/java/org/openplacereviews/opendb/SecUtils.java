@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -204,9 +206,18 @@ public class SecUtils {
 		}
 	}
 
-	public static String signMessageWithKeyBase64(KeyPair keyPair, byte[] msg, String signAlgo)
+	public static String signMessageWithKeyBase64(KeyPair keyPair, byte[] msg, String signAlgo, 
+			ByteArrayOutputStream out)
 			throws FailedVerificationException {
-		String signature = Base64.getEncoder().encodeToString(signMessageWithKey(keyPair, msg, signAlgo));
+		byte[] sigBytes = signMessageWithKey(keyPair, msg, signAlgo);
+		if(out != null) {
+			try {
+				out.write(sigBytes);
+			} catch (IOException e) {
+				throw new IllegalStateException(e);
+			}
+		}
+		String signature = Base64.getEncoder().encodeToString(sigBytes);
 		return DECODE_BASE64 + ":" + signature;
 	}
 
@@ -245,6 +256,7 @@ public class SecUtils {
 			throw new FailedVerificationException(e);
 		}
 	}
+	
 
 	public static String calculateSha1(String msg) {
 		try {
@@ -260,6 +272,10 @@ public class SecUtils {
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+	
+	public static String calculateSha256(byte[] bts) {
+		return DigestUtils.sha256Hex(bts);
 	}
 
 	public static String calculateHash(String algo, String salt, String msg) {

@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.KeyPair;
@@ -72,6 +74,7 @@ public class OpenDBUsersRegistry {
 	// hash and signature operations
 	public String calculateOperationHash(OpDefinitionBean ob, boolean set) {
 		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
+		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
 		
 		String hash = SecUtils.calculateHash(SecUtils.HASH_SHA256, null, gson.toJson(ob));
@@ -81,37 +84,62 @@ public class OpenDBUsersRegistry {
 			ob.putStringValue(OpDefinitionBean.F_HASH, oldHash);
 		}
 		ob.putObjectValue(OpDefinitionBean.F_SIGNATURE, sig);
+		ob.putObjectValue(OpDefinitionBean.F_SIGNATURE_HASH, sigHash);
 		return hash;
 	}
 	
-	public String toValidateSignatureJson(OpDefinitionBean op) {
-		Object sig = op.remove(OpDefinitionBean.F_SIGNATURE);
-		String json = gson.toJson(op);
-		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, sig);
-		return json;
-	}
+	
+	public String calculateSigOperationHash(OpDefinitionBean ob) {
+		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
+		try {
+			bytesSigHash.write(SecUtils.getHashBytes(ob.getHash()));
 
+			if (ob.hasOneSignature()) {
+				String dgst = ob.getStringMap(OpDefinitionBean.F_SIGNATURE).get(F_DIGEST);
+				bytesSigHash.write(SecUtils.decodeSignature(dgst));
+			} else {
+				List<Map<String, String>> lst = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
+				for (Map<String, String> m : lst) {
+					String dgst = m.get(F_DIGEST);
+					bytesSigHash.write(SecUtils.decodeSignature(dgst));
+				}
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
+    	return SecUtils.HASH_SHA256 + ":" + SecUtils.calculateSha256(bytesSigHash.toByteArray());
+	}
+	
 	
 	public OpDefinitionBean generateHashAndSign(OpDefinitionBean op, KeyPair... keyPair) throws FailedVerificationException {
 		String hsh = calculateOperationHash(op, true);
 		byte[] hashBytes = SecUtils.getHashBytes(hsh);
+		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
+		try {
+			bytesSigHash.write(hashBytes);
+		} catch (IOException e) {
+			throw new IllegalStateException(e);
+		}
     	op.remove(OpDefinitionBean.F_SIGNATURE);
+    	op.remove(OpDefinitionBean.F_SIGNATURE_HASH);
     	if(keyPair.length == 1) {
-    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, getSignature(hashBytes, keyPair[0]));
+    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, getSignature(hashBytes, keyPair[0], bytesSigHash));
     	} else {
     		List<Map<String, String>> lst = new ArrayList<Map<String,String>>();
     		for(KeyPair k : keyPair) {
-    			lst.add(getSignature(hashBytes, k));
+    			lst.add(getSignature(hashBytes, k, bytesSigHash));
     		}
     		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, lst);
     	}
+    	// signature hash is combination of all hash bytes
+    	op.putStringValue(OpDefinitionBean.F_SIGNATURE_HASH, SecUtils.HASH_SHA256 + ":" + SecUtils.calculateSha256(bytesSigHash.toByteArray()));
     	return op;
 	}
 
 
 
-	private Map<String, String> getSignature(byte[] hash, KeyPair keyPair) throws FailedVerificationException {
-		String signature = SecUtils.signMessageWithKeyBase64(keyPair, hash, SecUtils.SIG_ALGO_NONE_EC);
+	private Map<String, String> getSignature(byte[] hash, KeyPair keyPair, ByteArrayOutputStream out) throws FailedVerificationException {
+		String signature = SecUtils.signMessageWithKeyBase64(keyPair, hash, SecUtils.SIG_ALGO_NONE_EC, out);
     	Map<String, String> signatureMap = new TreeMap<>();
     	signatureMap.put(F_DIGEST, signature);
     	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_NONE_EC);

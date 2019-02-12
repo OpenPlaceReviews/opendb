@@ -19,6 +19,7 @@ public class OpDefinitionBean {
 	
 	public static final String F_HASH = "hash";
 	public static final String F_SIGNATURE = "signature";
+	public static final String F_SIGNATURE_HASH = "signature_hash";
 	public static final String F_SIGNED_BY = "signed_by";
 	public static final String SYSTEM_TYPE= "system";
 	public static final String F_DEPENDENCIES = "dependencies";
@@ -67,6 +68,10 @@ public class OpDefinitionBean {
 	
 	public String getHash() {
 		return getStringValue(F_HASH);
+	}
+	
+	public String getSignatureHash() {
+		return getStringValue(F_SIGNATURE_HASH);
 	}
 	
 	public boolean hasOneSignature() {
