@@ -77,9 +77,9 @@ public class OpenDBUsersRegistry {
 		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
 		
-		String hash = SecUtils.calculateHash(SecUtils.HASH_SHA256, null, gson.toJson(ob));
+		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHash(SecUtils.HASH_SHA256, null, gson.toJson(ob));
 		if(set) {
-			ob.putStringValue(OpDefinitionBean.F_HASH, JSON_MSG_TYPE + ":" + hash);
+			ob.putStringValue(OpDefinitionBean.F_HASH, hash);
 		} else {
 			ob.putStringValue(OpDefinitionBean.F_HASH, oldHash);
 		}
@@ -170,6 +170,10 @@ public class OpenDBUsersRegistry {
 	
 	public boolean validateHash(OpDefinitionBean o) {
 		return Utils.equals(calculateOperationHash(o, false), o.getHash());
+	}
+	
+	public boolean validateSignatureHash(OpDefinitionBean o) {
+		return Utils.equals(calculateSigOperationHash(o), o.getSignatureHash());
 	}
 	
 	public boolean validateSignature(ActiveUsersContext ctx, OpDefinitionBean ob, Map<String, String> sig, String name) throws FailedVerificationException {

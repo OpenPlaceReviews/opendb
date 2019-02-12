@@ -69,11 +69,13 @@ function loadData() {
   		for(var i = 0; i < data.operations.length; i++)  {
   			let op = data.operations[i];
   			let clone = JSON.parse(JSON.stringify(op));
-  			delete clone.hash ;
-  			delete clone.signature ;
+  			delete clone.hash;
+  			delete clone.signature;
+        delete clone.signature_hash;
+        delete clone.validation;
   			sha256(JSON.stringify(clone)).then(digestValue => {
   				if(("json:sha256:" + digestValue) != op.hash) {
-  					alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'sha256:" + digestValue +"'");
+  					alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");
   				}
 			});
   			items += "<br><li><b>Hash</b>: " + op.hash;

@@ -37,7 +37,7 @@ public class QueueController {
     public String addToQueue(@RequestParam(required = true) String json) {
     	OpDefinitionBean op = validator.parseOperation(json);
     	queue.addOperation(op);
-        return "OK";
+    	return "{\"status\":\"OK\"}";
     }
     
     @PostMapping(path = "/clear")
@@ -53,31 +53,12 @@ public class QueueController {
 		OpBlock bl = new OpBlock();
 		for (OpDefinitionBean ob : queue.getOperationsQueue()) {
 			Map<String, String> validation = new LinkedHashMap<String, String>();
-			if (ob.hasOneSignature()) {
-				Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
-				if (sig != null) {
-					boolean validate = validator
-							.validateSignature(validator.getQueueUsers(), ob, sig, ob.getSignedBy());
-					validation.put("validate_signature", validate + "");
-				}
-			} else {
-				List<Map<String, String>> sigs = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
-				for (int i = 0; i < sigs.size(); i++) {
-					Map<String, String> sig = sigs.get(i);
-					if (sig != null) {
-						boolean validate = validator.validateSignature(validator.getQueueUsers(), ob, sig,
-								i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy().get(i - 1));
-						validation.put("validate_signature_" + (i + 1), validate + "");
-					}
-				}
-			}
-			validation.put("validate_hash", Utils.equals(validator.calculateOperationHash(ob, false), ob.getHash())
-					+ "");
-			validation.put("validate_sig_hash",
-					Utils.equals(validator.calculateSigOperationHash(ob), ob.getSignatureHash()) + "");
-			ob.putObjectValue("validation", validation);
-
-			bl.getOperations().add(ob);
+			validation.put("validate_signatures", validator.validateSignatures(validator.getQueueUsers(), ob)+ "");
+			validation.put("validate_hash", validator.validateHash(ob)+ "");
+			validation.put("validate_sig_hash", validator.validateSignatureHash(ob) + "");
+			OpDefinitionBean c = new OpDefinitionBean(ob);
+			c.putObjectValue("validation", validation);
+			bl.getOperations().add(c);
 		}
 		return validator.toJson(bl);
 	}

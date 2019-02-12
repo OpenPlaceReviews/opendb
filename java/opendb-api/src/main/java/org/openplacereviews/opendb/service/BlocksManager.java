@@ -74,6 +74,9 @@ public class BlocksManager {
 				if(!usersRegistry.validateHash(o)) {
 					validMsg = "hash is not valid";
 				}
+				if(!usersRegistry.validateSignatureHash(o)) {
+					validMsg = "signature hash is not valid";
+				}
 			} catch (Exception e) {
 				validMsg = e.getMessage();
 			}
