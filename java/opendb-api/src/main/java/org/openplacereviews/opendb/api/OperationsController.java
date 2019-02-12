@@ -139,7 +139,7 @@ public class OperationsController {
     	} else if(!Utils.isEmpty(oauthId)) {
     		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_OAUTH);
     		op.putStringValue(SignUpOperation.F_SALT, name);
-			op.putStringValue(SignUpOperation.F_OAUTHID_HASH, SecUtils.calculateHash(SecUtils.HASH_SHA256_SALT, name, oauthId));
+			op.putStringValue(SignUpOperation.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
 			op.putStringValue(SignUpOperation.F_OAUTH_PROVIDER, oauthProvider);
     		keyPair = validation.getQueueUsers().getLoginKeyPair(serverName, privateKey);
     		op.setSignedBy(serverName);

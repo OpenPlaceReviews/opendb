@@ -71,13 +71,47 @@ public class OpenDBUsersRegistry {
 		return gson.toJson(op);
 	}
 
+	public String calculateMerkleTreeHash(OpBlock op) {
+		List<byte[]> hashes = new ArrayList<byte[]>();
+		for(OpDefinitionBean o: op.getOperations()) {
+			byte[] hashBytes = SecUtils.getHashBytes(o.getHash());
+			hashes.add(hashBytes);
+		}
+		return calculateMerkleTreeInPlaceHash(SecUtils.HASH_SHA256, hashes);
+	}
+	
+	public String calculateSigMerkleTreeHash(OpBlock op) {
+		List<byte[]> hashes = new ArrayList<byte[]>();
+		for(OpDefinitionBean o: op.getOperations()) {
+			byte[] hashBytes = SecUtils.getHashBytes(o.getSignatureHash());
+			hashes.add(hashBytes);
+		}
+		return calculateMerkleTreeInPlaceHash(SecUtils.HASH_SHA256, hashes);
+	}
+	
+	private String calculateMerkleTreeInPlaceHash(String algo, List<byte[]> hashes) {
+		if(hashes.size() == 0) {
+			return "";
+		}
+		if(hashes.size() <= 1) {
+			return SecUtils.formatHashWithAlgo(algo, hashes.get(0));
+		}
+		List<byte[]> nextLevel = new ArrayList<byte[]>();
+		for(int i = 0; i <hashes.size(); i+=2) {
+			byte[] hsh = SecUtils.calculateHash(algo, hashes.get(i), i + 1 < hashes.size() ? hashes.get(i+1) : hashes.get(i));
+			nextLevel.add(hsh);
+		}
+		return calculateMerkleTreeInPlaceHash(algo, nextLevel);
+	}
+
+
 	// hash and signature operations
 	public String calculateOperationHash(OpDefinitionBean ob, boolean set) {
 		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
 		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
 		
-		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHash(SecUtils.HASH_SHA256, null, gson.toJson(ob));
+		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, gson.toJson(ob));
 		if(set) {
 			ob.putStringValue(OpDefinitionBean.F_HASH, hash);
 		} else {
@@ -107,7 +141,7 @@ public class OpenDBUsersRegistry {
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
-    	return SecUtils.HASH_SHA256 + ":" + SecUtils.calculateSha256(bytesSigHash.toByteArray());
+    	return SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bytesSigHash.toByteArray());
 	}
 	
 	
@@ -132,7 +166,8 @@ public class OpenDBUsersRegistry {
     		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, lst);
     	}
     	// signature hash is combination of all hash bytes
-    	op.putStringValue(OpDefinitionBean.F_SIGNATURE_HASH, SecUtils.HASH_SHA256 + ":" + SecUtils.calculateSha256(bytesSigHash.toByteArray()));
+    	op.putStringValue(OpDefinitionBean.F_SIGNATURE_HASH,
+    			SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bytesSigHash.toByteArray()));
     	return op;
 	}
 

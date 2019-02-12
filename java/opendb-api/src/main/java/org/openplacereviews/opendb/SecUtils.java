@@ -35,7 +35,6 @@ public class SecUtils {
 
 	public static final String KEYGEN_PWD_METHOD_1 = "EC256K1_S17R8";
 	public static final String DECODE_BASE64 = "base64";
-	public static final String HASH_SHA256_SALT = "sha256_salt";
 	public static final String HASH_SHA256 = "sha256";
 	public static final String HASH_SHA1 = "sha1";
 
@@ -258,35 +257,38 @@ public class SecUtils {
 	}
 	
 
-	public static String calculateSha1(String msg) {
-		try {
-			return DigestUtils.sha1Hex(msg.getBytes("UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalStateException(e);
+	public static byte[] calculateHash(String algo, byte[] b1, byte[] b2) {
+		byte[] m = b1 == null ? b2 : b1;
+		if(b2 != null) {
+			m = new byte[b1.length + b2.length];
+			System.arraycopy(b1, 0, m, 0, b1.length);
+			System.arraycopy(b2, 0, b1.length, 0, b2.length);
 		}
-	}
-
-	public static String calculateSha256(String msg) {
-		try {
-			return DigestUtils.sha256Hex(msg.getBytes("UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalStateException(e);
-		}
-	}
-	
-	public static String calculateSha256(byte[] bts) {
-		return DigestUtils.sha256Hex(bts);
-	}
-
-	public static String calculateHash(String algo, String salt, String msg) {
 		if (algo.equals(HASH_SHA256)) {
-			return HASH_SHA256 + ":" + calculateSha256(msg);
+			return DigestUtils.sha256(m);
 		} else if (algo.equals(HASH_SHA1)) {
-			return HASH_SHA1 + ":" + calculateSha1(msg);
-		} else if (algo.equals(HASH_SHA256_SALT)) {
-			return HASH_SHA256_SALT + ":" + calculateSha256(salt + msg);
+			return DigestUtils.sha1(m);
 		}
 		throw new UnsupportedOperationException();
+	}
+	
+	public static String calculateHashWithAlgo(String algo, String salt, String msg) {
+		try {
+			String hex = Hex.encodeHexString(calculateHash(algo, salt.getBytes("UTF-8"), msg.getBytes("UTF-8")));
+			return algo + ":" + hex;
+		} catch (UnsupportedEncodingException e) {
+			throw new IllegalStateException(e);
+		} 
+	}
+	
+	public static String calculateHashWithAlgo(String algo, byte[] bts) {
+		byte[] hash = calculateHash(algo, bts, null);
+		return formatHashWithAlgo(algo, hash);
+	}
+
+	public static String formatHashWithAlgo(String algo, byte[] hash) {
+		String hex = Hex.encodeHexString(hash);
+		return algo + ":" + hex;
 	}
 
 	public static byte[] getHashBytes(String msg) {
@@ -305,7 +307,7 @@ public class SecUtils {
 			throw new IllegalArgumentException(String.format("Hash %s doesn't contain algorithm of hashing to verify",
 					s));
 		}
-		String v = calculateHash(hash.substring(0, s), salt, msg);
+		String v = calculateHashWithAlgo(hash.substring(0, s), salt, msg);
 		return hash.equals(v);
 	}
 
