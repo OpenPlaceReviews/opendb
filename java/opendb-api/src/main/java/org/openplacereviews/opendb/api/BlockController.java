@@ -8,7 +8,7 @@ import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
-import org.openplacereviews.opendb.service.OperationsQueue;
+import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
@@ -30,7 +30,7 @@ public class BlockController {
     private BlocksManager manager;
     
     @Autowired
-    private OperationsQueue queue;
+    private OperationsQueueManager queue;
     
     @Autowired
     private OpenDBUsersRegistry usersRegistry;

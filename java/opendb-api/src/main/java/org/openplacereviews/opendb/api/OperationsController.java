@@ -15,7 +15,7 @@ import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry.ActiveUsersContext;
-import org.openplacereviews.opendb.service.OperationsQueue;
+import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,7 +39,7 @@ public class OperationsController {
     private OpenDBUsersRegistry validation;
     
     @Autowired
-    private OperationsQueue queue;
+    private OperationsQueueManager queue;
     
     private Gson gson = new GsonBuilder().create();
 
@@ -73,25 +73,6 @@ public class OperationsController {
 		return validation.toJson(op);
 	}
     
-    @PostMapping(path = "/double-sign")
-    @ResponseBody
-    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey) throws FailedVerificationException {
-    	KeyPair kp = null;
-		if (!Utils.isEmpty(pwd)) {
-			kp = validation.getQueueUsers().getSignUpKeyPairFromPwd(name, pwd);
-		} else if (!Utils.isEmpty(privateKey)) {
-			kp = validation.getQueueUsers().getSignUpKeyPair(name, privateKey);
-		}
-		if (kp == null) {
-			throw new IllegalArgumentException("Couldn't validate sign up key");
-		}
-		OpDefinitionBean op = validation.parseOperation(json);
-		op.setSignedBy(name);
-    	validation.generateHashAndSign(op, kp);
-        return validation.toJson(op);
-    }
-
     @PostMapping(path = "/signup")
     @ResponseBody
     public String signup(@RequestParam(required = true) String name, @RequestParam(required = false) String serverName, 

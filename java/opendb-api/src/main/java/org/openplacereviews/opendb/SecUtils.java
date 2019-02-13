@@ -205,8 +205,7 @@ public class SecUtils {
 		}
 	}
 
-	public static String signMessageWithKeyBase64(KeyPair keyPair, byte[] msg, String signAlgo, 
-			ByteArrayOutputStream out)
+	public static String signMessageWithKeyBase64(KeyPair keyPair, byte[] msg, String signAlgo, ByteArrayOutputStream out)
 			throws FailedVerificationException {
 		byte[] sigBytes = signMessageWithKey(keyPair, msg, signAlgo);
 		if(out != null) {
@@ -259,7 +258,7 @@ public class SecUtils {
 
 	public static byte[] calculateHash(String algo, byte[] b1, byte[] b2) {
 		byte[] m = b1 == null ? b2 : b1;
-		if(b2 != null) {
+		if(b2 != null && b1 != null) {
 			m = new byte[b1.length + b2.length];
 			System.arraycopy(b1, 0, m, 0, b1.length);
 			System.arraycopy(b2, 0, b1.length, 0, b2.length);
@@ -274,7 +273,8 @@ public class SecUtils {
 	
 	public static String calculateHashWithAlgo(String algo, String salt, String msg) {
 		try {
-			String hex = Hex.encodeHexString(calculateHash(algo, salt.getBytes("UTF-8"), msg.getBytes("UTF-8")));
+			String hex = Hex.encodeHexString(calculateHash(algo, salt == null ? null : salt.getBytes("UTF-8"),
+					msg == null ? null : msg.getBytes("UTF-8")));
 			return algo + ":" + hex;
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);
@@ -292,6 +292,10 @@ public class SecUtils {
 	}
 
 	public static byte[] getHashBytes(String msg) {
+		if(msg == null || msg.length() == 0) {
+			// special case for empty hash
+			return new byte[0];
+		}
 		int i = msg.lastIndexOf(':');
 		String s = i >= 0 ? msg.substring(i + 1) : msg;
 		try {

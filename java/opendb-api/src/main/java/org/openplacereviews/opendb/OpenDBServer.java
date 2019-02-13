@@ -1,5 +1,8 @@
 package org.openplacereviews.opendb;
 
+import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.OperationsQueueManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,6 +16,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableJpaAuditing
 public class OpenDBServer  {
 
+	@Autowired
+	BlocksManager blocksManager;
+	
+	@Autowired
+	OperationsQueueManager queueManager;
 	
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
@@ -23,6 +31,10 @@ public class OpenDBServer  {
 	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
 		return args -> {
 			System.out.println("Application has started");
+			blocksManager.init();
+			System.out.println("Blocks are initialized");
+			queueManager.init();
+			System.out.println("Queue is initialized");
 		};
 	}
 }

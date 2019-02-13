@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OperationsQueue {
+public class OperationsQueueManager {
 
 	ConcurrentLinkedQueue<OpDefinitionBean> operationsQueue = new ConcurrentLinkedQueue<OpDefinitionBean>();
 	
@@ -31,6 +31,11 @@ public class OperationsQueue {
 
 	public void clearOperations() {
 		operationsQueue.clear();
+	}
+
+	public void init() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

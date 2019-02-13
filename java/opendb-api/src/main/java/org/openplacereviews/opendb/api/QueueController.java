@@ -9,7 +9,7 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
-import org.openplacereviews.opendb.service.OperationsQueue;
+import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,7 +25,7 @@ public class QueueController {
     protected static final Log LOGGER = LogFactory.getLog(QueueController.class);
     
     @Autowired
-    private OperationsQueue queue;
+    private OperationsQueueManager queue;
     
     @Autowired
     private OpenDBUsersRegistry validator;

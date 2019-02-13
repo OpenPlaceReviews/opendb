@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.KeyPair;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -36,6 +35,9 @@ public class OpenDBUsersRegistry {
  	public static final String F_DIGEST = "digest";
  	
  	public static final String JSON_MSG_TYPE = "json";
+ 	
+ 	// this char is not allowed in the nickname!
+ 	public static final char USER_LOGIN_CHAR = ':';
 
 
 	private ActiveUsersContext blockUsers;
@@ -69,6 +71,20 @@ public class OpenDBUsersRegistry {
 	
 	public String toJson(OpDefinitionBean op) {
 		return gson.toJson(op);
+	}
+	
+	public static String getSiteFromUser(String name) {
+		int i = name.indexOf(USER_LOGIN_CHAR);
+		return i >= 0 ? name.substring(i + 1) : "";
+	}
+	
+	public static String getNicknameFromUser(String name) {
+		int i = name.indexOf(USER_LOGIN_CHAR);
+		return i >= 0 ? name.substring(0, i) : name;
+	}
+	
+	public static String getUserFromNicknameAndSite(String nickname, String site) {
+		return nickname + USER_LOGIN_CHAR + site;
 	}
 
 	public String calculateMerkleTreeHash(OpBlock op) {
@@ -193,11 +209,11 @@ public class OpenDBUsersRegistry {
 			List<Map<String, String>> sigs = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
 			for (int i = 0; i < sigs.size(); i++) {
 				Map<String, String> sig = sigs.get(i);
-					boolean validate = validateSignature(ctx, ob, sig, i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy()
-							.get(i - 1));
-					if(!validate) {
-						return false;
-					}
+				boolean validate = validateSignature(ctx, ob, sig, i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy()
+						.get(i - 1));
+				if (!validate) {
+					return false;
+				}
 			}
 		}
 		return true;
@@ -223,38 +239,20 @@ public class OpenDBUsersRegistry {
 		byte[] signature = SecUtils.decodeSignature(sig.get(F_DIGEST));
 		if (ob.getOperationId().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// signup operation is validated by itself
-			KeyPair kp = getPublicKeyFromOp(ob);
+			KeyPair kp = ctx.getKeyPairFromOp(ob, null);
 			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 		} else if (ob.getOperationId().equals(LoginOperation.OP_ID)
 				&& ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// login operation is validated only by sign up
-			OpDefinitionBean signUp = ctx.getSignUpOperation(name);
-			KeyPair kp = getPublicKeyFromOp(signUp);
+			KeyPair kp = ctx.getPublicSignUpKeyPair(name);
 			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 		} else {
-			List<OpDefinitionBean> logins = ctx.getLoginOperations(name, new ArrayList<OpDefinitionBean>());
-			// other operations are validated by any login
-			for (OpDefinitionBean login : logins) {
-				KeyPair kp = getPublicKeyFromOp(login);
-				boolean vl = SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
-				if (vl) {
-					return vl;
-				}
-			}
+			KeyPair kp = ctx.getPublicLoginKeyPair(name);
+			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 		}
-		return false;
 	}
 
-	private KeyPair getPublicKeyFromOp(OpDefinitionBean ob) throws FailedVerificationException {
-		if(ob == null) {
-			return null;
-		}
-		String signUpalgo = ob.getStringValue(F_ALGO);
-		String pbKey = ob.getStringValue(SignUpOperation.F_PUBKEY);
-		return SecUtils.getKeyPair(signUpalgo, null, pbKey);
-	}
 
-	
 
 	// Users related operations
 	public ActiveUsersContext getBlockUsers() {
@@ -269,7 +267,7 @@ public class OpenDBUsersRegistry {
  	protected static class ActiveUser {
  		protected String name;
  		protected OpDefinitionBean signUp;
- 		protected List<OpDefinitionBean> logins = new ArrayList<OpDefinitionBean>();
+ 		protected Map<String, OpDefinitionBean> logins = new TreeMap<String, OpDefinitionBean>();
  		
  	}
  	
@@ -283,16 +281,6 @@ public class OpenDBUsersRegistry {
 			this.parent = parent;
 		}
 
-		public List<OpDefinitionBean> getLoginOperations(String name, List<OpDefinitionBean> list) {
-			if (parent != null) {
-				parent.getLoginOperations(name, list);
-			}
-			ActiveUser au = users.get(name);
-			if (au != null && au.signUp != null) {
-				list.addAll(au.logins);
-			}
-			return list;
-		}
 
  		public boolean removeAuthOperation(String name, OpDefinitionBean op, boolean deep) {
  			String h = op.getHash();
@@ -309,12 +297,11 @@ public class OpenDBUsersRegistry {
 					au.signUp = null;
 					deleted = true;
 				}
-				Iterator<OpDefinitionBean> it = au.logins.iterator();
-				while(it.hasNext()) {
-					OpDefinitionBean o = it.next();
+				for(OpDefinitionBean o : au.logins.values()) {
 					if(Utils.equals(o.getHash(), h)) {
-						it.remove();
+						au.logins.remove(getSiteFromUser(name));
 						deleted = true;
+						break;
 					}
 				}
 			}
@@ -326,24 +313,37 @@ public class OpenDBUsersRegistry {
 				return false;
 			}
 			String name = op.getStringValue(SignUpOperation.F_NAME);
-			ActiveUser au = users.get(name);
+			String nickname = getNicknameFromUser(name);
+			String site = getSiteFromUser(name);
+			ActiveUser au = users.get(nickname);
 			if (au == null) {
 				au = new ActiveUser();
 				au.name = name;
 				users.put(name, au);
 			}
 			if (op.getOperationId().equals(SignUpOperation.OP_ID)) {
-				OpDefinitionBean sop = getSignUpOperation(name);
+				OpDefinitionBean sop = getSignUpOperation(nickname);
 				if (sop != null) {
 					throw new IllegalArgumentException("User was already signed up");
 				}
 				au.signUp = op;
 				return true;
 			} else if (op.getOperationId().equals(LoginOperation.OP_ID)) {
-				au.logins.add(op);
+				au.logins.put(site, op);
 				return true;
 			}
 			return false;
+		}
+		
+		public OpDefinitionBean getLoginOperation(String name) {
+			ActiveUser au = users.get(getNicknameFromUser(name));
+			if (au != null && au.logins.containsKey(getSiteFromUser(name))) {
+				return au.logins.get(getSiteFromUser(name));
+			}
+			if (parent != null) {
+				return parent.getLoginOperation(name);
+			}
+			return null;
 		}
  		
  		public OpDefinitionBean getSignUpOperation(String name) {
@@ -352,13 +352,12 @@ public class OpenDBUsersRegistry {
  				 op = parent.getSignUpOperation(name);
  			}
  			if(op == null) {
- 				ActiveUser au = users.get(name);
- 	 			if(au == null || au.signUp == null) {
- 	 				return null;
+ 				ActiveUser au = users.get(getNicknameFromUser(name));
+ 	 			if(au != null) {
+ 	 				return au.signUp;
  	 			}	
- 	 			op = au.signUp;
  			}
- 			return op;
+ 			return null;
  		}
  		
  		public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
@@ -377,35 +376,39 @@ public class OpenDBUsersRegistry {
  			return null;
  		}
  		
- 	
+ 		public KeyPair getPublicSignUpKeyPair(String name) throws FailedVerificationException {
+ 			return getSignUpKeyPair(name, null);
+ 		}
  		
  		public KeyPair getSignUpKeyPair(String name, String privatekey) throws FailedVerificationException {
  			OpDefinitionBean op = getSignUpOperation(name);
  			if(op == null) {
  				return null;
  			}
- 			String algo = op.getStringValue(SignUpOperation.F_ALGO);
+ 			return getKeyPairFromOp(op, privatekey);
+ 		}
+
+
+		private KeyPair getKeyPairFromOp(OpDefinitionBean op, String privatekey) throws FailedVerificationException {
+			String algo = op.getStringValue(SignUpOperation.F_ALGO);
  			KeyPair kp = SecUtils.getKeyPair(algo, privatekey, op.getStringValue(SignUpOperation.F_PUBKEY));
- 			if(SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
+ 			if(privatekey == null || SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
  				return kp;
  			}
  			return null;
+		}
+ 		
+ 		public KeyPair getPublicLoginKeyPair(String name) throws FailedVerificationException {
+ 			return getLoginKeyPair(name, null);
  		}
  		
- 		public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
- 			ActiveUser au = users.get(name);
- 			if(au == null || au.signUp == null) {
- 				throw new IllegalStateException(String.format("User '%s' is not signed up", name));
+		public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
+			OpDefinitionBean op = getLoginOperation(name);
+			if(op == null) {
+ 				return null;
  			}
- 			for (OpDefinitionBean op : au.logins) {
- 				String algo = op.getStringValue(SignUpOperation.F_ALGO);
- 				KeyPair kp = SecUtils.getKeyPair(algo, privateKey,op.getStringValue(SignUpOperation.F_PUBKEY));
- 				if (SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
- 					return kp;
- 				}
- 			}
- 			return null;
- 		}
+ 			return getKeyPairFromOp(op, privateKey);
+		}
 
 
  	}
