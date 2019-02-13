@@ -58,9 +58,12 @@ public class BlocksManager {
 	
 	public static final int BLOCK_VERSION = 1;
 	
+	private OpDefinitionBean currentTx;
+	private OpBlock currentBlock;
+	private BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
+	
 	
 	private OpBlock prevOpBlock = new OpBlock();
-	private boolean blockCreationPaused = true;
 	private String serverUser;
 	private String serverPrivateKey;
 	private KeyPair serverKeyPair;
@@ -69,6 +72,14 @@ public class BlocksManager {
 	
 	public BlocksManager() {
 		init();
+	}
+	
+	public enum BlockchainState {
+		BLOCKCHAIN_INIT,
+		BLOCKCHAIN_READY,
+		BLOCKCHAIN_PAUSED,
+		BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC,
+		BLOCKCHAIN_FAILED_BLOCK_EXEC
 	}
 	
 	
@@ -90,47 +101,85 @@ public class BlocksManager {
 	
 	
 	public synchronized String createBlock() {
-		OpBlock bl = new OpBlock();
-		List<OpDefinitionBean> candidates = bl.getOperations();
-		ConcurrentLinkedQueue<OpDefinitionBean> q = queue.getOperationsQueue();
-		ActiveUsersContext users = pickupOpsFromQueue(candidates, q, false);
-		return executeBlock(bl, users, false);
+		if (this.currentState != BlockchainState.BLOCKCHAIN_READY) {
+			throw new IllegalStateException("Blockchain is not ready to create block");
+		}
+		this.currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
+		try {
+			OpBlock bl = new OpBlock();
+			currentBlock = bl;
+			List<OpDefinitionBean> candidates = bl.getOperations();
+			ConcurrentLinkedQueue<OpDefinitionBean> q = queue.getOperationsQueue();
+			ActiveUsersContext users = pickupOpsFromQueue(candidates, q, false);
+			return executeBlock(bl, users, false);
+		} catch (RuntimeException e) {
+			this.currentState = BlockchainState.BLOCKCHAIN_FAILED_BLOCK_EXEC;
+			throw e;
+		} finally {
+			if (currentState == BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC) {
+				this.currentState = BlockchainState.BLOCKCHAIN_READY;
+			}
+		}
 	}
 	
 	public synchronized String replicateBlock(OpBlock remoteBlock) {
-		LinkedList<OpDefinitionBean> ops = new LinkedList<>(remoteBlock.getOperations());
-		ArrayList<OpDefinitionBean> cand = new ArrayList<>();
+		if(this.currentState != BlockchainState.BLOCKCHAIN_READY) {
+			throw new IllegalStateException("Blockchain is not ready to create block");
+		}
+		this.currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		try {
+			currentBlock = remoteBlock;
+			LinkedList<OpDefinitionBean> ops = new LinkedList<>(remoteBlock.getOperations());
+			ArrayList<OpDefinitionBean> cand = new ArrayList<>();
 			ActiveUsersContext users = pickupOpsFromQueue(cand, ops, true);
 			if(ops.size() != cand.size()) {
 				throw new RuntimeException("The block could not validate all transactions included in it");
 			}
 			return executeBlock(remoteBlock, users, true);
 		} catch (RuntimeException e) {
+			this.currentState = BlockchainState.BLOCKCHAIN_FAILED_BLOCK_EXEC;
 			throw e;
+		} finally {
+			if(currentState == BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC) {
+				this.currentState = BlockchainState.BLOCKCHAIN_READY;
+			}
 		}
 	}
 	
 	public synchronized void init() {
 		serverUser = System.getenv("OPENDB_SIGN_LOGIN");
 		serverPrivateKey = System.getenv("OPENDB_SIGN_PK");
-		// TODO load block hashes and forks
+		currentState = BlockchainState.BLOCKCHAIN_READY;
 	}
 	
 	
-	public synchronized boolean setBlockCreationPaused(boolean paused) {
-		boolean p = blockCreationPaused;
-		blockCreationPaused = paused;
-		return p;
+	public synchronized boolean resumeBlockCreation() {
+		if(currentState == BlockchainState.BLOCKCHAIN_PAUSED) {
+			currentState = BlockchainState.BLOCKCHAIN_READY;
+			return true;
+		}
+		return false;
 	}
 	
-	public boolean isBlockCreationPaused(boolean paused) {
-		return blockCreationPaused;
+	public synchronized boolean pauseBlockCreation() {
+		if(currentState == BlockchainState.BLOCKCHAIN_READY) {
+			currentState = BlockchainState.BLOCKCHAIN_PAUSED;
+			return true;
+		}
+		return false;
 	}
 	
-
+	public BlockchainState getCurrentState() {
+		return currentState;
+	}
 	
+	public OpBlock getCurrentBlock() {
+		return currentBlock;
+	}
 	
+	public OpDefinitionBean getCurrentTx() {
+		return currentTx;
+	}
 	
 	private ActiveUsersContext pickupOpsFromQueue(List<OpDefinitionBean> candidates,
 			Collection<OpDefinitionBean> q, boolean exceptionOnFail) {
@@ -151,6 +200,7 @@ public class BlocksManager {
 				if(!usersRegistry.validateSignatureHash(o)) {
 					validMsg = "signature hash is not valid";
 				}
+				validMsg = usersRegistry.validateRoles(au, o);
 			} catch (Exception e) {
 				ex = e;
 			}
@@ -199,7 +249,16 @@ public class BlocksManager {
 		
 		// don't keep operations in memory
 		prevOpBlock = new OpBlock(block);
-		return formatter.toJson(block);
+		List<OpDefinitionBean> ops = prevOpBlock.getOperations();
+		for(OpDefinitionBean o : block.getOperations()) {
+			OpDefinitionBean ro = new OpDefinitionBean(o);
+			ro.getRawOtherFields().clear();
+			ro.putStringValue(OpDefinitionBean.F_HASH, o.getHash());
+			ro.putStringValue(OpDefinitionBean.F_NAME, o.getName());
+			ops.add(ro);
+		}
+		queue.removeSuccessfulOps(block);
+		return formatter.toJson(prevOpBlock);
 	}
 
 	private void validateBlock(OpBlock block, ActiveUsersContext users) {
@@ -302,17 +361,22 @@ public class BlocksManager {
 
 	private void executeOperations(OpBlock block, List<OpenDBOperationExec> operations) {
 		for (OpenDBOperationExec o : operations) {
+			currentTx = o.getDefinition();
 			boolean execute = false;
-			String err = "";
+			RuntimeException err = null;
 			try {
 				execute = o.execute(jdbcTemplate);
-			} catch (Exception e) {
-				err = e.getMessage();
+			} catch (RuntimeException e) {
+				err = e;
 			}
 			if (!execute) {
-				logSystem.logOperation(OperationStatus.FAILED_EXECUTE,
-						o.getDefinition(), String.format("Operations failed to execute: %s", err), true);
+				logSystem.logOperation(OperationStatus.FAILED_EXECUTE, o.getDefinition(), String.format(
+						"Operations failed to execute %s %s", o.getDefinition().getOperationId(), o.getDefinition()
+								.getHash()), true, err);
+				// not reachable code
+				throw new IllegalStateException(err);
 			} else {
+				usersRegistry.getBlockUsers().addAuthOperation(o.getDefinition());
 				logSystem.logOperation(OperationStatus.EXECUTED, o.getDefinition(), "OK", false);
 			}
 		}
@@ -324,7 +388,7 @@ public class BlocksManager {
 		Map<String, OpDefinitionBean> executedTx = new TreeMap<String, OpDefinitionBean>();
 		Iterator<OpDefinitionBean> it = block.getOperations().iterator();
 		while(it.hasNext()) {
-			OpDefinitionBean def  = it.next();
+			OpDefinitionBean def = it.next();
 			OpenDBOperationExec op = registry.createOperation(def);
 			boolean valid = false;
 			Exception ex = null;

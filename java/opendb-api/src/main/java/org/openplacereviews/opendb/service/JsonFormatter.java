@@ -2,7 +2,6 @@ package org.openplacereviews.opendb.service;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Map;
 import java.util.TreeMap;
 
 import org.openplacereviews.opendb.api.ApiController;

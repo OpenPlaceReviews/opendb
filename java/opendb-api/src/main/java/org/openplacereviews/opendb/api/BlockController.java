@@ -52,7 +52,6 @@ public class BlockController {
         return new InputStreamResource(formatter.getBlock(id));
     }
     
-    
     @PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public String bootstrap(@RequestParam(required = false) String serverName,

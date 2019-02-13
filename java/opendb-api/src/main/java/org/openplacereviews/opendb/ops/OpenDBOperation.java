@@ -11,8 +11,7 @@ import java.lang.annotation.Target;
 @Documented
 public @interface OpenDBOperation {
 
-	/**
-	 * @return id of operation
-	 */
-	String value() default "";
+	String name() ;
+	
+	String type();
 }

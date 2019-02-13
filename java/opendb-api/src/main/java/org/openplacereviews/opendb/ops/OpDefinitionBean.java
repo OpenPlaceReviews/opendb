@@ -18,10 +18,11 @@ import com.google.gson.JsonSerializer;
 public class OpDefinitionBean {
 	
 	public static final String F_HASH = "hash";
+	public static final String F_NAME = "name";
 	public static final String F_SIGNATURE = "signature";
 	public static final String F_SIGNATURE_HASH = "signature_hash";
 	public static final String F_SIGNED_BY = "signed_by";
-	public static final String SYSTEM_TYPE= "system";
+	public static final String SYSTEM_TYPE = "system";
 	public static final String F_DEPENDENCIES = "dependencies";
 	
 	private String type;
@@ -39,6 +40,9 @@ public class OpDefinitionBean {
 		this.type = cp.type;
 		this.operation = cp.operation;
 		this.signedBy = cp.signedBy;
+		if(cp.otherSignedBy != null) {
+			this.otherSignedBy = new ArrayList<String>(cp.otherSignedBy);
+		}
 		this.otherFields.putAll(cp.otherFields);
 	}
 	
@@ -58,6 +62,10 @@ public class OpDefinitionBean {
 		return operation;
 	}
 	
+	public String getFullOperationName() {
+		return type + ":" + operation;
+	}
+	
 	public String getSignedBy() {
 		return signedBy;
 	}
@@ -70,8 +78,16 @@ public class OpDefinitionBean {
 		return getStringValue(F_HASH);
 	}
 	
+	public String getName() {
+		return getStringValue(F_NAME);
+	}
+	
 	public String getSignatureHash() {
 		return getStringValue(F_SIGNATURE_HASH);
+	}
+	
+	public Map<String, Object> getRawOtherFields() {
+		return otherFields;
 	}
 	
 	public boolean hasOneSignature() {
@@ -121,11 +137,19 @@ public class OpDefinitionBean {
 	}
 	
 	public void putStringValue(String key, String value) {
-		otherFields.put(key, value);
+		if(value == null) {
+			otherFields.remove(key);
+		} else {
+			otherFields.put(key, value);
+		}
 	}
 	
 	public void putObjectValue(String key, Object value) {
-		otherFields.put(key, value);
+		if(value == null) {
+			otherFields.remove(key);
+		} else {
+			otherFields.put(key, value);
+		}
 	}
 	
 	public Object remove(String key) {
@@ -167,7 +191,10 @@ public class OpDefinitionBean {
 					bn.signedBy = o.get(F_SIGNED_BY).getAsString();
 				}
 			}
-			bn.otherFields = context.deserialize(o, Map.class); 
+			bn.otherFields = context.deserialize(o, TreeMap.class); 
+			bn.otherFields.remove(F_OPERATION);
+			bn.otherFields.remove(F_SIGNED_BY);
+			
 			return bn;
 		}
 

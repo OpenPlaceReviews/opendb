@@ -88,8 +88,8 @@ public class OpenDBUsersRegistry {
 			return SecUtils.formatHashWithAlgo(algo, hashes.get(0));
 		}
 		List<byte[]> nextLevel = new ArrayList<byte[]>();
-		for(int i = 0; i <hashes.size(); i+=2) {
-			byte[] hsh = SecUtils.calculateHash(algo, hashes.get(i), i + 1 < hashes.size() ? hashes.get(i+1) : hashes.get(i));
+		for (int i = 0; i < hashes.size(); i += 2) {
+			byte[] hsh = SecUtils.calculateHash(algo, hashes.get(i), i + 1 < hashes.size() ? hashes.get(i + 1) : hashes.get(i));
 			nextLevel.add(hsh);
 		}
 		return calculateMerkleTreeInPlaceHash(algo, nextLevel);
@@ -101,7 +101,7 @@ public class OpenDBUsersRegistry {
 		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
 		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
-		
+		System.out.println(formatter.toJson(ob));
 		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
 		if(set) {
 			ob.putStringValue(OpDefinitionBean.F_HASH, hash);

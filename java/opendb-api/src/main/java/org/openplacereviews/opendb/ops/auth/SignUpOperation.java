@@ -8,7 +8,7 @@ import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@OpenDBOperation(SignUpOperation.OP_ID)
+@OpenDBOperation(type=OperationsRegistry.OP_TYPE_AUTH, name=SignUpOperation.OP_ID)
 public class SignUpOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(SignUpOperation.class);
@@ -37,25 +37,30 @@ public class SignUpOperation implements OpenDBOperationExec {
 
 	@Override
 	public String getDescription() {
-		return "This operation signs up new user in DB. Supported fields:"+
-		"<br>'auth_method' : authorization method (osm, google, pwd, fb)" +
-		"<br>'nickname' : unique nickname" + 
+		return "This operation signs up new user in DB."+
+		"<br>This operation must be signed by signup key itself and the login key of the server that can signup users." +
+		"<br>Supported fields:"+
+		"<br>'name' : unique nickname" +
+		"<br>'auth_method' : authorization method (oauth, pwd, provided)" +
+		"<br>'pub_key' : public key for assymetric crypthograph" +
+		"<br>'algo' : algorithm for assymetric crypthograph" +
+		"<br>'keygen_method' : keygen is specified when pwd is used" +
+		"<br>'oauthid_hash' : hash for oauth id which is calculated with 'salt'" +
+		"<br>'oauth_provider' : oauth provider such as osm, fb, google" +
+		"<br>'details' : json with details for spoken languages, avatar, country" +
 		"<br>list of other fields";
 	}
 
 	@Override
 	public boolean prepare(OpDefinitionBean definition) {
 		this.definition = definition;
-		// TODO Auto-generated method stub
-		return false;
+		
+		return validateNickname(definition.getName());
 	}
 
-	// TODO validate 
 	@Override
 	public boolean execute(JdbcTemplate template) {
-		// TODO make separate api to create keys
-		// SecUtils.validateSignature(keyPair, msg, signature)
-		return false;
+		return true;
 	}
 	
 	private static boolean isAllowedNicknameSymbol(char c) {
@@ -77,9 +82,6 @@ public class SignUpOperation implements OpenDBOperationExec {
 		return true;
 	}
 	
-	
-	
-
 	@Override
 	public OpDefinitionBean getDefinition() {
 		return definition;

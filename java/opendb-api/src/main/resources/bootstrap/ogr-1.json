@@ -69,7 +69,7 @@
 		{
 			"operation" : "opdb:op_db_mapping",
 			"name" : "auth:signup",
-			"operation" : "new",
+			"type" : "new",
 			"identity" : ".name",
 			"table" : "users",
 			"table_columns": {
@@ -82,7 +82,7 @@
 		{
 			"operation" : "opdb:op_db_mapping",
 			"name" : "auth:login",
-			"operation" : "new",
+			"type" : "new",
 			"identity" : ".name",
 			"table" : "users",
 			"table_columns": {

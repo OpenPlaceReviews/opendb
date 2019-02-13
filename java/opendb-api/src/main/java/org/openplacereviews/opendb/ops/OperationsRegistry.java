@@ -18,6 +18,8 @@ public class OperationsRegistry {
 	
 	public static final String OP_TYPE_DDL = "ddl";
 	public static final String OP_TYPE_AUTH = "auth";
+	public static final String OP_TYPE_SYSTEM = "system";
+	public static final String OP_TYPE_OP = "op";
 	
 	Map<String, Class<? extends OpenDBOperationExec>> operations = new TreeMap<>();
 	
@@ -27,10 +29,10 @@ public class OperationsRegistry {
 
 		ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
 		scanner.addIncludeFilter(new AnnotationTypeFilter(OpenDBOperation.class));
-		for (BeanDefinition bd : scanner.findCandidateComponents("org.opengeoreviews")) {
+		for (BeanDefinition bd : scanner.findCandidateComponents("org.openplacereviews")) {
 			try {
 				Class<? extends OpenDBOperationExec> cl = (Class<? extends OpenDBOperationExec>) Class.forName(bd.getBeanClassName());
-				String op = cl.getAnnotation(OpenDBOperation.class).value();
+				String op = cl.getAnnotation(OpenDBOperation.class).type() + ":"+cl.getAnnotation(OpenDBOperation.class).name();
 				LOGGER.info(String.format("Register op '%s' -> %s ", op, bd.getBeanClassName()));
 				operations.put(op, cl);
 			} catch (Exception e) {

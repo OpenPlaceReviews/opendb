@@ -11,10 +11,11 @@ import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
+import org.openplacereviews.opendb.ops.auth.LoginOperation;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
-@OpenDBOperation(CreateTableOperation.OP_ID)
+@OpenDBOperation(type=OperationsRegistry.OP_TYPE_DDL, name=CreateTableOperation.OP_ID)
 public class CreateTableOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(CreateTableOperation.class);
