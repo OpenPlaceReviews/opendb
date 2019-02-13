@@ -2,12 +2,17 @@ package org.openplacereviews.opendb.service;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.stereotype.Service;
 
 @Service
 public class LogOperationService {
+	protected static final Log LOGGER = LogFactory.getLog(LogOperationService.class);
+	
 	ConcurrentLinkedQueue<LogEntry> log  = new ConcurrentLinkedQueue<LogOperationService.LogEntry>();
 
 	public static class LogEntry {
@@ -15,7 +20,10 @@ public class LogOperationService {
 		OpBlock block;
 		String message;
 		OperationStatus status;
-		public LogEntry(OperationStatus status, String message) {
+		Exception cause;
+		
+		public LogEntry(Exception cause, OperationStatus status, String message) {
+			this.cause = cause;
 			this.message = message;
 			this.status = status;
 		}
@@ -44,49 +52,60 @@ public class LogOperationService {
 	
 	public static class OperationFailException extends RuntimeException {
 		private static final long serialVersionUID = 5522972559998855977L;
-		private OperationStatus status;
-		private Object op;
+		private LogEntry logEntry;
 
-		public OperationFailException(OperationStatus status, Object op, String message) {
-			super(message);
-			this.status = status;
-			this.op = op;
+		public OperationFailException(LogEntry l) {
+			super(l.message, l.cause);
+			this.logEntry = l;
 		}
 		
-		public OpDefinitionBean getOp() {
-			return op instanceof OpDefinitionBean? (OpDefinitionBean) op : null;
+		public LogEntry getLogEntry() {
+			return logEntry;
 		}
 		
-		public OpBlock getBlock() {
-			return op instanceof OpBlock? (OpBlock) op : null;
-		}
-		
-		public OperationStatus getStatus() {
-			return status;
-		}
-		
+	}
+	
+	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, boolean exceptionOnFail,
+			Exception cause) throws OperationFailException {
+		LogEntry le = new LogEntry(cause, status, message);
+		le.operation = op;
+		log.add(le);
+		addLogEntry(exceptionOnFail, le);
 	}
 	
 	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, boolean exceptionOnFail) throws OperationFailException {
-		LogEntry le = new LogEntry(status, message);
-		le.operation = op;
-		log.add(le);
-		if(exceptionOnFail && !status.isSuccessful()) {
-			throw new OperationFailException(status, op, message);
-		}
+		logOperation(status, op, message, exceptionOnFail, null);
+	}
+	
+	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, Exception cause) {
+		logOperation(status, op, message, false, cause);
 	}
 	
 	public void logOperation(OperationStatus status, OpDefinitionBean op, String message) {
-		logOperation(status, op, message, false);
+		logOperation(status, op, message, false, null);
 	}
 	
 	
 	public void logBlock(OperationStatus status, OpBlock op, String message, boolean exceptionOnFail) {
-		LogEntry le = new LogEntry(status, message);
+		logBlock(status, op, message, exceptionOnFail, null);
+	}
+	
+	public void logBlock(OperationStatus status, OpBlock op, String message, boolean exceptionOnFail, 
+			Exception cause) {
+		LogEntry le = new LogEntry(cause, status, message);
 		le.block = new OpBlock(op);
+		addLogEntry(exceptionOnFail, le);
+	}
+
+	private void addLogEntry(boolean exceptionOnFail, LogEntry le) {
 		log.add(le);
-		if(exceptionOnFail && !status.isSuccessful()) {
-			throw new OperationFailException(status, le.block, message);
+		if(le.status.isSuccessful()) {
+			LOGGER.info("SUCCESS: " + le.message);
+		} else {
+			LOGGER.warn("FAILURE: " + le.message, le.cause);
+		}
+		if(exceptionOnFail && !le.status.isSuccessful()) {
+			throw new OperationFailException(le);
 		}
 	}
 	

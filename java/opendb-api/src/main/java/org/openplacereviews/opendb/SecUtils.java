@@ -236,13 +236,13 @@ public class SecUtils {
 		}
 	}
 
-	public static boolean validateSignature(KeyPair keyPair, byte[] msg, String hashAlgo, byte[] signature)
+	public static boolean validateSignature(KeyPair keyPair, byte[] msg, String sigAlgo, byte[] signature)
 			throws FailedVerificationException {
 		if (keyPair == null) {
 			return false;
 		}
 		try {
-			Signature sig = Signature.getInstance(hashAlgo);
+			Signature sig = Signature.getInstance(sigAlgo);
 			sig.initVerify(keyPair.getPublic());
 			sig.update(msg);
 			return sig.verify(signature);

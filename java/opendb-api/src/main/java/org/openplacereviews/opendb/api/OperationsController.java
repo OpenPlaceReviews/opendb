@@ -46,8 +46,7 @@ public class OperationsController {
     @PostMapping(path = "/sign")
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey,
-			@RequestParam(required = false) String altName, @RequestParam(required = false) String altPrivateKey)
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey)
 			throws FailedVerificationException {
 		KeyPair kp = null;
 		if (!Utils.isEmpty(pwd)) {
@@ -61,9 +60,10 @@ public class OperationsController {
 		OpDefinitionBean op = validation.parseOperation(json);
 		op.setSignedBy(name);
 		KeyPair altKp = null;
-		if (!Utils.isEmpty(altName)) {
-			op.addOtherSignedBy(altName);
-			altKp = validation.getQueueUsers().getLoginKeyPair(altName, altPrivateKey);
+		
+		if (!Utils.isEmpty(manager.getServerUser())) {
+			op.addOtherSignedBy(manager.getServerUser());
+			altKp = manager.getServerLoginKeyPair(validation.getQueueUsers());
 		}
 		if (altKp != null) {
 			validation.generateHashAndSign(op, kp);
@@ -75,12 +75,10 @@ public class OperationsController {
     
     @PostMapping(path = "/signup")
     @ResponseBody
-    public String signup(@RequestParam(required = true) String name, @RequestParam(required = false) String serverName, 
-    		@RequestParam(required = false) String pwd, 
-    		@RequestParam(required = false) String algo,
+    public String signup(@RequestParam(required = true) String name,  
+    		@RequestParam(required = false) String pwd,  
+    		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
-    		@RequestParam(required = false) String privateKey, 
-    		@RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
     	OpDefinitionBean op = new OpDefinitionBean();
     	name = name.trim(); // reduce errors by having trailing spaces
@@ -109,12 +107,12 @@ public class OperationsController {
     		op.putStringValue(SignUpOperation.F_SALT, salt);
         	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, keyGen);
     		op.setSignedBy(name);
-    		if(!Utils.isEmpty(serverName)) {
-    			op.addOtherSignedBy(serverName);
-    			otherKeyPair = validation.getQueueUsers().getLoginKeyPair(serverName, privateKey);
+    		if(!Utils.isEmpty(manager.getServerUser())) {
+    			op.addOtherSignedBy(manager.getServerUser());
+    			otherKeyPair = manager.getServerLoginKeyPair(validation.getQueueUsers());
     			if(otherKeyPair == null) {
     				throw new IllegalArgumentException(
-    						String.format("Server %s to signup user doesn't have valid login key", serverName));
+    						String.format("Server %s to signup user doesn't have valid login key", manager.getServerUser()));
     			}
     		}
     	} else if(!Utils.isEmpty(oauthId)) {
@@ -122,8 +120,8 @@ public class OperationsController {
     		op.putStringValue(SignUpOperation.F_SALT, name);
 			op.putStringValue(SignUpOperation.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
 			op.putStringValue(SignUpOperation.F_OAUTH_PROVIDER, oauthProvider);
-    		keyPair = validation.getQueueUsers().getLoginKeyPair(serverName, privateKey);
-    		op.setSignedBy(serverName);
+    		keyPair = manager.getServerLoginKeyPair(validation.getQueueUsers());
+    		op.setSignedBy(manager.getServerUser());
     	} else {
     		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PROVIDED);
     		op.setSignedBy(name);
@@ -147,53 +145,56 @@ public class OperationsController {
     
     @PostMapping(path = "/login")
     @ResponseBody
-    public String login(@RequestParam(required = true) String name, @RequestParam(required = false) String serverName, 
-    		@RequestParam(required = false) String pwd, 
+    public String login(@RequestParam(required = true) String name,  
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String signupPrivateKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
-    		@RequestParam(required = false) String privateKey, 
-    		@RequestParam(required = false) String loginAlgo, 
-    		@RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
+    		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
     	OpDefinitionBean op = new OpDefinitionBean();
     	op.setType(OperationsRegistry.OP_TYPE_AUTH);
     	op.setOperation(LoginOperation.OP_ID);
     	op.putStringValue(LoginOperation.F_NAME, name);
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
+		String nickname = OpenDBUsersRegistry.getNicknameFromUser(name);
+		String purpose = OpenDBUsersRegistry.getSiteFromUser(name);
+		if(!SignUpOperation.validateNickname(purpose)) {
+    		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
+    	}
 		ActiveUsersContext queueUsers = validation.getQueueUsers();
-		if (!Utils.isEmpty(pwd)) {
-			
-			kp = queueUsers.getSignUpKeyPairFromPwd(name, pwd);
-			op.setSignedBy(name);
+		String serverName = manager.getServerUser();
+		if (!Utils.isEmpty(pwd) || !Utils.isEmpty(signupPrivateKey)) {
+			if(!Utils.isEmpty(signupPrivateKey)) {
+				kp = queueUsers.getSignUpKeyPair(nickname, signupPrivateKey);	
+			} else {
+				kp = queueUsers.getSignUpKeyPairFromPwd(nickname, pwd);
+			}
+			op.setSignedBy(nickname);
 			if(!Utils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
-    			otherKeyPair = queueUsers.getLoginKeyPair(serverName, privateKey);
+    			otherKeyPair = manager.getServerLoginKeyPair(queueUsers);
     			if(otherKeyPair == null) {
     				throw new IllegalArgumentException(
     						String.format("Server %s to signup user doesn't have valid login key", serverName));
     			}
     		}
 		} else if (!Utils.isEmpty(oauthId)) {
-			kp = queueUsers.getLoginKeyPair(serverName, privateKey);
-			OpDefinitionBean sop = queueUsers.getSignUpOperation(name);
+			kp = manager.getServerLoginKeyPair(queueUsers);
+			OpDefinitionBean sop = queueUsers.getSignUpOperation(nickname);
 			if(!SecUtils.validateHash(sop.getStringValue(SignUpOperation.F_OAUTHID_HASH), 
 					sop.getStringValue(SignUpOperation.F_SALT), oauthId) || 
 					!oauthProvider.equals(sop.getStringValue(SignUpOperation.F_OAUTH_PROVIDER))) {
 				throw new IllegalArgumentException("User was registered with different oauth id");
 			}
 			op.setSignedBy(serverName);
-		} else if (!Utils.isEmpty(privateKey)) {
-			kp = queueUsers.getSignUpKeyPair(name, privateKey);
-			op.setSignedBy(name);
 		}
 		if (kp == null) {
 			throw new IllegalArgumentException("Couldn't validate sign up key or server key for oauth");
 		}
     	
     	KeyPair loginPair;
-		if (!Utils.isEmpty(loginAlgo)) {
+		if (!Utils.isEmpty(loginPubKey)) {
 			op.putStringValue(LoginOperation.F_ALGO, loginAlgo);
     		loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
-			
     	} else {
     		op.putStringValue(LoginOperation.F_ALGO, SecUtils.ALGO_EC);
     		loginPair = SecUtils.generateRandomEC256K1KeyPair();

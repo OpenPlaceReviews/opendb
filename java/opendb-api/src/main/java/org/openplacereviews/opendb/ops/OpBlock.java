@@ -1,12 +1,24 @@
 package org.openplacereviews.opendb.ops;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
+
+import wiremock.com.jayway.jsonpath.internal.Utils;
 
 import com.google.gson.annotations.SerializedName;
 
 public class OpBlock {
 
+	public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+	private static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+	{
+		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+	}
+	
 	
 	@SerializedName("block_id")
 	public int blockId = -1;
@@ -15,7 +27,8 @@ public class OpBlock {
 	public int version = 0;
 	
 	@SerializedName("date")
-	public long date;
+	public String date;
+	
 	
 	@SerializedName("previous_block_hash")
 	public String previousBlockHash;
@@ -65,10 +78,28 @@ public class OpBlock {
 	}
 	
 	private List<OpDefinitionBean> operations = new ArrayList<OpDefinitionBean>();
+
 	
 
 	
 	public List<OpDefinitionBean> getOperations() {
 		return operations;
 	}
+	
+	public long getDate() {
+		if(Utils.isEmpty(date)) {
+			return 0;
+		}
+		try {
+			return dateFormat.parse(date).getTime();
+		} catch (ParseException e) {
+			return 0;
+		}
+	}
+
+	
+	public void setDate(long time) {
+		date = dateFormat.format(new Date(time));
+	}
+	
 }

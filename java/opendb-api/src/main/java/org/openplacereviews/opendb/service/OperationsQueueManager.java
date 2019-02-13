@@ -16,11 +16,11 @@ public class OperationsQueueManager {
     private OpenDBUsersRegistry validation;
 
 	
-	public void addOperations(List<OpDefinitionBean> operations) {
+	public synchronized void addOperations(List<OpDefinitionBean> operations) {
 		operationsQueue.addAll(operations);
 	}
 	
-	public void addOperation(OpDefinitionBean op) {
+	public synchronized void addOperation(OpDefinitionBean op) {
 		validation.getQueueUsers().addAuthOperation(op);
 		operationsQueue.add(op);
 	}
@@ -29,8 +29,9 @@ public class OperationsQueueManager {
 		return operationsQueue;
 	}
 
-	public void clearOperations() {
+	public synchronized void clearOperations() {
 		operationsQueue.clear();
+		validation.getQueueUsers().clear();
 	}
 
 	public void init() {

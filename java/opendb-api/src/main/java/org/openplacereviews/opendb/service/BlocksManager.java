@@ -5,13 +5,13 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -67,7 +67,25 @@ public class BlocksManager {
 	public BlocksManager() {
 		init();
 	}
+	
+	
 
+	public String getServerPrivateKey() {
+		return serverPrivateKey;
+	}
+	
+	public String getServerUser() {
+		return serverUser;
+	}
+	
+	public KeyPair getServerLoginKeyPair(ActiveUsersContext users) throws FailedVerificationException {
+		if(serverUser == null) {
+			return null;
+		}
+		return users.getLoginKeyPair(serverUser, serverPrivateKey);
+	}
+	
+	
 	public synchronized String createBlock() {
 		OpBlock bl = new OpBlock();
 		List<OpDefinitionBean> candidates = bl.getOperations();
@@ -81,7 +99,7 @@ public class BlocksManager {
 		ArrayList<OpDefinitionBean> cand = new ArrayList<>();
 		try {
 			ActiveUsersContext users = pickupOpsFromQueue(cand, ops, true);
-			if(ops.size() != 0) {
+			if(ops.size() != cand.size()) {
 				throw new RuntimeException("The block could not validate all transactions included in it");
 			}
 			return executeBlock(remoteBlock, users, true);
@@ -112,14 +130,14 @@ public class BlocksManager {
 	
 	
 	private ActiveUsersContext pickupOpsFromQueue(List<OpDefinitionBean> candidates,
-			Queue<OpDefinitionBean> q, boolean exceptionOnFail) {
+			Collection<OpDefinitionBean> q, boolean exceptionOnFail) {
 		int size = 0;
 		ActiveUsersContext au = new OpenDBUsersRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
 		Map<String, Set<String>> authTxDependencies = new HashMap<String, Set<String>>();
-		while(!q.isEmpty()) {
-			OpDefinitionBean o = q.poll();
+		for (OpDefinitionBean o : q) {
 			int l = usersRegistry.toJson(o).length();
 			String validMsg = null; 
+			Exception ex = null;
 			try {
 				if(!usersRegistry.validateSignatures(au, o)) {
 					validMsg = "not verified";
@@ -131,11 +149,11 @@ public class BlocksManager {
 					validMsg = "signature hash is not valid";
 				}
 			} catch (Exception e) {
-				validMsg = e.getMessage();
+				ex = e;
 			}
-			if(validMsg != null) {
+			if(ex != null) {
 				logSystem.logOperation(OperationStatus.FAILED_PREPARE, o, String.format("Failed to verify operation signature: %s", validMsg),
-						exceptionOnFail);
+						exceptionOnFail, ex);
 				continue;
 			}
 			
@@ -168,7 +186,7 @@ public class BlocksManager {
 
 	private String executeBlock(OpBlock block, ActiveUsersContext users, boolean exceptionOnFail) {
 		List<OpenDBOperationExec> operations = prepareOperationCtxToExec(block, exceptionOnFail);
-		if(block.blockId == 0) {
+		if(block.blockId < 0) {
 			signBlock(block, users);
 		}
 		validateBlock(block, users);
@@ -203,32 +221,32 @@ public class BlocksManager {
 					String.format("Block id doesn't match with previous block id: %d %d", prevOpBlock.blockId, block.blockId), true);
 		}
 		boolean validateSig = true;
-		String eMsg = "";
+		Exception ex = null;
 		try {
 			KeyPair pk = users.getPublicLoginKeyPair(block.signedBy);
 			byte[] blHash = SecUtils.getHashBytes(block.hash);		
 			byte[] signature = SecUtils.decodeSignature(block.signature);
-			if(pk == null || !SecUtils.validateSignature(pk, blHash, block.signatureAlgo, signature)) {
+			if(pk != null && SecUtils.validateSignature(pk, blHash, block.signatureAlgo, signature)) {
 				validateSig = true;
 			} else {
 				validateSig = false;
 			}
 		} catch (FailedVerificationException e) {
 			validateSig = false;
-			eMsg = e.getMessage();
+			ex = e;
 		} catch (RuntimeException e) {
 			validateSig = false;
-			eMsg = e.getMessage();
+			ex = e;
 		}
 		if (!validateSig) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Block id doesn't match with previous block id: %s", eMsg), true);
+					"Block signature doesn't match", true, ex);
 		}
 	}
 
 	private void signBlock(OpBlock block, ActiveUsersContext users) {
 		try {
-			block.date = System.currentTimeMillis();
+			block.setDate(System.currentTimeMillis());
 			block.blockId = prevOpBlock.blockId + 1;
 			block.previousBlockHash = prevOpBlock.hash;
 			block.merkleTreeHash = usersRegistry.calculateMerkleTreeHash(block);
@@ -245,7 +263,7 @@ public class BlocksManager {
 			block.signature = SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_NONE_EC, null);
 			block.signatureAlgo = SecUtils.SIG_ALGO_NONE_EC;
 		} catch (FailedVerificationException e) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block, "Failed to sign the block: " + e.getMessage(), true);
+			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block, "Failed to sign the block: " + e.getMessage(), true, e);
 		}
 	}
 
@@ -258,7 +276,7 @@ public class BlocksManager {
 			dous.writeInt(block.version);
 			dous.writeInt(block.blockId);
 			dous.write(SecUtils.getHashBytes(block.previousBlockHash));
-			dous.writeLong(block.date);
+			dous.writeLong(block.getDate());
 			dous.write(SecUtils.getHashBytes(block.merkleTreeHash));
 			dous.write(SecUtils.getHashBytes(block.sigMerkleTreeHash));
 			dous.writeLong(block.extra);

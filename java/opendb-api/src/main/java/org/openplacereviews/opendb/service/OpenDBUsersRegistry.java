@@ -8,7 +8,9 @@ import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.openplacereviews.opendb.FailedVerificationException;
@@ -197,7 +199,29 @@ public class OpenDBUsersRegistry {
 		return signatureMap;
 	}
 	
-
+	public String validateRoles(ActiveUsersContext ctx, OpDefinitionBean ob) {
+		Set<String> signatures = new TreeSet<String>();
+		signatures.add(ob.getSignedBy());
+		if(ob.getOtherSignedBy() != null) {
+			signatures.addAll(ob.getOtherSignedBy());
+		}
+		if (ob.getOperationId().equals(SignUpOperation.OP_ID)) {
+			if(!signatures.contains(ob.getStringValue(SignUpOperation.F_NAME))) {
+				return "Signup operation must be signed by itself";
+			}
+		}
+		if (ob.getOperationId().equals(LoginOperation.OP_ID)) {
+			String loginName = ob.getStringValue(LoginOperation.F_NAME);
+			if(loginName.indexOf(USER_LOGIN_CHAR) == -1 ) {
+				return "Login should specify a site or a purpose name to login";
+			}
+			if(!signatures.contains(getNicknameFromUser(loginName))) {
+				return "Login operation must be signed by sign up key";
+			}
+		}
+		return null;
+	}
+	
 	public boolean validateSignatures(ActiveUsersContext ctx, OpDefinitionBean ob) throws FailedVerificationException {
 		if (ob.hasOneSignature()) {
 			Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
@@ -237,19 +261,14 @@ public class OpenDBUsersRegistry {
 		String sigAlgo = sig.get(F_ALGO);
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());		
 		byte[] signature = SecUtils.decodeSignature(sig.get(F_DIGEST));
+		KeyPair kp ;
 		if (ob.getOperationId().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// signup operation is validated by itself
-			KeyPair kp = ctx.getKeyPairFromOp(ob, null);
-			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
-		} else if (ob.getOperationId().equals(LoginOperation.OP_ID)
-				&& ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
-			// login operation is validated only by sign up
-			KeyPair kp = ctx.getPublicSignUpKeyPair(name);
-			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
+			kp = ctx.getKeyPairFromOp(ob, null);
 		} else {
-			KeyPair kp = ctx.getPublicLoginKeyPair(name);
-			return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
+			kp = ctx.getPublicKeyPair(name);
 		}
+		return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
 	}
 
 
@@ -279,6 +298,10 @@ public class OpenDBUsersRegistry {
 
 		public ActiveUsersContext(ActiveUsersContext parent) {
 			this.parent = parent;
+		}
+		
+		public void clear() {
+			users.clear();
 		}
 
 
@@ -380,6 +403,13 @@ public class OpenDBUsersRegistry {
  			return getSignUpKeyPair(name, null);
  		}
  		
+ 		public KeyPair getPublicKeyPair(String name) throws FailedVerificationException {
+ 			if(name.indexOf(USER_LOGIN_CHAR) == -1) {
+ 				return getSignUpKeyPair(name, null);
+ 			}
+ 			return getLoginKeyPair(name, null);
+ 		}
+ 		
  		public KeyPair getSignUpKeyPair(String name, String privatekey) throws FailedVerificationException {
  			OpDefinitionBean op = getSignUpOperation(name);
  			if(op == null) {
@@ -412,6 +442,8 @@ public class OpenDBUsersRegistry {
 
 
  	}
+
+
 
 
 	

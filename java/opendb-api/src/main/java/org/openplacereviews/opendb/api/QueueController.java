@@ -42,6 +42,7 @@ public class QueueController {
     @ResponseBody
     public String addToQueue() {
     	queue.clearOperations();
+    	
         return "{\"status\":\"OK\"}";
     }
     
@@ -52,6 +53,8 @@ public class QueueController {
 		for (OpDefinitionBean ob : queue.getOperationsQueue()) {
 			Map<String, String> validation = new LinkedHashMap<String, String>();
 			validation.put("validate_signatures", validator.validateSignatures(validator.getQueueUsers(), ob)+ "");
+			String err = validator.validateRoles(validator.getQueueUsers(), ob);
+			validation.put("validate_roles", err == null? "true" : err);
 			validation.put("validate_hash", validator.validateHash(ob)+ "");
 			validation.put("validate_sig_hash", validator.validateSignatureHash(ob) + "");
 			OpDefinitionBean c = new OpDefinitionBean(ob);

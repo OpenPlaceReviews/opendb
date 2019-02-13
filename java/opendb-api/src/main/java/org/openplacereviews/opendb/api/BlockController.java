@@ -53,19 +53,24 @@ public class BlockController {
     @ResponseBody
     public String bootstrap(@RequestParam(required = false) String serverName,
     		@RequestParam(required = false) String privateKey) throws Exception {
+    	serverName = manager.getServerUser();
+    	privateKey = manager.getServerPrivateKey();
     	OpBlock block = usersRegistry.parseBootstrapBlock("1");
 		if (!Utils.isEmpty(serverName)) {
-			KeyPair kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
+			KeyPair kp = null;
 			for (OpDefinitionBean o : block.getOperations()) {
 				OpDefinitionBean op = o;
-				if (!Utils.isEmpty(serverName)) {
+				if (!Utils.isEmpty(serverName) && Utils.isEmpty(o.getSignedBy())) {
+					if(kp == null) {
+						kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
+					}
 					op.setSignedBy(serverName);
 					op = usersRegistry.generateHashAndSign(op, kp);
-					queue.addOperation(op);
 				}
+				queue.addOperation(op);
 			}
 		}
 		manager.createBlock();
-        return "OK";
+	 	return "{\"status\":\"OK\"}";
     }
 }

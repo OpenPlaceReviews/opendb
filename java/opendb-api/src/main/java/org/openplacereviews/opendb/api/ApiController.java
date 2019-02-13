@@ -18,7 +18,7 @@ public class ApiController {
     @GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public String status() {
-        return "OK";
+     	return "{\"status\":\"OK\"}";
     }
     
     @GetMapping(path = "/test", produces = "text/html;charset=UTF-8")
