@@ -205,7 +205,7 @@ public class BlocksManager {
 		boolean validateSig = true;
 		String eMsg = "";
 		try {
-			KeyPair pk = users.getLoginPublicKey(block.signedBy);
+			KeyPair pk = users.getPublicLoginKeyPair(block.signedBy);
 			byte[] blHash = SecUtils.getHashBytes(block.hash);		
 			byte[] signature = SecUtils.decodeSignature(block.signature);
 			if(pk == null || !SecUtils.validateSignature(pk, blHash, block.signatureAlgo, signature)) {
