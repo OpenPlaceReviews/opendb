@@ -2,8 +2,6 @@ package org.openplacereviews.opendb.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,21 +14,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.Utils;
-import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.LoginOperation;
 import org.openplacereviews.opendb.ops.auth.SignUpOperation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 @Service
 public class OpenDBUsersRegistry {
 
-	private Gson gson;
     
  	// signature section
  	public static final String F_ALGO = "algo";
@@ -41,39 +35,18 @@ public class OpenDBUsersRegistry {
  	// this char is not allowed in the nickname!
  	public static final char USER_LOGIN_CHAR = ':';
 
+ 	@Autowired
+	private JsonFormatter formatter;
+
 
 	private ActiveUsersContext blockUsers;
 	private ActiveUsersContext queueUsers;
  	
 	public OpenDBUsersRegistry() {
-		GsonBuilder builder = new GsonBuilder();
-		builder.disableHtmlEscaping();
-		builder.registerTypeAdapter(OpDefinitionBean.class, new OpDefinitionBean.OpDefinitionBeanAdapter());
-		gson = builder.create();
 		blockUsers = new ActiveUsersContext(null);
 		queueUsers = new ActiveUsersContext(blockUsers);
 	}
 	
-	
-	// operations to parse / format related
-	public InputStream getBlock(String id) {
-    	return ApiController.class.getResourceAsStream("/bootstrap/ogr-"+id+".json");
-    }
-	
-	public OpBlock parseBootstrapBlock(String id) {
-		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
-	}
-	
-	public OpDefinitionBean parseOperation(String opJson) {
-		return gson.fromJson(opJson, OpDefinitionBean.class);
-	}
-	public String toJson(OpBlock bl) {
-		return gson.toJson(bl);
-	}
-	
-	public String toJson(OpDefinitionBean op) {
-		return gson.toJson(op);
-	}
 	
 	public static String getSiteFromUser(String name) {
 		int i = name.indexOf(USER_LOGIN_CHAR);
@@ -129,7 +102,7 @@ public class OpenDBUsersRegistry {
 		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
 		
-		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, gson.toJson(ob));
+		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
 		if(set) {
 			ob.putStringValue(OpDefinitionBean.F_HASH, hash);
 		} else {

@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.api ;
 
 import java.security.KeyPair;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -13,6 +12,7 @@ import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.LoginOperation;
 import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.JsonFormatter;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
@@ -22,9 +22,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 @Controller
 @RequestMapping("/op")
@@ -41,7 +38,8 @@ public class OperationsController {
     @Autowired
     private OperationsQueueManager queue;
     
-    private Gson gson = new GsonBuilder().create();
+    @Autowired
+    private JsonFormatter formatter;
 
     @PostMapping(path = "/sign")
     @ResponseBody
@@ -57,7 +55,7 @@ public class OperationsController {
 		if (kp == null) {
 			throw new IllegalArgumentException("Couldn't validate sign up key");
 		}
-		OpDefinitionBean op = validation.parseOperation(json);
+		OpDefinitionBean op = formatter.parseOperation(json);
 		op.setSignedBy(name);
 		KeyPair altKp = null;
 		
@@ -70,7 +68,7 @@ public class OperationsController {
 		} else {
 			validation.generateHashAndSign(op, altKp);
 		}
-		return validation.toJson(op);
+		return formatter.toJson(op);
 	}
     
     @PostMapping(path = "/signup")
@@ -90,7 +88,7 @@ public class OperationsController {
     	op.setOperation(SignUpOperation.OP_ID);
     	op.putStringValue(SignUpOperation.F_NAME, name);
     	if(!Utils.isEmpty(userDetails)) {
-    		op.putObjectValue(SignUpOperation.F_DETAILS, gson.fromJson(userDetails, Map.class));
+    		op.putObjectValue(SignUpOperation.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
     	}
     	
 		if (Utils.isEmpty(algo)) {
@@ -140,7 +138,7 @@ public class OperationsController {
     		validation.generateHashAndSign(op, keyPair, otherKeyPair);
     	}
     	queue.addOperation(op);
-        return validation.toJson(op);
+        return formatter.toJson(op);
     }
     
     @PostMapping(path = "/login")
@@ -213,8 +211,8 @@ public class OperationsController {
     	if(loginPair.getPrivate() != null) {
     		OpDefinitionBean copy = new OpDefinitionBean(op);
     		copy.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
-    		return validation.toJson(copy);
+    		return formatter.toJson(copy);
     	}
-        return validation.toJson(op);
+        return formatter.toJson(op);
     }
 }

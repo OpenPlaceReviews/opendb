@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.service.JsonFormatter;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +30,14 @@ public class QueueController {
     
     @Autowired
     private OpenDBUsersRegistry validator;
+    
+    @Autowired
+    private JsonFormatter formatter;
 
     @PostMapping(path = "/add")
     @ResponseBody
     public String addToQueue(@RequestParam(required = true) String json) {
-    	OpDefinitionBean op = validator.parseOperation(json);
+    	OpDefinitionBean op = formatter.parseOperation(json);
     	queue.addOperation(op);
     	return "{\"status\":\"OK\"}";
     }
@@ -61,7 +65,7 @@ public class QueueController {
 			c.putObjectValue("validation", validation);
 			bl.getOperations().add(c);
 		}
-		return validator.toJson(bl);
+		return formatter.toJson(bl);
 	}
     
 }

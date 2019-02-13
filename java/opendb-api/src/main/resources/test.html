@@ -73,6 +73,7 @@ function loadData() {
   			sha256(JSON.stringify(clone)).then(digestValue => {
   				if(("json:sha256:" + digestValue) != op.hash) {
   					alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");
+            console.log("'"+JSON.stringify(clone)+"'");
   				}
 			});
   			items += "<br><li><b>Hash</b>: " + op.hash;

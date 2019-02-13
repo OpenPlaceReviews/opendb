@@ -47,6 +47,9 @@ public class BlocksManager {
 	public OpenDBUsersRegistry usersRegistry;
 	
 	@Autowired
+    private JsonFormatter formatter;
+	
+	@Autowired
 	public JdbcTemplate jdbcTemplate;
 
 	public static final int MAX_BLOCK_SIZE = 1000;
@@ -135,7 +138,7 @@ public class BlocksManager {
 		ActiveUsersContext au = new OpenDBUsersRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
 		Map<String, Set<String>> authTxDependencies = new HashMap<String, Set<String>>();
 		for (OpDefinitionBean o : q) {
-			int l = usersRegistry.toJson(o).length();
+			int l = formatter.toJson(o).length();
 			String validMsg = null; 
 			Exception ex = null;
 			try {
@@ -196,7 +199,7 @@ public class BlocksManager {
 		
 		// don't keep operations in memory
 		prevOpBlock = new OpBlock(block);
-		return usersRegistry.toJson(block);
+		return formatter.toJson(block);
 	}
 
 	private void validateBlock(OpBlock block, ActiveUsersContext users) {

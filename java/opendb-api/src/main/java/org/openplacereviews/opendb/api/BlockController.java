@@ -7,6 +7,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.JsonFormatter;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class BlockController {
     
     @Autowired
     private OpenDBUsersRegistry usersRegistry;
+    
+    @Autowired
+    private JsonFormatter formatter;
 
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
     @ResponseBody
@@ -45,7 +49,7 @@ public class BlockController {
     @GetMapping(path = "/content", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public InputStreamResource block(@RequestParam(required = true) String id) {
-        return new InputStreamResource(usersRegistry.getBlock(id));
+        return new InputStreamResource(formatter.getBlock(id));
     }
     
     
@@ -55,7 +59,7 @@ public class BlockController {
     		@RequestParam(required = false) String privateKey) throws Exception {
     	serverName = manager.getServerUser();
     	privateKey = manager.getServerPrivateKey();
-    	OpBlock block = usersRegistry.parseBootstrapBlock("1");
+    	OpBlock block = formatter.parseBootstrapBlock("1");
 		if (!Utils.isEmpty(serverName)) {
 			KeyPair kp = null;
 			for (OpDefinitionBean o : block.getOperations()) {
