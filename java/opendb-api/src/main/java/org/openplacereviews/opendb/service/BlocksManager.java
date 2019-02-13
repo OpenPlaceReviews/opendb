@@ -200,6 +200,10 @@ public class BlocksManager {
 	}
 
 	private void validateBlock(OpBlock block, ActiveUsersContext users) {
+		if(block.getOperations().size() == 0) {
+			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
+					"Block has no operations to execute", true);
+		}
 		if(!Utils.equals(usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash), true);
@@ -317,14 +321,14 @@ public class BlocksManager {
 		Map<String, OpDefinitionBean> executedTx = new TreeMap<String, OpDefinitionBean>();
 		Iterator<OpDefinitionBean> it = block.getOperations().iterator();
 		while(it.hasNext()) {
-			OpDefinitionBean def = it.next();
+			OpDefinitionBean def  = it.next();
 			OpenDBOperationExec op = registry.createOperation(def);
 			boolean valid = false;
-			String err = "";
+			Exception ex = null;
 			try {
 				valid = op != null && op.prepare(def);
 			} catch (Exception e) {
-				err = e.getMessage();
+				ex = e;
 			}
 			if(valid) { 
 				boolean allDeps = checkAllDependencies(executedTx, def.getTransientTxDependencies());
@@ -343,13 +347,12 @@ public class BlocksManager {
 				}
 			} else {
 				logSystem.logOperation(OperationStatus.FAILED_PREPARE, def,
-						String.format("Operations couldn't be validated for execution: %s", err));
+						String.format("Operation %s %s couldn't be validated for execution", def.getOperationId(), def.getHash()) , ex);
 			}
 			if(valid) {
 				operations.add(op);
 				executedTx.put(def.getHash(), def);
 			} else {
-				// remove from block
 				it.remove();
 			}
 		}
