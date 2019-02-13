@@ -261,7 +261,7 @@ public class SecUtils {
 		if(b2 != null && b1 != null) {
 			m = new byte[b1.length + b2.length];
 			System.arraycopy(b1, 0, m, 0, b1.length);
-			System.arraycopy(b2, 0, b1.length, 0, b2.length);
+			System.arraycopy(b2, 0, m, b1.length, b2.length);
 		}
 		if (algo.equals(HASH_SHA256)) {
 			return DigestUtils.sha256(m);
