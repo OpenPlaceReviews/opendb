@@ -1,5 +1,8 @@
 package org.openplacereviews.opendb;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableJpaAuditing
 public class OpenDBServer  {
-
+	protected static final Log LOGGER = LogFactory.getLog(ApiController.class);
 	@Autowired
 	BlocksManager blocksManager;
 	

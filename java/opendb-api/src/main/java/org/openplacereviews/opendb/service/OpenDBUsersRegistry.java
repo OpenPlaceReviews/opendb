@@ -101,7 +101,6 @@ public class OpenDBUsersRegistry {
 		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
 		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
-		System.out.println(formatter.toJson(ob));
 		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
 		if(set) {
 			ob.putStringValue(OpDefinitionBean.F_HASH, hash);
