@@ -43,30 +43,37 @@ public class OperationsController {
 
     @PostMapping(path = "/sign")
     @ResponseBody
-    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = true) String name, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey)
+    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
+    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey, 
+    		@RequestParam(required = false) String dontSignByServer)
 			throws FailedVerificationException {
 		KeyPair kp = null;
-		if (!OUtils.isEmpty(pwd)) {
-			kp = validation.getQueueUsers().getSignUpKeyPairFromPwd(name, pwd);
-		} else if (!OUtils.isEmpty(privateKey)) {
-			kp = validation.getQueueUsers().getSignUpKeyPair(name, privateKey);
-		}
-		if (kp == null) {
-			throw new IllegalArgumentException("Couldn't validate sign up key");
-		}
-		OpDefinitionBean op = formatter.parseOperation(json);
-		op.setSignedBy(name);
 		KeyPair altKp = null;
-		
-		if (!OUtils.isEmpty(manager.getServerUser())) {
-			op.addOtherSignedBy(manager.getServerUser());
-			altKp = manager.getServerLoginKeyPair(validation.getQueueUsers());
+		OpDefinitionBean op = formatter.parseOperation(json);
+		if (!OUtils.isEmpty(name)) {
+			if (!OUtils.isEmpty(pwd)) {
+				kp = validation.getQueueUsers().getSignUpKeyPairFromPwd(name, pwd);
+			} else if (!OUtils.isEmpty(privateKey)) {
+				kp = validation.getQueueUsers().getSignUpKeyPair(name, privateKey);
+			}
+			if (kp == null) {
+				throw new IllegalArgumentException("Couldn't validate sign up key");
+			}
+			op.setSignedBy(name);
+		}
+		if (!OUtils.isEmpty(manager.getServerUser()) && OUtils.isEmpty(dontSignByServer)) {
+			if (!OUtils.isEmpty(name)) {
+				op.addOtherSignedBy(manager.getServerUser());
+				altKp = manager.getServerLoginKeyPair(validation.getQueueUsers());
+			} else {
+				op.setSignedBy(manager.getServerUser());
+				kp = manager.getServerLoginKeyPair(validation.getQueueUsers());
+			}
 		}
 		if (altKp != null) {
+			validation.generateHashAndSign(op, kp, altKp);
+		} else if(kp != null) {
 			validation.generateHashAndSign(op, kp);
-		} else {
-			validation.generateHashAndSign(op, altKp);
 		}
 		return formatter.toJson(op);
 	}

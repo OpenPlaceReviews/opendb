@@ -378,9 +378,8 @@ public class BlocksManager {
 				err = e;
 			}
 			if (!execute) {
-				logSystem.logOperation(OperationStatus.FAILED_EXECUTE, o.getDefinition(), String.format(
-						"Operations failed to execute %s %s", o.getDefinition().getOperationId(), o.getDefinition()
-								.getHash()), true, err);
+				logSystem.logOperation(OperationStatus.FAILED_EXECUTE, o.getDefinition(), 
+						"Operations failed to execute in the accepted block", true, err);
 				// not reachable code
 				throw new IllegalStateException(err);
 			} else {
