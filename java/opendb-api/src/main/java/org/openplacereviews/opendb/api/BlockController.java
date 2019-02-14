@@ -1,10 +1,11 @@
 package org.openplacereviews.opendb.api ;
 
-import java.security.KeyPair
-;
+import java.security.KeyPair;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
@@ -77,4 +78,25 @@ public class BlockController {
 		manager.createBlock();
 	 	return "{\"status\":\"OK\"}";
     }
+    
+    public static class BlockchainResult {
+    	public String status;
+    	public String serverUser;
+    	public OpBlock currentBlock;
+		public OpDefinitionBean currentTx;
+		public List<OpBlock> blockchain;
+    }
+    
+    
+    @GetMapping(path = "/list", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+	public String blocksList() throws FailedVerificationException {
+		BlockchainResult res = new BlockchainResult();
+		res.blockchain = manager.getBlockcchain();
+		res.serverUser = manager.getServerUser();
+		res.currentBlock = manager.getCurrentBlock();
+		res.currentTx = manager.getCurrentTx();
+		res.status = manager.getCurrentState().name().toLowerCase();
+		return formatter.objectToJson(res);
+	}
 }

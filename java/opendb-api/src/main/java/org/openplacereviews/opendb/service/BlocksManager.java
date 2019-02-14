@@ -70,6 +70,8 @@ public class BlocksManager {
 	private String blockCreationDetails = "";
 	private long blockExtra = 0;
 	
+	private List<OpBlock> blockcchain = new ArrayList<OpBlock>();
+	
 	public BlocksManager() {
 		init();
 	}
@@ -257,8 +259,14 @@ public class BlocksManager {
 			ro.putStringValue(OpDefinitionBean.F_NAME, o.getName());
 			ops.add(ro);
 		}
+		blockcchain = new ArrayList<OpBlock>(blockcchain);
+		blockcchain.add(prevOpBlock);
 		queue.removeSuccessfulOps(block);
 		return formatter.toJson(prevOpBlock);
+	}
+	
+	public List<OpBlock> getBlockcchain() {
+		return blockcchain;
 	}
 
 	private void validateBlock(OpBlock block, ActiveUsersContext users) {

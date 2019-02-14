@@ -4,7 +4,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.stereotype.Service;
@@ -21,8 +20,10 @@ public class LogOperationService {
 		String message;
 		OperationStatus status;
 		Exception cause;
+		long utcTime;
 		
 		public LogEntry(Exception cause, OperationStatus status, String message) {
+			this.utcTime = System.currentTimeMillis() / 1000;
 			this.cause = cause;
 			this.message = message;
 			this.status = status;

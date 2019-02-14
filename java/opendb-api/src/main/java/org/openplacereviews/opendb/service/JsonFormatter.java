@@ -40,6 +40,10 @@ public class JsonFormatter {
 		return gson.toJson(bl);
 	}
 	
+	public String objectToJson(Object o) {
+		return gson.toJson(o);
+	}
+	
 	public String toJson(OpDefinitionBean op) {
 		return gson.toJson(op);
 	}
