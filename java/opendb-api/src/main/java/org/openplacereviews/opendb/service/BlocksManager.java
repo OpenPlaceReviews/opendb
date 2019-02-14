@@ -428,9 +428,11 @@ public class BlocksManager {
 
 
 	private boolean checkAllDependencies(Map<String, OpDefinitionBean> executedTx, List<String> dp) {
-		for (String d : dp) {
-			if (!executedTx.containsKey(d)) {
-				return false;
+		if (dp != null) {
+			for (String d : dp) {
+				if (!executedTx.containsKey(d)) {
+					return false;
+				}
 			}
 		}
 		return true;

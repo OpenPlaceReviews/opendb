@@ -1,9 +1,11 @@
 package org.openplacereviews.opendb.api ;
 
-import java.security.KeyPair;
+import java.security.KeyPair
+;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.Utils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
@@ -19,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.jayway.jsonpath.internal.Utils;
 
 @Controller
 @RequestMapping("/block")
