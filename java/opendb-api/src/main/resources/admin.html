@@ -1,107 +1,228 @@
 <!DOCTYPE html>
 <html>
- <script src="https://code.jquery.com/jquery-1.9.1.min.js"></script>
-
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+        body {padding: 40px;}
+    </style>
+</head>
 <head>
 </head>
 
 <body>
-<h1>Test harness for OpenDB</h1>
-<h3>Operations in Queue</h3>
-<ul id="operations-list">
-</ul>
+  <p id="result"></p>
+  <ul class="nav nav-tabs" id="tabspanel">
+      <li class="active"><a data-toggle="tab" href="#home">Status</a></li>
+      <li><a data-toggle="tab" href="#queue" id="queue-tab">Queue</a></li>
+      <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
+      <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
+      <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
+  </ul>
+  <div class="tab-content">
+    <div id="home" class="tab-pane fade in active">
+          <h1>Admin harness for OpenDB</h1>
+          <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
+          <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
+          
+          <h3>Admin actions</h3>
+          <div>
+            <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
+            <input type="submit" value="Create block" id="block-create-btn"/>
+            <input type="submit" value="Toggle pause blockchain" id="block-pause-btn"/>
+          </div>
+    </div>
+    <div id="queue" class="tab-pane fade">
+      <h3>Operations in Queue</h3>
+        <input type="submit" value="Clear queue" id="clear-list-btn" />
+        <ul id="operations-list">
+        </ul>
 
+    </div>
 
-<p id="result"></p>
+    <div id="blocks" class="tab-pane fade">
+      <h3>Blocks</h3>
+        <ul id="blocks-list">
+        </ul>
 
-<input type="submit" value="Clear queue" id="clear-list" />
+    </div>
 
-<h3>Bootstrap</h3>
-<input type="submit" value="Bootstrap" id="boot-btn"/>
-</div>
+    <div id="errors" class="tab-pane fade">
+      <h3>Log</h3>
+        <input type="submit" value="Clear log" id="clear-log-btn" />
+        <ul id="errors-list">
+        </ul>
 
-<!-- 
--->
-<h3>Signup</h3>
-<div>
-1. Nickname: <input type="text" id="signup-name"/> 
-<br>
-2a. Password: <input type="text" id="signup-pwd"/> 
-<br>
-2b. Private key: <input type="text" id="signup-user-prk"/>  
-Public key: <input type="text" id="signup-user-pbk"/>  
-<br>
-2c. OAuth provider: <input type="text" id="signup-oauth-p"/>  
-OAuth Id: <input type="text" id="signup-oauth-id"/> 
-<br>
-3. User details (raw json): <input type="text" id="signup-details"/>  
-<br>
-<input type="submit" value="Signup" id="signup-btn"/>
-</div>
+    </div>
 
-<h3>Login</h3>
-<div>
-1. Login name (format 'nickname:site') : <input type="text" id="login-name"/> 
-<br>
-2a. Password: <input type="text" id="login-pwd"/> 
-<br>
-2b. Signup private key: <input type="text" id="login-signup-key"/> 
-<br>
-2c. OAuth provider: <input type="text" id="login-oauth-p"/>  
-OAuth Id: <input type="text" id="login-oauth-id"/> 
-<br>
-3. Public key (optional): <input type="text" id="login-public-key"/>  
-<br>
-<input type="submit" value="Login" id="login-btn"/>
-</div>
-
-
+    <div id="reg" class="tab-pane fade">
+      <h3>Signup</h3>
+      <div>
+          1. Nickname: <input type="text" id="signup-name"/> 
+        <br>
+          2a. Password: <input type="text" id="signup-pwd"/> 
+        <br>
+          2b. Private key: <input type="text" id="signup-user-prk"/>  
+          Public key: <input type="text" id="signup-user-pbk"/>  
+        <br>
+          2c. OAuth provider: <input type="text" id="signup-oauth-p"/>  
+          OAuth Id: <input type="text" id="signup-oauth-id"/> 
+        <br>
+          3. User details (raw json): <input type="text" id="signup-details"/>  
+        <br>
+        <input type="submit" value="Signup" id="signup-btn"/>
+      </div>
+      
+      <h3>Login</h3>
+      <div>
+          1. Login name (format 'nickname:site') : <input type="text" id="login-name"/> 
+        <br>
+          2a. Password: <input type="text" id="login-pwd"/> 
+        <br>
+          2b. Signup private key: <input type="text" id="login-signup-key"/> 
+        <br>
+          2c. OAuth provider: <input type="text" id="login-oauth-p"/>  
+          OAuth Id: <input type="text" id="login-oauth-id"/> 
+        <br>
+        3. Public key (optional): <input type="text" id="login-public-key"/>  
+        <br>
+        <input type="submit" value="Login" id="login-btn"/>
+      </div>
+    </div>
+  </div>
 </body>
 <script>
 
 
 function loadData() {
-	$.getJSON( "/queue/list", function( data ) {
-  		var items = "";
-  		for(var i = 0; i < data.operations.length; i++)  {
-  			let op = data.operations[i];
-  			let clone = JSON.parse(JSON.stringify(op));
-  			delete clone.hash;
-  			delete clone.signature;
+  loadQueueData();
+  loadBlocksData();
+  loadErrorsData();
+}
+
+function loadErrorsData() {
+  $.getJSON( "/log/list", function( data ) {
+      var items = "";
+      $("#errors-tab").html("Errors (" + data.logs.length + ")");
+      for(var i = 0; i < data.logs.length; i++)  {
+        let op = data.logs[i];
+        items += "<br><li><b>Status</b>: " + op.status;
+        items += "<br><b>Message</b>: " + op.message;
+        items += "<br><b>Time</b>: " + new Date(op.utcTime*1000).toUTCString();
+        if(op.cause) {
+          items += "<br><b>Exception message</b>: " + op.cause.detailMessage;
+        }
+        if(op.block) {
+          items += "<br><b>Block (id, hash)</b>: " + op.block.block_id + " " + op.block.hash;
+        }
+        if(op.operation) {
+          items += "<br><b>Operation</b>: " + 
+                  op.operation.operation +  " " + op.operation.name + " " + op.operation.hash;
+        }
+        
+        if(op.block) {
+          items += "<br><details><summary><b>Block json</b></summary><pre>" + 
+                JSON.stringify(op.block, null, 4) + "</pre></details>";
+        }
+        if(op.operation) {
+          items += "<br><details><summary><b>Operation json</b></summary><pre>" + 
+                JSON.stringify(op.operation, null, 4) + "</pre></details>";
+        }
+        if(op.cause) {
+          items += "<br><details><summary><b>Full exception</b></summary><pre>" + 
+                JSON.stringify(op.cause, null, 4) + "</pre></details>";
+        }
+        items += "</li>";
+      }
+      $("#errors-list").html(items);
+  });
+}
+
+function loadBlocksData() {
+  $.getJSON( "/block/list", function( data ) {
+      var items = "";
+      $("#blockchain-status").html(data.status);
+      $("#admin-user").html(data.serverUser);
+      // SHOW currentBlock, currentTx - as in progress or failed
+      $("#blocks-tab").html("Blocks (" + data.blockchain.length + ")");
+      for(var i = 0; i < data.blockchain.length; i++)  {
+        let op = data.blockchain[i];
+        items += "<br><li><b>Block id</b>: " + op.block_id;
+        items += "<br><b>Operations count</b>: " + op.operations.length;
+        items += "<br><b>Hash</b>: " + op.hash;
+        items += "<br><b>Signed by</b>: " + op.signed_by;
+        items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
+        items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
+        items += "<br><b>Details</b>: " + op.details;
+        // items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
+        items += "<br><details><summary><b>Simple json</b></summary><pre>" + 
+                JSON.stringify(op, null, 4) + "</pre></details>";
+        items += "</li>";
+      }
+      $("#blocks-list").html(items);
+  });
+}
+
+function loadQueueData() {
+  $.getJSON( "/queue/list", function( data ) {
+      var items = "";
+      $("#queue-tab").html("Queue (" + data.operations.length + ")");
+      for(var i = 0; i < data.operations.length; i++)  {
+        let op = data.operations[i];
+        let clone = JSON.parse(JSON.stringify(op));
+        delete clone.hash;
+        delete clone.signature;
         delete clone.signature_hash;
         delete clone.validation;
-  			sha256(JSON.stringify(clone)).then(digestValue => {
-  				if(("json:sha256:" + digestValue) != op.hash) {
-  					alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");
-            console.log("'"+JSON.stringify(clone)+"'");
-  				}
-			});
-  			items += "<br><li><b>Hash</b>: " + op.hash;
-  			items += "<br><b>Operation</b>: " + op.operation;
+        sha256(JSON.stringify(clone)).then(digestValue => {
+          if(("json:sha256:" + digestValue) != op.hash) {
+            alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");
+            // console.log("'"+JSON.stringify(clone)+"'");
+          }
+        });
+        items += "<br><li><b>Hash</b>: " + op.hash;
+        items += "<br><b>Operation</b>: " + op.operation;
         items += "<br><b>Name</b>: " + op.name;
-  			items += "<br><b>Signed by</b>: " + op.signed_by;
-  			items += "<br><b>Details</b>: " + JSON.stringify(op);
-  			items += "<br></li>";
-  		}
- 		$("#operations-list").html(items);
-  		
-});
+        items += "<br><b>Signed by</b>: " + op.signed_by;
+        items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
+        items += "<br><details><summary><b>JSON</b></summary><pre>" + 
+                JSON.stringify(op, null, 4) + "</pre></details>";
+        items += "</li>";
+      }
+      $("#operations-list").html(items);
+  });
 }
 
 $( document ).ready(function() {
     loadData();
-    $("#clear-list").click(function(){
+    $("#clear-list-btn").click(function(){
       $.post("/queue/clear", {},  function(data, status){
         loadData();
       });
     });
 
-    $("#boot-btn").click(function(){
-      var obj = {
-      };
-      $.post("/block/bootstrap", obj)
+    $("#clear-log-btn").click(function(){
+      $.post("/log/clear", {},  function(data, status){
+        loadData();
+      });
+    });
+
+    $("#block-create-btn").click(function(){
+       $.post("/block/create", {})
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
+
+    $("#block-pause-btn").click(function(){
+       $.post("/block/toggle-pause", {})
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
+
+    $("#block-bootstrap-btn").click(function(){
+      $.post("/block/bootstrap", {})
         .done(function(data){  $("#result").html(data); loadData(); })
-        .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
+        .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
     $("#signup-btn").click(function() {
@@ -117,22 +238,22 @@ $( document ).ready(function() {
       };
       $.post("/op/signup", obj)
           .done(function(data){  $("#result").html(data); loadData(); })
-          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
     $("#login-btn").click(function() {
-    	var obj = {
-    		"name":$("#login-name").val(),
+      var obj = {
+        "name":$("#login-name").val(),
         "pwd":$("#login-pwd").val(),
         "signupPrivateKey":$("#login-signup-key").val(),
         "oauthProvider":$("#login-oauth-p").val(),
         "oauthId":$("#login-oauth-id").val(),
         "loginPubKey":$("#login-public-key").val(),
         "loginAlgo":"EC"
-    	};
-    	$.post("/op/login", obj)
+      };
+      $.post("/op/login", obj)
           .done(function(data){  $("#result").html(data); loadData();})
-          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });
 });
 
