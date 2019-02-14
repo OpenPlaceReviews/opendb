@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
@@ -217,11 +217,11 @@ public class OpenDBUsersRegistry {
 	}
 	
 	public boolean validateHash(OpDefinitionBean o) {
-		return Utils.equals(calculateOperationHash(o, false), o.getHash());
+		return OUtils.equals(calculateOperationHash(o, false), o.getHash());
 	}
 	
 	public boolean validateSignatureHash(OpDefinitionBean o) {
-		return Utils.equals(calculateSigOperationHash(o), o.getSignatureHash());
+		return OUtils.equals(calculateSigOperationHash(o), o.getSignatureHash());
 	}
 	
 	public boolean validateSignature(ActiveUsersContext ctx, OpDefinitionBean ob, Map<String, String> sig, String name) throws FailedVerificationException {
@@ -289,12 +289,12 @@ public class OpenDBUsersRegistry {
  			}
  			ActiveUser au = users.get(name);
 			if (au != null && au.signUp != null) {
-				if(Utils.equals(au.signUp.getHash(), h)) {
+				if(OUtils.equals(au.signUp.getHash(), h)) {
 					au.signUp = null;
 					deleted = true;
 				}
 				for(OpDefinitionBean o : au.logins.values()) {
-					if(Utils.equals(o.getHash(), h)) {
+					if(OUtils.equals(o.getHash(), h)) {
 						au.logins.remove(getSiteFromUser(name));
 						deleted = true;
 						break;

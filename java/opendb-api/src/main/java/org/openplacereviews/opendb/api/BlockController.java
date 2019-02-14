@@ -5,7 +5,7 @@ import java.security.KeyPair
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
@@ -60,11 +60,11 @@ public class BlockController {
     	serverName = manager.getServerUser();
     	privateKey = manager.getServerPrivateKey();
     	OpBlock block = formatter.parseBootstrapBlock("1");
-		if (!Utils.isEmpty(serverName)) {
+		if (!OUtils.isEmpty(serverName)) {
 			KeyPair kp = null;
 			for (OpDefinitionBean o : block.getOperations()) {
 				OpDefinitionBean op = o;
-				if (!Utils.isEmpty(serverName) && Utils.isEmpty(o.getSignedBy())) {
+				if (!OUtils.isEmpty(serverName) && OUtils.isEmpty(o.getSignedBy())) {
 					if(kp == null) {
 						kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
 					}

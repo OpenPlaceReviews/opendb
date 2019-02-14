@@ -2,7 +2,7 @@ package org.openplacereviews.opendb.ops.db;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
@@ -39,7 +39,7 @@ public class CreateSequenceOperation implements OpenDBOperationExec {
 		this.definition = definition;
 		seqName = definition.getStringValue(FIELD_SEQ_NAME);
 		StringBuilder errorMessage = new StringBuilder();
-		if(!Utils.validateSqlIdentifier(seqName, errorMessage, FIELD_SEQ_NAME, "create sequence")) {
+		if(!OUtils.validateSqlIdentifier(seqName, errorMessage, FIELD_SEQ_NAME, "create sequence")) {
 			throw new IllegalArgumentException(errorMessage.toString());
 		}
 		minValue = definition.getNumberValue(FIELD_SEQ_MINVALUE);

@@ -6,7 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.LoginOperation;
@@ -47,9 +47,9 @@ public class OperationsController {
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey)
 			throws FailedVerificationException {
 		KeyPair kp = null;
-		if (!Utils.isEmpty(pwd)) {
+		if (!OUtils.isEmpty(pwd)) {
 			kp = validation.getQueueUsers().getSignUpKeyPairFromPwd(name, pwd);
-		} else if (!Utils.isEmpty(privateKey)) {
+		} else if (!OUtils.isEmpty(privateKey)) {
 			kp = validation.getQueueUsers().getSignUpKeyPair(name, privateKey);
 		}
 		if (kp == null) {
@@ -59,7 +59,7 @@ public class OperationsController {
 		op.setSignedBy(name);
 		KeyPair altKp = null;
 		
-		if (!Utils.isEmpty(manager.getServerUser())) {
+		if (!OUtils.isEmpty(manager.getServerUser())) {
 			op.addOtherSignedBy(manager.getServerUser());
 			altKp = manager.getServerLoginKeyPair(validation.getQueueUsers());
 		}
@@ -87,16 +87,16 @@ public class OperationsController {
     	op.setType(OperationsRegistry.OP_TYPE_AUTH);
     	op.setOperation(SignUpOperation.OP_ID);
     	op.putStringValue(SignUpOperation.F_NAME, name);
-    	if(!Utils.isEmpty(userDetails)) {
+    	if(!OUtils.isEmpty(userDetails)) {
     		op.putObjectValue(SignUpOperation.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
     	}
     	
-		if (Utils.isEmpty(algo)) {
+		if (OUtils.isEmpty(algo)) {
     		algo = SecUtils.ALGO_EC;
     	}
     	KeyPair keyPair;
     	KeyPair otherKeyPair = null;
-    	if(!Utils.isEmpty(pwd)) {
+    	if(!OUtils.isEmpty(pwd)) {
     		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PWD);
     		algo = SecUtils.ALGO_EC;
     		String salt = name;
@@ -105,7 +105,7 @@ public class OperationsController {
     		op.putStringValue(SignUpOperation.F_SALT, salt);
         	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, keyGen);
     		op.setSignedBy(name);
-    		if(!Utils.isEmpty(manager.getServerUser())) {
+    		if(!OUtils.isEmpty(manager.getServerUser())) {
     			op.addOtherSignedBy(manager.getServerUser());
     			otherKeyPair = manager.getServerLoginKeyPair(validation.getQueueUsers());
     			if(otherKeyPair == null) {
@@ -113,7 +113,7 @@ public class OperationsController {
     						String.format("Server %s to signup user doesn't have valid login key", manager.getServerUser()));
     			}
     		}
-    	} else if(!Utils.isEmpty(oauthId)) {
+    	} else if(!OUtils.isEmpty(oauthId)) {
     		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_OAUTH);
     		op.putStringValue(SignUpOperation.F_SALT, name);
 			op.putStringValue(SignUpOperation.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
@@ -160,14 +160,14 @@ public class OperationsController {
     	}
 		ActiveUsersContext queueUsers = validation.getQueueUsers();
 		String serverName = manager.getServerUser();
-		if (!Utils.isEmpty(pwd) || !Utils.isEmpty(signupPrivateKey)) {
-			if(!Utils.isEmpty(signupPrivateKey)) {
+		if (!OUtils.isEmpty(pwd) || !OUtils.isEmpty(signupPrivateKey)) {
+			if(!OUtils.isEmpty(signupPrivateKey)) {
 				kp = queueUsers.getSignUpKeyPair(nickname, signupPrivateKey);	
 			} else {
 				kp = queueUsers.getSignUpKeyPairFromPwd(nickname, pwd);
 			}
 			op.setSignedBy(nickname);
-			if(!Utils.isEmpty(serverName)) {
+			if(!OUtils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
     			otherKeyPair = manager.getServerLoginKeyPair(queueUsers);
     			if(otherKeyPair == null) {
@@ -175,7 +175,7 @@ public class OperationsController {
     						String.format("Server %s to signup user doesn't have valid login key", serverName));
     			}
     		}
-		} else if (!Utils.isEmpty(oauthId)) {
+		} else if (!OUtils.isEmpty(oauthId)) {
 			kp = manager.getServerLoginKeyPair(queueUsers);
 			OpDefinitionBean sop = queueUsers.getSignUpOperation(nickname);
 			if(!SecUtils.validateHash(sop.getStringValue(SignUpOperation.F_OAUTHID_HASH), 
@@ -190,7 +190,7 @@ public class OperationsController {
 		}
     	
     	KeyPair loginPair;
-		if (!Utils.isEmpty(loginPubKey)) {
+		if (!OUtils.isEmpty(loginPubKey)) {
 			op.putStringValue(LoginOperation.F_ALGO, loginAlgo);
     		loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
     	} else {

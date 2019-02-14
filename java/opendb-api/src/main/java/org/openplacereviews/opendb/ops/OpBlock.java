@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-import wiremock.com.jayway.jsonpath.internal.Utils;
+import org.openplacereviews.opendb.OUtils;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -87,7 +87,7 @@ public class OpBlock {
 	}
 	
 	public long getDate() {
-		if(Utils.isEmpty(date)) {
+		if(OUtils.isEmpty(date)) {
 			return 0;
 		}
 		try {

@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
@@ -266,19 +266,19 @@ public class BlocksManager {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					"Block has no operations to execute", true);
 		}
-		if(!Utils.equals(usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash)) {
+		if(!OUtils.equals(usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash), true);
 		}
-		if(!Utils.equals(usersRegistry.calculateSigMerkleTreeHash(block), block.sigMerkleTreeHash)) {
+		if(!OUtils.equals(usersRegistry.calculateSigMerkleTreeHash(block), block.sigMerkleTreeHash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate signature merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash), true);
 		}
-		if(!Utils.equals(prevOpBlock.hash, block.previousBlockHash)) {
+		if(!OUtils.equals(prevOpBlock.hash, block.previousBlockHash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate previous block hash: %s %s", prevOpBlock.hash, block.previousBlockHash), true);
 		}
-		if(!Utils.equals(calculateHash(block), block.hash)) {
+		if(!OUtils.equals(calculateHash(block), block.hash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate block hash: %s %s", calculateHash(block), block.hash), true);
 		}
@@ -346,7 +346,7 @@ public class BlocksManager {
 			dous.write(SecUtils.getHashBytes(block.merkleTreeHash));
 			dous.write(SecUtils.getHashBytes(block.sigMerkleTreeHash));
 			dous.writeLong(block.extra);
-			if(!Utils.isEmpty(block.details)) {
+			if(!OUtils.isEmpty(block.details)) {
 				dous.write(block.details.getBytes("UTF-8"));
 			}
 			dous.write(block.signedBy.getBytes("UTF-8"));

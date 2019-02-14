@@ -1,6 +1,6 @@
 package org.openplacereviews.opendb;
 
-public class Utils {
+public class OUtils {
 
 	
 	public static boolean isEmpty(String s) {

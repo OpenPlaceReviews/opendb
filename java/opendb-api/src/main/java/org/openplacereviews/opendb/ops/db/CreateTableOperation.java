@@ -6,7 +6,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.Utils;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
@@ -43,7 +43,7 @@ public class CreateTableOperation implements OpenDBOperationExec {
 		this.definition = definition;
 		tableName = definition.getStringValue(FIELD_TABLE_NAME);
 		StringBuilder errorMessage = new StringBuilder();
-		if(!Utils.validateSqlIdentifier(tableName, errorMessage, FIELD_TABLE_NAME, "create table")) {
+		if(!OUtils.validateSqlIdentifier(tableName, errorMessage, FIELD_TABLE_NAME, "create table")) {
 			throw new IllegalArgumentException(errorMessage.toString());
 		}
 		tableColumns = definition.getStringMap(FIELD_TABLE_COLUMNS);
@@ -51,7 +51,7 @@ public class CreateTableOperation implements OpenDBOperationExec {
 			throw new IllegalArgumentException(String.format("Field '%s' is not specified which is necessary to create table", FIELD_TABLE_COLUMNS));
 		}
 		for(String col: tableColumns.keySet()) {
-			if(!Utils.validateSqlIdentifier(col, errorMessage, FIELD_TABLE_COLUMNS, "create table")) {
+			if(!OUtils.validateSqlIdentifier(col, errorMessage, FIELD_TABLE_COLUMNS, "create table")) {
 				throw new IllegalArgumentException(errorMessage.toString());
 			}	
 		}
