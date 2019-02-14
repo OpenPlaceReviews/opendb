@@ -35,7 +35,7 @@ public class LogOperationService {
 		FAILED_EXECUTE(false),
 		FAILED_DEPENDENCIES(false),
 		FAILED_VALIDATE(false),
-		EXECUTED(false);
+		EXECUTED(true);
 		
 		private boolean success;
 		private OperationStatus(boolean s) {
@@ -70,7 +70,6 @@ public class LogOperationService {
 			Exception cause) throws OperationFailException {
 		LogEntry le = new LogEntry(cause, status, message);
 		le.operation = op;
-		log.add(le);
 		addLogEntry(exceptionOnFail, le);
 	}
 	

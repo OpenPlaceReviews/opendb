@@ -21,10 +21,10 @@ public class ApiController {
      	return "{\"status\":\"OK\"}";
     }
     
-    @GetMapping(path = "/test", produces = "text/html;charset=UTF-8")
+    @GetMapping(path = "/admin", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public InputStreamResource testHarness() {
-        return new InputStreamResource(ApiController.class.getResourceAsStream("/test.html"));
+        return new InputStreamResource(ApiController.class.getResourceAsStream("/admin.html"));
     }
     
 }

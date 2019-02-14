@@ -10,6 +10,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.BlocksManager.BlockchainState;
 import org.openplacereviews.opendb.service.JsonFormatter;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
@@ -45,6 +46,19 @@ public class BlockController {
     @ResponseBody
     public String createBlock() {
     	return manager.createBlock();
+    }
+    
+    @PostMapping(path = "/toggle-pause", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public String toggleBlockCreation() {
+    	if(manager.getCurrentState() == BlockchainState.BLOCKCHAIN_PAUSED) {
+    		manager.resumeBlockCreation();
+    	} else if(manager.getCurrentState() == BlockchainState.BLOCKCHAIN_READY) {
+    		manager.pauseBlockCreation();
+    	} else {
+			return "{\"status\":\"FAILED\", \"msg\":\"Current state is not ready: " + manager.getCurrentState() + "\"}";
+    	}
+    	return "{\"status\":\"OK\"}";
     }
     
     
@@ -96,7 +110,7 @@ public class BlockController {
 		res.serverUser = manager.getServerUser();
 		res.currentBlock = manager.getCurrentBlock();
 		res.currentTx = manager.getCurrentTx();
-		res.status = manager.getCurrentState().name().toLowerCase();
+		res.status = manager.getCurrentState().name();
 		return formatter.objectToJson(res);
 	}
 }
