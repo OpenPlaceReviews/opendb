@@ -2,7 +2,7 @@
 This is a service that provides database communication
 
 ## Requirements
-1. JDK
+1. JDK minimum 8
 2. Postgresql with empty database (default db: opengeoreviews, user: test, pwd: test)
 
 ## How to build & run
