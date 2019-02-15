@@ -21,7 +21,7 @@ cd java && ./gradlew bootRun
 In order to be able to bootstrap first block with specified users. Note: You can always construct it yourself. You need to specify following env variables so the server will be able to sign messages
 ```
 OPENDB_LOGIN=openplacereviews:test
-OPENDB_PK=<SPECIFY>
+OPENDB_PK="base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
 OPENDB_PORT=6463
 DB_URL=jdbc:postgresql://localhost:5432/openplacereviews
 DB_USER=test
