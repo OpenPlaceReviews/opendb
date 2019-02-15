@@ -16,6 +16,7 @@ CREATE DATABASE openplacereviews OWNER test;
 ```
 cd java && ./gradlew bootRun
 ```
+You should be able to see admin page at http://localhost:6463/api/admin.
 
 ## Env variables
 In order to be able to bootstrap first block with specified users. Note: You can always construct it yourself. You need to specify following env variables so the server will be able to sign messages
