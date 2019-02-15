@@ -12,7 +12,7 @@ public class OUtils {
 			errorMessage.append(String.format("Field '%s' is not specified which is necessary to %s", field, action));
 			return false;
 		}
-		if(isValidJavaIdentifier(id)) {
+		if(!isValidJavaIdentifier(id)) {
 			errorMessage.append(String.format("Value '%s' is not valid for %s to %s", id, field, action));
 			return false;
 		}

@@ -108,7 +108,7 @@ function loadErrorsData() {
         let op = data.logs[i];
         items += "<br><li><b>Status</b>: " + op.status;
         items += "<br><b>Message</b>: " + op.message;
-        items += "<br><b>Time</b>: " + new Date(op.utcTime*1000).toUTCString();
+        items += "<br><b>Time</b>: " + new Date(op.utcTime).toUTCString();
         if(op.cause) {
           items += "<br><b>Exception message</b>: " + op.cause.detailMessage;
         }

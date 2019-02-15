@@ -70,7 +70,7 @@ public class BlocksManager {
 	private String blockCreationDetails = "";
 	private long blockExtra = 0;
 	
-	private List<OpBlock> blockcchain = new ArrayList<OpBlock>();
+	private List<OpBlock> blockchain = new ArrayList<OpBlock>();
 	
 	public BlocksManager() {
 		init();
@@ -80,6 +80,7 @@ public class BlocksManager {
 		BLOCKCHAIN_INIT,
 		BLOCKCHAIN_READY,
 		BLOCKCHAIN_PAUSED,
+		BLOCKCHAIN_IN_PROGRESS_BLOCK_PREPARE,
 		BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC,
 		BLOCKCHAIN_FAILED_BLOCK_EXEC
 	}
@@ -106,7 +107,6 @@ public class BlocksManager {
 		if (this.currentState != BlockchainState.BLOCKCHAIN_READY) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
-		this.currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		try {
 			OpBlock bl = new OpBlock();
 			currentBlock = bl;
@@ -115,11 +115,20 @@ public class BlocksManager {
 			ActiveUsersContext users = pickupOpsFromQueue(candidates, q, false);
 			return executeBlock(bl, users, false);
 		} catch (RuntimeException e) {
-			this.currentState = BlockchainState.BLOCKCHAIN_FAILED_BLOCK_EXEC;
-			throw e;
+			if(this.currentState == BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_PREPARE) {
+				// this failure is not fatal and could be recovered easily 
+				this.currentState = BlockchainState.BLOCKCHAIN_READY;
+				this.currentBlock = null;
+				return formatter.objectToJson(e);
+			} else {
+				this.currentState = BlockchainState.BLOCKCHAIN_FAILED_BLOCK_EXEC;
+				throw e;	
+			}
+			
 		} finally {
 			if (currentState == BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC) {
 				this.currentState = BlockchainState.BLOCKCHAIN_READY;
+				this.currentBlock = null;
 			}
 		}
 	}
@@ -240,14 +249,17 @@ public class BlocksManager {
 
 
 	private String executeBlock(OpBlock block, ActiveUsersContext users, boolean exceptionOnFail) {
+		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_PREPARE;
 		List<OpenDBOperationExec> operations = prepareOperationCtxToExec(block, exceptionOnFail);
 		if(block.blockId < 0) {
 			signBlock(block, users);
 		}
 		validateBlock(block, users);
 		
+		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		// here we don't expect any failure or the will be fatal to the system
 		executeOperations(block, operations);
+		currentTx = null;
 		
 		// don't keep operations in memory
 		prevOpBlock = new OpBlock(block);
@@ -259,14 +271,14 @@ public class BlocksManager {
 			ro.putStringValue(OpDefinitionBean.F_NAME, o.getName());
 			ops.add(ro);
 		}
-		blockcchain = new ArrayList<OpBlock>(blockcchain);
-		blockcchain.add(prevOpBlock);
+		blockchain = new ArrayList<OpBlock>(blockchain);
+		blockchain.add(prevOpBlock);
 		queue.removeSuccessfulOps(block);
 		return formatter.toJson(prevOpBlock);
 	}
 	
 	public List<OpBlock> getBlockcchain() {
-		return blockcchain;
+		return blockchain;
 	}
 
 	private void validateBlock(OpBlock block, ActiveUsersContext users) {
@@ -421,7 +433,7 @@ public class BlocksManager {
 				}
 			} else {
 				logSystem.logOperation(OperationStatus.FAILED_PREPARE, def,
-						String.format("Operation %s %s couldn't be validated for execution", def.getOperationId(), def.getHash()) , ex);
+						op == null ? "Operation is not listed in the registry" : "Operation couldn't be validated for execution", ex);
 			}
 			if(valid) {
 				operations.add(op);

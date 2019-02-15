@@ -4,9 +4,13 @@ logging:
   pattern.console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){yellow} %-5level [%thread]: %message%n%ex{4}"
 
 server:
-  port: 6463
+  port: ${OPENDB_PORT:6463}
   tomcat.max-threads: 5
   connection-timeout: 120000
+
+opendb:
+  user: ${OPENDB_LOGIN:openplacereviews:test}
+  privateKey: ${OPENDB_PK:openplacereviews:test}
 
 management:
   endpoints:
@@ -19,7 +23,7 @@ spring:
     properties.hibernate.jdbc.lob.non_contextual_creation: true
     hibernate.ddl-auto: update
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/opengeoreviews}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/openplacereviews}
     username: ${DB_USER:test}
     password: ${DB_PWD:test}
 # classpath:/static/
@@ -33,7 +37,6 @@ logging:
   config: classpath:logback-spring.xml
 
 server:
-  port: 6463
   tomcat.max-threads: 50
   address: 127.0.0.1 #keep it behind proxy
   tomcat:

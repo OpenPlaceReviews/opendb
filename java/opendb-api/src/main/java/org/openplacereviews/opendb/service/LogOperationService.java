@@ -23,7 +23,7 @@ public class LogOperationService {
 		long utcTime;
 		
 		public LogEntry(Exception cause, OperationStatus status, String message) {
-			this.utcTime = System.currentTimeMillis() / 1000;
+			this.utcTime = System.currentTimeMillis();
 			this.cause = cause;
 			this.message = message;
 			this.status = status;
@@ -100,13 +100,26 @@ public class LogOperationService {
 	private void addLogEntry(boolean exceptionOnFail, LogEntry le) {
 		log.add(le);
 		if(le.status.isSuccessful()) {
-			LOGGER.info("SUCCESS: " + le.message);
+			LOGGER.info("SUCCESS: " + getMessage(le));
 		} else {
-			LOGGER.warn("FAILURE: " + le.message, le.cause);
+			LOGGER.warn("FAILURE: " + getMessage(le), le.cause);
 		}
 		if(exceptionOnFail && !le.status.isSuccessful()) {
 			throw new OperationFailException(le);
 		}
+	}
+
+	private String getMessage(LogEntry le) {
+		String msg = le.message;
+		if(le.operation != null) {
+			msg += String.format(", operation: %s, %s, %s", le.operation.getFullOperationName(), 
+					le.operation.getName(), le.operation.getHash()); 
+		}
+		if(le.block != null) {
+			msg += String.format(", block: %s, %s, %s", le.block.blockId +"", 
+					le.block.date, le.block.hash);
+		}
+		return msg;
 	}
 	
 	public void clearLogs() {
