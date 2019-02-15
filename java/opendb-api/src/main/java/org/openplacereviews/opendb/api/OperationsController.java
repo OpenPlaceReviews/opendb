@@ -174,6 +174,7 @@ public class OperationsController {
 				kp = queueUsers.getSignUpKeyPairFromPwd(nickname, pwd);
 			}
 			op.setSignedBy(nickname);
+			// sign with server is it necessary or make it optional? 
 			if(!OUtils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
     			otherKeyPair = manager.getServerLoginKeyPair(queueUsers);

@@ -41,6 +41,11 @@ public class SecUtils {
 	public static final String KEY_BASE64 = DECODE_BASE64;
 
 	public static void main(String[] args) throws FailedVerificationException {
+		
+		KeyPair kps = SecUtils.getKeyPair(ALGO_EC,
+				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
+				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
+		System.out.println(SecUtils.validateKeyPair(ALGO_EC, kps.getPrivate(), kps.getPublic()));
 		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
 		System.out.println(kp.getPrivate().getFormat());
 		System.out.println(kp.getPrivate().getAlgorithm());

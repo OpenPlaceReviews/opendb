@@ -352,7 +352,7 @@ public class OpenDBUsersRegistry {
  	 				return au.signUp;
  	 			}	
  			}
- 			return null;
+ 			return op;
  		}
  		
  		public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {

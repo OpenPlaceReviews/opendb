@@ -89,7 +89,8 @@ public class BlockController {
 				queue.addOperation(op);
 			}
 		}
-		return manager.createBlock();
+		// return manager.createBlock();
+		return "{}";
     }
     
     public static class BlockchainResult {

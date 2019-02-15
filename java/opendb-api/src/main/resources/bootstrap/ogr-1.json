@@ -16,18 +16,18 @@
    			},
    			"signature_hash":"sha256:f1c2973a60d41446339afabe0d6485f1f62d5076fa505c0237ef7289c9680266"
 		},
-		{  
-			"operation":"auth:login",
-			"signed_by":"openplacereviews",
-			"algo":"EC",
-			"hash":"json:sha256:331d5d15811f1c9a33b267f166b5a758aa335db495c51024edbda14b08d6a64c",
-			"name":"openplacereviews:web_backend",
-			"pubkey":"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE1/eJ8rxS47kRkx3UKzvdLnjyfwznniTYugVelx7rx2kecAqEj4oGeSkhrouAEDi1qc4uJOzC90ONSSCm2gEi6g==",
-			"signature":{  
-				"algo":"NonewithECDSA",
-				"digest":"base64:MEYCIQDUYK/t/Uoei5e0/VU6YZ4vQHprrUhrDwhyDjKbefkPtgIhAKaWi2ciVXRX1Vl6S7PQhTL1JUYQJvQjklPhyBCsOrj7"
-   			},
-			"signature_hash":"sha256:eb67033eb6772719c615c8dacdf3de3035d3617b7597133ba39573143c3f907e"
+		{
+    		"operation": "auth:login",
+    		"signed_by": "openplacereviews",
+    		"algo": "EC",
+    		"hash": "json:sha256:73ae726c17e06519b500797fbced924a34602a7d977d3a38d625db7267cedfb5",
+    		"name": "openplacereviews:test_1",
+    		"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==",
+    		"signature": {
+        		"algo": "NonewithECDSA",
+        		"digest": "base64:MEUCICi1ECvn/j20x1kD/Iw9RoJBYjwduUg+GE3neMNijV+gAiEAxX0QyhhdnqcJ9GgcLnm5FUFBiZ3qmvg8Sp5l0r+yIQM="
+    		},
+    		"signature_hash": "sha256:42276cf3273d1eaccc889be484bfe7c65983230e3766cf45f3a34e4840b0471c"
 		},
 		{
 			"operation" : "ddl:create_table",
@@ -65,33 +65,5 @@
 				"op_name" : "text",
 				"details" : "jsonb"
 			}
-		},
-		{
-			"operation" : "opdb:op_db_mapping",
-			"name" : "auth:signup",
-			"type" : "new",
-			"identity" : ".name",
-			"table" : "users",
-			"table_columns": {
-				"nickname" : ".name",
-				"block" : "$block",
-				"op_hash" : "hashlast_to_int4(.hash)",
-				"details" : ".details"
-			}
-		},
-		{
-			"operation" : "opdb:op_db_mapping",
-			"name" : "auth:login",
-			"type" : "new",
-			"identity" : ".name",
-			"table" : "users",
-			"table_columns": {
-				"nickname" : ".name",
-				"block" : "$block",
-				"op_hash" : "hashlast_to_int4(.hash)",
-				"details" : ".details"
-			}
-		}
-
-	]
+		}	]
 }

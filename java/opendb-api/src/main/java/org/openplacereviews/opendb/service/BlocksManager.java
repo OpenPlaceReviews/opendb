@@ -27,6 +27,7 @@ import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.service.OpenDBUsersRegistry.ActiveUsersContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -63,9 +64,14 @@ public class BlocksManager {
 	private BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
 	
 	
-	private OpBlock prevOpBlock = new OpBlock();
+	@Value("${opendb.user}")
 	private String serverUser;
+	
+	@Value("${opendb.privateKey}")
 	private String serverPrivateKey;
+	
+	private OpBlock prevOpBlock = new OpBlock();
+	
 	private KeyPair serverKeyPair;
 	private String blockCreationDetails = "";
 	private long blockExtra = 0;
@@ -158,8 +164,6 @@ public class BlocksManager {
 	}
 	
 	public synchronized void init() {
-		serverUser = System.getenv("OPENDB_SIGN_LOGIN");
-		serverPrivateKey = System.getenv("OPENDB_SIGN_PK");
 		currentState = BlockchainState.BLOCKCHAIN_READY;
 	}
 	
