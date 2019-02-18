@@ -3,11 +3,13 @@ grammar OpenDBExpr;
 // We define expression to be either a method call or a string.
 expression
     : methodCall
+    | fieldAccess
     | STRING_LITERAL2
     | STRING_LITERAL1
     | INT
     ;
 
+fieldAccess : 'this'? ('.' NAME) + ;
 methodCall : NAME '(' methodCallArguments ')' ;
 
 methodCallArguments

@@ -16,6 +16,8 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.openplacereviews.opendb.expr.OpenDBExprLexer;
 import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
+import org.openplacereviews.opendb.expr.OpenDBExprParser.FieldAccessContext;
+import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
@@ -50,26 +52,62 @@ public class SimpleExprEvaluator {
 		
 	}
 	
-	
 	public Object execute(SqlColumnType type, EvaluationContext obj) {
+		return execute(obj);
+	}
+	
+	private Object callFunction(String functionName, List<Object> args) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public Object execute(EvaluationContext obj) {
 		ParseTree child = ectx.getChild(0);
 		if(child instanceof TerminalNode){
 			TerminalNode t = ((TerminalNode)child);
-			if(t.getSymbol().getType()  == OpenDBExprParser.INT) {
-				return Integer.parseInt(t.getText());
-			} else if(t.getSymbol().getType()  == OpenDBExprParser.STRING_LITERAL1) {
+			if (t.getSymbol().getType() == OpenDBExprParser.INT) {
+				return Long.parseLong(t.getText());
+			} else if (t.getSymbol().getType() == OpenDBExprParser.STRING_LITERAL1) {
 				return t.getText().substring(1, t.getText().length() - 1).replace("\\\'", "\'");
-			} else if(t.getSymbol().getType()  == OpenDBExprParser.STRING_LITERAL2) {
+			} else if (t.getSymbol().getType() == OpenDBExprParser.STRING_LITERAL2) {
 				return t.getText().substring(1, t.getText().length() - 1).replace("\\\"", "\"");
 			}
 			throw new UnsupportedOperationException("Terminal node is not supported");
 		}
-		
-		System.out.println(ectx);
-		return null;
+		if(child instanceof FieldAccessContext) {
+			FieldAccessContext mcc = ((FieldAccessContext) child);
+			List<String> fieldAccess = new ArrayList<String>();
+			for(int i = 0; i < mcc.getChildCount(); i++) {
+				TerminalNode pt = (TerminalNode) mcc.getChild(i);
+				if(pt.getSymbol().getType() == OpenDBExprLexer.NAME) {
+					fieldAccess.add(pt.getSymbol().getText());
+				}
+			}
+			JsonElement o = obj.ctx;
+			for (String f : fieldAccess) {
+				if (o == null) {
+					break;
+				}
+				o = o.getAsJsonObject().get(f);
+				
+			}
+			return o;
+		}
+		if(child instanceof MethodCallContext) {
+			MethodCallContext mcc = ((MethodCallContext) child);
+			String functionName = mcc.NAME().getText();
+			List<Object> args = new ArrayList<Object>();
+			for(int i = 1; i < ectx.getChildCount(); i++) {
+				args.add(execute(obj));
+			}
+			return callFunction(functionName, args);
+		}
+		throw new UnsupportedOperationException("Unsupported parser operation: %s" + child.getText());
 		
 	}
 	
+	
+
 	public Object execute(SqlColumnType type, JsonObject obj) {
 		List<String> fieldAccess = new ArrayList<String>();
 		JsonElement o = obj;
