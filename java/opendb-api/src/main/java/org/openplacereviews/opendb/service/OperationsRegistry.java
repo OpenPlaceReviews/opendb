@@ -8,12 +8,14 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
-import org.openplacereviews.opendb.ops.db.CreateTableOperation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+
+import com.google.gson.JsonObject;
 
 @Service
 public class OperationsRegistry {
@@ -21,16 +23,18 @@ public class OperationsRegistry {
 	public static final int VERSION = 1;
 	protected static final Log LOGGER = LogFactory.getLog(OperationsRegistry.class);
 	
-	public static final String OP_TYPE_DDL = "ddl";
-	// TODO COMBINE with sys
-	public static final String OP_TYPE_AUTH = "auth";
+	// system operations
+	public static final String OP_TYPE_SYS  = "sys";
+	// auth
 	public static final String OP_LOGIN = "login";
 	public static final String OP_SIGNUP = "signup";
-	
-	public static final String OP_TYPE_SYS = "sys";
+	// validation 
 	public static final String OP_ROLE = "role";
-	public static final String OP_OPERATION = "operation";
 	public static final String OP_DENY = "opdeny";
+	// mapping
+	public static final String OP_TABLE = "table";
+	// meta 
+	public static final String OP_OPERATION = "operation";
 	
 	
 	// system events
@@ -39,8 +43,13 @@ public class OperationsRegistry {
 	public static final String OP_IN_BLOCK = "op_in_block";
 	public static final String OP_IN_QUEUE = "op_in_queue";
 	
+	// op_operation
+	private static final String F_NAME = "name";
 	
-	Map<String, OperationTypeDefinition> operations = new TreeMap<>();
+	private Map<String, OperationTypeDefinition> operations = new TreeMap<>();
+	
+	@Autowired
+	private DBDataManager dbManager;
 	
 	private static class OperationTypeDefinition {
 		public final OpDefinitionBean def;
@@ -76,22 +85,32 @@ public class OperationsRegistry {
 			}
 		}
 		
-		operations.put(getOperationId(OP_TYPE_AUTH, OP_LOGIN), new OperationTypeDefinition(null));
-		operations.put(getOperationId(OP_TYPE_AUTH, OP_SIGNUP), new OperationTypeDefinition(null));
 		
-		operations.put(getOperationId(OP_TYPE_SYS, OP_OPERATION), new OperationTypeDefinition(null));
+		operations.put(getOperationId(OP_TYPE_SYS, OP_LOGIN), new OperationTypeDefinition(null));
+		operations.put(getOperationId(OP_TYPE_SYS, OP_SIGNUP), new OperationTypeDefinition(null));
+		
 		operations.put(getOperationId(OP_TYPE_SYS, OP_ROLE), new OperationTypeDefinition(null));
 		operations.put(getOperationId(OP_TYPE_SYS, OP_DENY), new OperationTypeDefinition(null));
+		
+		operations.put(getOperationId(OP_TYPE_SYS, OP_TABLE), new OperationTypeDefinition(null));
+		
+		operations.put(getOperationId(OP_TYPE_SYS, OP_OPERATION), new OperationTypeDefinition(null));
+	}
+	
+	public void triggerEvent(String eventId, JsonObject obj) {
+		dbManager.executeMappingOperation(getOperationId(OP_TYPE_EVENT, eventId), obj);
 	}
 
+
 	public OpenDBOperationExec createOperation(OpDefinitionBean def) {
-		if(def.getOperationName().equals(OperationsRegistry.OP_TYPE_DDL + ":" + CreateTableOperation.OP_ID)) {
-			return new CreateTableOperation();
+		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_TABLE))) {
+			dbManager.registerTableDefinition(def);
 		}
-		if(def.getOperationName().equals(OperationsRegistry.OP_TYPE_SYS + ":" + OP_OPERATION)) {
-			operations.put(def.getOperationName(), new OperationTypeDefinition(def));
+		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_OPERATION))) {
+			operations.put(def.getStringValue(F_NAME), new OperationTypeDefinition(def));
+			dbManager.registerMappingOperation(def.getStringValue(F_NAME), def);
 		}
-		OperationTypeDefinition otd = operations.get(def.getOperationName());
+		OperationTypeDefinition otd = operations.get(def.getOperationId());
 		return new OpenDBOperationExec() {
 			
 			@Override
@@ -115,6 +134,9 @@ public class OperationsRegistry {
 			}
 		};
 	}
+
+
+	
 	
 	
 	

@@ -15,9 +15,13 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
-public class OpDefinitionBean {
+public class OpDefinitionBean  {
 	
 	public static final String F_HASH = "hash";
+	public static final String F_OPERATION = "operation";
+	public static final String F_OPERATION_NAME = "operation_name";
+	public static final String F_OPERATION_TYPE = "operation_type";
+	
 	public static final String F_NAME = "name";
 	public static final String F_SIGNATURE = "signature";
 	public static final String F_SIGNATURE_HASH = "signature_hash";
@@ -155,7 +159,6 @@ public class OpDefinitionBean {
 	public Object remove(String key) {
 		return otherFields.remove(key);
 	}
-	
 	
 	public static class OpDefinitionBeanAdapter implements JsonDeserializer<OpDefinitionBean>,
 			JsonSerializer<OpDefinitionBean> {

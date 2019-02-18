@@ -16,9 +16,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.api.BlockController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
@@ -33,7 +36,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class BlocksManager {
-
+	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
+	
 	@Autowired
 	public OperationsQueueManager queue;
 	
@@ -120,6 +124,7 @@ public class BlocksManager {
 			ActiveUsersContext users = pickupOpsFromQueue(candidates, q, false);
 			return executeBlock(bl, users, false);
 		} catch (RuntimeException e) {
+			LOGGER.error("Error creating block", e);
 			if(this.currentState == BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_PREPARE) {
 				// this failure is not fatal and could be recovered easily 
 				this.currentState = BlockchainState.BLOCKCHAIN_READY;
@@ -153,6 +158,7 @@ public class BlocksManager {
 			}
 			return executeBlock(remoteBlock, users, true);
 		} catch (RuntimeException e) {
+			LOGGER.error("Error creating block", e);
 			this.currentState = BlockchainState.BLOCKCHAIN_FAILED_BLOCK_EXEC;
 			throw e;
 		} finally {
@@ -276,6 +282,7 @@ public class BlocksManager {
 		}
 		blockchain = new ArrayList<OpBlock>(blockchain);
 		blockchain.add(prevOpBlock);
+		registry.triggerEvent(OperationsRegistry.OP_BLOCK, formatter.toJsonObject(prevOpBlock));
 		queue.removeSuccessfulOps(block);
 		return formatter.toJson(prevOpBlock);
 	}

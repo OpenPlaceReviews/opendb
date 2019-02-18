@@ -9,7 +9,7 @@ import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@OpenDBOperation(type = OperationsRegistry.OP_TYPE_AUTH, name = LoginOperation.OP_ID)
+@OpenDBOperation(type = OperationsRegistry.OP_TYPE_SYS, name = LoginOperation.OP_ID)
 public class LoginOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(LoginOperation.class);

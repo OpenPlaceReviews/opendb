@@ -91,7 +91,7 @@ public class OperationsController {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
     	
-    	op.setType(OperationsRegistry.OP_TYPE_AUTH);
+    	op.setType(OperationsRegistry.OP_TYPE_SYS);
     	op.setOperation(SignUpOperation.OP_ID);
     	op.putStringValue(SignUpOperation.F_NAME, name);
     	if(!OUtils.isEmpty(userDetails)) {
@@ -155,7 +155,7 @@ public class OperationsController {
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
     	OpDefinitionBean op = new OpDefinitionBean();
-    	op.setType(OperationsRegistry.OP_TYPE_AUTH);
+    	op.setType(OperationsRegistry.OP_TYPE_SYS);
     	op.setOperation(LoginOperation.OP_ID);
     	op.putStringValue(LoginOperation.F_NAME, name);
 		KeyPair kp = null;

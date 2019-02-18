@@ -8,7 +8,7 @@ import org.openplacereviews.opendb.ops.OpenDBOperation;
 import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@OpenDBOperation(type=OperationsRegistry.OP_TYPE_AUTH, name=SignUpOperation.OP_ID)
+@OpenDBOperation(type=OperationsRegistry.OP_TYPE_SYS, name=SignUpOperation.OP_ID)
 public class SignUpOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(SignUpOperation.class);

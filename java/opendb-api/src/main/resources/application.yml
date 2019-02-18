@@ -10,7 +10,7 @@ server:
 
 opendb:
   user: ${OPENDB_LOGIN:openplacereviews:test_1}
-  privateKey: ${OPENDB_PK:base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw==}
+  privateKey: ${OPENDB_PK:base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCAOpUDyGrTPRPDQRCIRXysxC6gCgSTiNQ5nVEjhvsFITA==}
 
 management:
   endpoints:

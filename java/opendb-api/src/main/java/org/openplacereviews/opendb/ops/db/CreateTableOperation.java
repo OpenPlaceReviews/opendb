@@ -14,7 +14,7 @@ import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
-@OpenDBOperation(type=OperationsRegistry.OP_TYPE_DDL, name=CreateTableOperation.OP_ID)
+@OpenDBOperation(type=OperationsRegistry.OP_TYPE_SYS, name=CreateTableOperation.OP_ID)
 public class CreateTableOperation implements OpenDBOperationExec {
 
 	protected static final Log LOGGER = LogFactory.getLog(CreateTableOperation.class);

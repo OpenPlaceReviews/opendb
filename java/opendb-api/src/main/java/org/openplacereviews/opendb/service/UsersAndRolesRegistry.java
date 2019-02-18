@@ -303,7 +303,11 @@ public class UsersAndRolesRegistry {
  		}
  		
 		public boolean addAuthOperation(OpDefinitionBean op) {
-			if(!op.getOperationType().equals(OperationsRegistry.OP_TYPE_AUTH)) {
+			if(!op.getOperationType().equals(OperationsRegistry.OP_TYPE_SYS) || 
+					!(
+					op.getOperationName().equals(OperationsRegistry.OP_LOGIN) || 
+					op.getOperationName().equals(OperationsRegistry.OP_SIGNUP)
+					)) {
 				return false;
 			}
 			String name = op.getStringValue(SignUpOperation.F_NAME);

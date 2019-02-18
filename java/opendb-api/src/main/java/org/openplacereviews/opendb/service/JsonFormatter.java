@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 
 @Component
 public class JsonFormatter {
@@ -36,8 +37,17 @@ public class JsonFormatter {
 	public OpDefinitionBean parseOperation(String opJson) {
 		return gson.fromJson(opJson, OpDefinitionBean.class);
 	}
+	
 	public String toJson(OpBlock bl) {
 		return gson.toJson(bl);
+	}
+	
+	public JsonObject toJsonObject(OpBlock bl) {
+		return gson.toJsonTree(bl).getAsJsonObject();
+	}
+	
+	public JsonObject toJsonObject(OpDefinitionBean o) {
+		return gson.toJsonTree(o).getAsJsonObject();
 	}
 	
 	public String objectToJson(Object o) {
