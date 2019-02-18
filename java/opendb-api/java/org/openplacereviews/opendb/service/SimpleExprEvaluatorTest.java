@@ -66,4 +66,12 @@ public class SimpleExprEvaluatorTest {
 		assertEquals(3, evaluateExprJson(".e.a.a"));
 		assertEquals(3, evaluateExprJson("this.e.a.a"));
 	}
+	
+	@Test
+	public void testSimpleFunctionEval() {
+		assertEquals(4l, evaluateExpr("m.plus(1,3)"));
+		assertEquals(-2l, evaluateExpr("m.plus(1,-3)"));
+		assertEquals("1", evaluateExpr("str.first('1:3')"));
+		assertEquals("3", evaluateExpr("str.second('1:3')"));
+	}
 }

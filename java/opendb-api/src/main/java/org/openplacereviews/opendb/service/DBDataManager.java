@@ -145,7 +145,7 @@ public class DBDataManager {
 					Object[] o = new Object[t.columnMappings.size()];
 					for (int i = 0; i < t.columnMappings.size(); i++) {
 						ColumnMapping colMapping = t.columnMappings.get(i);
-						o[i] = colMapping.expression.execute(colMapping.type, obj);
+						o[i] = colMapping.expression.evaluateForJson(colMapping.type, obj);
 					}
 
 					jdbcTemplate.update(t.preparedStatement, o);

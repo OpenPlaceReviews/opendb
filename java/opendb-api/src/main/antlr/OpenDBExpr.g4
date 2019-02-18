@@ -9,17 +9,18 @@ expression
     | INT
     ;
 
-fieldAccess : 'this'? ('.' NAME) + ;
-methodCall : NAME '(' methodCallArguments ')' ;
+fieldAccess : 'this' ? ('.' NAME) + ;
 
-methodCallArguments
-	: // No arguments
-    | expression (',' expression)*  
-    ;
+methodCall : NAME (DOT NAME) * OPENB  expression (COMMA expression)*  CLOSEB ;
+
 
 // NAME represents any variable or method name.
 NAME : [a-zA-Z][a-zA-Z0-9]*;
 INT : '-'? '0'..'9'+ ;
+DOT : '.';
+COMMA : ',';
+OPENB : '(';
+CLOSEB : ')';
 
 // STRING represents a string value, for example "abc".
 STRING_LITERAL2 : '"' (~('"' | '\\' | '\r' | '\n') | '\\' ('"' | '\\'))* '"';

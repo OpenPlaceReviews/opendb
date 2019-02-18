@@ -23,48 +23,100 @@ import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class SimpleExprEvaluator {
-	
+
+	public static final String FUNCTION_DB_FIND_BY_ID = "db.find_by_id";
+	public static final String FUNCTION_STR_FIRST = "str.first";
+	public static final String FUNCTION_STR_SECOND = "str.second";
+	public static final String FUNCTION_M_PLUS = "m.plus";
+
 	private ExpressionContext ectx;
-	
-	
+
 	public static class EvaluationContext {
 		JsonObject ctx;
 		JdbcTemplate jdbc;
-		Object[] args;
-		
+
 		public EvaluationContext(JdbcTemplate jdbc, JsonObject ctx) {
 			this.jdbc = jdbc;
 			this.ctx = ctx;
 		}
-		
-		public void setArgs(Object... args) {
-			this.args = args;
-		}
+
 	}
-		
+
 	private SimpleExprEvaluator(ExpressionContext ectx) {
 		this.ectx = ectx;
-		
+
 	}
-	
+
 	public Object execute(SqlColumnType type, EvaluationContext obj) {
-		return execute(obj);
+		return executeExpr(ectx, obj);
 	}
 	
+	public static SimpleExprEvaluator parseMappingExpression(String value) {
+		OpenDBExprLexer lexer = new OpenDBExprLexer(new ANTLRInputStream(value));
+		ThrowingErrorListener twt = new ThrowingErrorListener(value);
+		lexer.removeErrorListeners();
+		lexer.addErrorListener(twt);
+		OpenDBExprParser parser = new OpenDBExprParser(new CommonTokenStream(lexer));
+		parser.removeErrorListeners();
+		parser.addErrorListener(twt);
+		ExpressionContext ectx = parser.expression();
+
+		SimpleExprEvaluator ev = new SimpleExprEvaluator(ectx);
+		return ev;
+	}
+
 	private Object callFunction(String functionName, List<Object> args) {
-		// TODO Auto-generated method stub
-		return null;
+		switch (functionName) {
+//		case FUNCTION_DB_FIND_BY_ID:
+//
+//			break;
+		case FUNCTION_M_PLUS:
+			long l1 = getLongArgument(functionName, args, 0);
+			long l2 = getLongArgument(functionName, args, 1);
+			return l1 + l2;
+		case FUNCTION_STR_FIRST:
+		case FUNCTION_STR_SECOND:
+			String ffs = getStringArgument(functionName, args, 0);
+			if (ffs != null) {
+				int indexOf = ffs.indexOf(':');
+				if (indexOf != -1) {
+					return functionName.equals(FUNCTION_STR_FIRST) ? ffs.substring(0, indexOf) : ffs
+							.substring(indexOf + 1);
+				}
+			}
+			return ffs;
+		default:
+			break;
+		}
+		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
 	}
-	
-	public Object execute(EvaluationContext obj) {
+
+	private String getStringArgument(String functionName, List<Object> args, int i) {
+		if (i >= args.size()) {
+			throw new UnsupportedOperationException(String.format("Not enough arguments for function '%s'",
+					functionName));
+		}
+		Object o = args.get(i);
+		return o == null ? null : o.toString();
+	}
+
+	private long getLongArgument(String functionName, List<Object> args, int i) {
+		if (i >= args.size()) {
+			throw new UnsupportedOperationException(String.format("Not enough arguments for function '%s'",
+					functionName));
+		}
+		Object o = args.get(i);
+		return o == null ? 0 : Long.parseLong(o.toString());
+	}
+
+	private Object executeExpr(ExpressionContext ectx, EvaluationContext obj) {
 		ParseTree child = ectx.getChild(0);
-		if(child instanceof TerminalNode){
-			TerminalNode t = ((TerminalNode)child);
+		if (child instanceof TerminalNode) {
+			TerminalNode t = ((TerminalNode) child);
 			if (t.getSymbol().getType() == OpenDBExprParser.INT) {
 				return Long.parseLong(t.getText());
 			} else if (t.getSymbol().getType() == OpenDBExprParser.STRING_LITERAL1) {
@@ -74,12 +126,12 @@ public class SimpleExprEvaluator {
 			}
 			throw new UnsupportedOperationException("Terminal node is not supported");
 		}
-		if(child instanceof FieldAccessContext) {
+		if (child instanceof FieldAccessContext) {
 			FieldAccessContext mcc = ((FieldAccessContext) child);
 			List<String> fieldAccess = new ArrayList<String>();
-			for(int i = 0; i < mcc.getChildCount(); i++) {
+			for (int i = 0; i < mcc.getChildCount(); i++) {
 				TerminalNode pt = (TerminalNode) mcc.getChild(i);
-				if(pt.getSymbol().getType() == OpenDBExprLexer.NAME) {
+				if (pt.getSymbol().getType() == OpenDBExprLexer.NAME) {
 					fieldAccess.add(pt.getSymbol().getText());
 				}
 			}
@@ -89,26 +141,34 @@ public class SimpleExprEvaluator {
 					break;
 				}
 				o = o.getAsJsonObject().get(f);
-				
+
 			}
 			return o;
 		}
-		if(child instanceof MethodCallContext) {
+		if (child instanceof MethodCallContext) {
 			MethodCallContext mcc = ((MethodCallContext) child);
-			String functionName = mcc.NAME().getText();
+			String functionName = "";
+			boolean functionNameComplete = false;
 			List<Object> args = new ArrayList<Object>();
-			for(int i = 1; i < ectx.getChildCount(); i++) {
-				args.add(execute(obj));
+			for (int i = 0; i < mcc.getChildCount(); i++) {
+				ParseTree pt = mcc.getChild(i);
+				if (pt instanceof TerminalNode) {
+					int tp = ((TerminalNode)pt).getSymbol().getType();
+					if(tp == OpenDBExprLexer.OPENB) {
+						functionNameComplete = true;
+					} else if (!functionNameComplete) {
+						functionName += pt.getText();
+					}
+				} else {
+					args.add(executeExpr((ExpressionContext) pt, obj));
+				}
 			}
 			return callFunction(functionName, args);
 		}
 		throw new UnsupportedOperationException("Unsupported parser operation: %s" + child.getText());
-		
 	}
-	
-	
 
-	public Object execute(SqlColumnType type, JsonObject obj) {
+	public Object evaluateForJson(SqlColumnType type, JsonObject obj) {
 		List<String> fieldAccess = new ArrayList<String>();
 		JsonElement o = obj;
 		for (String f : fieldAccess) {
@@ -143,29 +203,7 @@ public class SimpleExprEvaluator {
 		return o.toString();
 	}
 
-	
-	
-	
-	
-	static {
-//		registerFunction("find_by_id", FindByIdFunction.class);
-//		registerFunction("first", FindByIdFunction.class);
-//		registerFunction("second", FindByIdFunction.class);
-//		
-	}
-
-	
-	public static void main(String[] args) {
-		Gson gson = new Gson();
-		JsonElement obj = gson.fromJson("{'a':1}", JsonElement.class);
-		EvaluationContext ectx = new EvaluationContext(null, obj.getAsJsonObject());
-		System.out.println(parseMappingExpression("1").execute(null,  ectx));
-		System.out.println(parseMappingExpression("'1\"\\\''").execute(null,  ectx));
-		System.out.println(parseMappingExpression("\"1\\\"\'\"").execute(null,  ectx));
-	}
-
 	public static class ThrowingErrorListener extends BaseErrorListener {
-
 
 		private String value;
 
@@ -176,36 +214,11 @@ public class SimpleExprEvaluator {
 		@Override
 		public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine,
 				String msg, RecognitionException e) throws ParseCancellationException {
-			throw new ParseCancellationException( 
-					String.format("Error parsing expression '%s' %d:%d %s", value, line, charPositionInLine, msg));
+			throw new ParseCancellationException(String.format("Error parsing expression '%s' %d:%d %s", value, line,
+					charPositionInLine, msg));
 		}
 	}
-	
-	public static SimpleExprEvaluator parseMappingExpression(String value) {
-		OpenDBExprLexer lexer = new OpenDBExprLexer(new ANTLRInputStream(value));
-		ThrowingErrorListener twt = new ThrowingErrorListener(value);
-		lexer.removeErrorListeners();
-		lexer.addErrorListener(twt);
-		OpenDBExprParser parser = new OpenDBExprParser(new CommonTokenStream(lexer));
-		parser.removeErrorListeners();
-		parser.addErrorListener(twt);
-		ExpressionContext ectx = parser.expression();
-		
-		SimpleExprEvaluator ev = new SimpleExprEvaluator(ectx);
-//		if(value.equals("this")) {
-//			return new FieldAccessEvaluator();
-//		} else if (value.startsWith(".") || value.startsWith("this.")) {
-//			String[] fields = value.substring(value.indexOf('.') + 1).split("\\.");
-//			for (String f : fields) {
-//				if(!OUtils.isValidJavaIdentifier(f)) {
-//					throw new UnsupportedOperationException(String.format("Invalid field access '%s' in expression '%s'", f, value));
-//				}
-//				s.fieldAccess.add(f);
-//			}
-//		} else {
-//			throw new UnsupportedOperationException();
-//		}
-		return ev;
-	}
+
+
 
 }
