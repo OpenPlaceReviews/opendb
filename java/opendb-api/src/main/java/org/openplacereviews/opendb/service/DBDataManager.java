@@ -1,7 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import java.sql.SQLException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,14 +9,11 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 @Service
@@ -36,48 +31,11 @@ public class DBDataManager {
 	
 	private Map<String, List<TableMapping>> opTableMappings = new TreeMap<>();	
 	
-	protected static class SimpleExpressionEvaluator {
-		List<String> fieldAccess = new ArrayList<String>();
-
-		public Object execute(SqlColumnType type, JsonObject obj) {
-			JsonElement o = obj;
-			for(String f : fieldAccess) {
-				o = o.getAsJsonObject().get(f);
-				if(o == null) {
-					break;
-				}
-			}
-			if (o == null) {
-				return null;
-			}
-			if(type == SqlColumnType.INT) {
-				return o.getAsInt();
-			}
-			if(type == SqlColumnType.TIMESTAMP) {
-				try {
-					return OpBlock.dateFormat.parse(o.getAsString());
-				} catch (ParseException e) {
-					throw new IllegalArgumentException(e);
-				}
-			}
-			if (type == SqlColumnType.JSONB) {
-				PGobject jsonObject = new PGobject();
-				jsonObject.setType("json");
-				try {
-					jsonObject.setValue(o.toString());
-				} catch (SQLException e) {
-					throw new IllegalArgumentException(e);
-				}
-				return jsonObject;
-			}
-			return o.toString();
-		}
-	}
 	
 	protected static class ColumnMapping {
 		String name;
 		SqlColumnType type;
-		SimpleExpressionEvaluator expression;
+		SimpleExprEvaluator expression;
 	}
 	
 	protected static class TableMapping {
@@ -85,7 +43,7 @@ public class DBDataManager {
 		String preparedStatement;
 	}
 	
-	private enum SqlColumnType {
+	public enum SqlColumnType {
 		TEXT,
 		INT,
 		TIMESTAMP,
@@ -138,7 +96,7 @@ public class DBDataManager {
 				inSql.append(k);
 				ColumnMapping cm = new ColumnMapping();
 				cm.type = getSqlType(tableDef, k);
-				cm.expression = prepareMappingExpression(e.getValue());
+				cm.expression = SimpleExprEvaluator.prepareMappingExpression(e.getValue());
 				cm.name = k;
 				tableMapping.columnMappings.add(cm);
 				values.append("?");
@@ -154,22 +112,6 @@ public class DBDataManager {
 	}
 	
 	
-	private SimpleExpressionEvaluator prepareMappingExpression(String value) {
-		SimpleExpressionEvaluator  s = new SimpleExpressionEvaluator();
-		if(value.equals("this")) {
-		} else if (value.startsWith(".") || value.startsWith("this.")) {
-			String[] fields = value.substring(value.indexOf('.') + 1).split("\\.");
-			for (String f : fields) {
-				if(!OUtils.isValidJavaIdentifier(f)) {
-					throw new UnsupportedOperationException(String.format("Invalid field access '%s' in expression '%s'", f, value));
-				}
-				s.fieldAccess.add(f);
-			}
-		} else {
-			throw new UnsupportedOperationException();
-		}
-		return s;
-	}
 
 	private boolean createTable(OpDefinitionBean definition) {
 		String tableName = definition.getStringValue(FIELD_NAME);
