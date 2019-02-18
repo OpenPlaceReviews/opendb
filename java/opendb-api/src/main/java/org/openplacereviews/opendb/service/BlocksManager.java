@@ -23,7 +23,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.auth.SignUpOperation;
+import org.openplacereviews.opendb.ops.SignUpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.springframework.beans.factory.annotation.Autowired;

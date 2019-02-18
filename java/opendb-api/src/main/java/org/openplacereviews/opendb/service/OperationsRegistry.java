@@ -6,13 +6,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.OpenDBOperation;
-import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.JsonObject;
@@ -68,22 +62,20 @@ public class OperationsRegistry {
 	}
 	
 	
-	@SuppressWarnings("unchecked")
 	public OperationsRegistry() {
 		LOGGER.info("Scanning for registered operations...");
-
-		ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
-		scanner.addIncludeFilter(new AnnotationTypeFilter(OpenDBOperation.class));
-		for (BeanDefinition bd : scanner.findCandidateComponents("org.openplacereviews")) {
-			try {
-				Class<? extends OpenDBOperationExec> cl = (Class<? extends OpenDBOperationExec>) Class.forName(bd.getBeanClassName());
-				String op = cl.getAnnotation(OpenDBOperation.class).type() + ":"+cl.getAnnotation(OpenDBOperation.class).name();
-				LOGGER.info(String.format("Register op '%s' -> %s ", op, bd.getBeanClassName()));
-				// operations.put(op, cl);
-			} catch (Exception e) {
-				LOGGER.warn(e.getMessage(), e);
-			}
-		}
+//		ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
+//		scanner.addIncludeFilter(new AnnotationTypeFilter(OpenDBOperation.class));
+//		for (BeanDefinition bd : scanner.findCandidateComponents("org.openplacereviews")) {
+//			try {
+//				Class<? extends OpenDBOperationExec> cl = (Class<? extends OpenDBOperationExec>) Class.forName(bd.getBeanClassName());
+//				String op = cl.getAnnotation(OpenDBOperation.class).type() + ":"+cl.getAnnotation(OpenDBOperation.class).name();
+//				LOGGER.info(String.format("Register op '%s' -> %s ", op, bd.getBeanClassName()));
+//				// operations.put(op, cl);
+//			} catch (Exception e) {
+//				LOGGER.warn(e.getMessage(), e);
+//			}
+//		}
 		
 		
 		operations.put(getOperationId(OP_TYPE_SYS, OP_LOGIN), new OperationTypeDefinition(null));

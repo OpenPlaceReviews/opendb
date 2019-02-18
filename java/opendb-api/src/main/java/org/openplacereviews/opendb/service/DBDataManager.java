@@ -96,7 +96,7 @@ public class DBDataManager {
 				inSql.append(k);
 				ColumnMapping cm = new ColumnMapping();
 				cm.type = getSqlType(tableDef, k);
-				cm.expression = SimpleExprEvaluator.prepareMappingExpression(e.getValue());
+				cm.expression = SimpleExprEvaluator.parseMappingExpression(e.getValue());
 				cm.name = k;
 				tableMapping.columnMappings.add(cm);
 				values.append("?");

@@ -14,10 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.ops.LoginOperation;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.auth.LoginOperation;
-import org.openplacereviews.opendb.ops.auth.SignUpOperation;
+import org.openplacereviews.opendb.ops.SignUpOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

@@ -1,15 +1,9 @@
-package org.openplacereviews.opendb.ops.auth;
+package org.openplacereviews.opendb.ops;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.OpenDBOperationExec;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.OpenDBOperation;
-import org.openplacereviews.opendb.service.OperationsRegistry;
-import org.springframework.jdbc.core.JdbcTemplate;
 
-@OpenDBOperation(type=OperationsRegistry.OP_TYPE_SYS, name=SignUpOperation.OP_ID)
-public class SignUpOperation implements OpenDBOperationExec {
+public class SignUpOperation {
 
 	protected static final Log LOGGER = LogFactory.getLog(SignUpOperation.class);
 	
@@ -28,9 +22,7 @@ public class SignUpOperation implements OpenDBOperationExec {
 	public static final String METHOD_PWD = "pwd";
 	public static final String METHOD_PROVIDED = "provided";
 	
-	private OpDefinitionBean definition;
 
-	@Override
 	public String getDescription() {
 		return "This operation signs up new user in DB."+
 		"<br>This operation must be signed by signup key itself and the login key of the server that can signup users." +
@@ -46,18 +38,10 @@ public class SignUpOperation implements OpenDBOperationExec {
 		"<br>list of other fields";
 	}
 
-	@Override
 	public boolean prepare(OpDefinitionBean definition) {
-		this.definition = definition;
-		
 		return validateNickname(definition.getName());
 	}
 
-	@Override
-	public boolean execute(JdbcTemplate template) {
-		return true;
-	}
-	
 	private static boolean isAllowedNicknameSymbol(char c) {
 		return c == ' ' || c == '$'  || c == '_' ||  
 				c == '.' || c == '-' ;
@@ -76,11 +60,5 @@ public class SignUpOperation implements OpenDBOperationExec {
 		}
 		return true;
 	}
-	
-	@Override
-	public OpDefinitionBean getDefinition() {
-		return definition;
-	}
-
 	
 }

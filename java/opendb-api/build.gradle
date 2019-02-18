@@ -7,6 +7,7 @@ buildscript {
     }
 }
 
+apply plugin: 'antlr'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
@@ -38,6 +39,10 @@ bootJar {
     mainClassName = 'org.openplacereviews.opendb.OpenDBServer'
 }
 
+generateGrammarSource {
+    outputDirectory = file("src/main/java/org/openplacereviews/opendb/expr")
+    arguments += ["-package", "org.openplacereviews.opendb.expr"]
+}
 
 dependencies {
     implementation "org.springframework.boot:spring-boot-starter-web:2.0.1.RELEASE"
@@ -48,6 +53,8 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-data-redis:2.0.1.RELEASE"
 
     implementation "nl.basjes.parse.httpdlog:httpdlog-parser:5.1"
+    antlr "org.antlr:antlr4:4.5" 
+    
 
     // make optional for release run
     implementation "org.springframework.boot:spring-boot-devtools:2.0.1.RELEASE"
