@@ -5,8 +5,8 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
-import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
+import org.openplacereviews.opendb.service.OperationsRegistry;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @OpenDBOperation(type = OperationsRegistry.OP_TYPE_AUTH, name = LoginOperation.OP_ID)
@@ -27,11 +27,6 @@ public class LoginOperation implements OpenDBOperationExec {
 	private OpDefinitionBean definition;
 
 	@Override
-	public String getName() {
-		return OP_ID;
-	}
-
-	@Override
 	public String getDescription() {
 		return "This operation logins an existing user to a specific 'site' (named login). " + 
 	    "In case user was logged in under such name the previous login key pair will become invalid." +
@@ -48,8 +43,8 @@ public class LoginOperation implements OpenDBOperationExec {
 	@Override
 	public boolean prepare(OpDefinitionBean definition) {
 		this.definition = definition;
-		return SignUpOperation.validateNickname(OpenDBUsersRegistry.getSiteFromUser(definition.getName())) &&
-				SignUpOperation.validateNickname(OpenDBUsersRegistry.getNicknameFromUser(definition.getName()));
+		return SignUpOperation.validateNickname(UsersAndRolesRegistry.getSiteFromUser(definition.getName())) &&
+				SignUpOperation.validateNickname(UsersAndRolesRegistry.getNicknameFromUser(definition.getName()));
 	}
 
 	@Override
@@ -60,11 +55,6 @@ public class LoginOperation implements OpenDBOperationExec {
 	@Override
 	public OpDefinitionBean getDefinition() {
 		return definition;
-	}
-
-	@Override
-	public String getType() {
-		return OperationsRegistry.OP_TYPE_AUTH;
 	}
 
 

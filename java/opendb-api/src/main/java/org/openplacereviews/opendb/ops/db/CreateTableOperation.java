@@ -10,8 +10,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
-import org.openplacereviews.opendb.ops.auth.LoginOperation;
+import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
@@ -27,16 +26,6 @@ public class CreateTableOperation implements OpenDBOperationExec {
 	private String tableName;
 	private Map<String, String> tableColumns;
 	
-	
-	@Override
-	public String getName() {
-		return OP_ID;
-	}
-	
-	@Override
-	public String getType() {
-		return OperationsRegistry.OP_TYPE_DDL;
-	}
 	
 	@Override
 	public boolean prepare(OpDefinitionBean definition) {
@@ -81,7 +70,8 @@ public class CreateTableOperation implements OpenDBOperationExec {
 		sql.append("(").append(columnsDef).append(")");
 		try {
 			LOGGER.info("DDL executed: " + sql);
-			template.execute(sql.toString());
+//			template.execute(sql.toString());
+			
 		} catch(RuntimeException e) {
 			LOGGER.warn("DDL failed: " + e.getMessage(), e);
 			throw e;

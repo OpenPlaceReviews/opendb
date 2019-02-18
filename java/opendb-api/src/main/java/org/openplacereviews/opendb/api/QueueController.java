@@ -9,7 +9,7 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.JsonFormatter;
-import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -29,7 +29,7 @@ public class QueueController {
     private OperationsQueueManager queue;
     
     @Autowired
-    private OpenDBUsersRegistry validator;
+    private UsersAndRolesRegistry validator;
     
     @Autowired
     private JsonFormatter formatter;

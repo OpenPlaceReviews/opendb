@@ -46,7 +46,7 @@ public class OpDefinitionBean {
 		this.otherFields.putAll(cp.otherFields);
 	}
 	
-	public String getType() {
+	public String getOperationType() {
 		return type;
 	}
 	
@@ -58,11 +58,11 @@ public class OpDefinitionBean {
 		return transientTxDependencies;
 	}
 	
-	public String getOperationId() {
+	public String getOperationName() {
 		return operation;
 	}
 	
-	public String getFullOperationName() {
+	public String getOperationId() {
 		return type + ":" + operation;
 	}
 	

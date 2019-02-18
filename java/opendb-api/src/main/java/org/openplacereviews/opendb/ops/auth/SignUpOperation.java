@@ -5,7 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
+import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @OpenDBOperation(type=OperationsRegistry.OP_TYPE_AUTH, name=SignUpOperation.OP_ID)
@@ -29,11 +29,6 @@ public class SignUpOperation implements OpenDBOperationExec {
 	public static final String METHOD_PROVIDED = "provided";
 	
 	private OpDefinitionBean definition;
-
-	@Override
-	public String getName() {
-		return OP_ID;
-	}
 
 	@Override
 	public String getDescription() {
@@ -88,9 +83,4 @@ public class SignUpOperation implements OpenDBOperationExec {
 	}
 
 	
-	@Override
-	public String getType() {
-		return OperationsRegistry.OP_TYPE_AUTH;
-	}
-
 }

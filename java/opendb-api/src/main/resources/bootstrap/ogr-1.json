@@ -65,5 +65,18 @@
 				"op_name" : "text",
 				"details" : "jsonb"
 			}
-		}	]
+		},
+		{
+			"operation" : "op:operation",
+			"name" : "system:block",
+			"comment" : "system event about block creation",
+			"identity" : ".block_id",
+			"table" : "users",
+			"table_columns": {
+				"id" : "this.block_id",
+				"details" : "this"
+			}
+		}
+
+	]
 }

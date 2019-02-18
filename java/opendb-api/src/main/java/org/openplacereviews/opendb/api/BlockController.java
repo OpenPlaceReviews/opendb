@@ -12,7 +12,7 @@ import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.BlocksManager.BlockchainState;
 import org.openplacereviews.opendb.service.JsonFormatter;
-import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -37,7 +37,7 @@ public class BlockController {
     private OperationsQueueManager queue;
     
     @Autowired
-    private OpenDBUsersRegistry usersRegistry;
+    private UsersAndRolesRegistry usersRegistry;
     
     @Autowired
     private JsonFormatter formatter;

@@ -112,7 +112,7 @@ public class LogOperationService {
 	private String getMessage(LogEntry le) {
 		String msg = le.message;
 		if(le.operation != null) {
-			msg += String.format(", operation: %s, %s, %s", le.operation.getFullOperationName(), 
+			msg += String.format(", operation: %s, %s, %s", le.operation.getOperationId(), 
 					le.operation.getName(), le.operation.getHash()); 
 		}
 		if(le.block != null) {

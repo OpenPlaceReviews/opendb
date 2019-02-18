@@ -8,13 +8,13 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.LoginOperation;
 import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.JsonFormatter;
-import org.openplacereviews.opendb.service.OpenDBUsersRegistry;
-import org.openplacereviews.opendb.service.OpenDBUsersRegistry.ActiveUsersContext;
+import org.openplacereviews.opendb.service.OperationsRegistry;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -33,7 +33,7 @@ public class OperationsController {
     private BlocksManager manager;
     
     @Autowired
-    private OpenDBUsersRegistry validation;
+    private UsersAndRolesRegistry validation;
     
     @Autowired
     private OperationsQueueManager queue;
@@ -160,8 +160,8 @@ public class OperationsController {
     	op.putStringValue(LoginOperation.F_NAME, name);
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
-		String nickname = OpenDBUsersRegistry.getNicknameFromUser(name);
-		String purpose = OpenDBUsersRegistry.getSiteFromUser(name);
+		String nickname = UsersAndRolesRegistry.getNicknameFromUser(name);
+		String purpose = UsersAndRolesRegistry.getSiteFromUser(name);
 		if(!SignUpOperation.validateNickname(purpose)) {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}

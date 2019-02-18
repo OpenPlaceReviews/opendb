@@ -6,7 +6,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperation;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
+import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
@@ -22,16 +22,6 @@ public class CreateSequenceOperation implements OpenDBOperationExec {
 	private String seqName;
 	private Number minValue;
 	
-	
-	@Override
-	public String getName() {
-		return OP_ID;
-	}
-	
-	@Override
-	public String getType() {
-		return OperationsRegistry.OP_TYPE_DDL;
-	}
 	
 	
 	@Override

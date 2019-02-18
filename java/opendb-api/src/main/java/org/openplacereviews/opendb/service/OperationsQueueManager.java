@@ -17,7 +17,7 @@ public class OperationsQueueManager {
 	ConcurrentLinkedQueue<OpDefinitionBean> operationsQueue = new ConcurrentLinkedQueue<OpDefinitionBean>();
 	
     @Autowired
-    private OpenDBUsersRegistry usersRegistry;
+    private UsersAndRolesRegistry usersRegistry;
 
 	
 	public synchronized void addOperations(List<OpDefinitionBean> operations) {

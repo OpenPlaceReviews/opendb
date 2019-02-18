@@ -22,10 +22,9 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.OpenDBOperationExec;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
-import org.openplacereviews.opendb.service.OpenDBUsersRegistry.ActiveUsersContext;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -45,7 +44,7 @@ public class BlocksManager {
 	public LogOperationService logSystem;
 	
 	@Autowired
-	public OpenDBUsersRegistry usersRegistry;
+	public UsersAndRolesRegistry usersRegistry;
 	
 	@Autowired
     private JsonFormatter formatter;
@@ -199,7 +198,7 @@ public class BlocksManager {
 	private ActiveUsersContext pickupOpsFromQueue(List<OpDefinitionBean> candidates,
 			Collection<OpDefinitionBean> q, boolean exceptionOnFail) {
 		int size = 0;
-		ActiveUsersContext au = new OpenDBUsersRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
+		ActiveUsersContext au = new UsersAndRolesRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
 		Map<String, Set<String>> authTxDependencies = new HashMap<String, Set<String>>();
 		for (OpDefinitionBean o : q) {
 			int l = formatter.toJson(o).length();

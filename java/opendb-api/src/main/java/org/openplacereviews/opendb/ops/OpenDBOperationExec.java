@@ -4,15 +4,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 public interface OpenDBOperationExec {
 
-	/** 
-	 * Operation name / id
-	 */
-	public String getName();
-	
-	/**
-	 * Operation type 
-	 */
-	public String getType();
 	
 	/**
 	 *  Will be used for documentation

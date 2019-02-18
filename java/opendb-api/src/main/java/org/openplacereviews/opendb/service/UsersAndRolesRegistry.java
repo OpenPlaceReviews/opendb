@@ -16,14 +16,13 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.OperationsRegistry;
 import org.openplacereviews.opendb.ops.auth.LoginOperation;
 import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OpenDBUsersRegistry {
+public class UsersAndRolesRegistry {
 
     
  	// signature section
@@ -42,7 +41,7 @@ public class OpenDBUsersRegistry {
 	private ActiveUsersContext blockUsers;
 	private ActiveUsersContext queueUsers;
  	
-	public OpenDBUsersRegistry() {
+	public UsersAndRolesRegistry() {
 		blockUsers = new ActiveUsersContext(null);
 		queueUsers = new ActiveUsersContext(blockUsers);
 	}
@@ -177,12 +176,12 @@ public class OpenDBUsersRegistry {
 		if(ob.getOtherSignedBy() != null) {
 			signatures.addAll(ob.getOtherSignedBy());
 		}
-		if (ob.getOperationId().equals(SignUpOperation.OP_ID)) {
+		if (ob.getOperationName().equals(SignUpOperation.OP_ID)) {
 			if(!signatures.contains(ob.getStringValue(SignUpOperation.F_NAME))) {
 				return "Signup operation must be signed by itself";
 			}
 		}
-		if (ob.getOperationId().equals(LoginOperation.OP_ID)) {
+		if (ob.getOperationName().equals(LoginOperation.OP_ID)) {
 			String loginName = ob.getStringValue(LoginOperation.F_NAME);
 			if(loginName.indexOf(USER_LOGIN_CHAR) == -1 ) {
 				return "Login should specify a site or a purpose name to login";
@@ -234,7 +233,7 @@ public class OpenDBUsersRegistry {
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());		
 		byte[] signature = SecUtils.decodeSignature(sig.get(F_DIGEST));
 		KeyPair kp ;
-		if (ob.getOperationId().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
+		if (ob.getOperationName().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
 			// signup operation is validated by itself
 			kp = ctx.getKeyPairFromOp(ob, null);
 		} else {
@@ -304,7 +303,7 @@ public class OpenDBUsersRegistry {
  		}
  		
 		public boolean addAuthOperation(OpDefinitionBean op) {
-			if(!op.getType().equals(OperationsRegistry.OP_TYPE_AUTH)) {
+			if(!op.getOperationType().equals(OperationsRegistry.OP_TYPE_AUTH)) {
 				return false;
 			}
 			String name = op.getStringValue(SignUpOperation.F_NAME);
@@ -316,14 +315,14 @@ public class OpenDBUsersRegistry {
 				au.name = name;
 				users.put(name, au);
 			}
-			if (op.getOperationId().equals(SignUpOperation.OP_ID)) {
+			if (op.getOperationName().equals(SignUpOperation.OP_ID)) {
 				OpDefinitionBean sop = getSignUpOperation(nickname);
 				if (sop != null) {
 					throw new IllegalArgumentException("User was already signed up");
 				}
 				au.signUp = op;
 				return true;
-			} else if (op.getOperationId().equals(LoginOperation.OP_ID)) {
+			} else if (op.getOperationName().equals(LoginOperation.OP_ID)) {
 				au.logins.put(site, op);
 				return true;
 			}
