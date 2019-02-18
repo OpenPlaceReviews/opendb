@@ -71,7 +71,7 @@
 			"name" : "event:block",
 			"comment" : "system event about block creation",
 			"identity" : ".block_id",
-			"table" : "users",
+			"table" : "blocks",
 			"table_columns": {
 				"id" : "this.block_id",
 				"details" : "this"

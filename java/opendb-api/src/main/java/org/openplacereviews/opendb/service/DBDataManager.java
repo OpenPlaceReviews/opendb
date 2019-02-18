@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.service;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,16 +11,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+@Service
 public class DBDataManager {
 	protected static final Log LOGGER = LogFactory.getLog(DBDataManager.class);
 	
-	private static final String FIELD_TABLE_NAME = "name";
+	private static final String FIELD_NAME = "name";
+	private static final String FIELD_TABLE_NAME = "table";
 	private static final String FIELD_TABLE_COLUMNS = "table_columns";
 	
 	@Autowired
@@ -47,6 +52,16 @@ public class DBDataManager {
 			if(type == SqlColumnType.INT) {
 				return o.getAsInt();
 			}
+			if (type == SqlColumnType.JSONB) {
+				PGobject jsonObject = new PGobject();
+				jsonObject.setType("json");
+				try {
+					jsonObject.setValue(o.toString());
+				} catch (SQLException e) {
+					throw new IllegalArgumentException(e);
+				}
+				return jsonObject;
+			}
 			return o.toString();
 		}
 	}
@@ -71,9 +86,9 @@ public class DBDataManager {
 	
 	
 	public boolean registerTableDefinition(OpDefinitionBean definition) {
-		String tableName = definition.getStringValue(FIELD_TABLE_NAME);
+		String tableName = definition.getStringValue(FIELD_NAME);
 		StringBuilder errorMessage = new StringBuilder();
-		if(!OUtils.validateSqlIdentifier(tableName, errorMessage, FIELD_TABLE_NAME, "create table")) {
+		if(!OUtils.validateSqlIdentifier(tableName, errorMessage, FIELD_NAME, "create table")) {
 			throw new IllegalArgumentException(errorMessage.toString());
 		}
 		Map<String, String> tableColumns = definition.getStringMap(FIELD_TABLE_COLUMNS);
@@ -96,7 +111,6 @@ public class DBDataManager {
 	public void registerMappingOperation(String operationId, OpDefinitionBean def) {
 		String tableName = def.getStringValue(FIELD_TABLE_NAME);
 		if(!OUtils.isEmpty(tableName)) {
-			Map<String, String> colMapping = def.getStringMap(FIELD_TABLE_COLUMNS);
 			OpDefinitionBean tableDef = tableDefinitions.get(tableName);
 			if(tableDef == null) {
 				throw new IllegalArgumentException(String.format("Mapping can't be registered cause the table '%s' is not registered", tableName));
@@ -126,6 +140,7 @@ public class DBDataManager {
 				opTableMappings.put(operationId, new ArrayList<DBDataManager.TableMapping>());
 			}
 			tableMapping.preparedStatement = inSql.toString();
+			opTableMappings.get(operationId).add(tableMapping);
 			LOGGER.info(String.format("Mapping '%s' is registered with insert sql: %s", operationId, inSql.toString()));
 		}
 	}
@@ -177,15 +192,16 @@ public class DBDataManager {
 	public void executeMappingOperation(String op, JsonObject obj) {
 		List<TableMapping> tableMappings = opTableMappings.get(op);
 		if(tableMappings != null) {
-			for(TableMapping t : tableMappings) {
-				Object[] o = new Object[t.columnMappings.size()];
-				for(int i = 0; i < t.columnMappings.size() ; i++) {
-					ColumnMapping colMapping = t.columnMappings.get(i);
-					o[i] = colMapping.expression.execute(colMapping.type, obj);
-				}
+			for (TableMapping t : tableMappings) {
 				try {
-				jdbcTemplate.update(t.preparedStatement, o);
-				} catch(RuntimeException e) {
+					Object[] o = new Object[t.columnMappings.size()];
+					for (int i = 0; i < t.columnMappings.size(); i++) {
+						ColumnMapping colMapping = t.columnMappings.get(i);
+						o[i] = colMapping.expression.execute(colMapping.type, obj);
+					}
+
+					jdbcTemplate.update(t.preparedStatement, o);
+				} catch (RuntimeException e) {
 					LOGGER.warn("SQL failed: " + e.getMessage(), e);
 					throw e;
 				}
