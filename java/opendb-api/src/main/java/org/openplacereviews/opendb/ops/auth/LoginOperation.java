@@ -16,7 +16,6 @@ public class LoginOperation implements OpenDBOperationExec {
 	
 	public static final String OP_ID = "login";
 	public static final String F_NAME = "name";
- 	public static final String F_KEYGEN_METHOD = "keygen_method";
  	public static final String F_ALGO = "algo";
  	
  	public static final String F_PUBKEY = "pubkey";

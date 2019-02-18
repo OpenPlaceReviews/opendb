@@ -2,56 +2,163 @@
 	"block_id":-1,
 	"date":"2019-02-15T00:00:00.000Z",
 	"operations": [
-        {
-            "operation": "sys:signup",
-            "signed_by": "openplacereviews",
-            "algo": "EC",
-            "auth_method": "provided",
-            "hash": "json:sha256:995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b",
-            "name": "openplacereviews",
-            "pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw==",
-            "signature": {
-                "algo": "NonewithECDSA",
-                "digest": "base64:MEUCID0xc3gpUJjPnY1p0U/ukgnPMGOp6HvUmbKfffir+qmJAiEAguFxdswqAzscyCPK9e+UeYeZoyE7p0RuOXHVUbEeuaQ="
-            },
-            "signature_hash": "sha256:4f93bbe29d150465ade5c051097cb5cc6c83e15a23fa68df0ecfbb088084fb35"
-        },
-        {
-            "operation": "sys:login",
-            "signed_by": "openplacereviews",
-            "algo": "EC",
-            "hash": "json:sha256:6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417",
-            "name": "openplacereviews:test_1",
-            "pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",
-            "signature": {
-                "algo": "NonewithECDSA",
-                "digest": "base64:MEYCIQD9eRuBCyrfRlUTzQtVI2ENFia1m4SrMB6hDVbX/ExNtgIhAMRk224TP6rjP0cS2v8PGk/q8m/EZkMGiFAhvDOglEtA"
-            },
-            "signature_hash": "sha256:232b1e1d68675b315f5b627f017e301568abe3c31c6b2d78a2317d6b52c07f5c"
-        },
+		{
+			"operation": "sys:signup",
+			"signed_by": "openplacereviews",
+			"algo": "EC",
+			"auth_method": "provided",
+			"hash": "json:sha256:995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b",
+			"name": "openplacereviews",
+			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw==",
+			"signature": {
+				"algo": "NonewithECDSA",
+				"digest": "base64:MEUCID0xc3gpUJjPnY1p0U/ukgnPMGOp6HvUmbKfffir+qmJAiEAguFxdswqAzscyCPK9e+UeYeZoyE7p0RuOXHVUbEeuaQ="
+			},
+			"signature_hash": "sha256:4f93bbe29d150465ade5c051097cb5cc6c83e15a23fa68df0ecfbb088084fb35"
+		},
+		{
+			"operation": "sys:login",
+			"signed_by": "openplacereviews",
+			"algo": "EC",
+			"hash": "json:sha256:6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417",
+			"name": "openplacereviews:test_1",
+			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",
+			"signature": {
+				"algo": "NonewithECDSA",
+				"digest": "base64:MEYCIQD9eRuBCyrfRlUTzQtVI2ENFia1m4SrMB6hDVbX/ExNtgIhAMRk224TP6rjP0cS2v8PGk/q8m/EZkMGiFAhvDOglEtA"
+			},
+			"signature_hash": "sha256:232b1e1d68675b315f5b627f017e301568abe3c31c6b2d78a2317d6b52c07f5c"
+		},
+
+		{
+			"operation" : "sys:table",
+			"name" : "users",
+			"comment" : "create table to store info about users",
+			"mapping" : "op",
+			"table_columns" : {
+				"uid" : "serial8 primary key",
+				"name" : "text",
+				"algo" : "text",
+				"auth_method" : "text",
+				"keygen_method" : "text",
+				"oauth_provider" : "text",
+				"oauthid_hash" : "text",
+				"pubkey" : "text",
+				"salt" : "text",
+				"userdetails" : "jsonb"
+			}
+		},
+		{
+			"operation" : "sys:operation",
+			"name" : "sys:signup",
+			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",
+			"identity" : ".name",
+			"table" : "users",
+			"table_columns": {
+				"name" : ".name",
+				"algo" : ".algo",
+				"auth_method" : ".auth_method",
+				"keygen_method" : ".keygen_method",
+				"oauth_provider" : ".oauth_provider",
+				"oauthid_hash" : ".oauthid_hash",
+				"pubkey" : ".pubkey",
+				"salt" : ".salt",
+				"userdetails" : ".details"
+			}
+		},
+
+		{
+			"operation" : "sys:table",
+			"name" : "logins",
+			"comment" : "create table to store info about logins",
+			"mapping" : "op",
+			"table_columns" : {
+				"uid" : "int8",
+				"login" : "text primary key",
+				"name" : "text",
+				"purpose" : "text",
+				"algo" : "text",
+				"pubkey" : "text"
+			}
+		},
+		{
+			"operation" : "sys:operation",
+			"name" : "sys:login",
+			"comment" : "system event about block creation",
+			"identity" : ".login",
+			"table" : "logins",
+			"table_columns": {
+				"login" : ".name",
+				"uid" : ".",
+				"algo" : ".algo",
+				"pubkey" : ".pubkey",
+				"uid" : "find_by_id('users', first(.name)).uid",
+				"name" : "first(.name)",
+				"purpose" : "second(.name)"
+			}
+		},
+
+
+		{
+			"operation" : "sys:table",
+			"name" : "op_definitions",
+			"comment" : "create table to store operation definitions",
+			"mapping" : "op",
+			"table_columns" : {
+				"operation" : "text primary",
+				"comment" : "text",
+				"table_name" : "text",
+				"details" : "jsonb"
+			}
+		},
+		{
+			"operation" : "sys:operation",
+			"name" : "sys:operation",
+			"comment" : "Operation to define other operations with description",
+			"identity" : ".operation",
+			"table" : "op_definitions",
+			"table_columns": {
+				"operation" : ".operation",
+				"comment" : ".comment",
+				"table_name" : ".table_name",
+				"details" : "jsonb"	
+			}
+		},
+
+		{
+			"operation" : "sys:table",
+			"name" : "tables",
+			"comment" : "create table to store info about table definitions",
+			"mapping" : "op",
+			"table_columns" : {
+				"table_name" : "text primary",
+				"mapping" : "text",
+				"details" : "jsonb"
+			}
+		},
+		{
+			"operation" : "sys:operation",
+			"name" : "sys:table",
+			"comment" : "Operation to describe table and default mapping for operations",
+			"identity" : ".table_name",
+			"table" : "tables",
+			"table_columns": {
+				"table_name" : ".table_name",
+				"mapping" : ".mapping",
+				"details" : "this"
+			}
+		},
+
+
 		{
 			"operation" : "sys:table",
 			"name" : "blocks",
 			"comment" : "create table to store info about blocks",
 			"table_columns" : {
 				"id" : "integer",
+				"hash" : "text",
 				"date" : "timestamp",
 				"details" : "jsonb"
-			}
-		},
-		{
-			"operation" : "sys:table",
-			"name" : "users",
-			"comment" : "create table to store info about users",
-			"table_columns" : {
-				"uid" : "serial8 primary key",
-				"nickname" : "text",
-				"block" : "int",
-				"op_hash" : "int",
-				"details" : "jsonb"
-			},
-			"indexes" : {
-				"nickname" : "unique"
 			}
 		},
 		{
@@ -59,13 +166,16 @@
 			"name" : "operations",
 			"comment" : "create table to store info about operations",
 			"table_columns" : {
-				"id" : "text primary key",
+				"op_hash" : "text primary key",
 				"block" : "int",
-				"op_hash" : "int",
 				"op_name" : "text",
+				"signed_by" : "text",
+				"block_ind" : "int",
+				"comment" : "text",
 				"details" : "jsonb"
 			}
 		},
+
 		{
 			"operation" : "sys:operation",
 			"name" : "event:block",
@@ -73,10 +183,31 @@
 			"identity" : ".block_id",
 			"table" : "blocks",
 			"table_columns": {
-				"id" : "this.block_id",
+				"id" : ".block_id",
+				"hash" : ".hash",
+				"date" : ".date",
+				"details" : "this"
+			}
+		},
+		{
+			"operation" : "sys:operation",
+			"name" : "event:operation",
+			"comment" : "system event about executed operation in block",
+			"identity" : ".hash",
+			"table" : "operations",
+			"table_columns": {
+				"op_hash" : ".hash",
+				"op_name" : ".operation",
+				"signed_by" : ".signed_by",
+				"block": ".block_id",
+				"block_ind": ".block_ind",
+				"comment" : ".comment",
 				"details" : "this"
 			}
 		}
+
+
+		
 
 	]
 }

@@ -14,7 +14,7 @@ import com.google.gson.annotations.SerializedName;
 public class OpBlock {
 
 	public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-	private static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	{
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}

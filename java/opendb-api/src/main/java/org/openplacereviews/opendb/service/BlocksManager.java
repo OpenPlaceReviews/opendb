@@ -19,12 +19,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.api.BlockController;
+import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.OpenDBOperationExec;
 import org.openplacereviews.opendb.ops.auth.SignUpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
@@ -32,6 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+
+import com.google.gson.JsonObject;
 
 
 @Service
@@ -259,7 +259,7 @@ public class BlocksManager {
 
 	private String executeBlock(OpBlock block, ActiveUsersContext users, boolean exceptionOnFail) {
 		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_PREPARE;
-		List<OpenDBOperationExec> operations = prepareOperationCtxToExec(block, exceptionOnFail);
+		prepareOperationCtxToExec(block, exceptionOnFail);
 		if(block.blockId < 0) {
 			signBlock(block, users);
 		}
@@ -267,24 +267,52 @@ public class BlocksManager {
 		
 		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		// here we don't expect any failure or the will be fatal to the system
-		executeOperations(block, operations);
-		currentTx = null;
 		
-		// don't keep operations in memory
-		prevOpBlock = new OpBlock(block);
-		List<OpDefinitionBean> ops = prevOpBlock.getOperations();
-		for(OpDefinitionBean o : block.getOperations()) {
-			OpDefinitionBean ro = new OpDefinitionBean(o);
-			ro.getRawOtherFields().clear();
-			ro.putStringValue(OpDefinitionBean.F_HASH, o.getHash());
-			ro.putStringValue(OpDefinitionBean.F_NAME, o.getName());
-			ops.add(ro);
-		}
+		prevOpBlock = executeOpsInBlock(block);
+		registry.triggerEvent(OperationsRegistry.OP_BLOCK, formatter.toJsonObject(prevOpBlock));
+		
 		blockchain = new ArrayList<OpBlock>(blockchain);
 		blockchain.add(prevOpBlock);
-		registry.triggerEvent(OperationsRegistry.OP_BLOCK, formatter.toJsonObject(prevOpBlock));
 		queue.removeSuccessfulOps(block);
 		return formatter.toJson(prevOpBlock);
+	}
+
+	private OpBlock executeOpsInBlock(OpBlock block) {
+		OpBlock execBlock = new OpBlock(block);
+		currentTx = null;
+		List<OpDefinitionBean> ops = execBlock.getOperations();
+		int indInBlock = 0;
+		
+		for(OpDefinitionBean o : block.getOperations()) {
+			OpDefinitionBean ro = new OpDefinitionBean(o);
+			// extra fields for events
+			ro.putObjectValue(OpDefinitionBean.F_BLOCK_ID, block.blockId);
+			ro.putObjectValue(OpDefinitionBean.F_BLOCK_IND, indInBlock);
+			JsonObject obj = formatter.toJsonObject(ro);
+			currentTx = o;
+			boolean execute = false;
+			RuntimeException err = null;
+			try {
+				registry.executeOperation(ro, obj);
+				// don't keep operations in memory
+				ro.clearNonSignificantBlockFields();
+				execute = true;
+			} catch (RuntimeException e) {
+				err = e;
+			}
+			if (!execute) {
+				logSystem.logOperation(OperationStatus.FAILED_EXECUTE, o, 
+						"Operations failed to execute in the accepted block", true, err);
+				// not reachable code
+				throw new IllegalStateException(err);
+			} else {
+				usersRegistry.getBlockUsers().addAuthOperation(o);
+				logSystem.logOperation(OperationStatus.EXECUTED, o, "OK", false);
+			}
+			ops.add(ro);
+			indInBlock++;
+		}
+		return execBlock;
 	}
 	
 	public List<OpBlock> getBlockcchain() {
@@ -389,40 +417,16 @@ public class BlocksManager {
 
 
 
-	private void executeOperations(OpBlock block, List<OpenDBOperationExec> operations) {
-		for (OpenDBOperationExec o : operations) {
-			currentTx = o.getDefinition();
-			boolean execute = false;
-			RuntimeException err = null;
-			try {
-				execute = o.execute(jdbcTemplate);
-			} catch (RuntimeException e) {
-				err = e;
-			}
-			if (!execute) {
-				logSystem.logOperation(OperationStatus.FAILED_EXECUTE, o.getDefinition(), 
-						"Operations failed to execute in the accepted block", true, err);
-				// not reachable code
-				throw new IllegalStateException(err);
-			} else {
-				usersRegistry.getBlockUsers().addAuthOperation(o.getDefinition());
-				logSystem.logOperation(OperationStatus.EXECUTED, o.getDefinition(), "OK", false);
-			}
-		}
-	}
-
-
-	private List<OpenDBOperationExec> prepareOperationCtxToExec(OpBlock block, boolean exceptionOnFail) {
-		List<OpenDBOperationExec> operations = new ArrayList<OpenDBOperationExec>();
+	private List<OpDefinitionBean> prepareOperationCtxToExec(OpBlock block, boolean exceptionOnFail) {
+		List<OpDefinitionBean> operations = new ArrayList<OpDefinitionBean>();
 		Map<String, OpDefinitionBean> executedTx = new TreeMap<String, OpDefinitionBean>();
 		Iterator<OpDefinitionBean> it = block.getOperations().iterator();
 		while(it.hasNext()) {
 			OpDefinitionBean def = it.next();
-			OpenDBOperationExec op = registry.createOperation(def);
-			boolean valid = false;
 			Exception ex = null;
+			boolean valid = false;
 			try {
-				valid = op != null && op.prepare(def);
+				valid = registry.preexecuteOperation(def);
 			} catch (Exception e) {
 				ex = e;
 			}
@@ -443,10 +447,10 @@ public class BlocksManager {
 				}
 			} else {
 				logSystem.logOperation(OperationStatus.FAILED_PREPARE, def,
-						op == null ? "Operation is not listed in the registry" : "Operation couldn't be validated for execution", ex);
+						"Operation couldn't be validated for execution (probably not registered) ", ex);
 			}
 			if(valid) {
-				operations.add(op);
+				operations.add(def);
 				executedTx.put(def.getHash(), def);
 			} else {
 				it.remove();

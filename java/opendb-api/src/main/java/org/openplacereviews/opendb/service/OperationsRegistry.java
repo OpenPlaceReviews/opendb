@@ -51,7 +51,7 @@ public class OperationsRegistry {
 	@Autowired
 	private DBDataManager dbManager;
 	
-	private static class OperationTypeDefinition {
+	protected static class OperationTypeDefinition {
 		public final OpDefinitionBean def;
 		
 		public OperationTypeDefinition(OpDefinitionBean def) {
@@ -100,9 +100,16 @@ public class OperationsRegistry {
 	public void triggerEvent(String eventId, JsonObject obj) {
 		dbManager.executeMappingOperation(getOperationId(OP_TYPE_EVENT, eventId), obj);
 	}
-
-
-	public OpenDBOperationExec createOperation(OpDefinitionBean def) {
+	
+	
+	public void executeOperation(OpDefinitionBean ro, JsonObject obj) {
+		dbManager.executeMappingOperation(ro.getOperationId(), obj);
+		triggerEvent(OperationsRegistry.OP_OPERATION, obj);		
+	}
+	
+	
+	public boolean preexecuteOperation(OpDefinitionBean def) {
+		// create tables first for initial block
 		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_TABLE))) {
 			dbManager.registerTableDefinition(def);
 		}
@@ -110,34 +117,11 @@ public class OperationsRegistry {
 			operations.put(def.getStringValue(F_NAME), new OperationTypeDefinition(def));
 			dbManager.registerMappingOperation(def.getStringValue(F_NAME), def);
 		}
-		OperationTypeDefinition otd = operations.get(def.getOperationId());
-		return new OpenDBOperationExec() {
-			
-			@Override
-			public boolean prepare(OpDefinitionBean definition) {
-				return otd  == null || otd.validate(definition);
-			}
-			
-			@Override
-			public String getDescription() {
-				return "";
-			}
-			
-			@Override
-			public OpDefinitionBean getDefinition() {
-				return def;
-			}
-			
-			@Override
-			public boolean execute(JdbcTemplate template) {
-				return true;
-			}
-		};
+		return operations.containsKey(def.getOperationId());
 	}
 
 
-	
-	
+
 	
 	
 }

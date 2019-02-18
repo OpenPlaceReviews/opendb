@@ -103,10 +103,13 @@ function loadData() {
 function loadErrorsData() {
   $.getJSON( "/log/list", function( data ) {
       var items = "";
-      $("#errors-tab").html("Errors (" + data.logs.length + ")");
+      var errs = 0;
       for(var i = 0; i < data.logs.length; i++)  {
         let op = data.logs[i];
         items += "<br><li><b>Status</b>: " + op.status;
+        if(op.status != "EXECUTED") {
+          errs++;
+        }
         items += "<br><b>Message</b>: " + op.message;
         items += "<br><b>Time</b>: " + new Date(op.utcTime).toUTCString();
         if(op.cause) {
@@ -134,6 +137,7 @@ function loadErrorsData() {
         }
         items += "</li>";
       }
+      $("#errors-tab").html("Logs (" + errs + " Errors)");
       $("#errors-list").html(items);
   });
 }

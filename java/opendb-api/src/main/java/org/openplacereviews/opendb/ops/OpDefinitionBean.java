@@ -23,9 +23,14 @@ public class OpDefinitionBean  {
 	public static final String F_OPERATION_TYPE = "operation_type";
 	
 	public static final String F_NAME = "name";
+	public static final String F_COMMENT = "comment";
 	public static final String F_SIGNATURE = "signature";
 	public static final String F_SIGNATURE_HASH = "signature_hash";
 	public static final String F_SIGNED_BY = "signed_by";
+	
+	public static final String F_BLOCK_ID = "block_id";
+	public static final String F_BLOCK_IND = "block_ind";
+	
 	public static final String SYSTEM_TYPE = "system";
 	public static final String F_DEPENDENCIES = "dependencies";
 	
@@ -84,6 +89,10 @@ public class OpDefinitionBean  {
 	
 	public String getName() {
 		return getStringValue(F_NAME);
+	}
+	
+	public String getComment() {
+		return getStringValue(F_COMMENT);
 	}
 	
 	public String getSignatureHash() {
@@ -160,6 +169,18 @@ public class OpDefinitionBean  {
 		return otherFields.remove(key);
 	}
 	
+	public void clearNonSignificantBlockFields() {
+		String hash = getHash();
+		String name = getName();
+		String cmt = getComment();
+		
+		otherFields.clear();
+
+		putStringValue(F_HASH, hash);
+		putStringValue(F_NAME, name);
+		putStringValue(F_COMMENT, cmt);
+	}
+	
 	public static class OpDefinitionBeanAdapter implements JsonDeserializer<OpDefinitionBean>,
 			JsonSerializer<OpDefinitionBean> {
 		private static final String F_OPERATION = "operation";
@@ -223,5 +244,6 @@ public class OpDefinitionBean  {
 		}
 
 	}
+
 	
 }

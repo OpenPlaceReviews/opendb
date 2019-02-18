@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.service;
 
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +34,7 @@ public class DBDataManager {
 
 	private Map<String, OpDefinitionBean> tableDefinitions = new TreeMap<>();
 	
-	private Map<String, List<TableMapping> > opTableMappings = new TreeMap<>();
-	
+	private Map<String, List<TableMapping>> opTableMappings = new TreeMap<>();	
 	
 	protected static class SimpleExpressionEvaluator {
 		List<String> fieldAccess = new ArrayList<String>();
@@ -46,11 +47,18 @@ public class DBDataManager {
 					break;
 				}
 			}
-			if(o == null ) {
+			if (o == null) {
 				return null;
 			}
 			if(type == SqlColumnType.INT) {
 				return o.getAsInt();
+			}
+			if(type == SqlColumnType.TIMESTAMP) {
+				try {
+					return OpBlock.dateFormat.parse(o.getAsString());
+				} catch (ParseException e) {
+					throw new IllegalArgumentException(e);
+				}
 			}
 			if (type == SqlColumnType.JSONB) {
 				PGobject jsonObject = new PGobject();
@@ -164,7 +172,7 @@ public class DBDataManager {
 	}
 
 	private boolean createTable(OpDefinitionBean definition) {
-		String tableName = definition.getStringValue(FIELD_TABLE_NAME);
+		String tableName = definition.getStringValue(FIELD_NAME);
 		Map<String, String> tableColumns = definition.getStringMap(FIELD_TABLE_COLUMNS);
 		StringBuilder sql = new StringBuilder("create table " + tableName);
 		StringBuilder columnsDef = new StringBuilder();
@@ -177,9 +185,7 @@ public class DBDataManager {
 		sql.append("(").append(columnsDef).append(")");
 		try {
 			LOGGER.info("DDL executed: " + sql);
-			// TODO
-//			template.execute(sql.toString());
-			
+			jdbcTemplate.execute(sql.toString());
 		} catch(RuntimeException e) {
 			LOGGER.warn("DDL failed: " + e.getMessage(), e);
 			throw e;
