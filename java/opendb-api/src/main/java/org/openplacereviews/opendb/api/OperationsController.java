@@ -5,16 +5,14 @@ import java.security.KeyPair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.ops.LoginOperation;
+import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.SignUpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
-import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -87,15 +85,15 @@ public class OperationsController {
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
     	OpDefinitionBean op = new OpDefinitionBean();
     	name = name.trim(); // reduce errors by having trailing spaces
-    	if(!SignUpOperation.validateNickname(name)) {
+    	if(!UsersAndRolesRegistry.validateNickname(name)) {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
     	
     	op.setType(OperationsRegistry.OP_TYPE_SYS);
-    	op.setOperation(SignUpOperation.OP_ID);
-    	op.putStringValue(SignUpOperation.F_NAME, name);
+    	op.setOperation(UsersAndRolesRegistry.OP_SIGNUP_ID);
+    	op.putStringValue(UsersAndRolesRegistry.F_NAME, name);
     	if(!OUtils.isEmpty(userDetails)) {
-    		op.putObjectValue(SignUpOperation.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
+    		op.putObjectValue(UsersAndRolesRegistry.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
     	}
     	
 		if (OUtils.isEmpty(algo)) {
@@ -104,13 +102,13 @@ public class OperationsController {
     	KeyPair keyPair;
     	KeyPair otherKeyPair = null;
     	if(!OUtils.isEmpty(pwd)) {
-    		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PWD);
+    		op.putStringValue(UsersAndRolesRegistry.F_AUTH_METHOD, UsersAndRolesRegistry.METHOD_PWD);
     		algo = SecUtils.ALGO_EC;
     		String salt = name;
     		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
     		keyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
-    		op.putStringValue(SignUpOperation.F_SALT, salt);
-        	op.putStringValue(SignUpOperation.F_KEYGEN_METHOD, keyGen);
+    		op.putStringValue(UsersAndRolesRegistry.F_SALT, salt);
+        	op.putStringValue(UsersAndRolesRegistry.F_KEYGEN_METHOD, keyGen);
     		op.setSignedBy(name);
     		if(!OUtils.isEmpty(manager.getServerUser())) {
     			op.addOtherSignedBy(manager.getServerUser());
@@ -121,14 +119,14 @@ public class OperationsController {
     			}
     		}
     	} else if(!OUtils.isEmpty(oauthId)) {
-    		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_OAUTH);
-    		op.putStringValue(SignUpOperation.F_SALT, name);
-			op.putStringValue(SignUpOperation.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
-			op.putStringValue(SignUpOperation.F_OAUTH_PROVIDER, oauthProvider);
+    		op.putStringValue(UsersAndRolesRegistry.F_AUTH_METHOD, UsersAndRolesRegistry.METHOD_OAUTH);
+    		op.putStringValue(UsersAndRolesRegistry.F_SALT, name);
+			op.putStringValue(UsersAndRolesRegistry.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
+			op.putStringValue(UsersAndRolesRegistry.F_OAUTH_PROVIDER, oauthProvider);
     		keyPair = manager.getServerLoginKeyPair(validation.getQueueUsers());
     		op.setSignedBy(manager.getServerUser());
     	} else {
-    		op.putStringValue(SignUpOperation.F_AUTH_METHOD, SignUpOperation.METHOD_PROVIDED);
+    		op.putStringValue(UsersAndRolesRegistry.F_AUTH_METHOD, UsersAndRolesRegistry.METHOD_PROVIDED);
     		op.setSignedBy(name);
     		keyPair = SecUtils.getKeyPair(algo, privateKey, publicKey);
     	}
@@ -136,8 +134,8 @@ public class OperationsController {
 			throw new IllegalArgumentException(
 					String.format("Signup private / public key could not be generated"));
 		}
-    	op.putStringValue(SignUpOperation.F_ALGO, algo);
-    	op.putStringValue(SignUpOperation.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+    	op.putStringValue(UsersAndRolesRegistry.F_ALGO, algo);
+    	op.putStringValue(UsersAndRolesRegistry.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
     	
     	if(otherKeyPair == null) {
     		validation.generateHashAndSign(op, keyPair);
@@ -156,13 +154,13 @@ public class OperationsController {
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
     	OpDefinitionBean op = new OpDefinitionBean();
     	op.setType(OperationsRegistry.OP_TYPE_SYS);
-    	op.setOperation(LoginOperation.OP_ID);
-    	op.putStringValue(LoginOperation.F_NAME, name);
+    	op.setOperation(UsersAndRolesRegistry.OP_LOGIN_ID);
+    	op.putStringValue(UsersAndRolesRegistry.F_NAME, name);
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
 		String nickname = UsersAndRolesRegistry.getNicknameFromUser(name);
 		String purpose = UsersAndRolesRegistry.getSiteFromUser(name);
-		if(!SignUpOperation.validateNickname(purpose)) {
+		if(!UsersAndRolesRegistry.validateNickname(purpose)) {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}
 		ActiveUsersContext queueUsers = validation.getQueueUsers();
@@ -186,9 +184,9 @@ public class OperationsController {
 		} else if (!OUtils.isEmpty(oauthId)) {
 			kp = manager.getServerLoginKeyPair(queueUsers);
 			OpDefinitionBean sop = queueUsers.getSignUpOperation(nickname);
-			if(!SecUtils.validateHash(sop.getStringValue(SignUpOperation.F_OAUTHID_HASH), 
-					sop.getStringValue(SignUpOperation.F_SALT), oauthId) || 
-					!oauthProvider.equals(sop.getStringValue(SignUpOperation.F_OAUTH_PROVIDER))) {
+			if(!SecUtils.validateHash(sop.getStringValue(UsersAndRolesRegistry.F_OAUTHID_HASH), 
+					sop.getStringValue(UsersAndRolesRegistry.F_SALT), oauthId) || 
+					!oauthProvider.equals(sop.getStringValue(UsersAndRolesRegistry.F_OAUTH_PROVIDER))) {
 				throw new IllegalArgumentException("User was registered with different oauth id");
 			}
 			op.setSignedBy(serverName);
@@ -199,13 +197,13 @@ public class OperationsController {
     	
     	KeyPair loginPair;
 		if (!OUtils.isEmpty(loginPubKey)) {
-			op.putStringValue(LoginOperation.F_ALGO, loginAlgo);
+			op.putStringValue(UsersAndRolesRegistry.F_ALGO, loginAlgo);
     		loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
     	} else {
-    		op.putStringValue(LoginOperation.F_ALGO, SecUtils.ALGO_EC);
+    		op.putStringValue(UsersAndRolesRegistry.F_ALGO, SecUtils.ALGO_EC);
     		loginPair = SecUtils.generateRandomEC256K1KeyPair();
     	}
-		op.putStringValue(LoginOperation.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
+		op.putStringValue(UsersAndRolesRegistry.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
     	
     	
     	if(otherKeyPair == null) {
@@ -218,7 +216,7 @@ public class OperationsController {
     	// private key won't be stored on opendb
     	if(loginPair.getPrivate() != null) {
     		OpDefinitionBean copy = new OpDefinitionBean(op);
-    		copy.putStringValue(LoginOperation.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
+    		copy.putStringValue(UsersAndRolesRegistry.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
     		return formatter.toJson(copy);
     	}
         return formatter.toJson(op);

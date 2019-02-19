@@ -3,6 +3,8 @@ package org.openplacereviews.opendb.service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,21 +21,40 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.ops.LoginOperation;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.SignUpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UsersAndRolesRegistry {
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBServer.class);
     
- 	// signature section
- 	public static final String F_ALGO = "algo";
- 	public static final String F_DIGEST = "digest";
+	public static final String OP_SIGNUP_ID = "signup";
+ 	public static final String OP_LOGIN_ID = "login";
+ 	public static final String F_DIGEST = "digest"; // signature
+ 	
+ 	
+ 	public static final String F_ALGO = "algo"; // login, signup, signature
+ 	public static final String F_PUBKEY = "pubkey"; // login, signup
+	public static final String F_NAME = "name"; // login, signup - name, login has with purpose like 'name:purpose', 
+	public static final String F_SALT = "salt"; // signup (salt used for pwd or oauthid_hash)
+	public static final String F_AUTH_METHOD = "auth_method"; // signup - pwd, oauth, provided
+	public static final String F_OAUTH_PROVIDER = "oauth_provider"; // signup 
+	public static final String F_OAUTHID_HASH = "oauthid_hash"; // hash with salt of the oauth_id 
+	public static final String F_KEYGEN_METHOD = "keygen_method"; // optional login, signup (for pwd important)
+	public static final String F_DETAILS = "details"; // signup
+	
+ 	// transient - not stored in blockchain
+ 	public static final String F_PRIVATEKEY = "privatekey"; // private key to return to user
+ 	public static final String F_UID = "uid"; // user identifier
+
+	public static final String METHOD_OAUTH = "oauth";
+	public static final String METHOD_PWD = "pwd";
+	public static final String METHOD_PROVIDED = "provided";
  	
  	public static final String JSON_MSG_TYPE = "json";
  	
@@ -43,9 +64,11 @@ public class UsersAndRolesRegistry {
  	@Autowired
 	private JsonFormatter formatter;
  	
- 	
  	@Autowired
 	private DBDataManager dbManager;
+ 	
+ 	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 
 	private ActiveUsersContext blockUsers = new ActiveUsersContext(null);
@@ -55,19 +78,110 @@ public class UsersAndRolesRegistry {
 	public void init(MetadataDb metadataDB) {
 		LOGGER.info("... User database. Load all users (should be changed in future)...");
 		if(metadataDB.tablesSpec.containsKey(DBConstants.USERS_TABLE)) {
-			List<OpDefinitionBean> ops = dbManager.loadOperations(DBConstants.USERS_TABLE);
-			for(OpDefinitionBean op : ops) {
-				blockUsers.addAuthOperation(op);
-			}
+			loadUser(blockUsers, "");
 		}
 		if(metadataDB.tablesSpec.containsKey(DBConstants.LOGINS_TABLE)) {
-			List<OpDefinitionBean> ops = dbManager.loadOperations(DBConstants.LOGINS_TABLE);
-			for(OpDefinitionBean op : ops) {
-				blockUsers.addAuthOperation(op);
-			}
+			loadLogins(blockUsers, "");
 		}
 		LOGGER.info(String.format("+++ User database is inititialized. Loaded %d users.", 
 				blockUsers.users.size()));
+	}
+	
+	public String getSignupDescription() {
+		return "This operation signs up new user in DB."+
+		"<br>This operation must be signed by signup key itself and the login key of the server that can signup users." +
+		"<br>Supported fields:"+
+		"<br>'name' : unique nickname" +
+		"<br>'auth_method' : authorization method (oauth, pwd, provided)" +
+		"<br>'pub_key' : public key for assymetric crypthograph" +
+		"<br>'algo' : algorithm for assymetric crypthograph" +
+		"<br>'keygen_method' : keygen is specified when pwd is used" +
+		"<br>'oauthid_hash' : hash for oauth id which is calculated with 'salt'" +
+		"<br>'oauth_provider' : oauth provider such as osm, fb, google" +
+		"<br>'details' : json with details for spoken languages, avatar, country" +
+		"<br>list of other fields";
+	}
+	
+	public String getLoginDescription() {
+		return "This operation logins an existing user to a specific 'site' (named login). " + 
+	    "In case user was logged in under such name the previous login key pair will become invalid." +
+		"<br>This operation must be signed by signup key of the user." +
+	    "<br>Supported fields:"+
+	    "<br>'name' : unique name for a user of the site or purpose of login" +
+		"<br>'pub_key' : public key for assymetric crypthograph" +
+		"<br>'algo' : algorithm for assymetric crypthograph" +
+		"<br>'keygen_method' : later could be used to explain how the key was calculated" +
+		"<br>'details' : json with details" +
+		"<br>list of other fields";
+	}
+
+	
+	private static boolean isAllowedNicknameSymbol(char c) {
+		return c == ' ' || c == '$'  || c == '_' ||  
+				c == '.' || c == '-' ;
+	}
+	
+	public static boolean validateNickname(String name) {
+		if(name.trim().length() == 0) {
+			return false;
+		}
+		for(int i = 0; i < name.length(); i++) {
+			char c = name.charAt(i);
+			if(!Character.isLetter(c) && !Character.isDigit(c) && !isAllowedNicknameSymbol(c)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+
+
+
+	private void loadUser(ActiveUsersContext uctx, String condition) {
+		jdbcTemplate.query("SELECT name, uid, algo, auth_method, keygen_method, "
+				+ "oauth_provider, oauthid_hash, pubkey, salt, userdetails from  " + DBConstants.USERS_TABLE + condition, new RowCallbackHandler() {
+
+			@Override
+			public void processRow(ResultSet rs) throws SQLException {
+				int col = 1;
+				String name = rs.getString(col++);
+				OpDefinitionBean op = new OpDefinitionBean();
+				op.putStringValue(F_NAME, name);
+				op.putObjectValue(F_UID, rs.getInt(col++));
+				op.putStringValue(F_ALGO, rs.getString(col++));
+				op.putStringValue(F_AUTH_METHOD, rs.getString(col++));
+				op.putStringValue(F_KEYGEN_METHOD, rs.getString(col++));
+				op.putStringValue(F_OAUTH_PROVIDER, rs.getString(col++));
+				op.putStringValue(F_OAUTHID_HASH, rs.getString(col++));
+				op.putStringValue(F_PUBKEY, rs.getString(col++));
+				op.putStringValue(F_SALT, rs.getString(col++));
+				op.putObjectValue(F_DETAILS, formatter.fromJsonToJsonObject(rs.getString(col++)));
+				ActiveUser user = blockUsers.getOrCreateActiveUser(name);
+				user.timestampAccess = System.currentTimeMillis();
+				user.signUp = op;
+			}
+		});
+	}
+	
+	private void loadLogins(ActiveUsersContext uctx, String condition) {
+		jdbcTemplate.query("SELECT login, uid, name purpose, algo, pubkey from " + DBConstants.LOGINS_TABLE + condition, new RowCallbackHandler() {
+
+			@Override
+			public void processRow(ResultSet rs) throws SQLException {
+				int col = 1;
+				OpDefinitionBean op = new OpDefinitionBean();
+				op.putStringValue(F_NAME, rs.getString(col++));
+				op.putObjectValue(F_UID, rs.getInt(col++));
+				String name = rs.getString(col++);
+				String purpose = rs.getString(col++);
+				op.putStringValue(F_ALGO, rs.getString(col++));
+				op.putStringValue(F_PUBKEY, rs.getString(col++));
+				ActiveUser user = blockUsers.getOrCreateActiveUser(name);
+				user.logins.put(purpose , op);
+				user.timestampAccess = System.currentTimeMillis();
+				
+			}
+		});
 	}
 	
 	
@@ -136,7 +250,6 @@ public class UsersAndRolesRegistry {
 		return hash;
 	}
 	
-	
 	public String calculateSigOperationHash(OpDefinitionBean ob) {
 		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
 		try {
@@ -185,8 +298,6 @@ public class UsersAndRolesRegistry {
     	return op;
 	}
 
-
-
 	private Map<String, String> getSignature(byte[] hash, KeyPair keyPair, ByteArrayOutputStream out) throws FailedVerificationException {
 		String signature = SecUtils.signMessageWithKeyBase64(keyPair, hash, SecUtils.SIG_ALGO_NONE_EC, out);
     	Map<String, String> signatureMap = new TreeMap<>();
@@ -201,13 +312,13 @@ public class UsersAndRolesRegistry {
 		if(ob.getOtherSignedBy() != null) {
 			signatures.addAll(ob.getOtherSignedBy());
 		}
-		if (ob.getOperationName().equals(SignUpOperation.OP_ID)) {
-			if(!signatures.contains(ob.getStringValue(SignUpOperation.F_NAME))) {
+		if (ob.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID)) {
+			if(!signatures.contains(ob.getStringValue(F_NAME))) {
 				return "Signup operation must be signed by itself";
 			}
 		}
-		if (ob.getOperationName().equals(LoginOperation.OP_ID)) {
-			String loginName = ob.getStringValue(LoginOperation.F_NAME);
+		if (ob.getOperationName().equals(OP_LOGIN_ID)) {
+			String loginName = ob.getStringValue(F_NAME);
 			if(loginName.indexOf(USER_LOGIN_CHAR) == -1 ) {
 				return "Login should specify a site or a purpose name to login";
 			}
@@ -258,7 +369,7 @@ public class UsersAndRolesRegistry {
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());		
 		byte[] signature = SecUtils.decodeSignature(sig.get(F_DIGEST));
 		KeyPair kp ;
-		if (ob.getOperationName().equals(SignUpOperation.OP_ID) && ob.getStringValue(SignUpOperation.F_NAME).equals(name)) {
+		if (ob.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID) && ob.getStringValue(F_NAME).equals(name)) {
 			// signup operation is validated by itself
 			kp = ctx.getKeyPairFromOp(ob, null);
 		} else {
@@ -280,7 +391,8 @@ public class UsersAndRolesRegistry {
 
 
  	protected static class ActiveUser {
- 		protected String name;
+ 		protected long timestampAccess;
+		protected String name;
  		protected OpDefinitionBean signUp;
  		protected Map<String, OpDefinitionBean> logins = new TreeMap<String, OpDefinitionBean>();
  		
@@ -335,27 +447,32 @@ public class UsersAndRolesRegistry {
 					)) {
 				return false;
 			}
-			String name = op.getStringValue(SignUpOperation.F_NAME);
+			String name = op.getStringValue(UsersAndRolesRegistry.F_NAME);
 			String nickname = getNicknameFromUser(name);
 			String site = getSiteFromUser(name);
-			ActiveUser au = users.get(nickname);
-			if (au == null) {
-				au = new ActiveUser();
-				au.name = name;
-				users.put(name, au);
-			}
-			if (op.getOperationName().equals(SignUpOperation.OP_ID)) {
+			ActiveUser au = getOrCreateActiveUser(nickname);
+			if (op.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID)) {
 				OpDefinitionBean sop = getSignUpOperation(nickname);
 				if (sop != null) {
 					throw new IllegalArgumentException("User was already signed up");
 				}
 				au.signUp = op;
 				return true;
-			} else if (op.getOperationName().equals(LoginOperation.OP_ID)) {
+			} else if (op.getOperationName().equals(OP_LOGIN_ID)) {
 				au.logins.put(site, op);
 				return true;
 			}
 			return false;
+		}
+
+		private ActiveUser getOrCreateActiveUser(String name) {
+			ActiveUser au = users.get(name);
+			if (au == null) {
+				au = new ActiveUser();
+				au.name = name;
+				users.put(name, au);
+			}
+			return au;
 		}
 		
 		public OpDefinitionBean getLoginOperation(String name) {
@@ -388,11 +505,11 @@ public class UsersAndRolesRegistry {
  			if(op == null) {
  				return null;
  			}
- 			String algo = op.getStringValue(SignUpOperation.F_ALGO);
+ 			String algo = op.getStringValue(UsersAndRolesRegistry.F_ALGO);
  			KeyPair keyPair = SecUtils.generateKeyPairFromPassword(
- 					algo, op.getStringValue(SignUpOperation.F_KEYGEN_METHOD), 
- 					op.getStringValue(SignUpOperation.F_SALT), pwd);
- 			KeyPair kp = SecUtils.getKeyPair(algo, null, op.getStringValue(SignUpOperation.F_PUBKEY));
+ 					algo, op.getStringValue(UsersAndRolesRegistry.F_KEYGEN_METHOD), 
+ 					op.getStringValue(UsersAndRolesRegistry.F_SALT), pwd);
+ 			KeyPair kp = SecUtils.getKeyPair(algo, null, op.getStringValue(UsersAndRolesRegistry.F_PUBKEY));
  			if(SecUtils.validateKeyPair(algo, keyPair.getPrivate(), kp.getPublic())) {
  				return keyPair;
  			}
@@ -420,8 +537,8 @@ public class UsersAndRolesRegistry {
 
 
 		private KeyPair getKeyPairFromOp(OpDefinitionBean op, String privatekey) throws FailedVerificationException {
-			String algo = op.getStringValue(SignUpOperation.F_ALGO);
- 			KeyPair kp = SecUtils.getKeyPair(algo, privatekey, op.getStringValue(SignUpOperation.F_PUBKEY));
+			String algo = op.getStringValue(UsersAndRolesRegistry.F_ALGO);
+ 			KeyPair kp = SecUtils.getKeyPair(algo, privatekey, op.getStringValue(UsersAndRolesRegistry.F_PUBKEY));
  			if(privatekey == null || SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
  				return kp;
  			}
@@ -443,12 +560,5 @@ public class UsersAndRolesRegistry {
 
  	}
 
-
-	
-
-
-
-
-	
  	
 }

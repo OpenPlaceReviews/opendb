@@ -27,7 +27,6 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
-import org.openplacereviews.opendb.ops.SignUpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -260,7 +259,7 @@ public class BlocksManager {
 			}
 			boolean authOp = au.addAuthOperation(o);
 			if(authOp) {
-				String uname = o.getStringValue(SignUpOperation.F_NAME);
+				String uname = o.getStringValue(UsersAndRolesRegistry.F_NAME);
 				if(!authTxDependencies.containsKey(uname)) {
 					authTxDependencies.put(uname, new LinkedHashSet<String>());
 				}

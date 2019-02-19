@@ -71,10 +71,10 @@ public class DBDataManager {
 		if(metadataDB.tablesSpec.containsKey(DBConstants.TABLES_TABLE)) {
 			List<OpDefinitionBean> ops = loadOperations(DBConstants.TABLES_TABLE);
 			for(OpDefinitionBean op : ops) {
-				registerTableDefinition(op);
+				registerTableDefinition(op, false);
 			}
 		}
-		LOGGER.info(String.format("+++ Database mapping is inititialized. Loaded %d table definitions, % mappings", 
+		LOGGER.info(String.format("+++ Database mapping is inititialized. Loaded %d table definitions, %d mappings", 
 				tableDefinitions.size(), opTableMappings.size()));
 	}
 	
@@ -90,7 +90,7 @@ public class DBDataManager {
 	}
 	
 	
-	public boolean registerTableDefinition(OpDefinitionBean definition) {
+	public boolean registerTableDefinition(OpDefinitionBean definition, boolean create) {
 		String tableName = definition.getStringValue(FIELD_NAME);
 		StringBuilder errorMessage = new StringBuilder();
 		if(!OUtils.validateSqlIdentifier(tableName, errorMessage, FIELD_NAME, "create table")) {
@@ -108,7 +108,9 @@ public class DBDataManager {
 		if(tableDefinitions.containsKey(tableName)) {
 			throw new IllegalArgumentException(String.format("Table '%s' is already registered in db", tableName));
 		}
-		createTable(definition);
+		if(create) {
+			createTable(definition);
+		}
 		TableDefinition tdf = new TableDefinition();
 		tdf.def = definition;
 		tableDefinitions.put(tableName, tdf);

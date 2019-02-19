@@ -105,7 +105,7 @@ public class OperationsRegistry {
 	public boolean preexecuteOperation(OpDefinitionBean def) {
 		// create tables first for initial block
 		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_TABLE))) {
-			dbManager.registerTableDefinition(def);
+			dbManager.registerTableDefinition(def, true);
 		}
 		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_OPERATION))) {
 			operations.put(def.getStringValue(F_NAME), new OperationTypeDefinition(def));
