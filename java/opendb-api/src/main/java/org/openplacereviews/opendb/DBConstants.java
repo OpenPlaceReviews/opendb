@@ -2,6 +2,8 @@ package org.openplacereviews.opendb;
 
 public interface DBConstants {
 
+	public static final String SCHEMA_NAME = "public";
+	
 	// Tables
 	public static final String BLOCK_TABLE = "blocks";
 	
@@ -18,4 +20,6 @@ public interface DBConstants {
 	public static final String OP_DEFINITIONS_TABLE = "op_definitions";
 	
 	public static final String EXECUTED_OPERATIONS_TABLE = "operations";
+
+	
 }

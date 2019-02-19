@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -168,7 +169,8 @@ public class BlocksManager {
 		String msg;
 		// db is bootstraped
 		if(metadataDB.tablesSpec.containsKey(DBConstants.BLOCK_TABLE)) {
-			List<OpBlock> blocks = jdbcTemplate.query("SELECT details FROM " + DBConstants.BLOCK_TABLE, new RowMapper<OpBlock>(){
+			// in future could be limited to last 10000
+			List<OpBlock> blocks = jdbcTemplate.query("SELECT details FROM " + DBConstants.BLOCK_TABLE + " order by id desc", new RowMapper<OpBlock>(){
 				@Override
 				public OpBlock mapRow(ResultSet rs, int rowNum) throws SQLException {
 					return formatter.parseBlock(rs.getString(1));
@@ -302,10 +304,17 @@ public class BlocksManager {
 	}
 
 	private void addNewBlockLocal(OpBlock newBlock) {
+		boolean blockchainEmpty = isBlockchainEmpty();
 		List<OpBlock> nblockchain = new ArrayList<OpBlock>(blockchain.size() + 1);
 		nblockchain.add(newBlock);
-		nblockchain.addAll(blockchain);
+		if(!blockchainEmpty) { 
+			nblockchain.addAll(blockchain);
+		}
 		blockchain = nblockchain;
+	}
+	
+	public boolean isBlockchainEmpty() {
+		return blockchain.isEmpty() || getLastBlock().blockId < 0;
 	}
 	
 	public OpBlock getLastBlock() {
@@ -352,7 +361,7 @@ public class BlocksManager {
 	}
 	
 	public List<OpBlock> getBlockcchain() {
-		return blockchain;
+		return isBlockchainEmpty() ? Collections.emptyList() : blockchain;
 	}
 
 	private void validateBlock(OpBlock block, ActiveUsersContext users, OpBlock prevBlock) {

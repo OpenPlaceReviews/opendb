@@ -2,72 +2,6 @@
 	"block_id":-1,
 	"date":"2019-02-15T00:00:00.000Z",
 	"operations": [
-		{  
-			"operation":"auth:signup",
-			"signed_by":"openplacereviews",	
-   			"algo":"EC",
-			"auth_method":"provided",
-			"hash":"json:sha256:75c3abc9e81400452c0cbbc35f3064b0875e091582ed59f7cbc10ec03d64e146",
-			"name":"openplacereviews",
-			"pubkey":"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw==",
-   			"signature":{  
-      			"algo":"NonewithECDSA",
-      			"digest":"base64:MEUCIHRja8RoqgLCuhYKlpbv6ysdBIJrszgbQLbKJpuL7AefAiEAvdSejlZG5R2IoHn4qZbzuI+OqgEUbBI8FyLad4csKXU="
-   			},
-   			"signature_hash":"sha256:f1c2973a60d41446339afabe0d6485f1f62d5076fa505c0237ef7289c9680266"
-		},
-		{  
-			"operation":"auth:login",
-			"signed_by":"openplacereviews",
-			"algo":"EC",
-			"hash":"json:sha256:331d5d15811f1c9a33b267f166b5a758aa335db495c51024edbda14b08d6a64c",
-			"name":"openplacereviews:web_backend",
-			"pubkey":"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE1/eJ8rxS47kRkx3UKzvdLnjyfwznniTYugVelx7rx2kecAqEj4oGeSkhrouAEDi1qc4uJOzC90ONSSCm2gEi6g==",
-			"signature":{  
-				"algo":"NonewithECDSA",
-				"digest":"base64:MEYCIQDUYK/t/Uoei5e0/VU6YZ4vQHprrUhrDwhyDjKbefkPtgIhAKaWi2ciVXRX1Vl6S7PQhTL1JUYQJvQjklPhyBCsOrj7"
-   			},
-			"signature_hash":"sha256:eb67033eb6772719c615c8dacdf3de3035d3617b7597133ba39573143c3f907e"
-		},
-		{
-			"operation" : "ddl:create_table",
-			"name" : "blocks",
-			"comment" : "create table to store info about blocks",
-			"table_columns" : {
-				"id" : "integer",
-				"date" : "timestamp",
-				"details" : "jsonb"
-			}
-		},
-		{
-			"operation" : "ddl:create_table",
-			"name" : "users",
-			"comment" : "create table to store info about users",
-			"table_columns" : {
-				"uid" : "serial8 primary key",
-				"nickname" : "text",
-				"block" : "int",
-				"op_hash" : "int",
-				"details" : "jsonb"
-			},
-			"indexes" : {
-				"nickname" : "unique"
-			}
-		},
-		{
-			"operation" : "ddl:create_table",
-			"name" : "operations",
-			"comment" : "create table to store info about operations",
-			"table_columns" : {
-				"id" : "text primary key",
-				"block" : "int",
-				"op_hash" : "int",
-				"op_name" : "text",
-				"details" : "jsonb"
-			}
-		},
-
-
 		{
 			"operation" : "auth:role",
 			"name"		: "owner",
@@ -101,6 +35,14 @@
 		},
 		{
 			"operation" : "auth:role",
+			"name"		: "user",
+			"owner_role" : "owner",
+			"super_roles" : ["master"],
+			"signed_by":"openplacereviews:web_backend"
+		},
+
+		{
+			"operation" : "sys:op_deny",
 			"name"		: "user",
 			"super_roles" : ["master"],
 			"signed_by":"openplacereviews:web_backend",

@@ -164,7 +164,7 @@ public class UsersAndRolesRegistry {
 	}
 	
 	private void loadLogins(ActiveUsersContext uctx, String condition) {
-		jdbcTemplate.query("SELECT login, uid, name purpose, algo, pubkey from " + DBConstants.LOGINS_TABLE + condition, new RowCallbackHandler() {
+		jdbcTemplate.query("SELECT login, uid, name, purpose, algo, pubkey from " + DBConstants.LOGINS_TABLE + condition, new RowCallbackHandler() {
 
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {

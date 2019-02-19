@@ -68,6 +68,7 @@ public class DBDataManager {
 	
 	public void init(MetadataDb metadataDB) {
 		LOGGER.info("... Database mapping. Loading table definitions and mappings ...");
+		System.out.println(metadataDB.tablesSpec);
 		if(metadataDB.tablesSpec.containsKey(DBConstants.TABLES_TABLE)) {
 			List<OpDefinitionBean> ops = loadOperations(DBConstants.TABLES_TABLE);
 			for(OpDefinitionBean op : ops) {

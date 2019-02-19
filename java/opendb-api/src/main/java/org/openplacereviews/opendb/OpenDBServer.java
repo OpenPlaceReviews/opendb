@@ -3,16 +3,13 @@ package org.openplacereviews.opendb;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.LogOperationService;
@@ -82,7 +79,7 @@ public class OpenDBServer  {
 		MetadataDb d = new MetadataDb();
 		try {
 			DatabaseMetaData mt = jdbcTemplate.getDataSource().getConnection().getMetaData();
-			ResultSet rs = mt.getColumns(null, null, null, null);
+			ResultSet rs = mt.getColumns(null, DBConstants.SCHEMA_NAME, null, null);
 			while(rs.next()) {
 				String tName = rs.getString("TABLE_NAME");
 				if(!d.tablesSpec.containsKey(tName)) {
@@ -99,7 +96,6 @@ public class OpenDBServer  {
 		} catch (SQLException e) {
 			throw new IllegalStateException("Can't read db metadata", e);
 		}
-		System.out.println();
 		return d;
 	}
 	
@@ -107,14 +103,20 @@ public class OpenDBServer  {
 	@Bean
 	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
 		return args -> {
-			System.out.println("Application has started");
-			MetadataDb metadataDB = loadMetadata();
-			dbDataManager.init(metadataDB);
-			logOperationService.init(metadataDB);
-			queueManager.init(metadataDB);
-			operationRegistry.init(metadataDB);
-			usersAndRolesRegistry.init(metadataDB);
-			blocksManager.init(metadataDB);
+			try {
+				System.out.println("Application starting...");
+				MetadataDb metadataDB = loadMetadata();
+				dbDataManager.init(metadataDB);
+				logOperationService.init(metadataDB);
+				queueManager.init(metadataDB);
+				operationRegistry.init(metadataDB);
+				usersAndRolesRegistry.init(metadataDB);
+				blocksManager.init(metadataDB);
+				System.out.println("Application has started");
+			} catch (RuntimeException e) {
+				LOGGER.error(e.getMessage(), e);
+				throw e;
+			}
 		};
 	}
 }
