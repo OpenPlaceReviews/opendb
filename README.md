@@ -10,6 +10,10 @@ Create database psql
 CREATE USER test WITH PASSWORD 'test';
 CREATE DATABASE openplacereviews OWNER test;
 ```
+Quick command to recreate schema from scratch
+```
+drop schema public cascade; create schema public; grant all on schema public to test;
+```
 
 ## How to build & run
 
