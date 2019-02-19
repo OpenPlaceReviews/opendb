@@ -3,120 +3,131 @@
 	"date":"2019-02-15T00:00:00.000Z",
 	"operations": [
 		{
-			"operation" : "auth:role",
+			"operation" : "sys:role",
 			"name"		: "owner",
-			"signed_by":"openplacereviews:web_backend",
-			"available_operations" : {
-				"auth:*" : {},
-				"system:*" : {},
-				"login:*" : {}
-			}
-		},
-		{  
-			"operation":"auth:signup:edit",
-			"old_hash":"json:sha256:75c3abc9e81400452c0cbbc35f3064b0875e091582ed59f7cbc10ec03d64e146",
-			"name" : "openplacereviews",
-			"signed_by":"openplacereviews",
-			"changes" : {
-				"roles" : ["owner"]
-			}
+			"comment"   : "Create role owner and specify that nobody could change it",
+			"owner_role" : "none",
+			"super_roles" : []
 		},
 		{
 			"operation" : "auth:role",
 			"name"		: "master",
-			"super_roles" : ["owner"],
-			"signed_by":"openplacereviews:web_backend",
+			"comment"   : "Create role master and specify that only owner could change it",
+			"owner_role" : "owner",
+			"super_roles" : ["owner"]
 		},
 		{
 			"operation" : "auth:role",
 			"name"		: "registrator",
-			"super_roles" : ["master"],
-			"signed_by":"openplacereviews:web_backend",
-		},
-		{
-			"operation" : "auth:role",
-			"name"		: "user",
+			"comment"   : "Create role registrator and specify that only owner could change it",
 			"owner_role" : "owner",
-			"super_roles" : ["master"],
-			"signed_by":"openplacereviews:web_backend"
+			"super_roles" : ["master"]
 		},
 
-		{
-			"operation" : "sys:op_deny",
-			"name"		: "user",
-			"super_roles" : ["master"],
-			"signed_by":"openplacereviews:web_backend",
+		{  
+			"operation":"sys:grant",
+			"prev_hash":"json:sha256:995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b",
+			"name" : "openplacereviews",
+			"roles" : ["owner"]
 		},
-
-
-
-
-
 		{
-			"operation" : "op:operation",
-			"name" : "auth:signup",
-			"owner_role" : "TODO",
-			"identity" : ".name",
-			"validation" : {
-				"new" : {
-					"signature_all" : [
-						{ "req_sig_role" : "registrator" }
-					]
-				},
-				"edit" : {
-					"signature_all" : [
-						{ "req_sig_signup" : ".name" },
-						{ "req_sig_role" : "registrator" }
-					]
-				},
-				"delete" : {
-					"signature_any" : [
-						{ "req_sig_signup" : ".name" },
-						{ "req_sig_role" : "owner" }
-					]
+			"operation" : "sys:table:edit",
+			"prev_hash" : "json:sha256:e744a5c320c3b5bf7cf14ffb403d42ba6f96240aef99620850b4b3f325c80e51",
+			"version" : 1,
+			"name" : "users",
+			"comment" : "Extend table to store roles",
+			"add" : {
+				"table_columns" : {
 				}
 			},
+
 			"table" : "users",
 			"table_columns": {
-				"nickname" : ".name",
-				"block" : "$block",
-				"op_hash" : "hashlast_to_int4(.hash)",
-				"details" : ".details"
+				"name" : ".name",
+				"role" : ".roles",
+
 			}
 		},
 		{
-			"operation" : "op:operation",
-			"name" : "auth:login",
-			"identity" : ".name",
-			"owner_role" : "TODO",
-			"validation" : {
-				"new" : {
-					"signature_all" : [
-						{ "req_sig_signup" : ".name???" },
-						{ "req_sig_role" : "registrator" }
-					]
-				},
-				"edit" : {
-					"signature_all" : [
-						{ "req_sig_login" : ".name" },
-						{ "req_sig_role" : "registrator" }
-					]
-				},
-				"delete" : {
-					"signature_any" : [
-						{ "req_sig_login" : ".name" },
-						{ "req_sig_role" : "registrator" }
-					]
-				}
-			},
-			"table" : "logins",
+			"operation" : "sys:operation",
+			"name" : "sys:grant",
+			"comment" : "Operation to grant permission to user signup",
+			"versionining" : "true",
+			"table" : "users",
 			"table_columns": {
-				"nickname" : ".name",
-				"block" : "$block",
-				"op_hash" : "hashlast_to_int4(.hash)",
-				"details" : ".details"
+				"name" : ".name",
+				"role" : ".roles"
 			}
 		},
+
+
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "check_role_assigned_and_signed",
+			"comment"   : "Check if role assigned by person who has it. Master role could change validation.",
+			"owner_role" : "master",
+			"operations" : ["sys:grant"],
+			"if" : {},
+			"validate" : [
+				"auth:has_sig_all_roles(.roles)",
+				"auth:has_sig_all_roles(old.roles)"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "check_login_signup_by_registrator",
+			"comment"   : "Check that only registrator could signup and login users",
+			"owner_role" : "master",
+			"operations" : ["sys:login", "sys:signup"],
+			"if" :  {},
+			"validate" : [
+				"auth:has_sig_role('registrator')"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "check_self_signed_login_signup",
+			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
+			"owner_role" : "none",
+			"operations" : ["sys:login", "sys:signup"],
+			"if" :  {
+				".auth_method" : ["provided"]
+			},
+			"validate" : [
+				"auth:has_sig_user(.name, 'signup')"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "check_self_signed_login_signup",
+			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
+			"owner_role" : "none",
+			"operations" : ["sys:login", "sys:signup"],
+			"if" :  {
+				".auth_method" : ["pwd"]
+			},
+			"validate" : [
+				"auth:has_sig_any_user(.name, 'signup')"
+			]
+		},
+
+
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "only_owner_can_change_validation_rule",
+			"comment"   : "Only owner_role can change or delete validation. It means validation with role none, can not be reverted",
+			"owner_role" : "none",
+			"operations" : ["sys:op_valdiate"],
+			"operations_mod" : ["edit", "delete"],
+			"if" : {},
+			"validate" : [
+				"auth:has_sig_role(.owner_role)"
+			]
+		}
+
+
+
+
 		{
 			"operation" : "op:splitfunds",
 			"name" : "auth:login",
@@ -133,23 +144,6 @@
 					"impossible" : "none"
 				}
 			}
-		},
-
-		{
-			"operation" : "op:operation",
-			"name" : "op:operation",
-			"EDIT" : "????? only owner ????"
-		},
-
-		{
-			"operation" : "auth:role",
-			"name" : "op:operation",
-			"EDIT" : "????? only owner ????"
-		},
-		{
-			"operation" : "ddl:create_table",
-			"name" : "op:operation",
-			"EDIT" : "????? only owner ????"
 		},
 		{
 			"operation" : "user:vote",

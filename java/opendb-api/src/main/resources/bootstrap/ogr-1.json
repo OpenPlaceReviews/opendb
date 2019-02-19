@@ -34,7 +34,6 @@
 			"operation" : "sys:table",
 			"name" : "users",
 			"comment" : "create table to store info about users",
-			"mapping" : "op",
 			"identity" : "name",
 			"table_columns" : {
 				"uid" : "serial8 primary key",
@@ -53,6 +52,7 @@
 			"operation" : "sys:operation",
 			"name" : "sys:signup",
 			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",
+			"versionining" : "true",
 			"table" : "users",
 			"table_columns": {
 				"name" : ".name",

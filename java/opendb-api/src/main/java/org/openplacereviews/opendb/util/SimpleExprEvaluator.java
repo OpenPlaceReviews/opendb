@@ -19,7 +19,9 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.service.DBDataManager;
+import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,7 +35,18 @@ public class SimpleExprEvaluator {
 	public static final String FUNCTION_DB_FIND_UNIQUE = "db:find_unique";
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
+	public static final String FUNCTION_OP_NAME = "op:op_name";
+	public static final String FUNCTION_OP_MOD = "op:op_mod";
+	public static final String FUNCTION_OP_GROUP = "op:op_group";
 	public static final String FUNCTION_M_PLUS = "m:plus";
+	
+	// TODO
+	// op:op_signatures
+	// auth:has_sig_all_roles
+	// auth:has_sig_role
+	// auth:has_sig_user
+	// auth:has_sig_any_user(op:op_signatures(db:find_op(signup)))
+	
 
 	private ExpressionContext ectx;
 
@@ -143,10 +156,28 @@ public class SimpleExprEvaluator {
 				}
 			}
 			return ffs;
+		case FUNCTION_OP_GROUP:
+			return getSplitElement(ctx.ctx.get(OpDefinitionBean.F_OPERATION), 0);
+		case FUNCTION_OP_MOD:
+			return getSplitElement(ctx.ctx.get(OpDefinitionBean.F_OPERATION), 2);
+		case FUNCTION_OP_NAME:
+			return getSplitElement(ctx.ctx.get(OpDefinitionBean.F_OPERATION), 1);
 		default:
 			break;
 		}
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
+	}
+
+	private String getSplitElement(JsonElement jsonElement, int i) {
+		if(jsonElement == null || !jsonElement.isJsonPrimitive()) {
+			return null;
+		}
+		String[] s = jsonElement.getAsString().split(":");
+		if(s.length > i) {
+			return s[i];
+		}
+		return null;
+		
 	}
 
 	private String getStringArgument(String functionName, List<Object> args, int i) {
