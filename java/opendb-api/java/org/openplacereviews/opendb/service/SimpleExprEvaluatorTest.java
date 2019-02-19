@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 public class SimpleExprEvaluatorTest {
 
@@ -14,9 +15,15 @@ public class SimpleExprEvaluatorTest {
 	public Object evaluateExpr(String e) {
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
-		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(null,
-				obj.getAsJsonObject());
-		return SimpleExprEvaluator.parseMappingExpression(e).execute(null, ectx);
+		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(new DBDataManager() {
+			@Override
+			public JsonObject queryByIdentity(String tableName, Object val) {
+				JsonObject obj = new JsonObject();
+				obj.addProperty("uid", "1");
+				return obj;
+			}
+		}, null, obj.getAsJsonObject());
+		return SimpleExprEvaluator.parseMappingExpression(e).evaluateObject(ectx);
 	}
 	
 	public Object evaluateExprJson(String e) {
@@ -69,9 +76,11 @@ public class SimpleExprEvaluatorTest {
 	
 	@Test
 	public void testSimpleFunctionEval() {
-		assertEquals(4l, evaluateExpr("m.plus(1,3)"));
-		assertEquals(-2l, evaluateExpr("m.plus(1,-3)"));
-		assertEquals("1", evaluateExpr("str.first('1:3')"));
-		assertEquals("3", evaluateExpr("str.second('1:3')"));
+		assertEquals(4l, evaluateExpr("m:plus(1,3)"));
+		assertEquals(-2l, evaluateExpr("m:plus(1,-3)"));
+		assertEquals("1", evaluateExpr("str:first('1:3')"));
+		assertEquals("3", evaluateExpr("str:second('1:3')"));
+		assertEquals("1", evaluateExprJson("db:find_unique('users', str:first(.name)).uid"));
+		
 	}
 }

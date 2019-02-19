@@ -63,5 +63,9 @@ public class JsonFormatter {
 		return gson.fromJson(json, TreeMap.class);
 	}
 	
+	public JsonObject fromJsonToJsonObject(String json) {
+		return gson.fromJson(json, JsonObject.class);
+	}
+	
 	
 }

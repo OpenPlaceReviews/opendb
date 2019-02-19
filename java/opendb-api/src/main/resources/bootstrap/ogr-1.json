@@ -35,6 +35,7 @@
 			"name" : "users",
 			"comment" : "create table to store info about users",
 			"mapping" : "op",
+			"identity" : "name",
 			"table_columns" : {
 				"uid" : "serial8 primary key",
 				"name" : "text",
@@ -52,7 +53,6 @@
 			"operation" : "sys:operation",
 			"name" : "sys:signup",
 			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",
-			"identity" : ".name",
 			"table" : "users",
 			"table_columns": {
 				"name" : ".name",
@@ -72,6 +72,7 @@
 			"name" : "logins",
 			"comment" : "create table to store info about logins",
 			"mapping" : "op",
+			"identity" : "login",
 			"table_columns" : {
 				"uid" : "int8",
 				"login" : "text primary key",
@@ -85,16 +86,15 @@
 			"operation" : "sys:operation",
 			"name" : "sys:login",
 			"comment" : "system event about block creation",
-			"identity" : ".login",
 			"table" : "logins",
 			"table_columns": {
 				"login" : ".name",
 				"uid" : ".",
 				"algo" : ".algo",
 				"pubkey" : ".pubkey",
-				"uid" : "find_by_id('users', first(.name)).uid",
-				"name" : "first(.name)",
-				"purpose" : "second(.name)"
+				"uid" : "db:find_unique('users', str:first(.name)).uid",
+				"name" : "str:first(.name)",
+				"purpose" : "str:second(.name)"
 			}
 		},
 
@@ -104,8 +104,9 @@
 			"name" : "op_definitions",
 			"comment" : "create table to store operation definitions",
 			"mapping" : "op",
+			"identity" : "operation",
 			"table_columns" : {
-				"operation" : "text primary",
+				"operation" : "text primary key",
 				"comment" : "text",
 				"table_name" : "text",
 				"details" : "jsonb"
@@ -115,13 +116,12 @@
 			"operation" : "sys:operation",
 			"name" : "sys:operation",
 			"comment" : "Operation to define other operations with description",
-			"identity" : ".operation",
 			"table" : "op_definitions",
 			"table_columns": {
-				"operation" : ".operation",
+				"operation" : ".name",
 				"comment" : ".comment",
-				"table_name" : ".table_name",
-				"details" : "jsonb"	
+				"table_name" : ".table",
+				"details" : "this"	
 			}
 		},
 
@@ -129,9 +129,10 @@
 			"operation" : "sys:table",
 			"name" : "tables",
 			"comment" : "create table to store info about table definitions",
+			"identity" : "table_name",
 			"mapping" : "op",
 			"table_columns" : {
-				"table_name" : "text primary",
+				"table_name" : "text primary key",
 				"mapping" : "text",
 				"details" : "jsonb"
 			}
@@ -140,10 +141,9 @@
 			"operation" : "sys:operation",
 			"name" : "sys:table",
 			"comment" : "Operation to describe table and default mapping for operations",
-			"identity" : ".table_name",
 			"table" : "tables",
 			"table_columns": {
-				"table_name" : ".table_name",
+				"table_name" : ".name",
 				"mapping" : ".mapping",
 				"details" : "this"
 			}
@@ -154,6 +154,7 @@
 			"operation" : "sys:table",
 			"name" : "blocks",
 			"comment" : "create table to store info about blocks",
+			"identity" : "id",
 			"table_columns" : {
 				"id" : "integer",
 				"hash" : "text",
@@ -165,6 +166,7 @@
 			"operation" : "sys:table",
 			"name" : "operations",
 			"comment" : "create table to store info about operations",
+			"identity" : "op_hash",
 			"table_columns" : {
 				"op_hash" : "text primary key",
 				"block" : "int",
@@ -180,7 +182,6 @@
 			"operation" : "sys:operation",
 			"name" : "event:block",
 			"comment" : "system event about block creation",
-			"identity" : ".block_id",
 			"table" : "blocks",
 			"table_columns": {
 				"id" : ".block_id",
@@ -193,7 +194,6 @@
 			"operation" : "sys:operation",
 			"name" : "event:operation",
 			"comment" : "system event about executed operation in block",
-			"identity" : ".hash",
 			"table" : "operations",
 			"table_columns": {
 				"op_hash" : ".hash",

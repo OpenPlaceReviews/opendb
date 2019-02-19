@@ -2,20 +2,22 @@ grammar OpenDBExpr;
 
 // We define expression to be either a method call or a string.
 expression
-    : methodCall
-    | fieldAccess
+    : expression DOT NAME
+    | THIS
+    | methodCall 
+    | DOT NAME
     | STRING_LITERAL2
     | STRING_LITERAL1
     | INT
     ;
 
-fieldAccess : 'this' ? ('.' NAME) + ;
-
-methodCall : NAME (DOT NAME) * OPENB  expression (COMMA expression)*  CLOSEB ;
+methodCall  : packageName OPENB expression (COMMA expression)*  CLOSEB;
+packageName : NAME (':' NAME)*;
 
 
 // NAME represents any variable or method name.
-NAME : [a-zA-Z][a-zA-Z0-9]*;
+THIS : 'this' ;
+NAME : [a-zA-Z_][a-zA-Z0-9_]*;
 INT : '-'? '0'..'9'+ ;
 DOT : '.';
 COMMA : ',';
