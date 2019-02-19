@@ -10,8 +10,12 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.SimpleExprEvaluator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -39,8 +43,6 @@ public class DBDataManager {
 	private Map<String, List<TableMapping>> opTableMappings = new TreeMap<>();	
 	
 	
-	
-	
 	protected static class ColumnMapping {
 		String name;
 		SqlColumnType type;
@@ -62,6 +64,29 @@ public class DBDataManager {
 		INT,
 		TIMESTAMP,
 		JSONB
+	}
+	
+	public void init(MetadataDb metadataDB) {
+		LOGGER.info("... Database mapping. Loading table definitions and mappings ...");
+		if(metadataDB.tablesSpec.containsKey(DBConstants.TABLES_TABLE)) {
+			List<OpDefinitionBean> ops = loadOperations(DBConstants.TABLES_TABLE);
+			for(OpDefinitionBean op : ops) {
+				registerTableDefinition(op);
+			}
+		}
+		LOGGER.info(String.format("+++ Database mapping is inititialized. Loaded %d table definitions, % mappings", 
+				tableDefinitions.size(), opTableMappings.size()));
+	}
+	
+	public List<OpDefinitionBean> loadOperations(String table) {
+		return jdbcTemplate.query("SELECT details FROM " + table, new RowMapper<OpDefinitionBean>() {
+
+			@Override
+			public OpDefinitionBean mapRow(ResultSet rs, int rowNum) throws SQLException {
+				return formatter.parseOperation(rs.getString(1));
+			}
+
+		});
 	}
 	
 	
@@ -261,6 +286,7 @@ public class DBDataManager {
 		}
 		return SqlColumnType.TEXT;
 	}
+
 
 
 }

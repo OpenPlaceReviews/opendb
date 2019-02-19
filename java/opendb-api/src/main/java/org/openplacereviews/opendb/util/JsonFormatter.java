@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.service;
+package org.openplacereviews.opendb.util;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -36,6 +36,10 @@ public class JsonFormatter {
 	
 	public OpDefinitionBean parseOperation(String opJson) {
 		return gson.fromJson(opJson, OpDefinitionBean.class);
+	}
+	
+	public OpBlock parseBlock(String opJson) {
+		return gson.fromJson(opJson, OpBlock.class);
 	}
 	
 	public String toJson(OpBlock bl) {

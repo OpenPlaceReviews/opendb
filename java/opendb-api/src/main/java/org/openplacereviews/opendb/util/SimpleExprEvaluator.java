@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.service;
+package org.openplacereviews.opendb.util;
 
 import java.sql.Date;
 import java.sql.SQLException;
@@ -19,6 +19,7 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
 import org.springframework.jdbc.core.JdbcTemplate;

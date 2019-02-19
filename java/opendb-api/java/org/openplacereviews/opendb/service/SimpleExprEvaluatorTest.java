@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.service;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
+import org.openplacereviews.opendb.util.SimpleExprEvaluator;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;

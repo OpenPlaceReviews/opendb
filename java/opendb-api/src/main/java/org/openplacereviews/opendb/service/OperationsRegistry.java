@@ -1,10 +1,13 @@
 package org.openplacereviews.opendb.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.DBConstants;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -62,22 +65,8 @@ public class OperationsRegistry {
 	}
 	
 	
-	public OperationsRegistry() {
-		LOGGER.info("Scanning for registered operations...");
-//		ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
-//		scanner.addIncludeFilter(new AnnotationTypeFilter(OpenDBOperation.class));
-//		for (BeanDefinition bd : scanner.findCandidateComponents("org.openplacereviews")) {
-//			try {
-//				Class<? extends OpenDBOperationExec> cl = (Class<? extends OpenDBOperationExec>) Class.forName(bd.getBeanClassName());
-//				String op = cl.getAnnotation(OpenDBOperation.class).type() + ":"+cl.getAnnotation(OpenDBOperation.class).name();
-//				LOGGER.info(String.format("Register op '%s' -> %s ", op, bd.getBeanClassName()));
-//				// operations.put(op, cl);
-//			} catch (Exception e) {
-//				LOGGER.warn(e.getMessage(), e);
-//			}
-//		}
-		
-		
+
+	private void regDefaultSysOperaitons() {
 		operations.put(getOperationId(OP_TYPE_SYS, OP_LOGIN), new OperationTypeDefinition(null));
 		operations.put(getOperationId(OP_TYPE_SYS, OP_SIGNUP), new OperationTypeDefinition(null));
 		
@@ -87,6 +76,19 @@ public class OperationsRegistry {
 		operations.put(getOperationId(OP_TYPE_SYS, OP_TABLE), new OperationTypeDefinition(null));
 		
 		operations.put(getOperationId(OP_TYPE_SYS, OP_OPERATION), new OperationTypeDefinition(null));
+	}
+	
+	public void init(MetadataDb metadataDB) {
+		LOGGER.info("... Operations registry. Loading operation definitions ...");
+		if(metadataDB.tablesSpec.containsKey(DBConstants.OP_DEFINITIONS_TABLE)) {
+			List<OpDefinitionBean> ops = dbManager.loadOperations(DBConstants.OP_DEFINITIONS_TABLE);
+			for(OpDefinitionBean o : ops) {
+				preexecuteOperation(o);
+			}
+		} else {
+			regDefaultSysOperaitons();
+		}
+		LOGGER.info(String.format("+++ Operations registry. Loaded %d operations.", operations.size()));
 	}
 	
 	public void triggerEvent(String eventId, JsonObject obj) {

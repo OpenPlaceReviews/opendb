@@ -11,19 +11,25 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.OpenDBServer;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
+import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.LoginOperation;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.SignUpOperation;
+import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UsersAndRolesRegistry {
-
+	protected static final Log LOGGER = LogFactory.getLog(OpenDBServer.class);
     
  	// signature section
  	public static final String F_ALGO = "algo";
@@ -36,15 +42,34 @@ public class UsersAndRolesRegistry {
 
  	@Autowired
 	private JsonFormatter formatter;
-
-
-	private ActiveUsersContext blockUsers;
-	private ActiveUsersContext queueUsers;
  	
-	public UsersAndRolesRegistry() {
-		blockUsers = new ActiveUsersContext(null);
-		queueUsers = new ActiveUsersContext(blockUsers);
+ 	
+ 	@Autowired
+	private DBDataManager dbManager;
+
+
+	private ActiveUsersContext blockUsers = new ActiveUsersContext(null);
+	private ActiveUsersContext queueUsers = new ActiveUsersContext(blockUsers);
+ 	
+	
+	public void init(MetadataDb metadataDB) {
+		LOGGER.info("... User database. Load all users (should be changed in future)...");
+		if(metadataDB.tablesSpec.containsKey(DBConstants.USERS_TABLE)) {
+			List<OpDefinitionBean> ops = dbManager.loadOperations(DBConstants.USERS_TABLE);
+			for(OpDefinitionBean op : ops) {
+				blockUsers.addAuthOperation(op);
+			}
+		}
+		if(metadataDB.tablesSpec.containsKey(DBConstants.LOGINS_TABLE)) {
+			List<OpDefinitionBean> ops = dbManager.loadOperations(DBConstants.LOGINS_TABLE);
+			for(OpDefinitionBean op : ops) {
+				blockUsers.addAuthOperation(op);
+			}
+		}
+		LOGGER.info(String.format("+++ User database is inititialized. Loaded %d users.", 
+				blockUsers.users.size()));
 	}
+	
 	
 	
 	public static String getSiteFromUser(String name) {
@@ -417,6 +442,9 @@ public class UsersAndRolesRegistry {
 
 
  	}
+
+
+	
 
 
 

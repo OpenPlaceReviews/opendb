@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.springframework.stereotype.Service;
@@ -13,22 +14,6 @@ public class LogOperationService {
 	protected static final Log LOGGER = LogFactory.getLog(LogOperationService.class);
 	
 	ConcurrentLinkedQueue<LogEntry> log  = new ConcurrentLinkedQueue<LogOperationService.LogEntry>();
-
-	public static class LogEntry {
-		OpDefinitionBean operation;
-		OpBlock block;
-		String message;
-		OperationStatus status;
-		Exception cause;
-		long utcTime;
-		
-		public LogEntry(Exception cause, OperationStatus status, String message) {
-			this.utcTime = System.currentTimeMillis();
-			this.cause = cause;
-			this.message = message;
-			this.status = status;
-		}
-	}
 	
 	public enum OperationStatus {
 		FAILED_PREPARE(false),
@@ -51,19 +36,8 @@ public class LogOperationService {
 		return log;
 	}
 	
-	public static class OperationFailException extends RuntimeException {
-		private static final long serialVersionUID = 5522972559998855977L;
-		private LogEntry logEntry;
-
-		public OperationFailException(LogEntry l) {
-			super(l.message, l.cause);
-			this.logEntry = l;
-		}
-		
-		public LogEntry getLogEntry() {
-			return logEntry;
-		}
-		
+	public void init(MetadataDb metadataDB) {
+		// no persistence for now
 	}
 	
 	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, boolean exceptionOnFail,
@@ -124,6 +98,37 @@ public class LogOperationService {
 	
 	public void clearLogs() {
 		log.clear();
+	}
+
+	public static class OperationFailException extends RuntimeException {
+		private static final long serialVersionUID = 5522972559998855977L;
+		private LogEntry logEntry;
+
+		public OperationFailException(LogEntry l) {
+			super(l.message, l.cause);
+			this.logEntry = l;
+		}
+		
+		public LogEntry getLogEntry() {
+			return logEntry;
+		}
+		
+	}
+	
+	public static class LogEntry {
+		OpDefinitionBean operation;
+		OpBlock block;
+		String message;
+		OperationStatus status;
+		Exception cause;
+		long utcTime;
+		
+		public LogEntry(Exception cause, OperationStatus status, String message) {
+			this.utcTime = System.currentTimeMillis();
+			this.cause = cause;
+			this.message = message;
+			this.status = status;
+		}
 	}
 
 }

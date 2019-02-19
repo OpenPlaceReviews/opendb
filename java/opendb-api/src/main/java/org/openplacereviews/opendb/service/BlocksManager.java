@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -18,17 +20,21 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpDefinitionBean;
 import org.openplacereviews.opendb.ops.SignUpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
+import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.JsonObject;
@@ -37,53 +43,45 @@ import com.google.gson.JsonObject;
 @Service
 public class BlocksManager {
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
+	public static final int MAX_BLOCK_SIZE = 1000;
+	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
+	public static final int BLOCK_VERSION = 1;
+	// not used by this implementation
+	private static final String BLOCK_CREATION_DETAILS = "";
+	private static final long BLOCK_EXTRA = 0;
 	
 	@Autowired
-	public OperationsQueueManager queue;
+	private OperationsQueueManager queue;
 	
 	@Autowired
-	public OperationsRegistry registry;
+	private OperationsRegistry registry;
 	
 	@Autowired
-	public LogOperationService logSystem;
+	private LogOperationService logSystem;
 	
 	@Autowired
-	public UsersAndRolesRegistry usersRegistry;
+	private UsersAndRolesRegistry usersRegistry;
 	
 	@Autowired
     private JsonFormatter formatter;
 	
 	@Autowired
-	public JdbcTemplate jdbcTemplate;
-
-	public static final int MAX_BLOCK_SIZE = 1000;
-	
-	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
-	
-	public static final int BLOCK_VERSION = 1;
-	
-	private OpDefinitionBean currentTx;
-	private OpBlock currentBlock;
-	private BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
-	
+	private JdbcTemplate jdbcTemplate;
 	
 	@Value("${opendb.user}")
 	private String serverUser;
-	
 	@Value("${opendb.privateKey}")
 	private String serverPrivateKey;
 	
-	private OpBlock prevOpBlock = new OpBlock();
-	
 	private KeyPair serverKeyPair;
-	private String blockCreationDetails = "";
-	private long blockExtra = 0;
 	
 	private List<OpBlock> blockchain = new ArrayList<OpBlock>();
+
+	private OpDefinitionBean currentTx;
 	
-	public BlocksManager() {
-		init();
-	}
+	private OpBlock currentBlock;
+	
+	private BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
 	
 	public enum BlockchainState {
 		BLOCKCHAIN_INIT,
@@ -93,8 +91,6 @@ public class BlocksManager {
 		BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC,
 		BLOCKCHAIN_FAILED_BLOCK_EXEC
 	}
-	
-	
 
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
@@ -167,9 +163,31 @@ public class BlocksManager {
 			}
 		}
 	}
-	
-	public synchronized void init() {
+
+	public synchronized void init(MetadataDb metadataDB) {
+		LOGGER.info("... Blockchain. Loading blocks...");
+		String msg;
+		// db is bootstraped
+		if(metadataDB.tablesSpec.containsKey(DBConstants.BLOCK_TABLE)) {
+			List<OpBlock> blocks = jdbcTemplate.query("SELECT details FROM " + DBConstants.BLOCK_TABLE, new RowMapper<OpBlock>(){
+				@Override
+				public OpBlock mapRow(ResultSet rs, int rowNum) throws SQLException {
+					return formatter.parseBlock(rs.getString(1));
+				}
+			});
+			msg = String.format("Loaded %d blocks.", blocks.size());
+			System.out.println();
+			blockchain = new ArrayList<OpBlock>(blocks);
+
+		} else {
+			msg = "Bootstrap needed"; 
+		}
+		if(blockchain.isEmpty()) {
+			// always add empty block  
+			addNewBlockLocal(new OpBlock());
+		}
 		currentState = BlockchainState.BLOCKCHAIN_READY;
+		LOGGER.info("+++ Blockchain is inititialized. " + msg);
 	}
 	
 	
@@ -258,25 +276,44 @@ public class BlocksManager {
 
 
 	private String executeBlock(OpBlock block, ActiveUsersContext users, boolean exceptionOnFail) {
+		// in preparation exception could fail and it shouldn't be fatal for system 
 		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_PREPARE;
-		prepareOperationCtxToExec(block, exceptionOnFail);
+		OpBlock prevBlock = getLastBlock();
+		
+		prepareBlockOpsToExec(block, exceptionOnFail);
 		if(block.blockId < 0) {
-			signBlock(block, users);
+			signBlock(block, users, prevBlock);
 		}
-		validateBlock(block, users);
+		validateBlock(block, users, prevBlock);
 		
-		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		// here we don't expect any failure or the will be fatal to the system
+		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
+		OpBlock newBlock = executeOpsInBlock(block);
 		
-		prevOpBlock = executeOpsInBlock(block);
-		registry.triggerEvent(OperationsRegistry.OP_BLOCK, formatter.toJsonObject(prevOpBlock));
+		addNewBlockLocal(newBlock);
 		
-		blockchain = new ArrayList<OpBlock>(blockchain);
-		blockchain.add(prevOpBlock);
-		queue.removeSuccessfulOps(block);
-		return formatter.toJson(prevOpBlock);
+		postBlockAdded(block, newBlock);
+		
+		return formatter.toJson(newBlock);
 	}
 
+	private void postBlockAdded(OpBlock block, OpBlock newBlock) {
+		registry.triggerEvent(OperationsRegistry.OP_BLOCK, formatter.toJsonObject(newBlock));
+		queue.removeSuccessfulOps(block);
+	}
+
+	private void addNewBlockLocal(OpBlock newBlock) {
+		List<OpBlock> nblockchain = new ArrayList<OpBlock>(blockchain.size() + 1);
+		nblockchain.add(newBlock);
+		nblockchain.addAll(blockchain);
+		blockchain = nblockchain;
+	}
+	
+	public OpBlock getLastBlock() {
+		return blockchain.get(0);
+	}
+	
+	
 	private OpBlock executeOpsInBlock(OpBlock block) {
 		OpBlock execBlock = new OpBlock(block);
 		currentTx = null;
@@ -319,7 +356,7 @@ public class BlocksManager {
 		return blockchain;
 	}
 
-	private void validateBlock(OpBlock block, ActiveUsersContext users) {
+	private void validateBlock(OpBlock block, ActiveUsersContext users, OpBlock prevBlock) {
 		if(block.getOperations().size() == 0) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					"Block has no operations to execute", true);
@@ -332,17 +369,17 @@ public class BlocksManager {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate signature merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash), true);
 		}
-		if(!OUtils.equals(prevOpBlock.hash, block.previousBlockHash)) {
+		if(!OUtils.equals(prevBlock.hash, block.previousBlockHash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate previous block hash: %s %s", prevOpBlock.hash, block.previousBlockHash), true);
+					String.format("Failed to validate previous block hash: %s %s", prevBlock.hash, block.previousBlockHash), true);
 		}
 		if(!OUtils.equals(calculateHash(block), block.hash)) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					String.format("Failed to validate block hash: %s %s", calculateHash(block), block.hash), true);
 		}
-		if(prevOpBlock.blockId + 1 != block.blockId) {
+		if(prevBlock.blockId + 1 != block.blockId) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Block id doesn't match with previous block id: %d %d", prevOpBlock.blockId, block.blockId), true);
+					String.format("Block id doesn't match with previous block id: %d %d", prevBlock.blockId, block.blockId), true);
 		}
 		boolean validateSig = true;
 		Exception ex = null;
@@ -368,7 +405,7 @@ public class BlocksManager {
 		}
 	}
 
-	private void signBlock(OpBlock block, ActiveUsersContext users) {
+	private void signBlock(OpBlock block, ActiveUsersContext users, OpBlock prevOpBlock) {
 		try {
 			block.setDate(System.currentTimeMillis());
 			block.blockId = prevOpBlock.blockId + 1;
@@ -377,8 +414,8 @@ public class BlocksManager {
 			block.sigMerkleTreeHash = usersRegistry.calculateSigMerkleTreeHash(block);
 			block.signedBy = serverUser;
 			block.version = BLOCK_VERSION;
-			block.extra = blockExtra;
-			block.details = blockCreationDetails;
+			block.extra = BLOCK_EXTRA;
+			block.details = BLOCK_CREATION_DETAILS;
 			block.hash = calculateHash(block);
 			byte[] hashBytes = SecUtils.getHashBytes(block.hash);
 			if(serverKeyPair == null) {
@@ -417,7 +454,7 @@ public class BlocksManager {
 
 
 
-	private List<OpDefinitionBean> prepareOperationCtxToExec(OpBlock block, boolean exceptionOnFail) {
+	private List<OpDefinitionBean> prepareBlockOpsToExec(OpBlock block, boolean exceptionOnFail) {
 		List<OpDefinitionBean> operations = new ArrayList<OpDefinitionBean>();
 		Map<String, OpDefinitionBean> executedTx = new TreeMap<String, OpDefinitionBean>();
 		Iterator<OpDefinitionBean> it = block.getOperations().iterator();
