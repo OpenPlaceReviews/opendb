@@ -6,7 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -40,22 +40,22 @@ public class LogOperationService {
 		// no persistence for now
 	}
 	
-	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, boolean exceptionOnFail,
+	public void logOperation(OperationStatus status, OpOperation op, String message, boolean exceptionOnFail,
 			Exception cause) throws OperationFailException {
 		LogEntry le = new LogEntry(cause, status, message);
 		le.operation = op;
 		addLogEntry(exceptionOnFail, le);
 	}
 	
-	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, boolean exceptionOnFail) throws OperationFailException {
+	public void logOperation(OperationStatus status, OpOperation op, String message, boolean exceptionOnFail) throws OperationFailException {
 		logOperation(status, op, message, exceptionOnFail, null);
 	}
 	
-	public void logOperation(OperationStatus status, OpDefinitionBean op, String message, Exception cause) {
+	public void logOperation(OperationStatus status, OpOperation op, String message, Exception cause) {
 		logOperation(status, op, message, false, cause);
 	}
 	
-	public void logOperation(OperationStatus status, OpDefinitionBean op, String message) {
+	public void logOperation(OperationStatus status, OpOperation op, String message) {
 		logOperation(status, op, message, false, null);
 	}
 	
@@ -116,7 +116,7 @@ public class LogOperationService {
 	}
 	
 	public static class LogEntry {
-		OpDefinitionBean operation;
+		OpOperation operation;
 		OpBlock block;
 		String message;
 		OperationStatus status;

@@ -22,7 +22,7 @@ import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -145,7 +145,7 @@ public class UsersAndRolesRegistry {
 			public void processRow(ResultSet rs) throws SQLException {
 				int col = 1;
 				String name = rs.getString(col++);
-				OpDefinitionBean op = new OpDefinitionBean();
+				OpOperation op = new OpOperation();
 				op.putStringValue(F_NAME, name);
 				op.putObjectValue(F_UID, rs.getInt(col++));
 				op.putStringValue(F_ALGO, rs.getString(col++));
@@ -169,7 +169,7 @@ public class UsersAndRolesRegistry {
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
 				int col = 1;
-				OpDefinitionBean op = new OpDefinitionBean();
+				OpOperation op = new OpOperation();
 				op.putStringValue(F_NAME, rs.getString(col++));
 				op.putObjectValue(F_UID, rs.getInt(col++));
 				String name = rs.getString(col++);
@@ -202,7 +202,7 @@ public class UsersAndRolesRegistry {
 
 	public String calculateMerkleTreeHash(OpBlock op) {
 		List<byte[]> hashes = new ArrayList<byte[]>();
-		for(OpDefinitionBean o: op.getOperations()) {
+		for(OpOperation o: op.getOperations()) {
 			byte[] hashBytes = SecUtils.getHashBytes(o.getHash());
 			hashes.add(hashBytes);
 		}
@@ -211,7 +211,7 @@ public class UsersAndRolesRegistry {
 	
 	public String calculateSigMerkleTreeHash(OpBlock op) {
 		List<byte[]> hashes = new ArrayList<byte[]>();
-		for(OpDefinitionBean o: op.getOperations()) {
+		for(OpOperation o: op.getOperations()) {
 			byte[] hashBytes = SecUtils.getHashBytes(o.getSignatureHash());
 			hashes.add(hashBytes);
 		}
@@ -235,31 +235,31 @@ public class UsersAndRolesRegistry {
 
 
 	// hash and signature operations
-	public String calculateOperationHash(OpDefinitionBean ob, boolean set) {
-		String oldHash = (String) ob.remove(OpDefinitionBean.F_HASH);
-		String sigHash = (String) ob.remove(OpDefinitionBean.F_SIGNATURE_HASH);
-		Object sig = ob.remove(OpDefinitionBean.F_SIGNATURE);
+	public String calculateOperationHash(OpOperation ob, boolean set) {
+		String oldHash = (String) ob.remove(OpOperation.F_HASH);
+		String sigHash = (String) ob.remove(OpOperation.F_SIGNATURE_HASH);
+		Object sig = ob.remove(OpOperation.F_SIGNATURE);
 		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
 		if(set) {
-			ob.putStringValue(OpDefinitionBean.F_HASH, hash);
+			ob.putStringValue(OpOperation.F_HASH, hash);
 		} else {
-			ob.putStringValue(OpDefinitionBean.F_HASH, oldHash);
+			ob.putStringValue(OpOperation.F_HASH, oldHash);
 		}
-		ob.putObjectValue(OpDefinitionBean.F_SIGNATURE, sig);
-		ob.putObjectValue(OpDefinitionBean.F_SIGNATURE_HASH, sigHash);
+		ob.putObjectValue(OpOperation.F_SIGNATURE, sig);
+		ob.putObjectValue(OpOperation.F_SIGNATURE_HASH, sigHash);
 		return hash;
 	}
 	
-	public String calculateSigOperationHash(OpDefinitionBean ob) {
+	public String calculateSigOperationHash(OpOperation ob) {
 		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
 		try {
 			bytesSigHash.write(SecUtils.getHashBytes(ob.getHash()));
 
 			if (ob.hasOneSignature()) {
-				String dgst = ob.getStringMap(OpDefinitionBean.F_SIGNATURE).get(F_DIGEST);
+				String dgst = ob.getStringMap(OpOperation.F_SIGNATURE).get(F_DIGEST);
 				bytesSigHash.write(SecUtils.decodeSignature(dgst));
 			} else {
-				List<Map<String, String>> lst = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
+				List<Map<String, String>> lst = ob.getListStringMap(OpOperation.F_SIGNATURE);
 				for (Map<String, String> m : lst) {
 					String dgst = m.get(F_DIGEST);
 					bytesSigHash.write(SecUtils.decodeSignature(dgst));
@@ -272,7 +272,7 @@ public class UsersAndRolesRegistry {
 	}
 	
 	
-	public OpDefinitionBean generateHashAndSign(OpDefinitionBean op, KeyPair... keyPair) throws FailedVerificationException {
+	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
 		String hsh = calculateOperationHash(op, true);
 		byte[] hashBytes = SecUtils.getHashBytes(hsh);
 		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
@@ -281,19 +281,19 @@ public class UsersAndRolesRegistry {
 		} catch (IOException e) {
 			throw new IllegalStateException(e);
 		}
-    	op.remove(OpDefinitionBean.F_SIGNATURE);
-    	op.remove(OpDefinitionBean.F_SIGNATURE_HASH);
+    	op.remove(OpOperation.F_SIGNATURE);
+    	op.remove(OpOperation.F_SIGNATURE_HASH);
     	if(keyPair.length == 1) {
-    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, getSignature(hashBytes, keyPair[0], bytesSigHash));
+    		op.putObjectValue(OpOperation.F_SIGNATURE, getSignature(hashBytes, keyPair[0], bytesSigHash));
     	} else {
     		List<Map<String, String>> lst = new ArrayList<Map<String,String>>();
     		for(KeyPair k : keyPair) {
     			lst.add(getSignature(hashBytes, k, bytesSigHash));
     		}
-    		op.putObjectValue(OpDefinitionBean.F_SIGNATURE, lst);
+    		op.putObjectValue(OpOperation.F_SIGNATURE, lst);
     	}
     	// signature hash is combination of all hash bytes
-    	op.putStringValue(OpDefinitionBean.F_SIGNATURE_HASH,
+    	op.putStringValue(OpOperation.F_SIGNATURE_HASH,
     			SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bytesSigHash.toByteArray()));
     	return op;
 	}
@@ -306,7 +306,7 @@ public class UsersAndRolesRegistry {
 		return signatureMap;
 	}
 	
-	public String validateRoles(ActiveUsersContext ctx, OpDefinitionBean ob) {
+	public String validateRoles(ActiveUsersContext ctx, OpOperation ob) {
 		Set<String> signatures = new TreeSet<String>();
 		signatures.add(ob.getSignedBy());
 		if(ob.getOtherSignedBy() != null) {
@@ -329,15 +329,15 @@ public class UsersAndRolesRegistry {
 		return null;
 	}
 	
-	public boolean validateSignatures(ActiveUsersContext ctx, OpDefinitionBean ob) throws FailedVerificationException {
+	public boolean validateSignatures(ActiveUsersContext ctx, OpOperation ob) throws FailedVerificationException {
 		if (ob.hasOneSignature()) {
-			Map<String, String> sig = ob.getStringMap(OpDefinitionBean.F_SIGNATURE);
+			Map<String, String> sig = ob.getStringMap(OpOperation.F_SIGNATURE);
 				boolean validate = validateSignature(ctx, ob, sig, ob.getSignedBy());
 				if(!validate) {
 					return false;
 				}
 		} else {
-			List<Map<String, String>> sigs = ob.getListStringMap(OpDefinitionBean.F_SIGNATURE);
+			List<Map<String, String>> sigs = ob.getListStringMap(OpOperation.F_SIGNATURE);
 			for (int i = 0; i < sigs.size(); i++) {
 				Map<String, String> sig = sigs.get(i);
 				boolean validate = validateSignature(ctx, ob, sig, i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy()
@@ -350,15 +350,15 @@ public class UsersAndRolesRegistry {
 		return true;
 	}
 	
-	public boolean validateHash(OpDefinitionBean o) {
+	public boolean validateHash(OpOperation o) {
 		return OUtils.equals(calculateOperationHash(o, false), o.getHash());
 	}
 	
-	public boolean validateSignatureHash(OpDefinitionBean o) {
+	public boolean validateSignatureHash(OpOperation o) {
 		return OUtils.equals(calculateSigOperationHash(o), o.getSignatureHash());
 	}
 	
-	public boolean validateSignature(ActiveUsersContext ctx, OpDefinitionBean ob, Map<String, String> sig, String name) throws FailedVerificationException {
+	public boolean validateSignature(ActiveUsersContext ctx, OpOperation ob, Map<String, String> sig, String name) throws FailedVerificationException {
 		if (sig == null) {
 			return false;
 		}
@@ -393,8 +393,8 @@ public class UsersAndRolesRegistry {
  	protected static class ActiveUser {
  		protected long timestampAccess;
 		protected String name;
- 		protected OpDefinitionBean signUp;
- 		protected Map<String, OpDefinitionBean> logins = new TreeMap<String, OpDefinitionBean>();
+ 		protected OpOperation signUp;
+ 		protected Map<String, OpOperation> logins = new TreeMap<String, OpOperation>();
  		
  	}
  	
@@ -413,7 +413,7 @@ public class UsersAndRolesRegistry {
 		}
 
 
- 		public boolean removeAuthOperation(String name, OpDefinitionBean op, boolean deep) {
+ 		public boolean removeAuthOperation(String name, OpOperation op, boolean deep) {
  			String h = op.getHash();
  			if(h == null) {
  				return false;
@@ -428,7 +428,7 @@ public class UsersAndRolesRegistry {
 					au.signUp = null;
 					deleted = true;
 				}
-				for(OpDefinitionBean o : au.logins.values()) {
+				for(OpOperation o : au.logins.values()) {
 					if(OUtils.equals(o.getHash(), h)) {
 						au.logins.remove(getSiteFromUser(name));
 						deleted = true;
@@ -439,7 +439,7 @@ public class UsersAndRolesRegistry {
 			return deleted;
  		}
  		
-		public boolean addAuthOperation(OpDefinitionBean op) {
+		public boolean addAuthOperation(OpOperation op) {
 			if(!op.getOperationType().equals(OperationsRegistry.OP_TYPE_SYS) || 
 					!(
 					op.getOperationName().equals(OperationsRegistry.OP_LOGIN) || 
@@ -452,7 +452,7 @@ public class UsersAndRolesRegistry {
 			String site = getSiteFromUser(name);
 			ActiveUser au = getOrCreateActiveUser(nickname);
 			if (op.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID)) {
-				OpDefinitionBean sop = getSignUpOperation(nickname);
+				OpOperation sop = getSignUpOperation(nickname);
 				if (sop != null) {
 					throw new IllegalArgumentException("User was already signed up");
 				}
@@ -475,7 +475,7 @@ public class UsersAndRolesRegistry {
 			return au;
 		}
 		
-		public OpDefinitionBean getLoginOperation(String name) {
+		public OpOperation getLoginOperation(String name) {
 			ActiveUser au = users.get(getNicknameFromUser(name));
 			if (au != null && au.logins.containsKey(getSiteFromUser(name))) {
 				return au.logins.get(getSiteFromUser(name));
@@ -486,8 +486,8 @@ public class UsersAndRolesRegistry {
 			return null;
 		}
  		
- 		public OpDefinitionBean getSignUpOperation(String name) {
- 			OpDefinitionBean op = null;
+ 		public OpOperation getSignUpOperation(String name) {
+ 			OpOperation op = null;
  			if(parent != null) {
  				 op = parent.getSignUpOperation(name);
  			}
@@ -501,7 +501,7 @@ public class UsersAndRolesRegistry {
  		}
  		
  		public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
- 			OpDefinitionBean op = getSignUpOperation(name);
+ 			OpOperation op = getSignUpOperation(name);
  			if(op == null) {
  				return null;
  			}
@@ -528,7 +528,7 @@ public class UsersAndRolesRegistry {
  		}
  		
  		public KeyPair getSignUpKeyPair(String name, String privatekey) throws FailedVerificationException {
- 			OpDefinitionBean op = getSignUpOperation(name);
+ 			OpOperation op = getSignUpOperation(name);
  			if(op == null) {
  				return null;
  			}
@@ -536,7 +536,7 @@ public class UsersAndRolesRegistry {
  		}
 
 
-		private KeyPair getKeyPairFromOp(OpDefinitionBean op, String privatekey) throws FailedVerificationException {
+		private KeyPair getKeyPairFromOp(OpOperation op, String privatekey) throws FailedVerificationException {
 			String algo = op.getStringValue(UsersAndRolesRegistry.F_ALGO);
  			KeyPair kp = SecUtils.getKeyPair(algo, privatekey, op.getStringValue(UsersAndRolesRegistry.F_PUBKEY));
  			if(privatekey == null || SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {
@@ -550,7 +550,7 @@ public class UsersAndRolesRegistry {
  		}
  		
 		public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
-			OpDefinitionBean op = getLoginOperation(name);
+			OpOperation op = getLoginOperation(name);
 			if(op == null) {
  				return null;
  			}

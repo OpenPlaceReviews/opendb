@@ -6,7 +6,7 @@ import java.util.TreeMap;
 
 import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
@@ -21,7 +21,7 @@ public class JsonFormatter {
 	public JsonFormatter() {
 		GsonBuilder builder = new GsonBuilder();
 		builder.disableHtmlEscaping();
-		builder.registerTypeAdapter(OpDefinitionBean.class, new OpDefinitionBean.OpDefinitionBeanAdapter());
+		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpDefinitionBeanAdapter());
 		gson = builder.create();
 	}
 	
@@ -34,8 +34,8 @@ public class JsonFormatter {
 		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
 	}
 	
-	public OpDefinitionBean parseOperation(String opJson) {
-		return gson.fromJson(opJson, OpDefinitionBean.class);
+	public OpOperation parseOperation(String opJson) {
+		return gson.fromJson(opJson, OpOperation.class);
 	}
 	
 	public OpBlock parseBlock(String opJson) {
@@ -50,7 +50,7 @@ public class JsonFormatter {
 		return gson.toJsonTree(bl).getAsJsonObject();
 	}
 	
-	public JsonObject toJsonObject(OpDefinitionBean o) {
+	public JsonObject toJsonObject(OpOperation o) {
 		return gson.toJsonTree(o).getAsJsonObject();
 	}
 	
@@ -58,7 +58,7 @@ public class JsonFormatter {
 		return gson.toJson(o);
 	}
 	
-	public String toJson(OpDefinitionBean op) {
+	public String toJson(OpOperation op) {
 		return gson.toJson(op);
 	}
 

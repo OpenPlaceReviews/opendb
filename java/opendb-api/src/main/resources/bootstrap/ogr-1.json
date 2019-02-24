@@ -89,7 +89,6 @@
 			"table" : "logins",
 			"table_columns": {
 				"login" : ".name",
-				"uid" : ".",
 				"algo" : ".algo",
 				"pubkey" : ".pubkey",
 				"uid" : "db:find_unique('users', str:first(.name)).uid",

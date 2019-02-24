@@ -7,7 +7,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.service.OperationsRegistry;
@@ -47,7 +47,7 @@ public class OperationsController {
 			throws FailedVerificationException {
 		KeyPair kp = null;
 		KeyPair altKp = null;
-		OpDefinitionBean op = formatter.parseOperation(json);
+		OpOperation op = formatter.parseOperation(json);
 		if (!OUtils.isEmpty(name)) {
 			if (!OUtils.isEmpty(pwd)) {
 				kp = validation.getQueueUsers().getSignUpKeyPairFromPwd(name, pwd);
@@ -83,14 +83,13 @@ public class OperationsController {
     		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
-    	OpDefinitionBean op = new OpDefinitionBean();
+    	OpOperation op = new OpOperation();
     	name = name.trim(); // reduce errors by having trailing spaces
     	if(!UsersAndRolesRegistry.validateNickname(name)) {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
     	
-    	op.setType(OperationsRegistry.OP_TYPE_SYS);
-    	op.setOperation(UsersAndRolesRegistry.OP_SIGNUP_ID);
+    	op.setOperationType(OperationsRegistry.OP_TYPE_SYS, UsersAndRolesRegistry.OP_SIGNUP_ID);
     	op.putStringValue(UsersAndRolesRegistry.F_NAME, name);
     	if(!OUtils.isEmpty(userDetails)) {
     		op.putObjectValue(UsersAndRolesRegistry.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
@@ -152,9 +151,8 @@ public class OperationsController {
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String signupPrivateKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
-    	OpDefinitionBean op = new OpDefinitionBean();
-    	op.setType(OperationsRegistry.OP_TYPE_SYS);
-    	op.setOperation(UsersAndRolesRegistry.OP_LOGIN_ID);
+    	OpOperation op = new OpOperation();
+    	op.setOperationType(OperationsRegistry.OP_TYPE_SYS, UsersAndRolesRegistry.OP_LOGIN_ID);
     	op.putStringValue(UsersAndRolesRegistry.F_NAME, name);
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
@@ -183,7 +181,7 @@ public class OperationsController {
     		}
 		} else if (!OUtils.isEmpty(oauthId)) {
 			kp = manager.getServerLoginKeyPair(queueUsers);
-			OpDefinitionBean sop = queueUsers.getSignUpOperation(nickname);
+			OpOperation sop = queueUsers.getSignUpOperation(nickname);
 			if(!SecUtils.validateHash(sop.getStringValue(UsersAndRolesRegistry.F_OAUTHID_HASH), 
 					sop.getStringValue(UsersAndRolesRegistry.F_SALT), oauthId) || 
 					!oauthProvider.equals(sop.getStringValue(UsersAndRolesRegistry.F_OAUTH_PROVIDER))) {
@@ -215,7 +213,7 @@ public class OperationsController {
     	queue.addOperation(op);
     	// private key won't be stored on opendb
     	if(loginPair.getPrivate() != null) {
-    		OpDefinitionBean copy = new OpDefinitionBean(op);
+    		OpOperation copy = new OpOperation(op);
     		copy.putStringValue(UsersAndRolesRegistry.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
     		return formatter.toJson(copy);
     	}

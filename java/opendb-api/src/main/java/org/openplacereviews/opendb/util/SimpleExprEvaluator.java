@@ -19,7 +19,7 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
@@ -157,11 +157,11 @@ public class SimpleExprEvaluator {
 			}
 			return ffs;
 		case FUNCTION_OP_GROUP:
-			return getSplitElement(ctx.ctx.get(OpDefinitionBean.F_OPERATION), 0);
+			return getSplitElement(ctx.ctx.get(OpOperation.F_OPERATION), 0);
 		case FUNCTION_OP_MOD:
-			return getSplitElement(ctx.ctx.get(OpDefinitionBean.F_OPERATION), 2);
+			return getSplitElement(ctx.ctx.get(OpOperation.F_OPERATION), 2);
 		case FUNCTION_OP_NAME:
-			return getSplitElement(ctx.ctx.get(OpDefinitionBean.F_OPERATION), 1);
+			return getSplitElement(ctx.ctx.get(OpOperation.F_OPERATION), 1);
 		default:
 			break;
 		}

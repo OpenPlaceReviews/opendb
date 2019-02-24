@@ -8,7 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.BlocksManager.BlockchainState;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
@@ -77,8 +77,8 @@ public class BlockController {
     	OpBlock block = formatter.parseBootstrapBlock("1");
 		if (!OUtils.isEmpty(serverName)) {
 			KeyPair kp = null;
-			for (OpDefinitionBean o : block.getOperations()) {
-				OpDefinitionBean op = o;
+			for (OpOperation o : block.getOperations()) {
+				OpOperation op = o;
 				if (!OUtils.isEmpty(serverName) && OUtils.isEmpty(o.getSignedBy())) {
 					if(kp == null) {
 						kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
@@ -97,7 +97,7 @@ public class BlockController {
     	public String status;
     	public String serverUser;
     	public OpBlock currentBlock;
-		public OpDefinitionBean currentTx;
+		public OpOperation currentTx;
 		public List<OpBlock> blockchain;
     }
     

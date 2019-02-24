@@ -3,21 +3,21 @@
 	"date":"2019-02-15T00:00:00.000Z",
 	"operations": [
 		{
-			"operation" : "sys:role",
-			"name"		: "owner",
-			"comment"   : "Create role owner and specify that nobody could change it",
+			"operation"  : "sys:role",
+			"name" : "owner",
+			"comment" : "Create role owner and specify that nobody could change it",
 			"owner_role" : "none",
-			"super_roles" : []
+			"super_roles": []
 		},
 		{
-			"operation" : "auth:role",
+			"operation" : "sys:role",
 			"name"		: "master",
 			"comment"   : "Create role master and specify that only owner could change it",
 			"owner_role" : "owner",
 			"super_roles" : ["owner"]
 		},
 		{
-			"operation" : "auth:role",
+			"operation" : "sys:role",
 			"name"		: "registrator",
 			"comment"   : "Create role registrator and specify that only owner could change it",
 			"owner_role" : "owner",
@@ -25,8 +25,7 @@
 		},
 
 		{  
-			"operation":"sys:grant",
-			"prev_hash":"json:sha256:995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b",
+			"operation" : "sys:grant",
 			"name" : "openplacereviews",
 			"roles" : ["owner"]
 		},
@@ -63,8 +62,8 @@
 
 		{
 			"operation" : "sys:op_validate",
-			"name"		: "check_role_assigned_and_signed",
-			"comment"   : "Check if role assigned by person who has it. Master role could change validation.",
+			"name" : "check_role_assigned_and_signed",
+			"comment" : "Check if role assigned by person who has it. Master role could change validation.",
 			"owner_role" : "master",
 			"operations" : ["sys:grant"],
 			"if" : {},
@@ -86,7 +85,7 @@
 		},
 		{
 			"operation" : "sys:op_validate",
-			"name"		: "check_self_signed_login_signup",
+			"name" : "check_self_signed_login_signup",
 			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
 			"owner_role" : "none",
 			"operations" : ["sys:login", "sys:signup"],

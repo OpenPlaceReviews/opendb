@@ -11,7 +11,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class OperationsQueueManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(OperationsQueueManager.class);
-	ConcurrentLinkedQueue<OpDefinitionBean> operationsQueue = new ConcurrentLinkedQueue<OpDefinitionBean>();
+	ConcurrentLinkedQueue<OpOperation> operationsQueue = new ConcurrentLinkedQueue<OpOperation>();
 	
     @Autowired
     private UsersAndRolesRegistry usersRegistry;
@@ -31,7 +31,7 @@ public class OperationsQueueManager {
     public void init(MetadataDb metadataDB) {
 		LOGGER.info("... Operations queue. Loading operations queue ...");
 		if(metadataDB.tablesSpec.containsKey(DBConstants.QUEUE_TABLE)) {
-			List<OpDefinitionBean> ops = dbManager.loadOperations(DBConstants.QUEUE_TABLE);
+			List<OpOperation> ops = dbManager.loadOperations(DBConstants.QUEUE_TABLE);
 			addOperations(ops);
 		}
 		
@@ -39,25 +39,25 @@ public class OperationsQueueManager {
 	}
     
 	
-	public synchronized void addOperations(List<OpDefinitionBean> operations) {
-		for(OpDefinitionBean o : operations) {
+	public synchronized void addOperations(List<OpOperation> operations) {
+		for(OpOperation o : operations) {
 			addOperation(o);
 		}
 	}
 	
-	public synchronized void addOperation(OpDefinitionBean op) {
+	public synchronized void addOperation(OpOperation op) {
 		usersRegistry.getQueueUsers().addAuthOperation(op);
 		operationsQueue.add(op);
 	}
 	
 	public synchronized void removeSuccessfulOps(OpBlock block) {
 		Set<String> hashes = new TreeSet<>();
-		for(OpDefinitionBean o : block.getOperations()) {
+		for(OpOperation o : block.getOperations()) {
 			hashes.add(o.getHash());
 		}
-		Iterator<OpDefinitionBean> it = operationsQueue.iterator();
+		Iterator<OpOperation> it = operationsQueue.iterator();
 		while(it.hasNext()) {
-			OpDefinitionBean o = it.next();
+			OpOperation o = it.next();
 			if(hashes.contains(o.getHash())) {
 				it.remove();
 				usersRegistry.getQueueUsers().removeAuthOperation(o.getName(), o, false);
@@ -65,7 +65,7 @@ public class OperationsQueueManager {
 		}
 	}
 	
-	public ConcurrentLinkedQueue<OpDefinitionBean> getOperationsQueue() {
+	public ConcurrentLinkedQueue<OpOperation> getOperationsQueue() {
 		return operationsQueue;
 	}
 

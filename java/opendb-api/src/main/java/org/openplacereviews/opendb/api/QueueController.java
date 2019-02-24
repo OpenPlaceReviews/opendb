@@ -7,7 +7,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -37,7 +37,7 @@ public class QueueController {
     @PostMapping(path = "/add")
     @ResponseBody
     public String addToQueue(@RequestParam(required = true) String json) {
-    	OpDefinitionBean op = formatter.parseOperation(json);
+    	OpOperation op = formatter.parseOperation(json);
     	queue.addOperation(op);
     	return "{\"status\":\"OK\"}";
     }
@@ -54,14 +54,14 @@ public class QueueController {
     @ResponseBody
 	public String queueList() throws FailedVerificationException {
 		OpBlock bl = new OpBlock();
-		for (OpDefinitionBean ob : queue.getOperationsQueue()) {
+		for (OpOperation ob : queue.getOperationsQueue()) {
 			Map<String, String> validation = new LinkedHashMap<String, String>();
 			validation.put("validate_signatures", validator.validateSignatures(validator.getQueueUsers(), ob)+ "");
 			String err = validator.validateRoles(validator.getQueueUsers(), ob);
 			validation.put("validate_roles", err == null? "true" : err);
 			validation.put("validate_hash", validator.validateHash(ob)+ "");
 			validation.put("validate_sig_hash", validator.validateSignatureHash(ob) + "");
-			OpDefinitionBean c = new OpDefinitionBean(ob);
+			OpOperation c = new OpOperation(ob);
 			c.putObjectValue("validation", validation);
 			bl.getOperations().add(c);
 		}

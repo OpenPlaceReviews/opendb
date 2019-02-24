@@ -27,7 +27,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpDefinitionBean;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -77,7 +77,7 @@ public class BlocksManager {
 	
 	private List<OpBlock> blockchain = new ArrayList<OpBlock>();
 
-	private OpDefinitionBean currentTx;
+	private OpOperation currentTx;
 	
 	private OpBlock currentBlock;
 	
@@ -115,8 +115,8 @@ public class BlocksManager {
 		try {
 			OpBlock bl = new OpBlock();
 			currentBlock = bl;
-			List<OpDefinitionBean> candidates = bl.getOperations();
-			ConcurrentLinkedQueue<OpDefinitionBean> q = queue.getOperationsQueue();
+			List<OpOperation> candidates = bl.getOperations();
+			ConcurrentLinkedQueue<OpOperation> q = queue.getOperationsQueue();
 			ActiveUsersContext users = pickupOpsFromQueue(candidates, q, false);
 			return executeBlock(bl, users, false);
 		} catch (RuntimeException e) {
@@ -146,8 +146,8 @@ public class BlocksManager {
 		this.currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		try {
 			currentBlock = remoteBlock;
-			LinkedList<OpDefinitionBean> ops = new LinkedList<>(remoteBlock.getOperations());
-			ArrayList<OpDefinitionBean> cand = new ArrayList<>();
+			LinkedList<OpOperation> ops = new LinkedList<>(remoteBlock.getOperations());
+			ArrayList<OpOperation> cand = new ArrayList<>();
 			ActiveUsersContext users = pickupOpsFromQueue(cand, ops, true);
 			if(ops.size() != cand.size()) {
 				throw new RuntimeException("The block could not validate all transactions included in it");
@@ -216,16 +216,16 @@ public class BlocksManager {
 		return currentBlock;
 	}
 	
-	public OpDefinitionBean getCurrentTx() {
+	public OpOperation getCurrentTx() {
 		return currentTx;
 	}
 	
-	private ActiveUsersContext pickupOpsFromQueue(List<OpDefinitionBean> candidates,
-			Collection<OpDefinitionBean> q, boolean exceptionOnFail) {
+	private ActiveUsersContext pickupOpsFromQueue(List<OpOperation> candidates,
+			Collection<OpOperation> q, boolean exceptionOnFail) {
 		int size = 0;
 		ActiveUsersContext au = new UsersAndRolesRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
 		Map<String, Set<String>> authTxDependencies = new HashMap<String, Set<String>>();
-		for (OpDefinitionBean o : q) {
+		for (OpOperation o : q) {
 			int l = formatter.toJson(o).length();
 			String validMsg = null; 
 			Exception ex = null;
@@ -325,14 +325,11 @@ public class BlocksManager {
 	private OpBlock executeOpsInBlock(OpBlock block) {
 		OpBlock execBlock = new OpBlock(block);
 		currentTx = null;
-		List<OpDefinitionBean> ops = execBlock.getOperations();
+		List<OpOperation> ops = execBlock.getOperations();
 		int indInBlock = 0;
 		
-		for(OpDefinitionBean o : block.getOperations()) {
-			OpDefinitionBean ro = new OpDefinitionBean(o);
-			// extra fields for events
-			ro.putObjectValue(OpDefinitionBean.F_BLOCK_ID, block.blockId);
-			ro.putObjectValue(OpDefinitionBean.F_BLOCK_IND, indInBlock);
+		for(OpOperation o : block.getOperations()) {
+			OpOperation ro = new OpOperation(o);
 			JsonObject obj = formatter.toJsonObject(ro);
 			currentTx = o;
 			boolean execute = false;
@@ -462,12 +459,12 @@ public class BlocksManager {
 
 
 
-	private List<OpDefinitionBean> prepareBlockOpsToExec(OpBlock block, boolean exceptionOnFail) {
-		List<OpDefinitionBean> operations = new ArrayList<OpDefinitionBean>();
-		Map<String, OpDefinitionBean> executedTx = new TreeMap<String, OpDefinitionBean>();
-		Iterator<OpDefinitionBean> it = block.getOperations().iterator();
+	private List<OpOperation> prepareBlockOpsToExec(OpBlock block, boolean exceptionOnFail) {
+		List<OpOperation> operations = new ArrayList<OpOperation>();
+		Map<String, OpOperation> executedTx = new TreeMap<String, OpOperation>();
+		Iterator<OpOperation> it = block.getOperations().iterator();
 		while(it.hasNext()) {
-			OpDefinitionBean def = it.next();
+			OpOperation def = it.next();
 			Exception ex = null;
 			boolean valid = false;
 			try {
@@ -478,7 +475,7 @@ public class BlocksManager {
 			if(valid) { 
 				boolean allDeps = checkAllDependencies(executedTx, def.getTransientTxDependencies());
 				if(allDeps) {
-					allDeps = checkAllDependencies(executedTx, def.getStringList(OpDefinitionBean.F_DEPENDENCIES));
+					allDeps = checkAllDependencies(executedTx, def.getStringList(OpOperation.F_DEPENDENCIES));
 				}
 				if(!allDeps) {
 					logSystem.logOperation(OperationStatus.FAILED_DEPENDENCIES, def, 
@@ -505,7 +502,7 @@ public class BlocksManager {
 	}
 
 
-	private boolean checkAllDependencies(Map<String, OpDefinitionBean> executedTx, List<String> dp) {
+	private boolean checkAllDependencies(Map<String, OpOperation> executedTx, List<String> dp) {
 		if (dp != null) {
 			for (String d : dp) {
 				if (!executedTx.containsKey(d)) {
