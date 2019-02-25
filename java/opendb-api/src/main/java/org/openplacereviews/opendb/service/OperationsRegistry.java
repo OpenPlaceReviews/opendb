@@ -21,20 +21,20 @@ public class OperationsRegistry {
 	protected static final Log LOGGER = LogFactory.getLog(OperationsRegistry.class);
 	
 	// system operations
-	public static final String OP_TYPE_SYS  = "sys";
+	public static final String OP_TYPE_SYS  = "sys.";
 	// auth
-	public static final String OP_LOGIN = "login";
-	public static final String OP_SIGNUP = "signup";
+	public static final String OP_LOGIN = OP_TYPE_SYS + "login";
+	public static final String OP_SIGNUP = OP_TYPE_SYS + "signup";
 	// roles / validation
-	public static final String OP_ROLE = "role";
-	public static final String OP_GRANT = "grant";
-	public static final String OP_VALIDATE = "validate";
+	public static final String OP_ROLE = OP_TYPE_SYS + "role";
+	public static final String OP_GRANT = OP_TYPE_SYS + "grant";
+	public static final String OP_VALIDATE = OP_TYPE_SYS + "validate";
 	// limit external ops 
-	public static final String OP_LIMIT = "limit";
-	// ddl
-	public static final String OP_TABLE = "table";
+	public static final String OP_LIMIT = OP_TYPE_SYS + "limit";
+	// ddl?
+	public static final String OP_TABLE = OP_TYPE_SYS + "table";
 	// meta  & mapping
-	public static final String OP_OPERATION = "operation";
+	public static final String OP_OPERATION = OP_TYPE_SYS + "operation";
 	
 	
 	// system events
@@ -113,43 +113,42 @@ public class OperationsRegistry {
 	
 	
 	public boolean preexecuteOperation(OpOperation def, List<OpOperation> bootstrapOps) {
-		OperationTypeDefinition opTypeDef = operations.get(def.getOperationId());
+		OperationTypeDefinition opTypeDef = operations.get(def.getOperationType());
 		if(opTypeDef == null) {
-			throw new UnsupportedOperationException(String.format("Operation %s is not registered", def.getOperationId()));
+			throw new UnsupportedOperationException(String.format("Operation %s is not registered", def.getOperationType()));
 		}
 		// create tables first for initial block
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_TABLE))) {
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_TABLE))) {
 			dbManager.registerTableDefinition(def, true);
 		}
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_OPERATION))) {
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_OPERATION))) {
 			operations.put(def.getStringValue(F_NAME), new OperationTypeDefinition(def));
 			dbManager.registerMappingOperation(def.getStringValue(F_NAME), def);
 		}
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_SIGNUP))) {
-			usersRegistry.getBlockUsers().addAuthOperation(o);
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_SIGNUP))) {
 			// TODO add signup operation
 		}
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_LOGIN))) {
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_LOGIN))) {
 			// TODO add login operation
 		}
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_ROLE))) {
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_ROLE))) {
 			// TODO add role operation
 		}
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_VALIDATE))) {
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_VALIDATE))) {
 			// TODO add validate operation
 		}
-		if(def.getOperationId().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_GRANT))) {
+		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_GRANT))) {
 			// TODO add validate operation
 		}
 		if (opTypeDef.isBootstrap()) {
 			bootstrapOps.add(def);
 		} else {
 			JsonObject obj = null;
-			dbManager.executeMappingOperation(def.getOperationId(), obj);
+			dbManager.executeMappingOperation(def.getOperationType(), obj);
 			triggerEvent(OperationsRegistry.OP_OPERATION, obj);		
 		}
 		
-		return operations.containsKey(def.getOperationId());
+		return operations.containsKey(def.getOperationType());
 	}
 
 

@@ -60,7 +60,6 @@ public class QueueController {
 			String err = validator.validateRoles(validator.getQueueUsers(), ob);
 			validation.put("validate_roles", err == null? "true" : err);
 			validation.put("validate_hash", validator.validateHash(ob)+ "");
-			validation.put("validate_sig_hash", validator.validateSignatureHash(ob) + "");
 			OpOperation c = new OpOperation(ob);
 			c.putObjectValue("validation", validation);
 			bl.getOperations().add(c);

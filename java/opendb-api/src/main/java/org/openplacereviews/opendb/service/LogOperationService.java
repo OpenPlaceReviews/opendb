@@ -86,12 +86,12 @@ public class LogOperationService {
 	private String getMessage(LogEntry le) {
 		String msg = le.message;
 		if(le.operation != null) {
-			msg += String.format(", operation: %s, %s, %s", le.operation.getOperationId(), 
+			msg += String.format(", operation: %s, %s, %s", le.operation.getOperationType(), 
 					le.operation.getName(), le.operation.getHash()); 
 		}
 		if(le.block != null) {
-			msg += String.format(", block: %s, %s, %s", le.block.blockId +"", 
-					le.block.date, le.block.hash);
+			msg += String.format(", block: %s, %s, %s", le.block.getBlockId() +"", 
+					le.block.getDateString(), le.block.getHash());
 		}
 		return msg;
 	}

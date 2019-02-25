@@ -1,7 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.security.KeyPair;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -212,8 +210,12 @@ public class UsersAndRolesRegistry {
 	public String calculateSigMerkleTreeHash(OpBlock op) {
 		List<byte[]> hashes = new ArrayList<byte[]>();
 		for(OpOperation o: op.getOperations()) {
-			byte[] hashBytes = SecUtils.getHashBytes(o.getSignatureHash());
-			hashes.add(hashBytes);
+			List<String> sigs = o.getSignatureList();
+			byte[] bts = null;
+			for(String s : sigs) {
+				bts = SecUtils.mergeTwoArrays(bts, SecUtils.decodeSignature(s));
+			}
+			hashes.add(bts);
 		}
 		return calculateMerkleTreeInPlaceHash(SecUtils.HASH_SHA256, hashes);
 	}
@@ -237,7 +239,6 @@ public class UsersAndRolesRegistry {
 	// hash and signature operations
 	public String calculateOperationHash(OpOperation ob, boolean set) {
 		String oldHash = (String) ob.remove(OpOperation.F_HASH);
-		String sigHash = (String) ob.remove(OpOperation.F_SIGNATURE_HASH);
 		Object sig = ob.remove(OpOperation.F_SIGNATURE);
 		String hash = JSON_MSG_TYPE + ":" + SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
 		if(set) {
@@ -246,78 +247,25 @@ public class UsersAndRolesRegistry {
 			ob.putStringValue(OpOperation.F_HASH, oldHash);
 		}
 		ob.putObjectValue(OpOperation.F_SIGNATURE, sig);
-		ob.putObjectValue(OpOperation.F_SIGNATURE_HASH, sigHash);
 		return hash;
-	}
-	
-	public String calculateSigOperationHash(OpOperation ob) {
-		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
-		try {
-			bytesSigHash.write(SecUtils.getHashBytes(ob.getHash()));
-
-			if (ob.hasOneSignature()) {
-				String dgst = ob.getStringMap(OpOperation.F_SIGNATURE).get(F_DIGEST);
-				bytesSigHash.write(SecUtils.decodeSignature(dgst));
-			} else {
-				List<Map<String, String>> lst = ob.getListStringMap(OpOperation.F_SIGNATURE);
-				for (Map<String, String> m : lst) {
-					String dgst = m.get(F_DIGEST);
-					bytesSigHash.write(SecUtils.decodeSignature(dgst));
-				}
-			}
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
-    	return SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bytesSigHash.toByteArray());
 	}
 	
 	
 	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
 		String hsh = calculateOperationHash(op, true);
 		byte[] hashBytes = SecUtils.getHashBytes(hsh);
-		ByteArrayOutputStream bytesSigHash = new ByteArrayOutputStream();
-		try {
-			bytesSigHash.write(hashBytes);
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
     	op.remove(OpOperation.F_SIGNATURE);
-    	op.remove(OpOperation.F_SIGNATURE_HASH);
-    	if(keyPair.length == 1) {
-    		op.putObjectValue(OpOperation.F_SIGNATURE, getSignature(hashBytes, keyPair[0], bytesSigHash));
-    	} else {
-    		List<Map<String, String>> lst = new ArrayList<Map<String,String>>();
-    		for(KeyPair k : keyPair) {
-    			lst.add(getSignature(hashBytes, k, bytesSigHash));
-    		}
-    		op.putObjectValue(OpOperation.F_SIGNATURE, lst);
+    	for(KeyPair o : keyPair) {
+    		String sig = SecUtils.signMessageWithKeyBase64(o, hashBytes, SecUtils.SIG_ALGO_ECDSA, null);
+    		op.addOrSetStringValue(OpOperation.F_SIGNATURE, sig);
     	}
-    	// signature hash is combination of all hash bytes
-    	op.putStringValue(OpOperation.F_SIGNATURE_HASH,
-    			SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bytesSigHash.toByteArray()));
     	return op;
 	}
 
-	private Map<String, String> getSignature(byte[] hash, KeyPair keyPair, ByteArrayOutputStream out) throws FailedVerificationException {
-		String signature = SecUtils.signMessageWithKeyBase64(keyPair, hash, SecUtils.SIG_ALGO_NONE_EC, out);
-    	Map<String, String> signatureMap = new TreeMap<>();
-    	signatureMap.put(F_DIGEST, signature);
-    	signatureMap.put(F_ALGO, SecUtils.SIG_ALGO_NONE_EC);
-		return signatureMap;
-	}
 	
 	public String validateRoles(ActiveUsersContext ctx, OpOperation ob) {
-		Set<String> signatures = new TreeSet<String>();
-		signatures.add(ob.getSignedBy());
-		if(ob.getOtherSignedBy() != null) {
-			signatures.addAll(ob.getOtherSignedBy());
-		}
-		if (ob.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID)) {
-			if(!signatures.contains(ob.getStringValue(F_NAME))) {
-				return "Signup operation must be signed by itself";
-			}
-		}
-		if (ob.getOperationName().equals(OP_LOGIN_ID)) {
+		Set<String> signatures = new TreeSet<String>(ob.getSignedBy());
+		if (ob.getOperationType().equals(OP_LOGIN_ID)) {
 			String loginName = ob.getStringValue(F_NAME);
 			if(loginName.indexOf(USER_LOGIN_CHAR) == -1 ) {
 				return "Login should specify a site or a purpose name to login";
@@ -330,21 +278,16 @@ public class UsersAndRolesRegistry {
 	}
 	
 	public boolean validateSignatures(ActiveUsersContext ctx, OpOperation ob) throws FailedVerificationException {
-		if (ob.hasOneSignature()) {
-			Map<String, String> sig = ob.getStringMap(OpOperation.F_SIGNATURE);
-				boolean validate = validateSignature(ctx, ob, sig, ob.getSignedBy());
-				if(!validate) {
-					return false;
-				}
-		} else {
-			List<Map<String, String>> sigs = ob.getListStringMap(OpOperation.F_SIGNATURE);
-			for (int i = 0; i < sigs.size(); i++) {
-				Map<String, String> sig = sigs.get(i);
-				boolean validate = validateSignature(ctx, ob, sig, i == 0 ? ob.getSignedBy() : ob.getOtherSignedBy()
-						.get(i - 1));
-				if (!validate) {
-					return false;
-				}
+		List<String> sigs = ob.getSignatureList();
+		List<String> signedBy = ob.getSignedBy();
+		if(signedBy.size() != sigs.size()) {
+			return false;
+		}
+		for (int i = 0; i < sigs.size(); i++) {
+			String sig = sigs.get(i);
+			boolean validate = validateSignature(ctx, ob, sig, signedBy.get(i));
+			if (!validate) {
+				return false;
 			}
 		}
 		return true;
@@ -354,28 +297,23 @@ public class UsersAndRolesRegistry {
 		return OUtils.equals(calculateOperationHash(o, false), o.getHash());
 	}
 	
-	public boolean validateSignatureHash(OpOperation o) {
-		return OUtils.equals(calculateSigOperationHash(o), o.getSignatureHash());
-	}
-	
-	public boolean validateSignature(ActiveUsersContext ctx, OpOperation ob, Map<String, String> sig, String name) throws FailedVerificationException {
+	public boolean validateSignature(ActiveUsersContext ctx, OpOperation ob, String sig, String name) throws FailedVerificationException {
 		if (sig == null) {
 			return false;
 		}
 		if (name == null) {
 			return false;
 		}
-		String sigAlgo = sig.get(F_ALGO);
+		
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());		
-		byte[] signature = SecUtils.decodeSignature(sig.get(F_DIGEST));
 		KeyPair kp ;
-		if (ob.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID) && ob.getStringValue(F_NAME).equals(name)) {
+		if (ob.getOperationType().equals(UsersAndRolesRegistry.OP_SIGNUP_ID) && ob.getStringValue(F_NAME).equals(name)) {
 			// signup operation is validated by itself
 			kp = ctx.getKeyPairFromOp(ob, null);
 		} else {
 			kp = ctx.getPublicKeyPair(name);
 		}
-		return SecUtils.validateSignature(kp, txHash, sigAlgo, signature);
+		return SecUtils.validateSignature(kp, txHash, sig);
 	}
 
 
@@ -440,25 +378,22 @@ public class UsersAndRolesRegistry {
  		}
  		
 		public boolean addAuthOperation(OpOperation op) {
-			if(!op.getOperationType().equals(OperationsRegistry.OP_TYPE_SYS) || 
-					!(
-					op.getOperationName().equals(OperationsRegistry.OP_LOGIN) || 
-					op.getOperationName().equals(OperationsRegistry.OP_SIGNUP)
-					)) {
+			if(!op.getOperationType().equals(OperationsRegistry.OP_LOGIN) || 
+				!op.getOperationType().equals(OperationsRegistry.OP_SIGNUP)) {
 				return false;
 			}
 			String name = op.getStringValue(UsersAndRolesRegistry.F_NAME);
 			String nickname = getNicknameFromUser(name);
 			String site = getSiteFromUser(name);
 			ActiveUser au = getOrCreateActiveUser(nickname);
-			if (op.getOperationName().equals(UsersAndRolesRegistry.OP_SIGNUP_ID)) {
+			if (op.getOperationType().equals(UsersAndRolesRegistry.OP_SIGNUP_ID)) {
 				OpOperation sop = getSignUpOperation(nickname);
 				if (sop != null) {
 					throw new IllegalArgumentException("User was already signed up");
 				}
 				au.signUp = op;
 				return true;
-			} else if (op.getOperationName().equals(OP_LOGIN_ID)) {
+			} else if (op.getOperationType().equals(OP_LOGIN_ID)) {
 				au.logins.put(site, op);
 				return true;
 			}

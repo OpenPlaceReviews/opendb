@@ -9,13 +9,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -224,7 +221,6 @@ public class BlocksManager {
 			Collection<OpOperation> q, boolean exceptionOnFail) {
 		int size = 0;
 		ActiveUsersContext au = new UsersAndRolesRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
-		Map<String, Set<String>> authTxDependencies = new HashMap<String, Set<String>>();
 		for (OpOperation o : q) {
 			int l = formatter.toJson(o).length();
 			String validMsg = null; 
@@ -235,9 +231,6 @@ public class BlocksManager {
 				}
 				if(!usersRegistry.validateHash(o)) {
 					validMsg = "hash is not valid";
-				}
-				if(!usersRegistry.validateSignatureHash(o)) {
-					validMsg = "signature hash is not valid";
 				}
 				validMsg = usersRegistry.validateRoles(au, o);
 			} catch (Exception e) {
@@ -259,15 +252,7 @@ public class BlocksManager {
 			if(candidates.size() >= MAX_BLOCK_SIZE) {
 				break;
 			}
-			boolean authOp = au.addAuthOperation(o);
-			if(authOp) {
-				String uname = o.getStringValue(UsersAndRolesRegistry.F_NAME);
-				if(!authTxDependencies.containsKey(uname)) {
-					authTxDependencies.put(uname, new LinkedHashSet<String>());
-				}
-				o.setTransientTxDependencies(new ArrayList<String>(authTxDependencies.get(uname)));
-				authTxDependencies.get(uname).add(o.getHash());
-			}
+			au.addAuthOperation(o);
 			candidates.add(o);
 		}
 		return au;
@@ -282,7 +267,7 @@ public class BlocksManager {
 		OpBlock prevBlock = getLastBlock();
 		
 		prepareBlockOpsToExec(block, exceptionOnFail);
-		if(block.blockId < 0) {
+		if(block.getBlockId() < 0) {
 			signBlock(block, users, prevBlock);
 		}
 		validateBlock(block, users, prevBlock);
@@ -314,7 +299,7 @@ public class BlocksManager {
 	}
 	
 	public boolean isBlockchainEmpty() {
-		return blockchain.isEmpty() || getLastBlock().blockId < 0;
+		return blockchain.isEmpty() || getLastBlock().getBlockId() < 0;
 	}
 	
 	public OpBlock getLastBlock() {
@@ -366,33 +351,35 @@ public class BlocksManager {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
 					"Block has no operations to execute", true);
 		}
-		if(!OUtils.equals(usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash)) {
+		if(!OUtils.equals(usersRegistry.calculateMerkleTreeHash(block), block.getStringValue(OpBlock.F_MERKLE_TREE_HASH))) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash), true);
+					String.format("Failed to validate merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), 
+							block.getStringValue(OpBlock.F_MERKLE_TREE_HASH)), true);
 		}
-		if(!OUtils.equals(usersRegistry.calculateSigMerkleTreeHash(block), block.sigMerkleTreeHash)) {
+		if(!OUtils.equals(usersRegistry.calculateSigMerkleTreeHash(block), block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH))) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate signature merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), block.merkleTreeHash), true);
+					String.format("Failed to validate signature merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), 
+							block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH)), true);
 		}
-		if(!OUtils.equals(prevBlock.hash, block.previousBlockHash)) {
+		if(!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate previous block hash: %s %s", prevBlock.hash, block.previousBlockHash), true);
+					String.format("Failed to validate previous block hash: %s %s", prevBlock.getHash(), 
+							block.getStringValue(OpBlock.F_PREV_BLOCK_HASH)), true);
 		}
-		if(!OUtils.equals(calculateHash(block), block.hash)) {
+		if(!OUtils.equals(calculateHash(block), prevBlock.getHash())) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate block hash: %s %s", calculateHash(block), block.hash), true);
+					String.format("Failed to validate block hash: %s %s", calculateHash(block), prevBlock.getHash()), true);
 		}
-		if(prevBlock.blockId + 1 != block.blockId) {
+		if(prevBlock.getBlockId() + 1 != block.getBlockId()) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Block id doesn't match with previous block id: %d %d", prevBlock.blockId, block.blockId), true);
+					String.format("Block id doesn't match with previous block id: %d %d", prevBlock.getBlockId(), block.getBlockId()), true);
 		}
 		boolean validateSig = true;
 		Exception ex = null;
 		try {
-			KeyPair pk = users.getPublicLoginKeyPair(block.signedBy);
-			byte[] blHash = SecUtils.getHashBytes(block.hash);		
-			byte[] signature = SecUtils.decodeSignature(block.signature);
-			if(pk != null && SecUtils.validateSignature(pk, blHash, block.signatureAlgo, signature)) {
+			KeyPair pk = users.getPublicLoginKeyPair(block.getStringValue(OpBlock.F_SIGNED_BY));
+			byte[] blHash = SecUtils.getHashBytes(block.getHash());		
+			if(pk != null && SecUtils.validateSignature(pk, blHash, block.getSignature())) {
 				validateSig = true;
 			} else {
 				validateSig = false;
@@ -412,22 +399,21 @@ public class BlocksManager {
 
 	private void signBlock(OpBlock block, ActiveUsersContext users, OpBlock prevOpBlock) {
 		try {
-			block.setDate(System.currentTimeMillis());
-			block.blockId = prevOpBlock.blockId + 1;
-			block.previousBlockHash = prevOpBlock.hash;
-			block.merkleTreeHash = usersRegistry.calculateMerkleTreeHash(block);
-			block.sigMerkleTreeHash = usersRegistry.calculateSigMerkleTreeHash(block);
-			block.signedBy = serverUser;
-			block.version = BLOCK_VERSION;
-			block.extra = BLOCK_EXTRA;
-			block.details = BLOCK_CREATION_DETAILS;
-			block.hash = calculateHash(block);
-			byte[] hashBytes = SecUtils.getHashBytes(block.hash);
+			block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
+			block.putObjectValue(OpBlock.F_BLOCKID, (Integer) (prevOpBlock.getBlockId() + 1));
+			block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlock.getHash());
+			block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, usersRegistry.calculateMerkleTreeHash(block));
+			block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, usersRegistry.calculateSigMerkleTreeHash(block));
+			block.putStringValue(OpBlock.F_SIGNED_BY, serverUser);
+			block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
+			block.putObjectValue(OpBlock.F_EXTRA, BLOCK_EXTRA);
+			block.putStringValue(OpBlock.F_DETAILS, BLOCK_CREATION_DETAILS);
+			block.putStringValue(OpBlock.F_HASH, calculateHash(block));
+			byte[] hashBytes = SecUtils.getHashBytes(block.getHash());
 			if(serverKeyPair == null) {
 				serverKeyPair = users.getLoginKeyPair(serverUser, serverPrivateKey);	
 			}
-			block.signature = SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_NONE_EC, null);
-			block.signatureAlgo = SecUtils.SIG_ALGO_NONE_EC;
+			block.putStringValue(OpBlock.F_SIGNATURE, SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
 		} catch (FailedVerificationException e) {
 			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block, "Failed to sign the block: " + e.getMessage(), true, e);
 		}
@@ -439,17 +425,17 @@ public class BlocksManager {
 		ByteArrayOutputStream bs = new ByteArrayOutputStream();
 		DataOutputStream dous = new DataOutputStream(bs);
 		try {
-			dous.writeInt(block.version);
-			dous.writeInt(block.blockId);
-			dous.write(SecUtils.getHashBytes(block.previousBlockHash));
-			dous.writeLong(block.getDate());
-			dous.write(SecUtils.getHashBytes(block.merkleTreeHash));
-			dous.write(SecUtils.getHashBytes(block.sigMerkleTreeHash));
-			dous.writeLong(block.extra);
-			if(!OUtils.isEmpty(block.details)) {
-				dous.write(block.details.getBytes("UTF-8"));
+			dous.writeInt(block.getIntValue(OpBlock.F_VERSION, BLOCK_VERSION));
+			dous.writeInt(block.getBlockId());
+			dous.write(SecUtils.getHashBytes(block.getStringValue(OpBlock.F_PREV_BLOCK_HASH)));
+			dous.writeLong(block.getDate(OpBlock.F_DATE));
+			dous.write(SecUtils.getHashBytes(block.getStringValue(OpBlock.F_MERKLE_TREE_HASH)));
+			dous.write(SecUtils.getHashBytes(block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH)));
+			dous.writeLong(block.getLongValue(OpBlock.F_EXTRA, BLOCK_EXTRA));
+			if(!OUtils.isEmpty(block.getStringValue(OpBlock.F_DETAILS))) {
+				dous.write(block.getStringValue(OpBlock.F_DETAILS).getBytes("UTF-8"));
 			}
-			dous.write(block.signedBy.getBytes("UTF-8"));
+			dous.write(block.getStringValue(OpBlock.F_DETAILS).getBytes("UTF-8"));
 			dous.flush();
 			return SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bs.toByteArray());
 		} catch (IOException e) {
@@ -468,20 +454,11 @@ public class BlocksManager {
 			Exception ex = null;
 			boolean valid = false;
 			try {
-				valid = registry.preexecuteOperation(def);
+				valid = registry.preexecuteOperation(def, null);
 			} catch (Exception e) {
 				ex = e;
 			}
 			if(valid) { 
-				boolean allDeps = checkAllDependencies(executedTx, def.getTransientTxDependencies());
-				if(allDeps) {
-					allDeps = checkAllDependencies(executedTx, def.getStringList(OpOperation.F_DEPENDENCIES));
-				}
-				if(!allDeps) {
-					logSystem.logOperation(OperationStatus.FAILED_DEPENDENCIES, def, 
-							String.format("Operations has dependencies there were not executed yet", def.getHash()), exceptionOnFail);
-					valid = false;
-				}
 				if(executedTx.containsKey(def.getHash())) {
 					logSystem.logOperation(OperationStatus.FAILED_EXECUTE, def, 
 							String.format("Operations has duplicate hash in same block: %s", def.getHash()), exceptionOnFail);
@@ -501,18 +478,6 @@ public class BlocksManager {
 		return operations;
 	}
 
-
-	private boolean checkAllDependencies(Map<String, OpOperation> executedTx, List<String> dp) {
-		if (dp != null) {
-			for (String d : dp) {
-				if (!executedTx.containsKey(d)) {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-	
 
 
 	

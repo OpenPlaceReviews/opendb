@@ -28,8 +28,10 @@ import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.crypto.prng.FixedSecureRandom;
 
 public class SecUtils {
-	public static final String SIG_ALGO_SHA1_EC = "SHA1withECDSA";
-	public static final String SIG_ALGO_NONE_EC = "NonewithECDSA";
+	private static final String SIG_ALGO_SHA1_EC = "SHA1withECDSA";
+	private static final String SIG_ALGO_NONE_EC = "NonewithECDSA";
+	
+	public static final String SIG_ALGO_ECDSA = "ECDSA";
 	public static final String ALGO_EC = "EC";
 	public static final String EC_256SPEC_K1 = "secp256k1";
 
@@ -221,13 +223,13 @@ public class SecUtils {
 			}
 		}
 		String signature = Base64.getEncoder().encodeToString(sigBytes);
-		return DECODE_BASE64 + ":" + signature;
+		return signAlgo + ":" + DECODE_BASE64 + ":" + signature;
 	}
 
 	public static byte[] signMessageWithKey(KeyPair keyPair, byte[] msg, String signAlgo)
 			throws FailedVerificationException {
 		try {
-			Signature sig = Signature.getInstance(signAlgo);
+			Signature sig = Signature.getInstance(getInternalSigAlgo(signAlgo));
 			sig.initSign(keyPair.getPrivate());
 			sig.update(msg);
 			byte[] signatureBytes = sig.sign();
@@ -240,6 +242,16 @@ public class SecUtils {
 			throw new FailedVerificationException(e);
 		}
 	}
+	
+	public static boolean validateSignature(KeyPair keyPair, byte[] msg, String sig)
+			throws FailedVerificationException {
+		int ind = sig.indexOf(':');
+		String sigAlgo = sig.substring(0, ind);
+		if (keyPair == null) {
+			return false;
+		}
+		return validateSignature(keyPair, msg, sigAlgo, decodeSignature(sig.substring(ind + 1)));
+	}
 
 	public static boolean validateSignature(KeyPair keyPair, byte[] msg, String sigAlgo, byte[] signature)
 			throws FailedVerificationException {
@@ -247,7 +259,7 @@ public class SecUtils {
 			return false;
 		}
 		try {
-			Signature sig = Signature.getInstance(sigAlgo);
+			Signature sig = Signature.getInstance(getInternalSigAlgo(sigAlgo));
 			sig.initVerify(keyPair.getPublic());
 			sig.update(msg);
 			return sig.verify(signature);
@@ -259,21 +271,30 @@ public class SecUtils {
 			throw new FailedVerificationException(e);
 		}
 	}
+
+	private static String getInternalSigAlgo(String sigAlgo) {
+		return sigAlgo.equals(SIG_ALGO_ECDSA)? SIG_ALGO_NONE_EC : sigAlgo;
+	}
 	
 
 	public static byte[] calculateHash(String algo, byte[] b1, byte[] b2) {
-		byte[] m = b1 == null ? b2 : b1;
-		if(b2 != null && b1 != null) {
-			m = new byte[b1.length + b2.length];
-			System.arraycopy(b1, 0, m, 0, b1.length);
-			System.arraycopy(b2, 0, m, b1.length, b2.length);
-		}
+		byte[] m = mergeTwoArrays(b1, b2);
 		if (algo.equals(HASH_SHA256)) {
 			return DigestUtils.sha256(m);
 		} else if (algo.equals(HASH_SHA1)) {
 			return DigestUtils.sha1(m);
 		}
 		throw new UnsupportedOperationException();
+	}
+
+	public static byte[] mergeTwoArrays(byte[] b1, byte[] b2) {
+		byte[] m = b1 == null ? b2 : b1;
+		if(b2 != null && b1 != null) {
+			m = new byte[b1.length + b2.length];
+			System.arraycopy(b1, 0, m, 0, b1.length);
+			System.arraycopy(b2, 0, m, b1.length, b2.length);
+		}
+		return m;
 	}
 	
 	public static String calculateHashWithAlgo(String algo, String salt, String msg) {
@@ -322,8 +343,10 @@ public class SecUtils {
 
 	public static byte[] decodeSignature(String digest) {
 		try {
-			if (digest.startsWith(DECODE_BASE64 + ":")) {
-				return Base64.getDecoder().decode(digest.substring(DECODE_BASE64.length() + 1).getBytes("UTF-8"));
+			int indexOf = digest.indexOf(DECODE_BASE64 + ":");
+			if (indexOf != -1) {
+				return Base64.getDecoder().decode(digest.substring(indexOf + DECODE_BASE64.length() + 1).
+						getBytes("UTF-8"));
 			}
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);

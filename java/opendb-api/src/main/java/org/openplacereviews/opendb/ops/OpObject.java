@@ -4,6 +4,7 @@ import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -69,10 +70,6 @@ public class OpObject  {
 		return (Map<String, String>) fields.get(field);
 	}
 	
-	@SuppressWarnings("unchecked")
-	public List<String> getStringList(String field) {
-		return (List<String>) fields.get(field);
-	}
 	
 	@SuppressWarnings("unchecked")
 	public List<Map<String, String>> getListStringMap(String field) {
@@ -101,12 +98,35 @@ public class OpObject  {
 		return (Number) fields.get(field);
 	}
 	
+	public int getIntValue(String key, int def) {
+		Number o = getNumberValue(key);
+		return o == null ? def : o.intValue();
+	}
+	
+	public long getLongValue(String key, long def) {
+		Number o = getNumberValue(key);
+		return o == null ? def : o.longValue();
+	}
+	
 	public String getStringValue(String field) {
 		Object o = fields.get(field);
 		if (o instanceof String || o == null) {
 			return (String) o;
 		}
 		return o.toString();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<String> getStringList(String field) {
+		// cast to list if it is single value
+		Object o = fields.get(field);
+		if(o == null || o.toString().isEmpty()) {
+			return Collections.emptyList();
+		}
+		if(o instanceof String) {
+			return Collections.singletonList(o.toString());
+		}
+		return (List<String>) o;
 	}
 	
 	public void putStringValue(String key, String value) {
@@ -117,8 +137,14 @@ public class OpObject  {
 		}
 	}
 	
+	/**
+	 * Operates as a single value if cardinality is less than 1
+	 * or as a list of values if it stores > 1 value
+	 * @param key
+	 * @param value
+	 */
 	@SuppressWarnings("unchecked")
-	public void addStringValue(String key, String value) {
+	public void addOrSetStringValue(String key, String value) {
 		Object o = fields.get(key);
 		if(o == null) {
 			fields.put(key, value);
@@ -169,5 +195,6 @@ public class OpObject  {
 
 
 	}
+
 
 }

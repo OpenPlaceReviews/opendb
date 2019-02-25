@@ -1,12 +1,9 @@
 package org.openplacereviews.opendb.ops;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.openplacereviews.opendb.OUtils;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -23,6 +20,8 @@ public class OpOperation extends OpObject {
 	public static final String F_HASH = "hash";
 	
 	public static final String F_SIGNATURE = "signature";
+	// transient info about validation timing etc
+	public static final String F_VALIDATION = "validation";
 	
 	public static final String F_REF = "ref";
 	public static final String F_NEW = "new";
@@ -47,8 +46,8 @@ public class OpOperation extends OpObject {
 		return type;
 	}
 	
-	public void setOperationType(String group, String name) {
-		type = group + "." + name;
+	public void setOperationType(String name) {
+		type = name;
 	}
 	
 	public void setSignedBy(String value) {
@@ -56,11 +55,11 @@ public class OpOperation extends OpObject {
 	}
 	
 	public void addOtherSignedBy(String value) {
-		super.addStringValue(F_SIGNED_BY, value);
+		super.addOrSetStringValue(F_SIGNED_BY, value);
 	}
 	
-	public String getSignedBy() {
-		return getStringValue(F_SIGNED_BY);
+	public List<String> getSignedBy() {
+		return getStringList(F_SIGNED_BY);
 	}
 	
 	
@@ -71,6 +70,10 @@ public class OpOperation extends OpObject {
 	
 	public String getHash() {
 		return getStringValue(F_HASH);
+	}
+	
+	public List<String> getSignatureList() {
+		return getStringList(F_SIGNATURE);
 	}
 	
 	public String getName() {
@@ -125,6 +128,7 @@ public class OpOperation extends OpObject {
 		}
 
 	}
+
 
 	
 }

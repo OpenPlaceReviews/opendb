@@ -7,7 +7,8 @@ public class OpBlock extends OpObject {
 	
 	public static final String F_HASH = "hash";
 	public static final String F_BLOCKID = "block_id";
-	public static final String F_VERSION = "comment";
+	public static final String F_VERSION = "version";
+	public static final String F_DATE = "date";
 	public static final String F_EXTRA = "extra"; // long
 	public static final String F_DETAILS = "details"; // string
 	public static final String F_SIGNED_BY = "signed_by";
@@ -23,11 +24,26 @@ public class OpBlock extends OpObject {
 	
 	public OpBlock(OpBlock cp) {
 		super(cp);
-		
 	}
 	
 	public List<OpOperation> getOperations() {
 		return operations;
+	}
+
+	public int getBlockId() {
+		return super.getIntValue(F_BLOCKID, -1);
+	}
+
+	public String getDateString() {
+		return getStringValue(F_DATE);
+	}
+
+	public String getHash() {
+		return getStringValue(F_HASH);
+	}
+	
+	public String getSignature() {
+		return getStringValue(F_SIGNATURE);
 	}
 	
 }

@@ -79,7 +79,7 @@ public class BlockController {
 			KeyPair kp = null;
 			for (OpOperation o : block.getOperations()) {
 				OpOperation op = o;
-				if (!OUtils.isEmpty(serverName) && OUtils.isEmpty(o.getSignedBy())) {
+				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
 					if(kp == null) {
 						kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
 					}
