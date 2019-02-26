@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb;
 
+import java.util.List;
+
 public class OUtils {
 
 	
@@ -34,6 +36,29 @@ public class OUtils {
 	    return true;
 	}
 
+	public static boolean equals(List<?> s1, List<?> s2) {
+		if(s1 == null || s1.size() == 0) {
+			return s2 == null || s2.size() == 0;
+		}
+		if(s2 == null || s1.size() != s2.size()) {
+			return false;
+		}
+		for(int i = 0; i < s1.size(); i++) {
+			Object o1 = s1.get(i);
+			Object o2 = s2.get(i);
+			if(o1 == null) {
+				if(o2 != null) {
+					return false;
+				}
+			} else {
+				if(!o1.equals(o2)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
 	public static boolean equals(String s1, String s2) {
 		if(s1 == null) {
 			return s1 == s2;

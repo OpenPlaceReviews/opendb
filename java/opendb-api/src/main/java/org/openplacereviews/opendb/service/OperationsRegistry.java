@@ -51,8 +51,6 @@ public class OperationsRegistry {
 	@Autowired
 	private DBDataManager dbManager;
 	
-	@Autowired
-	private UsersAndRolesRegistry usersRegistry;
 	
 	protected static class OperationTypeDefinition {
 		public final OpOperation def;
@@ -110,49 +108,5 @@ public class OperationsRegistry {
 	
 	public void executeOperation(OpOperation ro, JsonObject obj) {
 	}
-	
-	
-	public boolean preexecuteOperation(OpOperation def, List<OpOperation> bootstrapOps) {
-		OperationTypeDefinition opTypeDef = operations.get(def.getOperationType());
-		if(opTypeDef == null) {
-			throw new UnsupportedOperationException(String.format("Operation %s is not registered", def.getOperationType()));
-		}
-		// create tables first for initial block
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_TABLE))) {
-			dbManager.registerTableDefinition(def, true);
-		}
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_OPERATION))) {
-			operations.put(def.getStringValue(F_NAME), new OperationTypeDefinition(def));
-			dbManager.registerMappingOperation(def.getStringValue(F_NAME), def);
-		}
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_SIGNUP))) {
-			// TODO add signup operation
-		}
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_LOGIN))) {
-			// TODO add login operation
-		}
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_ROLE))) {
-			// TODO add role operation
-		}
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_VALIDATE))) {
-			// TODO add validate operation
-		}
-		if(def.getOperationType().equals(getOperationId(OperationsRegistry.OP_TYPE_SYS, OP_GRANT))) {
-			// TODO add validate operation
-		}
-		if (opTypeDef.isBootstrap()) {
-			bootstrapOps.add(def);
-		} else {
-			JsonObject obj = null;
-			dbManager.executeMappingOperation(def.getOperationType(), obj);
-			triggerEvent(OperationsRegistry.OP_OPERATION, obj);		
-		}
-		
-		return operations.containsKey(def.getOperationType());
-	}
-
-
-
-	
 	
 }

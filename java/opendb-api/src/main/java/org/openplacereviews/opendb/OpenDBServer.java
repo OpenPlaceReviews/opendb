@@ -45,9 +45,6 @@ public class OpenDBServer  {
 	LogOperationService logOperationService;
 	
 	@Autowired
-	UsersAndRolesRegistry usersAndRolesRegistry;
-	
-	@Autowired
 	OperationsRegistry operationRegistry;
 	
 	@Autowired
@@ -110,7 +107,6 @@ public class OpenDBServer  {
 				logOperationService.init(metadataDB);
 				queueManager.init(metadataDB);
 				operationRegistry.init(metadataDB);
-				usersAndRolesRegistry.init(metadataDB);
 				blocksManager.init(metadataDB);
 				System.out.println("Application has started");
 			} catch (RuntimeException e) {

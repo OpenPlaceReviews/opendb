@@ -24,9 +24,10 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
-import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,12 +41,7 @@ import com.google.gson.JsonObject;
 @Service
 public class BlocksManager {
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
-	public static final int MAX_BLOCK_SIZE = 1000;
-	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
-	public static final int BLOCK_VERSION = 1;
-	// not used by this implementation
-	private static final String BLOCK_CREATION_DETAILS = "";
-	private static final long BLOCK_EXTRA = 0;
+	
 	
 	@Autowired
 	private OperationsQueueManager queue;
@@ -55,9 +51,6 @@ public class BlocksManager {
 	
 	@Autowired
 	private LogOperationService logSystem;
-	
-	@Autowired
-	private UsersAndRolesRegistry usersRegistry;
 	
 	@Autowired
     private JsonFormatter formatter;
@@ -72,11 +65,9 @@ public class BlocksManager {
 	
 	private KeyPair serverKeyPair;
 	
-	private List<OpBlock> blockchain = new ArrayList<OpBlock>();
-
-	private OpOperation currentTx;
+	private OpBlockChain blockchain = new OpBlockChain(null, null);
 	
-	private OpBlock currentBlock;
+	private OpBlockchainRules blockchainRules = new OpBlockchainRules();
 	
 	private BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
 	
@@ -88,6 +79,10 @@ public class BlocksManager {
 		BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC,
 		BLOCKCHAIN_FAILED_BLOCK_EXEC
 	}
+	
+	public BlocksManager() {
+		
+	}
 
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
@@ -95,13 +90,6 @@ public class BlocksManager {
 	
 	public String getServerUser() {
 		return serverUser;
-	}
-	
-	public KeyPair getServerLoginKeyPair(ActiveUsersContext users) throws FailedVerificationException {
-		if(serverUser == null) {
-			return null;
-		}
-		return users.getLoginKeyPair(serverUser, serverPrivateKey);
 	}
 	
 	
@@ -163,27 +151,8 @@ public class BlocksManager {
 
 	public synchronized void init(MetadataDb metadataDB) {
 		LOGGER.info("... Blockchain. Loading blocks...");
-		String msg;
+		String msg = "";
 		// db is bootstraped
-		if(metadataDB.tablesSpec.containsKey(DBConstants.BLOCK_TABLE)) {
-			// in future could be limited to last 10000
-			List<OpBlock> blocks = jdbcTemplate.query("SELECT details FROM " + DBConstants.BLOCK_TABLE + " order by id desc", new RowMapper<OpBlock>(){
-				@Override
-				public OpBlock mapRow(ResultSet rs, int rowNum) throws SQLException {
-					return formatter.parseBlock(rs.getString(1));
-				}
-			});
-			msg = String.format("Loaded %d blocks.", blocks.size());
-			System.out.println();
-			blockchain = new ArrayList<OpBlock>(blocks);
-
-		} else {
-			msg = "Bootstrap needed"; 
-		}
-		if(blockchain.isEmpty()) {
-			// always add empty block  
-			addNewBlockLocal(new OpBlock());
-		}
 		currentState = BlockchainState.BLOCKCHAIN_READY;
 		LOGGER.info("+++ Blockchain is inititialized. " + msg);
 	}
@@ -209,53 +178,43 @@ public class BlocksManager {
 		return currentState;
 	}
 	
-	public OpBlock getCurrentBlock() {
-		return currentBlock;
-	}
 	
-	public OpOperation getCurrentTx() {
-		return currentTx;
-	}
-	
-	private ActiveUsersContext pickupOpsFromQueue(List<OpOperation> candidates,
-			Collection<OpOperation> q, boolean exceptionOnFail) {
+	private void pickupOpsFromQueue(List<OpOperation> candidates, Collection<OpOperation> q, boolean exceptionOnFail) {
 		int size = 0;
-		ActiveUsersContext au = new UsersAndRolesRegistry.ActiveUsersContext(usersRegistry.getBlockUsers());
 		for (OpOperation o : q) {
 			int l = formatter.toJson(o).length();
-			String validMsg = null; 
+			String validMsg = null;
 			Exception ex = null;
 			try {
-				if(!usersRegistry.validateSignatures(au, o)) {
+				if (!blockchainRules.validateSignatures(blockchain, o)) {
 					validMsg = "not verified";
 				}
-				if(!usersRegistry.validateHash(o)) {
+				if (!blockchainRules.validateHash(o)) {
 					validMsg = "hash is not valid";
 				}
-				validMsg = usersRegistry.validateRoles(au, o);
+				validMsg = blockchainRules.validateRoles(blockchain, o);
 			} catch (Exception e) {
 				ex = e;
 			}
-			if(ex != null) {
-				logSystem.logOperation(OperationStatus.FAILED_PREPARE, o, String.format("Failed to verify operation signature: %s", validMsg),
-						exceptionOnFail, ex);
+			if (ex != null) {
+				logSystem.logOperation(OperationStatus.FAILED_PREPARE, o,
+						String.format("Failed to verify operation signature: %s", validMsg), exceptionOnFail, ex);
 				continue;
 			}
-			
-			if(l > MAX_BLOCK_SIZE_MB / 2) {
-				logSystem.logOperation(OperationStatus.FAILED_PREPARE, o, String.format("Operation discarded due to size limit %d", l), exceptionOnFail);
+
+			if (l > OpBlockchainRules.MAX_BLOCK_SIZE_MB / 2) {
+				logSystem.logOperation(OperationStatus.FAILED_PREPARE, o,
+						String.format("Operation discarded due to size limit %d", l), exceptionOnFail);
 				continue;
 			}
-			if(size + l > MAX_BLOCK_SIZE) {
+			if (size + l > OpBlockchainRules.MAX_BLOCK_SIZE) {
 				break;
 			}
-			if(candidates.size() >= MAX_BLOCK_SIZE) {
+			if (candidates.size() >= OpBlockchainRules.MAX_BLOCK_SIZE) {
 				break;
 			}
-			au.addAuthOperation(o);
 			candidates.add(o);
 		}
-		return au;
 	}
 
 	
@@ -276,34 +235,11 @@ public class BlocksManager {
 		currentState = BlockchainState.BLOCKCHAIN_IN_PROGRESS_BLOCK_EXEC;
 		OpBlock newBlock = executeOpsInBlock(block);
 		
-		addNewBlockLocal(newBlock);
-		
-		postBlockAdded(block, newBlock);
-		
 		return formatter.toJson(newBlock);
 	}
 
-	private void postBlockAdded(OpBlock block, OpBlock newBlock) {
-		registry.triggerEvent(OperationsRegistry.OP_BLOCK, formatter.toJsonObject(newBlock));
-		queue.removeSuccessfulOps(block);
-	}
-
-	private void addNewBlockLocal(OpBlock newBlock) {
-		boolean blockchainEmpty = isBlockchainEmpty();
-		List<OpBlock> nblockchain = new ArrayList<OpBlock>(blockchain.size() + 1);
-		nblockchain.add(newBlock);
-		if(!blockchainEmpty) { 
-			nblockchain.addAll(blockchain);
-		}
-		blockchain = nblockchain;
-	}
-	
-	public boolean isBlockchainEmpty() {
-		return blockchain.isEmpty() || getLastBlock().getBlockId() < 0;
-	}
-	
 	public OpBlock getLastBlock() {
-		return blockchain.get(0);
+		return blockchain.getLastBlock();
 	}
 	
 	
@@ -396,53 +332,6 @@ public class BlocksManager {
 					"Block signature doesn't match", true, ex);
 		}
 	}
-
-	private void signBlock(OpBlock block, ActiveUsersContext users, OpBlock prevOpBlock) {
-		try {
-			block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
-			block.putObjectValue(OpBlock.F_BLOCKID, (Integer) (prevOpBlock.getBlockId() + 1));
-			block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlock.getHash());
-			block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, usersRegistry.calculateMerkleTreeHash(block));
-			block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, usersRegistry.calculateSigMerkleTreeHash(block));
-			block.putStringValue(OpBlock.F_SIGNED_BY, serverUser);
-			block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
-			block.putObjectValue(OpBlock.F_EXTRA, BLOCK_EXTRA);
-			block.putStringValue(OpBlock.F_DETAILS, BLOCK_CREATION_DETAILS);
-			block.putStringValue(OpBlock.F_HASH, calculateHash(block));
-			byte[] hashBytes = SecUtils.getHashBytes(block.getHash());
-			if(serverKeyPair == null) {
-				serverKeyPair = users.getLoginKeyPair(serverUser, serverPrivateKey);	
-			}
-			block.putStringValue(OpBlock.F_SIGNATURE, SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
-		} catch (FailedVerificationException e) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block, "Failed to sign the block: " + e.getMessage(), true, e);
-		}
-	}
-
-
-
-	private String calculateHash(OpBlock block) {
-		ByteArrayOutputStream bs = new ByteArrayOutputStream();
-		DataOutputStream dous = new DataOutputStream(bs);
-		try {
-			dous.writeInt(block.getIntValue(OpBlock.F_VERSION, BLOCK_VERSION));
-			dous.writeInt(block.getBlockId());
-			dous.write(SecUtils.getHashBytes(block.getStringValue(OpBlock.F_PREV_BLOCK_HASH)));
-			dous.writeLong(block.getDate(OpBlock.F_DATE));
-			dous.write(SecUtils.getHashBytes(block.getStringValue(OpBlock.F_MERKLE_TREE_HASH)));
-			dous.write(SecUtils.getHashBytes(block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH)));
-			dous.writeLong(block.getLongValue(OpBlock.F_EXTRA, BLOCK_EXTRA));
-			if(!OUtils.isEmpty(block.getStringValue(OpBlock.F_DETAILS))) {
-				dous.write(block.getStringValue(OpBlock.F_DETAILS).getBytes("UTF-8"));
-			}
-			dous.write(block.getStringValue(OpBlock.F_DETAILS).getBytes("UTF-8"));
-			dous.flush();
-			return SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bs.toByteArray());
-		} catch (IOException e) {
-			throw new IllegalArgumentException(e);
-		}
-	}
-
 
 
 	private List<OpOperation> prepareBlockOpsToExec(OpBlock block, boolean exceptionOnFail) {

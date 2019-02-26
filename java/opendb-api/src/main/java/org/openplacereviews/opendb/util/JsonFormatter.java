@@ -27,7 +27,7 @@ public class JsonFormatter {
 	
 //	operations to parse / format related
 	public InputStream getBlock(String id) {
-    	return ApiController.class.getResourceAsStream("/bootstrap/ogr-"+id+".json");
+    	return ApiController.class.getResourceAsStream("/bootstrap/opr-"+id+".json");
     }
 	
 	public OpBlock parseBootstrapBlock(String id) {

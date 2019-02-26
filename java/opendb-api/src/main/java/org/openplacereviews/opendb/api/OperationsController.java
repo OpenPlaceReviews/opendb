@@ -7,9 +7,11 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
+import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -151,13 +153,13 @@ public class OperationsController {
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
     	OpOperation op = new OpOperation();
-    	op.setOperationType(UsersAndRolesRegistry.OP_LOGIN_ID);
-    	op.putStringValue(UsersAndRolesRegistry.F_NAME, name);
+    	op.setOperationType(OperationsRegistry.OP_LOGIN);
+    	op.putStringValue(OpBlockchainRules.F_NAME, name);
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
-		String nickname = UsersAndRolesRegistry.getNicknameFromUser(name);
-		String purpose = UsersAndRolesRegistry.getSiteFromUser(name);
-		if(!UsersAndRolesRegistry.validateNickname(purpose)) {
+		String nickname = OpBlockchainRules.getNicknameFromUser(name);
+		String purpose = OpBlockchainRules.getSiteFromUser(name);
+		if(!OpBlockchainRules.validateNickname(purpose)) {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}
 		ActiveUsersContext queueUsers = validation.getQueueUsers();

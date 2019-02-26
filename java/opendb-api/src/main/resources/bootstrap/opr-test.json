@@ -1,0 +1,301 @@
+{
+	"block_id":-1,
+	"date":"2019-02-15T00:00:00.000Z",
+	"operations": [
+		{
+			"type" : "sys.signup",
+			"signed_by": "openplacereviews",
+			"new": [{	
+				"id": "openplacereviews",
+				"name" : "openplacereviews",
+				"algo": "EC",
+				"auth_method": "provided",
+				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw==",
+			}],
+			"hash": "json:sha256:995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b",
+			"signature": "ECDSA:base64:MEUCID0xc3gpUJjPnY1p0U/ukgnPMGOp6HvUmbKfffir+qmJAiEAguFxdswqAzscyCPK9e+UeYeZoyE7p0RuOXHVUbEeuaQ="
+		},
+		{
+			"type" : "sys.login",
+			"signed_by": "openplacereviews",
+			"ref" : {
+				"s" : ["sys.signup","openplacereviews"]
+			},
+			"new" : [{	
+				"id" : ["openplacereviews","test_1"],
+				"algo" : "EC",
+				"auth_method" : "provided",
+				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",
+			}],
+			"hash": "json:sha256:6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417",
+			"signature": "ECDSA:base64:MEYCIQD9eRuBCyrfRlUTzQtVI2ENFia1m4SrMB6hDVbX/ExNtgIhAMRk224TP6rjP0cS2v8PGk/q8m/EZkMGiFAhvDOglEtA"
+		},
+		{
+			"type" : "sys.login",
+			"signed_by": "openplacereviews",
+			"ref" : {
+				"s" : ["sys.signup","openplacereviews"]
+			},
+			"old" : ["6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417:0"],
+			"new": [{	
+				"id": ["openplacereviews","test_1"],
+				"algo": "EC",
+				"auth_method": "provided",
+				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",
+			}],
+			
+			"hash": "json:sha256:6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417",
+			"signature": "ECDSA:base64:MEYCIQD9eRuBCyrfRlUTzQtVI2ENFia1m4SrMB6hDVbX/ExNtgIhAMRk224TP6rjP0cS2v8PGk/q8m/EZkMGiFAhvDOglEtA",
+		},
+
+
+		// 	1."comment"   : "Check that only registrator could signup and login users",
+		// if(type == 'sys:login' || type == 'sys:signup' ) { has_role('registrator', this.signed_by)) }
+
+		// 2. check_self_signed_login_signup
+		// if(type == 'sys:login' && "link.signup.auth_method" == "provided")
+		// intersects_not_empty(this.signed_by, link.signup.signed_by)
+
+		{
+			"type" : "sys.validate",
+			"signed_by": "openplacereviews",
+			"new" : {
+				"id" : "only_one_mod_possible_for_auth",
+				"type" : ["sys.login", "sys.signup"],
+				"role" : "owner",
+				"validate" : [
+					"std:leq(std:size(.old), 1)",
+					"std:eq(std:size(.new), 1)",
+				]
+			}
+		},
+		{
+			"type" : "sys.validate",
+			"signed_by": "openplacereviews",
+			"new" : {
+				"id" : "only_one_mod_possible_for_valid",
+				"type" : ["sys:role", "sys.validate"],
+				"role" : "none",
+				"validate" : [
+					"bool:leq(std:size(.old), 1)",
+					"bool:eq(std:size(.new), 1)",
+				]
+			}
+		},
+
+		{
+			"type" : "sys.validate",
+			"signed_by": "openplacereviews",
+			"new" : {
+				"id" : "change_validate_requires_to_have_role",
+				"type" : ["sys:role"],
+				"comment" : "Check that operation of validate edit should be signed by previous role. Couldn't be changed!",
+				"role" : "none",
+				"if" : [
+					"bool:eq(std:size(.old), 1)"
+				],
+				"validate" : [
+					"auth:one_has_role(.old.role, .signed_by)"
+				]
+			}
+		},
+		{
+			"type" : "sys.validate",
+			"signed_by": "openplacereviews",
+			"new" : {
+				"id" : "role_none_couldnot_be_created",
+				"type" : ["sys:role"],
+				"comment" : "Check that role none could not be created. Couldn't be changed!",
+				"role" : "none",
+				"validate" : [
+					"bool:not_equals(new.name, 'none')"
+				]
+			}
+		},
+		{
+			"type" : "sys.validate",
+			"signed_by": "openplacereviews",
+			"new" : {
+				"id" : "all_operations_should_be_registered",
+				"type" : ["sys:role"],
+				"comment" : "All operations should be registered by sys operation",
+				"role" : "owner",
+				"validate" : [
+					"bl:find_by_id('sys:operation', .type)"
+				]
+			}
+		},
+
+		// "usr:balance", "new" : { "id" : "$usr:$asset:$", "asset" }
+		// validation: sum(old.balance) = new.0.balance + new.1.balance
+		{
+			"operation"  : "sys:role",
+			"name" : "owner",
+			"comment" : "Create role owner and specify that nobody could change it",
+			"owner_role" : "none",
+			"super_roles": []
+		},
+		{
+			"operation" : "sys:role",
+			"name"		: "master",
+			"comment"   : "Create role master and specify that only owner could change it",
+			"owner_role" : "owner",
+			"super_roles" : ["owner"]
+		},
+		{
+			"operation" : "sys:role",
+			"name"		: "registrator",
+			"comment"   : "Create role registrator and specify that only owner could change it",
+			"owner_role" : "owner",
+			"super_roles" : ["master"]
+		},
+
+		{  
+			"operation" : "sys:grant",
+			"name" : "openplacereviews",
+			"roles" : ["owner"]
+		},
+		{
+			"operation" : "sys:table:edit",
+			"prev_hash" : "json:sha256:e744a5c320c3b5bf7cf14ffb403d42ba6f96240aef99620850b4b3f325c80e51",
+			"version" : 1,
+			"name" : "users",
+			"comment" : "Extend table to store roles",
+			"add" : {
+				"table_columns" : {
+				}
+			},
+
+			"table" : "users",
+			"table_columns": {
+				"name" : ".name",
+				"role" : ".roles",
+
+			}
+		},
+		{
+			"operation" : "sys:operation",
+			"name" : "sys:grant",
+			"comment" : "Operation to grant permission to user signup",
+			"versionining" : "true",
+			"table" : "users",
+			"table_columns": {
+				"name" : ".name",
+				"role" : ".roles"
+			}
+		},
+
+
+		{
+			"operation" : "sys:op_validate",
+			"name" : "check_role_assigned_and_signed",
+			"comment" : "Check if role assigned by person who has it. Master role could change validation.",
+			"owner_role" : "master",
+			"operations" : ["sys:grant"],
+			"if" : {},
+			"validate" : [
+				"auth:has_sig_all_roles(.roles)",
+				"auth:has_sig_all_roles(old.roles)"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "check_login_signup_by_registrator",
+			"comment"   : "Check that only registrator could signup and login users",
+			"owner_role" : "master",
+			"operations" : ["sys:login", "sys:signup"],
+			"if" :  {},
+			"validate" : [
+				"auth:has_sig_role('registrator')"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name" : "login_should_reference_its_signup",
+			"comment"   : "Every login should reference signup",
+			"owner_role" : "none",
+			"operations" : ["sys:login"],
+			"validate" : [
+				"std:type(s, 'sys:signup')",
+				"std:eq(new.id.0, s.signup.id)"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name" : "check_self_signed_login_signup",
+			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
+			"owner_role" : "none",
+			"operations" : ["sys:login"],
+			"if" :  {
+				"s.auth_method" : ["provided"]
+			},
+			"validate" : [
+				"std:in(new.name, .signed_by)",
+				"std:in(.signed_by, s.signup.signed_by)"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name" : "check_self_signed_login_signup",
+			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
+			"owner_role" : "none",
+			"operations" : "sys:login",
+			"if" :  {
+				".auth_method" : ["provided"]
+			},
+			"validate" : [
+				"auth:has_sig_user(.name, .signup)"
+			]
+		},
+		{
+			"operation" : "sys:op_validate",
+			"name"		: "check_self_signed_login_signup",
+			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
+			"owner_role" : "none",
+			"operations" : ["sys:login", "sys:signup"],
+			"if" :  {
+				".auth_method" : ["pwd"]
+			},
+			"validate" : [
+				"auth:has_sig_any_user(.name, 'signup')"
+			]
+		},
+
+
+
+
+
+		{
+			"operation" : "op:splitfunds",
+			"name" : "auth:login",
+			"identity" : ".name",
+			"owner_role" : "TODO",
+			"validation" : {
+				"new" : {
+					"signature_all" : [
+						{ "req_sig_login:financial" : ".from" },
+						{ "req_sig_role" : "registrator" }
+					]
+				},
+				"edit" : {
+					"impossible" : "none"
+				}
+			}
+		},
+		{
+			"operation" : "user:vote",
+			"name" : "op:operation",
+			"owner_role" : "TODO",
+			"identity" : ".nickname .topic",
+			"EDIT" : "????? only owner ????",
+			"new" : {
+				"signature_all" : [
+					{ "req_sig_login" : ".name" },
+					{ "req_sig_role" : "vote_approval" }
+				]
+			},
+		}
+
+
+	]
+}

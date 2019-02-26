@@ -245,11 +245,11 @@ public class SecUtils {
 	
 	public static boolean validateSignature(KeyPair keyPair, byte[] msg, String sig)
 			throws FailedVerificationException {
+		if(sig == null || keyPair == null) {
+			 return false;
+		}
 		int ind = sig.indexOf(':');
 		String sigAlgo = sig.substring(0, ind);
-		if (keyPair == null) {
-			return false;
-		}
 		return validateSignature(keyPair, msg, sigAlgo, decodeSignature(sig.substring(ind + 1)));
 	}
 

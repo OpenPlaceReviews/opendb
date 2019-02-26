@@ -11,17 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OperationInfo.DeleteInfo;
 
 public class OpBlockChain {
 	
 	private final OpBlockChain parent;
-	
-	private Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
-	private Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
-	private Map<String, OperationInfo> opsByHash = new ConcurrentHashMap<>();
-	private Map<String, ObjectInfo> objByName = new ConcurrentHashMap<>();
+	private final Deque<OpBlock> blocks ;
+	private final Deque<OpOperation> operations;
+	private final Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
+	private final Map<String, OperationInfo> opsByHash = new ConcurrentHashMap<>();
+	private final Map<String, ObjectInfo> objByName = new ConcurrentHashMap<>();
 	private boolean immutable;
+	private int blockLastId;
 
 	
 	// no multi thread issue (used only in synchronized blocks)
@@ -29,32 +31,21 @@ public class OpBlockChain {
 	private List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 	private List<OperationInfo> deletedObjInfoCache = new ArrayList<OperationInfo>();
 	
-	private static enum ErrorType {
-		PREV_BLOCK_HASH("Previous block hash is not equal '%s' != '%s': block '%s'"),
-		PREV_BLOCK_ID("Previous block id is not equal '%d' != '%d': block '%s'"),
-		BLOCK_HASH_IS_DUPLICATED("Block hash is duplicated '%s' in block '%d' and '%d'"),
-		OP_HASH_IS_DUPLICATED("Operation hash is duplicated '%s' in block '%d' and '%s'"),
-		DEL_OBJ_NOT_FOUND("Object to delete wasn't found '%s': op '%s'"),
-		REF_OBJ_NOT_FOUND("Object to reference wasn't found '%s': op '%s'"),
-		DEL_OBJ_DOUBLE_DELETED("Object '%s' was already deleted at '%s' in block '%s'");
-		private final String msg;
 
-		ErrorType(String msg) {
-			this.msg = msg;
-		}
-		
-		public String getErrorFormat(Object... args) {
-			return String.format(msg, args);
-		}
-	}
-	
-
-	public OpBlockChain(OpBlockChain parent, OpBlock b) {
+	public OpBlockChain(OpBlockChain parent, boolean operations) {
 		this.parent = parent;
+		if(operations) {
+			this.operations = new ConcurrentLinkedDeque<OpOperation>();
+			this.blocks = null;
+		} else {
+			this.operations = null;
+			this.blocks = new ConcurrentLinkedDeque<OpBlock>();
+		}
+		// TODO
 		if(this.parent != null) {
 			this.parent.makeImmutable();
+			this.blockLastId = this.parent.getLastBlockId();
 		}
-		addBlock(b);
 	}
 	
 	
@@ -91,48 +82,28 @@ public class OpBlockChain {
 		return Integer.parseInt(r.substring(i + 1));
 	}
 	
-	
-	public void error(ErrorType e, Object... args) {
-		throw new IllegalArgumentException(e.getErrorFormat(args));
-	}
-	
-
-	public synchronized void addBlock(OpBlock block) {
+	public synchronized void addBlock(OpBlock block, OpBlockchainRules rules) {
 		if(immutable) {
 			throw new IllegalStateException("Object is immutable");
 		}
-		OpBlock prevBlock = getLastBlock();
-		int pid = -1;
+		rules.validateBlock(this, block, getLastBlock());
+		List<OpOperation> ops = block.getOperations();
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
-		if(prevBlock != null) {
-			if(!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
-				error(ErrorType.PREV_BLOCK_HASH, prevBlock.getHash(), 
-						block.getStringValue(OpBlock.F_PREV_BLOCK_HASH), blockHash);
-			}
-			pid = prevBlock.getBlockId();
-		}
-		if(pid != blockId) {
-			error(ErrorType.PREV_BLOCK_ID, pid, block.getBlockId(), blockHash);
-		}
-		int dupBl = getBlockDepth(block.getHash());
-		if(dupBl != -1) {
-			error(ErrorType.BLOCK_HASH_IS_DUPLICATED, blockHash, block.getBlockId(), dupBl);
-		}
-		
-		List<OpOperation> ops = block.getOperations();
-		
 		for(OpOperation u : ops) {
-			addOperation(blockHash, blockId, u);
+			addOperation(rules, blockHash, blockId, u);
 		}
 		blockDepth.put(blockHash, blockId);
 		blocks.push(block);
 	}
-
-
-	private void addOperation(String blockHash, int blockId, OpOperation u) {
+	
+	public synchronized void addOperation(OpOperation op, OpBlockchainRules rules) {
+		addOperation(rules, "", blockLastId, op);
+	}
+	
+	private void addOperation(OpBlockchainRules rules, String blockHash, int blockId, OpOperation u) {
+		// TODO use deletedObjInfoCache & refObjsCache
 		validateAndPrepareOperation(blockHash, blockId, u);
-		
 		for(OpObject newObj : u.getNew()){
 			List<String> id = newObj.getId();
 			if(id != null && id.size() > 0) {
@@ -151,7 +122,7 @@ public class OpBlockChain {
 	}
 
 
-	private synchronized void validateAndPrepareOperation(String blockHash, int blockId, OpOperation u) {
+	private void validateAndPrepareOperation(String blockHash, int blockId, OpOperation u) {
 		OperationInfo oin = getOperationInfo(u.getHash());
 		if(oin != null) {
 			error(ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), oin.getBlockId(), blockHash);
@@ -237,13 +208,29 @@ public class OpBlockChain {
 		return oi;
 	}
 	
+	public OpObject getObjectByName(String type, String key) {
+		ObjectInfo ot = getObjectsByType(type, false);
+		if(ot == null) {
+			return null;
+		}
+		return ot.getObjectById(key, null);
+	}
+	
+	public OpObject getObjectByName(String type, String key, String secondary) {
+		ObjectInfo ot = getObjectsByType(type, false);
+		if(ot == null) {
+			return null;
+		}
+		return ot.getObjectById(key, secondary);
+	}
+	
 	private OpObject getObjectByName(List<String> o) {
 		String objType = o.get(0);
 		ObjectInfo ot = getObjectsByType(objType, false);
 		if(ot == null) {
 			return null;
 		}
-		return ot.getObjectByFullName(o);
+		return ot.getObjectById(1, o);
 	}
 	
 	private void prepareDeletedObjects(OpOperation u, String blockHash, int blockId) {
@@ -279,8 +266,6 @@ public class OpBlockChain {
 					error(ErrorType.DEL_OBJ_DOUBLE_DELETED, delRef, u.getHash(), entry.blockHash);
 				}
 			}
-			
-			
 		}
 	}
 

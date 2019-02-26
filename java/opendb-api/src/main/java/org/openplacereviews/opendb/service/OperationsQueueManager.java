@@ -21,8 +21,6 @@ public class OperationsQueueManager {
 	protected static final Log LOGGER = LogFactory.getLog(OperationsQueueManager.class);
 	ConcurrentLinkedQueue<OpOperation> operationsQueue = new ConcurrentLinkedQueue<OpOperation>();
 	
-    @Autowired
-    private UsersAndRolesRegistry usersRegistry;
     
     @Autowired
     private DBDataManager dbManager;
@@ -46,7 +44,6 @@ public class OperationsQueueManager {
 	}
 	
 	public synchronized void addOperation(OpOperation op) {
-		usersRegistry.getQueueUsers().addAuthOperation(op);
 		operationsQueue.add(op);
 	}
 	
@@ -60,7 +57,6 @@ public class OperationsQueueManager {
 			OpOperation o = it.next();
 			if(hashes.contains(o.getHash())) {
 				it.remove();
-				usersRegistry.getQueueUsers().removeAuthOperation(o.getName(), o, false);
 			}
 		}
 	}
@@ -71,7 +67,6 @@ public class OperationsQueueManager {
 
 	public synchronized void clearOperations() {
 		operationsQueue.clear();
-		usersRegistry.getQueueUsers().clear();
 	}
 
 	
