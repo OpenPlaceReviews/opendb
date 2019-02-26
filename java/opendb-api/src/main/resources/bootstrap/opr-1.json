@@ -19,7 +19,7 @@
 			"type" : "sys.login",
 			"signed_by": "openplacereviews",
 			"ref" : {
-				"s" : "995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b:0"
+				"s" : ["sys.signup","openplacereviews"]
 			},
 			"new" : [{	
 				"id" : ["openplacereviews","test_1"],
@@ -34,11 +34,11 @@
 			"type" : "sys.login",
 			"signed_by": "openplacereviews",
 			"ref" : {
-				"s" : "sys.signup:openplacereviews"
+				"s" : ["sys.signup","openplacereviews"]
 			},
 			"old" : ["6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417:0"],
 			"new": [{	
-				"id": "openplacereviews:test_1",
+				"id": ["openplacereviews","test_1"],
 				"algo": "EC",
 				"auth_method": "provided",
 				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",

@@ -24,6 +24,7 @@ import com.google.gson.JsonSerializer;
 public class OpObject  {
 	
 	public static final String F_NAME = "name";
+	public static final String F_ID = "id";
 	public static final String F_COMMENT = "comment";
 	public static final String TYPE_OP = "sys.op";
 	public static final String TYPE_BLOCK = "sys.block";
@@ -33,20 +34,27 @@ public class OpObject  {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 	
-	
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected OpOperation operation;
 	
+	public OpObject() {}
 	
-	public OpObject() {
+	public OpObject(OpOperation operation, Map<String, Object> fields) {
+		this.operation = operation;
+		this.fields.putAll(fields);
 	}
 	
 	public OpObject(OpObject cp) {
+		this.operation = cp.operation;
 		this.fields.putAll(cp.fields);
 	}
 	
 	public String getType() {
 		return operation != null ? operation.getOperationType() : null;
+	}
+	
+	public List<String> getId() {
+		return getStringList(F_ID);
 	}
 	
 	public OpOperation getOperation() {
@@ -70,10 +78,19 @@ public class OpObject  {
 		return (Map<String, String>) fields.get(field);
 	}
 	
+	@SuppressWarnings("unchecked")
+	public Map<String, List<String>> getMapStringList(String field) {
+		return (Map<String, List<String>>) fields.get(field);
+	}
 	
 	@SuppressWarnings("unchecked")
 	public List<Map<String, String>> getListStringMap(String field) {
 		return (List<Map<String, String>>) fields.get(field);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> getListStringObjMap(String field) {
+		return (List<Map<String, Object>>) fields.get(field);
 	}
 	
 
