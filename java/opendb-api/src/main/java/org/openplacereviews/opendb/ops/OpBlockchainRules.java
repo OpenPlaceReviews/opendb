@@ -9,12 +9,11 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hibernate.internal.util.xml.ErrorLogger;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.ops.OpBlockChain.ErrorType;
-import org.openplacereviews.opendb.service.ActiveUsersContext;
 import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -35,8 +34,6 @@ public class OpBlockchainRules {
 	private static final String BLOCK_CREATION_DETAILS = "";
 	private static final long BLOCK_EXTRA = 0;
 	
-	
-
 	public static final String F_DIGEST = "digest"; // signature
 	public static final String F_ALGO = "algo"; // login, signup, signature
 	public static final String F_PUBKEY = "pubkey"; // login, signup
@@ -197,19 +194,54 @@ public class OpBlockchainRules {
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
 		int pid = -1;
-		if(prevBlock != null) {
-			if(!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
-				return error(ErrorType.PREV_BLOCK_HASH, prevBlock.getHash(), 
+		if (prevBlock != null) {
+			if (!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
+				return error(ErrorType.BLOCK_PREV_HASH, prevBlock.getHash(),
 						block.getStringValue(OpBlock.F_PREV_BLOCK_HASH), blockHash);
 			}
 			pid = prevBlock.getBlockId();
 		}
-		if(pid != blockId) {
-			return error(ErrorType.PREV_BLOCK_ID, pid, block.getBlockId(), blockHash);
+		if (pid + 1 != blockId) {
+			return error(ErrorType.BLOCK_PREV_ID, pid, block.getBlockId(), blockHash);
 		}
 		int dupBl = blockChain.getBlockDepth(block.getHash());
-		if(dupBl != -1) {
+		if (dupBl != -1) {
 			return error(ErrorType.BLOCK_HASH_IS_DUPLICATED, blockHash, block.getBlockId(), dupBl);
+		}
+		if (block.getOperations().size() == 0) {
+			return error(ErrorType.BLOCK_EMPTY, blockHash);
+		}
+		if (!OUtils.equals(calculateMerkleTreeHash(block), block.getStringValue(OpBlock.F_MERKLE_TREE_HASH))) {
+			return error(ErrorType.BLOCK_MERKLE_TREE_FAILED, blockHash, calculateMerkleTreeHash(block),
+					block.getStringValue(OpBlock.F_MERKLE_TREE_HASH));
+		}
+		if (!OUtils.equals(calculateSigMerkleTreeHash(block), block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH))) {
+			return error(ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED, blockHash, calculateSigMerkleTreeHash(block),
+					block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH));
+		}
+		if (!OUtils.equals(calculateHash(block), prevBlock.getHash())) {
+			return error(ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
+		}
+		OpObject keyObj = getLoginKeyObj(blockChain, block.getStringValue(OpBlock.F_SIGNED_BY));
+		boolean validateSig = true;
+		Exception ex = null;
+		try {
+			KeyPair pk = getKeyPairFromObj(keyObj, null);
+			byte[] blHash = SecUtils.getHashBytes(block.getHash());
+			if (pk != null && SecUtils.validateSignature(pk, blHash, block.getSignature())) {
+				validateSig = true;
+			} else {
+				validateSig = false;
+			}
+		} catch (FailedVerificationException e) {
+			validateSig = false;
+			ex = e;
+		} catch (RuntimeException e) {
+			validateSig = false;
+			ex = e;
+		}
+		if (!validateSig) {
+			return error(ErrorType.BLOCK_SIGNATURE_FAILED, blockHash, block.getStringValue(OpBlock.F_SIGNED_BY), ex);
 		}
 		return true;
 	}
@@ -236,13 +268,7 @@ public class OpBlockchainRules {
 			if(firstSignup && signedByName.equals(signupName)) {
 				keyObj = ob.getNew().get(0);
 			} else {
-				int n = signedByName.indexOf(USER_LOGIN_CHAR);
-				if(n == -1) {
-					keyObj = ctx.getObjectByName(OperationsRegistry.OP_SIGNUP, signedByName);
-				} else  {
-					keyObj = ctx.getObjectByName(OperationsRegistry.OP_LOGIN, signedByName.substring(0, n),
-							signedByName.substring(n + 1));
-				}
+				keyObj = getLoginKeyObj(ctx, signedByName);
 			}
 			KeyPair kp = getKeyPairFromObj(keyObj, null);
 			boolean validate = SecUtils.validateSignature(kp, txHash, sig);
@@ -251,6 +277,18 @@ public class OpBlockchainRules {
 			}
 		}
 		return true;
+	}
+
+	private OpObject getLoginKeyObj(OpBlockChain ctx, String signedByName) {
+		OpObject keyObj;
+		int n = signedByName.indexOf(USER_LOGIN_CHAR);
+		if(n == -1) {
+			keyObj = ctx.getObjectByName(OperationsRegistry.OP_SIGNUP, signedByName);
+		} else  {
+			keyObj = ctx.getObjectByName(OperationsRegistry.OP_LOGIN, signedByName.substring(0, n),
+					signedByName.substring(n + 1));
+		}
+		return keyObj;
 	}
 
 	public boolean validateHash(OpOperation o) {
@@ -331,14 +369,24 @@ public class OpBlockchainRules {
 		throw new IllegalArgumentException(e.getErrorFormat(args));
 	}
 	
+	public boolean error(ErrorType e, Exception cause, Object... args) {
+		throw new IllegalArgumentException(e.getErrorFormat(args), cause);
+	}
+	
 	public static enum ErrorType {
-		PREV_BLOCK_HASH("Previous block hash is not equal '%s' != '%s': block '%s'"),
-		PREV_BLOCK_ID("Previous block id is not equal '%d' != '%d': block '%s'"),
+		BLOCK_PREV_HASH("Previous block hash is not equal '%s' != '%s': block '%s'"),
+		BLOCK_PREV_ID("Previous block id is not equal '%d' != '%d': block '%s'"),
+		BLOCK_EMPTY("Block '%s' doesn't have any operations"),
+		BLOCK_MERKLE_TREE_FAILED("Block '%s': failed to validate merkle tree '%s' != '%s'"), 
+		BLOCK_SIG_MERKLE_TREE_FAILED("Block '%s': failed to validate signature merkle tree '%s' != '%s'"),
+		BLOCK_HASH_FAILED("Block '%s': failed to validate hash '%s'"), 
+		BLOCK_SIGNATURE_FAILED("Block '%s': signature of '%s' failed to validate"),
 		BLOCK_HASH_IS_DUPLICATED("Block hash is duplicated '%s' in block '%d' and '%d'"),
-		OP_HASH_IS_DUPLICATED("Operation hash is duplicated '%s' in block '%d' and '%s'"),
+		
+		OP_HASH_IS_DUPLICATED("Operation hash is duplicated '%s' in block '%s'"),
 		DEL_OBJ_NOT_FOUND("Object to delete wasn't found '%s': op '%s'"),
 		REF_OBJ_NOT_FOUND("Object to reference wasn't found '%s': op '%s'"),
-		DEL_OBJ_DOUBLE_DELETED("Object '%s' was already deleted at '%s' in block '%s'");
+		DEL_OBJ_DOUBLE_DELETED("Object '%s' was already deleted at block '%d'");
 		private final String msg;
 
 		ErrorType(String msg) {

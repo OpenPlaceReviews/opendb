@@ -10,9 +10,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
-import org.openplacereviews.opendb.ops.OperationInfo.DeleteInfo;
 
 public class OpBlockChain {
 	
@@ -20,40 +18,98 @@ public class OpBlockChain {
 	private final Deque<OpBlock> blocks ;
 	private final Deque<OpOperation> operations;
 	private final Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
-	private final Map<String, OperationInfo> opsByHash = new ConcurrentHashMap<>();
+	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
 	private final Map<String, ObjectInfo> objByName = new ConcurrentHashMap<>();
+	private int parentBlockLastId;
 	private boolean immutable;
-	private int blockLastId;
 
 	
-	// no multi thread issue (used only in synchronized blocks)
-	private Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
-	private List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
-	private List<OperationInfo> deletedObjInfoCache = new ArrayList<OperationInfo>();
-	
-
 	public OpBlockChain(OpBlockChain parent, boolean operations) {
 		this.parent = parent;
-		if(operations) {
-			this.operations = new ConcurrentLinkedDeque<OpOperation>();
-			this.blocks = null;
-		} else {
-			this.operations = null;
-			this.blocks = new ConcurrentLinkedDeque<OpBlock>();
-		}
-		// TODO
+		this.operations = new ConcurrentLinkedDeque<OpOperation>();
+		this.blocks = new ConcurrentLinkedDeque<OpBlock>();
+		// TODO this.parent.makeImmutable();
 		if(this.parent != null) {
-			this.parent.makeImmutable();
-			this.blockLastId = this.parent.getLastBlockId();
+			parentBlockLastId = this.parent.getLastBlockId();
+		} else {
+			parentBlockLastId = -1;
 		}
 	}
 	
-	
-	public void makeImmutable() {
+	public synchronized void makeImmutable() {
 		this.immutable = true;
 	}
 	
-	public synchronized boolean isImmutable() {
+	public void addSubblock(OpBlockChain subchain){
+		
+	}
+	
+	public synchronized OpBlock createBlock(OpBlockchainRules rules) {
+		if(immutable) {
+			throw new IllegalStateException("Object is immutable");
+		}
+		OpBlock block = new OpBlock();
+		block.setDate(field, time);
+		rules.validateBlock(this, block, getLastBlock());
+		Iterator<OpOperation> it = operations.iterator();
+		for(OpOperation o : block.getOperations()) {
+			if(it.hasNext()) {
+				it.next()
+			}
+		}
+		
+		String blockHash = block.getHash();
+		int blockId = block.getBlockId();
+		blockDepth.put(blockHash, blockId);
+		blocks.push(block);
+		return block;
+	}
+	
+	public synchronized boolean addOperation(OpOperation op, OpBlockchainRules rules) {
+		if(immutable) {
+			throw new IllegalStateException("Object is immutable");
+		}
+		LocalValidationCtx validationCtx = new LocalValidationCtx();
+		validationCtx.rules = rules;
+		validationCtx.blockHash = "";
+		boolean valid = validateAndPrepareOperation(u, validationCtx);
+		if(!valid) {
+			return valid;
+		}
+		addOperationAfterPrepare(op, validationCtx);
+		return valid;
+	}
+
+	private void addOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
+		for(OpObject newObj : u.getNew()){
+			List<String> id = newObj.getId();
+			if(id != null && id.size() > 0) {
+				String objType = id.get(0);
+				ObjectInfo oinf = getObjectsByType(objType, true);
+				oinf.add(id, newObj);
+			}
+		}
+		List<String> deletedRefs = u.getOld();
+		for(int i = 0; i < deletedRefs.size(); i++) {
+			String delRef = deletedRefs.get(i);
+			String delHash = getHashFromAbsRef(delRef);
+			int delInd = getIndexFromAbsRef(delRef);
+			OperationDeleteInfo pi = opsByHash.get(delHash);
+			if(pi == null) {
+				pi = new OperationDeleteInfo();
+				pi.op = validationCtx.deletedOpsCache.get(i);
+				pi.deletedObjects = new int[pi.op.getNew().size()];
+				opsByHash.put(delHash, pi);
+			}
+			pi.deletedObjects[delInd] = getLastBlockId() + 1;
+		}
+		OperationDeleteInfo infop = new OperationDeleteInfo();
+		infop.op = u;
+		opsByHash.put(u.getHash(), infop);
+	}
+
+	
+	public boolean isImmutable() {
 		return immutable;
 	}
 	
@@ -64,7 +120,6 @@ public class OpBlockChain {
 		}
 		return blocks.peekFirst();
 	}
-	
 	
 	private String getHashFromAbsRef(String r) {
 		int i = r.indexOf(':');
@@ -82,53 +137,31 @@ public class OpBlockChain {
 		return Integer.parseInt(r.substring(i + 1));
 	}
 	
-	public synchronized void addBlock(OpBlock block, OpBlockchainRules rules) {
-		if(immutable) {
-			throw new IllegalStateException("Object is immutable");
+	private OperationDeleteInfo getOperationInfo(String hash) {
+		OperationDeleteInfo opInfo = null;
+		OpBlockChain blc = this;
+		while (blc != null && opInfo == null) {
+			opInfo = blc.opsByHash.get(hash);
+			blc = blc.parent;
 		}
-		rules.validateBlock(this, block, getLastBlock());
-		List<OpOperation> ops = block.getOperations();
-		String blockHash = block.getHash();
-		int blockId = block.getBlockId();
-		for(OpOperation u : ops) {
-			addOperation(rules, blockHash, blockId, u);
-		}
-		blockDepth.put(blockHash, blockId);
-		blocks.push(block);
+		return opInfo;
 	}
 	
-	public synchronized void addOperation(OpOperation op, OpBlockchainRules rules) {
-		addOperation(rules, "", blockLastId, op);
-	}
-	
-	private void addOperation(OpBlockchainRules rules, String blockHash, int blockId, OpOperation u) {
-		// TODO use deletedObjInfoCache & refObjsCache
-		validateAndPrepareOperation(blockHash, blockId, u);
-		for(OpObject newObj : u.getNew()){
-			List<String> id = newObj.getId();
-			if(id != null && id.size() > 0) {
-				String objType = id.get(0);
-				ObjectInfo oinf = getObjectsByType(objType, true);
-				oinf.add(id, newObj);
-			}
-		}
-		List<String> deletedRefs = u.getOld();
-		for(int i = 0; i < deletedRefs.size(); i++) {
-			String delRef = deletedRefs.get(i);
-			int delInd = getIndexFromAbsRef(delRef);
-			deletedObjInfoCache.get(i).addDelInfo(delInd, u, blockId, blockHash);
-		}
-		opsByHash.put(u.getHash(), new OperationInfo(u, this, blockId));
-	}
-
-
-	private void validateAndPrepareOperation(String blockHash, int blockId, OpOperation u) {
-		OperationInfo oin = getOperationInfo(u.getHash());
+	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
+		OperationDeleteInfo oin = getOperationInfo(u.getHash());
+		boolean valid = true;
 		if(oin != null) {
-			error(ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), oin.getBlockId(), blockHash);
+			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
-		prepareDeletedObjects(u, blockHash, blockId);
-		prepareReferencedObjects(u);
+		valid = prepareDeletedObjects(u, ctx);
+		if(!valid) {
+			return false;
+		}
+		valid = prepareReferencedObjects(u, ctx);
+		if(!valid) {
+			return valid;
+		}
+		return true;
 	}
 	
 	
@@ -171,7 +204,7 @@ public class OpBlockChain {
 	}
 	
 
-	private void prepareReferencedObjects(OpOperation u) {
+	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
 		Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
 		while(it.hasNext()) {
@@ -188,11 +221,38 @@ public class OpBlockChain {
 				}
 			}
 			if(oi == null) {
-				error(ErrorType.REF_OBJ_NOT_FOUND, refObjName, u.getHash());
+				return ctx.rules.error(ErrorType.REF_OBJ_NOT_FOUND, refObjName, u.getHash());
 			}
-			
-			refObjsCache.put(refName, oi);
+			ctx.refObjsCache.put(refName, oi);
 		}
+		return true;
+	}
+	
+	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx) {
+		List<String> deletedRefs = u.getOld();
+		ctx.deletedObjsCache.clear();
+		ctx.deletedOpsCache.clear();
+		for(int i = 0; i < deletedRefs.size(); i++) {
+			String delRef = deletedRefs.get(i);
+			String delHash = getHashFromAbsRef(delRef);
+			int delInd = getIndexFromAbsRef(delRef);
+			
+			
+			OperationDeleteInfo opInfo = getOperationInfo(delHash);
+			
+			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
+				return ctx.rules.error(ErrorType.DEL_OBJ_NOT_FOUND, delRef, u.getHash());
+			}
+			if(opInfo.deletedObjects != null || delInd < opInfo.deletedObjects.length){
+				if(opInfo.deletedObjects[delInd] > -1) {
+					return ctx.rules.error(ErrorType.DEL_OBJ_DOUBLE_DELETED, delRef, opInfo.deletedObjects[delInd]);
+				}
+			}
+			List<OpObject> nw = opInfo.op.getNew();
+			ctx.deletedObjsCache.add(nw.get(delInd));
+			ctx.deletedOpsCache.add(opInfo.op);
+		}
+		return true;
 	}
 	
 	private ObjectInfo getObjectsByType(String type, boolean create) {
@@ -233,53 +293,24 @@ public class OpBlockChain {
 		return ot.getObjectById(1, o);
 	}
 	
-	private void prepareDeletedObjects(OpOperation u, String blockHash, int blockId) {
-		List<String> deletedRefs = u.getOld();
-		deletedObjsCache.clear();
-		deletedObjInfoCache.clear();
+	
+
+
+
+	// no multi thread issue (used only in synchronized blocks)
+	private static class LocalValidationCtx {
+		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
+		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
+		List<OpOperation> deletedOpsCache = new ArrayList<OpOperation>();
 		
-		for(int i = 0; i < deletedRefs.size(); i++) {
-			String delRef = deletedRefs.get(i);
-			String delHash = getHashFromAbsRef(delRef);
-			int delInd = getIndexFromAbsRef(delRef);
-			
-			OperationInfo opInfo = getOperationInfo(delHash);
-			if(opInfo == null || opInfo.getOp().getNew().size() <= delInd) {
-				error(ErrorType.DEL_OBJ_NOT_FOUND, delRef, u.getHash());
-			}
-			List<OpObject> nw = opInfo.getOp().getNew();
-			deletedObjsCache.add(nw.get(delInd));
-			deletedObjInfoCache.add(opInfo);
-			Iterator<DeleteInfo> delIt = opInfo.getDelInfoIterator(delInd);
-			while(delIt.hasNext()) {
-				DeleteInfo entry = delIt.next();
-				boolean overlaps = false;
-				if(blockId == entry.blockId) {
-					overlaps = blockHash.equals(entry.blockHash);
-				} else if(blockId < entry.blockId) {
-					OpBlock bls = getBlockById(entry.blockId);
-					if(bls == null || bls.getHash().equals(entry.blockHash)) {
-						overlaps = true;
-					}
-				}
-				if(overlaps) {
-					error(ErrorType.DEL_OBJ_DOUBLE_DELETED, delRef, u.getHash(), entry.blockHash);
-				}
-			}
-		}
+		String blockHash;
+		OpBlockchainRules rules;
 	}
 
-
-	private OperationInfo getOperationInfo(String hash) {
-		OperationInfo opInfo = null;
-		OpBlockChain blc = this;
-		while (blc != null && opInfo == null) {
-			opInfo = blc.opsByHash.get(hash);
-			blc = blc.parent;
-		}
-		return opInfo;
+	private static class OperationDeleteInfo {
+		private OpOperation op;
+		private int[] deletedObjects;
 	}
-
 	
 	
 }

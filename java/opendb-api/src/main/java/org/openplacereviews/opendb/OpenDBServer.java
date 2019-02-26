@@ -15,7 +15,6 @@ import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.service.OperationsRegistry;
-import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

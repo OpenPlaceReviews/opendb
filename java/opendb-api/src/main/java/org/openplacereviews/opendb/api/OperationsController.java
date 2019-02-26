@@ -12,8 +12,6 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.service.OperationsRegistry;
-import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
-import org.openplacereviews.opendb.service.UsersAndRolesRegistry.ActiveUsersContext;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -30,9 +28,6 @@ public class OperationsController {
     
     @Autowired
     private BlocksManager manager;
-    
-    @Autowired
-    private UsersAndRolesRegistry validation;
     
     @Autowired
     private OperationsQueueManager queue;
@@ -86,14 +81,14 @@ public class OperationsController {
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
     	OpOperation op = new OpOperation();
     	name = name.trim(); // reduce errors by having trailing spaces
-    	if(!UsersAndRolesRegistry.validateNickname(name)) {
+    	if(!OpBlockchainRules.validateNickname(name)) {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
     	
-    	op.setOperationType(UsersAndRolesRegistry.OP_SIGNUP_ID);
-    	op.putStringValue(UsersAndRolesRegistry.F_NAME, name);
+    	op.setOperationType(OperationsRegistry.OP_SIGNUP);
+    	op.putStringValue(OpBlockchainRules.F_NAME, name);
     	if(!OUtils.isEmpty(userDetails)) {
-    		op.putObjectValue(UsersAndRolesRegistry.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
+    		op.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
     	}
     	
 		if (OUtils.isEmpty(algo)) {
@@ -102,13 +97,13 @@ public class OperationsController {
     	KeyPair keyPair;
     	KeyPair otherKeyPair = null;
     	if(!OUtils.isEmpty(pwd)) {
-    		op.putStringValue(UsersAndRolesRegistry.F_AUTH_METHOD, UsersAndRolesRegistry.METHOD_PWD);
+    		op.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PWD);
     		algo = SecUtils.ALGO_EC;
     		String salt = name;
     		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
     		keyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
-    		op.putStringValue(UsersAndRolesRegistry.F_SALT, salt);
-        	op.putStringValue(UsersAndRolesRegistry.F_KEYGEN_METHOD, keyGen);
+    		op.putStringValue(OpBlockchainRules.F_SALT, salt);
+        	op.putStringValue(OpBlockchainRules.F_KEYGEN_METHOD, keyGen);
     		op.setSignedBy(name);
     		if(!OUtils.isEmpty(manager.getServerUser())) {
     			op.addOtherSignedBy(manager.getServerUser());
@@ -119,14 +114,14 @@ public class OperationsController {
     			}
     		}
     	} else if(!OUtils.isEmpty(oauthId)) {
-    		op.putStringValue(UsersAndRolesRegistry.F_AUTH_METHOD, UsersAndRolesRegistry.METHOD_OAUTH);
-    		op.putStringValue(UsersAndRolesRegistry.F_SALT, name);
-			op.putStringValue(UsersAndRolesRegistry.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
-			op.putStringValue(UsersAndRolesRegistry.F_OAUTH_PROVIDER, oauthProvider);
+    		op.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_OAUTH);
+    		op.putStringValue(OpBlockchainRules.F_SALT, name);
+			op.putStringValue(OpBlockchainRules.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
+			op.putStringValue(OpBlockchainRules.F_OAUTH_PROVIDER, oauthProvider);
     		keyPair = manager.getServerLoginKeyPair(validation.getQueueUsers());
     		op.setSignedBy(manager.getServerUser());
     	} else {
-    		op.putStringValue(UsersAndRolesRegistry.F_AUTH_METHOD, UsersAndRolesRegistry.METHOD_PROVIDED);
+    		op.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PROVIDED);
     		op.setSignedBy(name);
     		keyPair = SecUtils.getKeyPair(algo, privateKey, publicKey);
     	}
@@ -134,8 +129,8 @@ public class OperationsController {
 			throw new IllegalArgumentException(
 					String.format("Signup private / public key could not be generated"));
 		}
-    	op.putStringValue(UsersAndRolesRegistry.F_ALGO, algo);
-    	op.putStringValue(UsersAndRolesRegistry.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+    	op.putStringValue(OpBlockchainRules.F_ALGO, algo);
+    	op.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
     	
     	if(otherKeyPair == null) {
     		validation.generateHashAndSign(op, keyPair);
@@ -183,9 +178,9 @@ public class OperationsController {
 		} else if (!OUtils.isEmpty(oauthId)) {
 			kp = manager.getServerLoginKeyPair(queueUsers);
 			OpOperation sop = queueUsers.getSignUpOperation(nickname);
-			if(!SecUtils.validateHash(sop.getStringValue(UsersAndRolesRegistry.F_OAUTHID_HASH), 
-					sop.getStringValue(UsersAndRolesRegistry.F_SALT), oauthId) || 
-					!oauthProvider.equals(sop.getStringValue(UsersAndRolesRegistry.F_OAUTH_PROVIDER))) {
+			if(!SecUtils.validateHash(sop.getStringValue(OpBlockchainRules.F_OAUTHID_HASH), 
+					sop.getStringValue(OpBlockchainRules.F_SALT), oauthId) || 
+					!oauthProvider.equals(sop.getStringValue(OpBlockchainRules.F_OAUTH_PROVIDER))) {
 				throw new IllegalArgumentException("User was registered with different oauth id");
 			}
 			op.setSignedBy(serverName);
@@ -196,13 +191,13 @@ public class OperationsController {
     	
     	KeyPair loginPair;
 		if (!OUtils.isEmpty(loginPubKey)) {
-			op.putStringValue(UsersAndRolesRegistry.F_ALGO, loginAlgo);
+			op.putStringValue(OpBlockchainRules.F_ALGO, loginAlgo);
     		loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
     	} else {
-    		op.putStringValue(UsersAndRolesRegistry.F_ALGO, SecUtils.ALGO_EC);
+    		op.putStringValue(OpBlockchainRules.F_ALGO, SecUtils.ALGO_EC);
     		loginPair = SecUtils.generateRandomEC256K1KeyPair();
     	}
-		op.putStringValue(UsersAndRolesRegistry.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
+		op.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
     	
     	
     	if(otherKeyPair == null) {

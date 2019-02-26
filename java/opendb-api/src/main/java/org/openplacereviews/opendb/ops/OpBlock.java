@@ -37,7 +37,7 @@ public class OpBlock extends OpObject {
 	public String getDateString() {
 		return getStringValue(F_DATE);
 	}
-
+	
 	public String getHash() {
 		return getStringValue(F_HASH);
 	}

@@ -282,56 +282,7 @@ public class BlocksManager {
 		return isBlockchainEmpty() ? Collections.emptyList() : blockchain;
 	}
 
-	private void validateBlock(OpBlock block, ActiveUsersContext users, OpBlock prevBlock) {
-		if(block.getOperations().size() == 0) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					"Block has no operations to execute", true);
-		}
-		if(!OUtils.equals(usersRegistry.calculateMerkleTreeHash(block), block.getStringValue(OpBlock.F_MERKLE_TREE_HASH))) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), 
-							block.getStringValue(OpBlock.F_MERKLE_TREE_HASH)), true);
-		}
-		if(!OUtils.equals(usersRegistry.calculateSigMerkleTreeHash(block), block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH))) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate signature merkle tree: %s %s", usersRegistry.calculateMerkleTreeHash(block), 
-							block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH)), true);
-		}
-		if(!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate previous block hash: %s %s", prevBlock.getHash(), 
-							block.getStringValue(OpBlock.F_PREV_BLOCK_HASH)), true);
-		}
-		if(!OUtils.equals(calculateHash(block), prevBlock.getHash())) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Failed to validate block hash: %s %s", calculateHash(block), prevBlock.getHash()), true);
-		}
-		if(prevBlock.getBlockId() + 1 != block.getBlockId()) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					String.format("Block id doesn't match with previous block id: %d %d", prevBlock.getBlockId(), block.getBlockId()), true);
-		}
-		boolean validateSig = true;
-		Exception ex = null;
-		try {
-			KeyPair pk = users.getPublicLoginKeyPair(block.getStringValue(OpBlock.F_SIGNED_BY));
-			byte[] blHash = SecUtils.getHashBytes(block.getHash());		
-			if(pk != null && SecUtils.validateSignature(pk, blHash, block.getSignature())) {
-				validateSig = true;
-			} else {
-				validateSig = false;
-			}
-		} catch (FailedVerificationException e) {
-			validateSig = false;
-			ex = e;
-		} catch (RuntimeException e) {
-			validateSig = false;
-			ex = e;
-		}
-		if (!validateSig) {
-			logSystem.logBlock(OperationStatus.FAILED_VALIDATE, block,
-					"Block signature doesn't match", true, ex);
-		}
-	}
+	
 
 
 	private List<OpOperation> prepareBlockOpsToExec(OpBlock block, boolean exceptionOnFail) {
