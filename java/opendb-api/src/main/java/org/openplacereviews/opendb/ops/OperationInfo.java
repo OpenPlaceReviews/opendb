@@ -3,8 +3,6 @@ package org.openplacereviews.opendb.ops;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 public class OperationInfo {
 	private final OpOperation op;
@@ -30,9 +28,10 @@ public class OperationInfo {
 		return blockId;
 	}
 
-	public synchronized void addDelInfo(int ind, OpOperation op, OpBlockChain blc) {
+	public synchronized void addDelInfo(int ind, OpOperation op, int blockId, String blockHash) {
 		DeleteInfo i = new DeleteInfo();
-		i.blc = blc;
+		i.blockId = blockId;
+		i.blockHash = blockHash;
 		i.op = op;
 		if (deletedObjs == null) {
 			deletedObjs = new ArrayList<DeleteInfo>(op.getNew().size());
@@ -51,11 +50,11 @@ public class OperationInfo {
 		}
 	}
 	
-	public Iterator<Map.Entry<OpOperation, OpBlockChain>> getDelInfoIterator(int ind) {
+	public Iterator<DeleteInfo> getDelInfoIterator(int ind) {
 		if(deletedObjs == null || deletedObjs.size() <= ind || deletedObjs.get(ind) == null) {
-			return new Iterator<Map.Entry<OpOperation,OpBlockChain>>() {
+			return new Iterator<DeleteInfo>() {
 				@Override
-				public Entry<OpOperation, OpBlockChain> next() {
+				public DeleteInfo next() {
 					return null;
 				}
 				@Override
@@ -65,28 +64,13 @@ public class OperationInfo {
 			};
 		}
 		DeleteInfo odi = deletedObjs.get(ind);
-		return new Iterator<Map.Entry<OpOperation,OpBlockChain>>() {
+		return new Iterator<DeleteInfo>() {
 			DeleteInfo next = odi;
 			@Override
-			public Entry<OpOperation, OpBlockChain> next() {
+			public DeleteInfo next() {
 				DeleteInfo t = next;
 				next = next.otherDeleteInfo;
-				return new Entry<OpOperation, OpBlockChain>() {
-					@Override
-					public OpBlockChain setValue(OpBlockChain value) {
-						throw new UnsupportedOperationException();
-					}
-					
-					@Override
-					public OpBlockChain getValue() {
-						return t.blc;
-					}
-					
-					@Override
-					public OpOperation getKey() {
-						return t.op;
-					}
-				};
+				return t;
 			}
 			@Override
 			public boolean hasNext() {
@@ -96,9 +80,10 @@ public class OperationInfo {
 		
 	}
 
-	private static class DeleteInfo {
+	public static class DeleteInfo {
+		int blockId;
+		String blockHash;
 		OpOperation op;
-		OpBlockChain blc;
 
 		// simple linked list
 		DeleteInfo otherDeleteInfo;
