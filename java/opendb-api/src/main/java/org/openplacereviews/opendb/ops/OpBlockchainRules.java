@@ -165,6 +165,7 @@ public class OpBlockchainRules {
 	public String calculateOperationHash(OpOperation ob, boolean set) {
 		String oldHash = (String) ob.remove(OpOperation.F_HASH);
 		Object sig = ob.remove(OpOperation.F_SIGNATURE);
+		Object validation = ob.remove(OpOperation.F_VALIDATION);
 		String hash = JSON_MSG_TYPE + ":"
 				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
 		if (set) {
@@ -173,6 +174,7 @@ public class OpBlockchainRules {
 			ob.putStringValue(OpOperation.F_HASH, oldHash);
 		}
 		ob.putObjectValue(OpOperation.F_SIGNATURE, sig);
+		ob.putObjectValue(OpOperation.F_VALIDATION, validation);
 		return hash;
 	}
 
@@ -289,8 +291,20 @@ public class OpBlockchainRules {
 		}
 		return true;
 	}
+	
+	public boolean validateHash(OpOperation o) {
+		if(!OUtils.equals(calculateOperationHash(o, false), o.getHash())) {
+			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(o, false), o.getHash());
+		}
+		return true;
+	}
+	
+	public KeyPair getLoginKeyPair(OpBlockChain ctx, String signedByName, String privateKey) throws FailedVerificationException {
+		OpObject obj = getLoginKeyObj(ctx, signedByName);
+		return getKeyPairFromObj(obj, privateKey);
+	}
 
-	private OpObject getLoginKeyObj(OpBlockChain ctx, String signedByName) {
+	public OpObject getLoginKeyObj(OpBlockChain ctx, String signedByName) {
 		OpObject keyObj;
 		int n = signedByName.indexOf(USER_LOGIN_CHAR);
 		if(n == -1) {
@@ -302,12 +316,7 @@ public class OpBlockchainRules {
 		return keyObj;
 	}
 
-	public boolean validateHash(OpOperation o) {
-		if(!OUtils.equals(calculateOperationHash(o, false), o.getHash())) {
-			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(o, false), o.getHash());
-		}
-		return true;
-	}
+	
 
 	public KeyPair getSignUpKeyPairFromPwd(OpBlockChain blc,
 			String name, String pwd) throws FailedVerificationException {
@@ -323,9 +332,7 @@ public class OpBlockchainRules {
 			return keyPair;
 		}
 		return null;
-	}
-
-
+	}	
 	private KeyPair getKeyPairFromObj(OpObject op, String privatekey) throws FailedVerificationException {
 		String algo = op.getStringValue(F_ALGO);
 		KeyPair kp = SecUtils.getKeyPair(algo, privatekey, op.getStringValue(F_PUBKEY));

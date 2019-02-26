@@ -78,10 +78,10 @@ public class BlockController {
 				OpOperation op = o;
 				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
 					if(kp == null) {
-						kp = usersRegistry.getQueueUsers().getLoginKeyPair(serverName, privateKey);
+						kp = manager.getLoginKeyPair(serverName, privateKey);
 					}
 					op.setSignedBy(serverName);
-					op = usersRegistry.generateHashAndSign(op, kp);
+					op = manager.generateHashAndSign(op, kp);
 				}
 				queue.addOperation(op);
 			}
@@ -105,8 +105,6 @@ public class BlockController {
 		BlockchainResult res = new BlockchainResult();
 		res.blockchain = manager.getBlockcchain();
 		res.serverUser = manager.getServerUser();
-		res.currentBlock = manager.getCurrentBlock();
-		res.currentTx = manager.getCurrentTx();
 		res.status = manager.getCurrentState().name();
 		return formatter.objectToJson(res);
 	}

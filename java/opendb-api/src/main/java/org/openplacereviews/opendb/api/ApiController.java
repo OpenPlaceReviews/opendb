@@ -11,7 +11,6 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,9 +59,9 @@ public class ApiController {
 		OpOperation op = formatter.parseOperation(json);
 		if (!OUtils.isEmpty(name)) {
 			if (!OUtils.isEmpty(pwd)) {
-				kp = manager.getSignUpKeyPairFromPwd(name, pwd);
+				kp = manager.getLoginKeyPairFromPwd(name, pwd);
 			} else if (!OUtils.isEmpty(privateKey)) {
-				kp = manager.getSignUpKeyPair(name, privateKey);
+				kp = manager.getLoginKeyPair(name, privateKey);
 			}
 			if (kp == null) {
 				throw new IllegalArgumentException("Couldn't validate sign up key");
@@ -174,9 +173,9 @@ public class ApiController {
 		String serverName = manager.getServerUser();
 		if (!OUtils.isEmpty(pwd) || !OUtils.isEmpty(signupPrivateKey)) {
 			if(!OUtils.isEmpty(signupPrivateKey)) {
-				kp = manager.getSignUpKeyPair(nickname, signupPrivateKey);	
+				kp = manager.getLoginKeyPair(nickname, signupPrivateKey);	
 			} else {
-				kp = manager.getSignUpKeyPairFromPwd(nickname, pwd);
+				kp = manager.getLoginKeyPairFromPwd(nickname, pwd);
 			}
 			op.setSignedBy(nickname);
 			// sign with server is it necessary or make it optional? 
@@ -190,7 +189,7 @@ public class ApiController {
     		}
 		} else if (!OUtils.isEmpty(oauthId)) {
 			kp = manager.getServerLoginKeyPair();
-			OpObject sop = manager.getSignUpObject(nickname);
+			OpObject sop = manager.getLoginObj(nickname);
 			if(!SecUtils.validateHash(sop.getStringValue(OpBlockchainRules.F_OAUTHID_HASH), 
 					sop.getStringValue(OpBlockchainRules.F_SALT), oauthId) || 
 					!oauthProvider.equals(sop.getStringValue(OpBlockchainRules.F_OAUTH_PROVIDER))) {

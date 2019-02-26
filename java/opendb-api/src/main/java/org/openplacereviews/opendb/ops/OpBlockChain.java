@@ -222,7 +222,7 @@ public class OpBlockChain {
 				}
 			}
 			if(oi == null) {
-				return ctx.rules.error(ErrorType.REF_OBJ_NOT_FOUND, refObjName, u.getHash());
+				return ctx.rules.error(ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
 			}
 			ctx.refObjsCache.put(refName, oi);
 		}
@@ -242,11 +242,12 @@ public class OpBlockChain {
 			OperationDeleteInfo opInfo = getOperationInfo(delHash);
 			
 			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
-				return ctx.rules.error(ErrorType.DEL_OBJ_NOT_FOUND, delRef, u.getHash());
+				return ctx.rules.error(ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), delRef);
 			}
 			if(opInfo.deletedObjects != null || delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd] > -1) {
-					return ctx.rules.error(ErrorType.DEL_OBJ_DOUBLE_DELETED, delRef, opInfo.deletedObjects[delInd]);
+					return ctx.rules.error(ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
+							delRef, opInfo.deletedObjects[delInd]);
 				}
 			}
 			List<OpObject> nw = opInfo.op.getNew();

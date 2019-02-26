@@ -1,14 +1,10 @@
 package org.openplacereviews.opendb.api ;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.UsersAndRolesRegistry;
 import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,14 +48,7 @@ public class QueueController {
 	public String queueList() throws FailedVerificationException {
 		OpBlock bl = new OpBlock();
 		for (OpOperation ob : queue.getOperationsQueue()) {
-			Map<String, String> validation = new LinkedHashMap<String, String>();
-			validation.put("validate_signatures", validator.validateSignatures(validator.getQueueUsers(), ob)+ "");
-			String err = validator.validateRoles(validator.getQueueUsers(), ob);
-			validation.put("validate_roles", err == null? "true" : err);
-			validation.put("validate_hash", validator.validateHash(ob)+ "");
-			OpOperation c = new OpOperation(ob);
-			c.putObjectValue("validation", validation);
-			bl.getOperations().add(c);
+			bl.getOperations().add(ob);
 		}
 		return formatter.toJson(bl);
 	}

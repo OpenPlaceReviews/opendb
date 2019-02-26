@@ -26,6 +26,7 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -194,6 +195,11 @@ public class BlocksManager {
 		return currentState;
 	}
 	
+	public void addOperation(OpOperation op) {
+		// TODO Auto-generated method stub
+		addOperationToQueue();
+	}
+	
 	
 	private void pickupOpsFromQueue(List<OpOperation> candidates, Collection<OpOperation> q, boolean exceptionOnFail) {
 		int size = 0;
@@ -334,9 +340,17 @@ public class BlocksManager {
 		return operations;
 	}
 
+	public KeyPair getLoginKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
+		return blockchainRules.getSignUpKeyPairFromPwd(blockchain, name, pwd);
+	}
 	
+	public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
+		return blockchainRules.getLoginKeyPair(blockchain, name, privateKey);
+	}
 
-
+	public OpObject getLoginObj(String nickname) {
+		return blockchainRules.getLoginKeyObj(blockchain, nickname);
+	}
 
 	
 }
