@@ -29,9 +29,6 @@ public class QueueController {
     private OperationsQueueManager queue;
     
     @Autowired
-    private UsersAndRolesRegistry validator;
-    
-    @Autowired
     private JsonFormatter formatter;
 
     @PostMapping(path = "/add")

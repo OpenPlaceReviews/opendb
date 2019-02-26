@@ -60,14 +60,16 @@ public class BlocksManager {
 	
 	@Value("${opendb.user}")
 	private String serverUser;
+	
 	@Value("${opendb.privateKey}")
 	private String serverPrivateKey;
 	
+	@Value("${opendb.publicKey}")
+	private String serverPublicKey;
+	
 	private KeyPair serverKeyPair;
-	
-	private OpBlockChain blockchain = new OpBlockChain(null, null);
-	
-	private OpBlockchainRules blockchainRules = new OpBlockchainRules();
+	private OpBlockChain blockchain; 
+	private OpBlockchainRules blockchainRules;
 	
 	private BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
 	
@@ -81,7 +83,17 @@ public class BlocksManager {
 	}
 	
 	public BlocksManager() {
-		
+		try {
+			serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
+		} catch (FailedVerificationException e) {
+			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
+		}
+		blockchainRules = new OpBlockchainRules(formatter, serverUser, serverKeyPair);
+		blockchain = new OpBlockChain(null, false);
+	}
+	
+	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
+		return blockchainRules.generateHashAndSign(op, keyPair);
 	}
 
 	public String getServerPrivateKey() {
@@ -90,6 +102,10 @@ public class BlocksManager {
 	
 	public String getServerUser() {
 		return serverUser;
+	}
+	
+	public KeyPair getServerLoginKeyPair() {
+		return serverKeyPair;
 	}
 	
 	
@@ -317,6 +333,8 @@ public class BlocksManager {
 		}
 		return operations;
 	}
+
+	
 
 
 

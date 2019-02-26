@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 
 public class OpBlockChain {
@@ -20,7 +21,7 @@ public class OpBlockChain {
 	private final Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
 	private final Map<String, ObjectInfo> objByName = new ConcurrentHashMap<>();
-	private int parentBlockLastId;
+	private final int parentBlockLastId;
 	private boolean immutable;
 
 	
@@ -40,24 +41,12 @@ public class OpBlockChain {
 		this.immutable = true;
 	}
 	
-	public void addSubblock(OpBlockChain subchain){
-		
-	}
-	
-	public synchronized OpBlock createBlock(OpBlockchainRules rules) {
+	public synchronized OpBlock createBlock(OpBlockchainRules rules) throws FailedVerificationException {
 		if(immutable) {
 			throw new IllegalStateException("Object is immutable");
 		}
-		OpBlock block = new OpBlock();
-		block.setDate(field, time);
+		OpBlock block = rules.createAndSignBlock(operations, getLastBlock());
 		rules.validateBlock(this, block, getLastBlock());
-		Iterator<OpOperation> it = operations.iterator();
-		for(OpOperation o : block.getOperations()) {
-			if(it.hasNext()) {
-				it.next()
-			}
-		}
-		
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
 		blockDepth.put(blockHash, blockId);
@@ -72,7 +61,7 @@ public class OpBlockChain {
 		LocalValidationCtx validationCtx = new LocalValidationCtx();
 		validationCtx.rules = rules;
 		validationCtx.blockHash = "";
-		boolean valid = validateAndPrepareOperation(u, validationCtx);
+		boolean valid = validateAndPrepareOperation(op, validationCtx);
 		if(!valid) {
 			return valid;
 		}
@@ -158,6 +147,18 @@ public class OpBlockChain {
 			return false;
 		}
 		valid = prepareReferencedObjects(u, ctx);
+		if(!valid) {
+			return valid;
+		}
+		valid = ctx.rules.validateHash(u);
+		if(!valid) {
+			return valid;
+		}
+		valid = ctx.rules.validateSignatures(this, u);
+		if(!valid) {
+			return valid;
+		}
+		valid = ctx.rules.validateRoles(this, u, ctx.deletedObjsCache, ctx.refObjsCache);
 		if(!valid) {
 			return valid;
 		}

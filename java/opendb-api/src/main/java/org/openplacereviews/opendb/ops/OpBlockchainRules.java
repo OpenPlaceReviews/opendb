@@ -5,20 +5,18 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.internal.util.xml.ErrorLogger;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.service.OperationsRegistry;
-import org.openplacereviews.opendb.service.LogOperationService.OperationStatus;
 import org.openplacereviews.opendb.util.JsonFormatter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * State less blockchain rules to validate roles and calculate hashes
@@ -57,12 +55,17 @@ public class OpBlockchainRules {
 
 	// this char is not allowed in the nickname!
 	public static final char USER_LOGIN_CHAR = ':';
-
-	@Autowired
+	
 	private JsonFormatter formatter;
+	private String serverUser;
+	private KeyPair serverKeyPair;
+	
+	public OpBlockchainRules(JsonFormatter formatter, String serverUser, KeyPair serverKeyPair) {
+		this.formatter = formatter;
+		this.serverUser = serverUser;
+		this.serverKeyPair = serverKeyPair;
+	}
 
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
 	
 	public String getSignupDescription() {
 		return "This operation signs up new user in DB."
@@ -185,9 +188,11 @@ public class OpBlockchainRules {
 	}
 
 	
-	public String validateRoles(OpBlockChain blockchain, OpOperation o) {
-		// TODO Auto-generated method stub
-		return null;
+	public boolean validateRoles(OpBlockChain blockchain, OpOperation o, 
+			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache) {
+		// TODO here we could validate any ops 
+		// sys.op_validate, sys.grant, sys.role, sys.limit, sys.operation
+		return true;
 	}
 	
 	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock) {
@@ -246,11 +251,11 @@ public class OpBlockchainRules {
 		return true;
 	}
 	
-	public boolean validateSignatures(OpBlockChain ctx, OpOperation ob) throws FailedVerificationException {
+	public boolean validateSignatures(OpBlockChain ctx, OpOperation ob) {
 		List<String> sigs = ob.getSignatureList();
 		List<String> signedBy = ob.getSignedBy();
 		if (signedBy.size() != sigs.size()) {
-			return false;
+			return error(ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs);
 		}
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());
 		boolean firstSignup = false;
@@ -262,18 +267,24 @@ public class OpBlockchainRules {
 		}
 		// 1st signup could be signed by itself
 		for (int i = 0; i < sigs.size(); i++) {
-			String sig = sigs.get(i);
-			String signedByName = signedBy.get(i);
-			OpObject keyObj;
-			if(firstSignup && signedByName.equals(signupName)) {
-				keyObj = ob.getNew().get(0);
-			} else {
-				keyObj = getLoginKeyObj(ctx, signedByName);
+			Exception cause = null;
+			boolean validate = true;
+			try {
+				String sig = sigs.get(i);
+				String signedByName = signedBy.get(i);
+				OpObject keyObj;
+				if(firstSignup && signedByName.equals(signupName)) {
+					keyObj = ob.getNew().get(0);
+				} else {
+					keyObj = getLoginKeyObj(ctx, signedByName);
+				}
+				KeyPair kp = getKeyPairFromObj(keyObj, null);
+				validate = SecUtils.validateSignature(kp, txHash, sig);
+			} catch (Exception e) {
+				cause = e;
 			}
-			KeyPair kp = getKeyPairFromObj(keyObj, null);
-			boolean validate = SecUtils.validateSignature(kp, txHash, sig);
 			if (!validate) {
-				return false;
+				return error(ErrorType.OP_SIGNATURE_FAILED, cause, ob.getHash(), sigs.get(i));
 			}
 		}
 		return true;
@@ -292,11 +303,15 @@ public class OpBlockchainRules {
 	}
 
 	public boolean validateHash(OpOperation o) {
-		return OUtils.equals(calculateOperationHash(o, false), o.getHash());
+		if(!OUtils.equals(calculateOperationHash(o, false), o.getHash())) {
+			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(o, false), o.getHash());
+		}
+		return true;
 	}
 
-	public KeyPair getSignUpKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
-		OpOperation op = getSignUpOperation(name);
+	public KeyPair getSignUpKeyPairFromPwd(OpBlockChain blc,
+			String name, String pwd) throws FailedVerificationException {
+		OpObject op = blc.getObjectByName(OperationsRegistry.OP_SIGNUP, name); 
 		if (op == null) {
 			return null;
 		}
@@ -321,8 +336,9 @@ public class OpBlockchainRules {
 	}
 
 	
-	private void signBlock(OpBlock block, OpBlock prevOpBlock, String serverUser, KeyPair serverKeyPair)
-			throws FailedVerificationException {
+	public OpBlock createAndSignBlock(Collection<OpOperation> ops,OpBlock prevOpBlock) throws FailedVerificationException {
+		OpBlock block = new OpBlock();
+		block.operations.addAll(ops);
 		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
 		block.putObjectValue(OpBlock.F_BLOCKID, (Integer) (prevOpBlock.getBlockId() + 1));
 		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlock.getHash());
@@ -335,11 +351,12 @@ public class OpBlockchainRules {
 		block.putObjectValue(OpBlock.F_EXTRA, BLOCK_EXTRA);
 		block.putStringValue(OpBlock.F_DETAILS, BLOCK_CREATION_DETAILS);
 		block.putStringValue(OpBlock.F_HASH, calculateHash(block));
-		byte[] hashBytes = SecUtils.getHashBytes(block.getHash());
 		if (serverKeyPair != null) {
+			byte[] hashBytes = SecUtils.getHashBytes(block.getHash());
 			block.putStringValue(OpBlock.F_SIGNATURE,
 					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
 		}
+		return block;
 	}
 	
 	public String calculateHash(OpBlock block) {
@@ -383,10 +400,14 @@ public class OpBlockchainRules {
 		BLOCK_SIGNATURE_FAILED("Block '%s': signature of '%s' failed to validate"),
 		BLOCK_HASH_IS_DUPLICATED("Block hash is duplicated '%s' in block '%d' and '%d'"),
 		
-		OP_HASH_IS_DUPLICATED("Operation hash is duplicated '%s' in block '%s'"),
-		DEL_OBJ_NOT_FOUND("Object to delete wasn't found '%s': op '%s'"),
-		REF_OBJ_NOT_FOUND("Object to reference wasn't found '%s': op '%s'"),
-		DEL_OBJ_DOUBLE_DELETED("Object '%s' was already deleted at block '%d'");
+		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
+		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
+		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
+		
+		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found "),
+		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%d'"),
+		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
+		;
 		private final String msg;
 
 		ErrorType(String msg) {
