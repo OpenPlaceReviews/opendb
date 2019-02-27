@@ -38,8 +38,8 @@ public class OpBlockChain {
 		this.parent = parent;
 		this.operations = new ConcurrentLinkedDeque<OpOperation>();
 		this.blocks = new ConcurrentLinkedDeque<OpBlock>();
-		// TODO this.parent.makeImmutable();
 		if(this.parent != null) {
+			this.parent.makeImmutable();
 			parentBlockLastId = this.parent.getLastBlockId();
 		} else {
 			parentBlockLastId = -1;
@@ -53,20 +53,36 @@ public class OpBlockChain {
 	}
 	
 	public synchronized OpBlock createBlock(OpBlockchainRules rules) throws FailedVerificationException {
-		if(locked != UNLOCKED) {
-			throw new IllegalStateException("Object is immutable");
-		}
+		validateIsUnlocked();
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock());
-		rules.validateBlock(this, block, getLastBlock());
+		boolean valid = rules.validateBlock(this, block, getLastBlock());
+		if(!valid) {
+			return null;
+		}
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
+		locked = LOCKED_SUCCESS;
+		try {
+			atomicCreateBlockFromAllOps(block, blockHash, blockId);
+			locked = UNLOCKED;
+		} finally {
+			if(locked == LOCKED_SUCCESS) {
+				locked = LOCKED_ERROR;
+			}
+		}
+		return block;
+	}
+
+	private void atomicCreateBlockFromAllOps(OpBlock block, String blockHash, int blockId) {
 		operations.clear();
 		blockDepth.put(blockHash, blockId);
 		blocks.push(block);
-		return block;
 	}
 	
 	public synchronized void changeParent(OpBlockChain blc) {
+		validateIsUnlocked();
+		
+		
 		// TODO Auto-generated method stub
 		// this.objByName - doesn't change
 		// this.opsByHash - doesn't change
@@ -78,15 +94,13 @@ public class OpBlockChain {
 	}
 	
 	public synchronized void compact() {
-		// TODO Auto-generated method stub
+		// TODO this shouldn't change anything so it shouldn't be synchronized ?
 		
 	}
 	
 	public synchronized boolean removeDupOperation(OpOperation op, OpBlockchainRules rules) {
-		if(locked != 0) {
-			throw new IllegalStateException("This chain is immutable");
-		}
-
+		validateIsUnlocked();
+		
 		String type = op.getType();
 		boolean deleted = false;
 		Iterator<OpOperation> it = operations.iterator();
@@ -118,6 +132,12 @@ public class OpBlockChain {
 			}
 		}
 		return true;
+	}
+
+	private void validateIsUnlocked() {
+		if(locked != UNLOCKED) {
+			throw new IllegalStateException("This chain is immutable");
+		}
 	}
 
 	private void atomicRemoveOperation(OpOperation op, Iterator<OpOperation> it, List<OpOperation> prevOperationsSameType) {
@@ -172,10 +192,7 @@ public class OpBlockChain {
 	 * Adds operation and validates it to block chain
 	 */
 	public synchronized boolean addOperation(OpOperation op, OpBlockchainRules rules) {
-		// make this method synchronized so during preparation there are no possible 
-		if(locked != UNLOCKED) {
-			throw new IllegalStateException("This chain is immutable");
-		}
+		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx();
 		validationCtx.rules = rules;
 		validationCtx.blockHash = "";
@@ -337,6 +354,7 @@ public class OpBlockChain {
 		}
 		OperationDeleteInfo infop = new OperationDeleteInfo();
 		infop.op = u;
+		infop.create = true;
 		opsByHash.put(u.getHash(), infop);
 	}
 	

@@ -100,7 +100,7 @@ public class BlocksManager {
 			blc.addOperation(o, blockchainRules);
 		}
 		OpBlock opBlock = blc.createBlock(blockchainRules);
-		blockchain.rebase(blc);
+		blockchain.changeParent(blc);
 		blc.compact();
 		return formatter.objectToJson(opBlock);
 	}

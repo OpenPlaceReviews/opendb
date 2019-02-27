@@ -362,7 +362,8 @@ public class OpBlockchainRules {
 	}
 
 	
-	public OpBlock createAndSignBlock(Collection<OpOperation> ops,OpBlock prevOpBlock) throws FailedVerificationException {
+	public OpBlock createAndSignBlock(Collection<OpOperation> ops, OpBlock prevOpBlock)
+			throws FailedVerificationException {
 		OpBlock block = new OpBlock();
 		block.operations.addAll(ops);
 		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
