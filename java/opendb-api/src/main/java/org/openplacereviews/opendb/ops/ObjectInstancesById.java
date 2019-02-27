@@ -46,6 +46,9 @@ public class ObjectInstancesById {
 		}
 	}
 	
+	public void setParent(ObjectInstancesById pid) {
+		this.parentInfo = pid;
+	}
 	
 	public String getType() {
 		return type;
@@ -123,6 +126,8 @@ public class ObjectInstancesById {
 			return true;
 		}
 	}
+
+	
 
 
 	

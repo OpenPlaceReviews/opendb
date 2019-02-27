@@ -11,11 +11,25 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import org.antlr.v4.parse.ANTLRParser.throwsSpec_return;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 
+/**
+ *  Guidelines of object methods:
+ *  1. This object doesn't expose any of the internal representation i.e. doesn't expose internal arrays or anything for modification
+ *  In case information is returned by get methods it should be considered immutable. 
+ *  Now not all objects are protected by immutability OpBlock, OpOperations, OpObjects
+ *  2. Atomic internal methods should never fail, in case atomic method fails the object moves to the state LOCKED_ERROR which can't be reverted
+ *  and object needs to be recreated
+ *  3. All change methods are synchronized in order to :
+ *  	- maintain proper locked and locked error state. 
+ *      - to properly prepare for modification and know that none of the internal objects will change during validation & preparation
+ *      - method compact / merge requires 2 objects to go synchronized
+ *  4. Change methods return true/false and throw exception, if object remains unlocked it means that exception wasn't fatal
+ *  
+ *
+ */
 public class OpBlockChain {
 	
 	
@@ -84,7 +98,6 @@ public class OpBlockChain {
 		newParent.makeImmutable();
 		// calculate blocks and ops to be removed all blocks must be present
 		if(blocks.size() > 0) {
-
 			return false;
 		}
 		for(OpBlock o : blocks) {
@@ -135,13 +148,17 @@ public class OpBlockChain {
 				prevByType.add(o);
 			}
 		}
+		for(ObjectInstancesById bid : this.objByName.values()) {
+			ObjectInstancesById pid = newParent.getObjectsByIdMap(bid.getType(), true);
+			bid.setParent(pid);
+		}
 		this.parent = newParent;
 		this.blocks.clear();
 		this.blockDepth.clear();
 	}
 	
 	public synchronized void compact() {
-		// TODO this shouldn't change anything so it shouldn't be synchronized ?
+		// cause internal objects will be changed 
 		
 	}
 	
