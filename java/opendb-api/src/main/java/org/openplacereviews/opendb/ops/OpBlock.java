@@ -45,5 +45,32 @@ public class OpBlock extends OpObject {
 	public String getSignature() {
 		return getStringValue(F_SIGNATURE);
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((operations == null) ? 0 : operations.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		OpBlock other = (OpBlock) obj;
+		if (operations == null) {
+			if (other.operations != null)
+				return false;
+		} else if (!operations.equals(other.operations))
+			return false;
+		return true;
+	}
+	
+	
 	
 }

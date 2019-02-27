@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,49 +8,49 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.openplacereviews.opendb.OUtils;
 
 
-public class ObjectInfo {
+public class ObjectInstancesById {
 
-	private final OpBlockChain blc;
 	private final String type;
-//	private final ObjectInfo parentInfo;
+	private ObjectInstancesById parentInfo;
 	private Map<ListKey, OpObject> objects = new ConcurrentHashMap<>();
 	
-	
-	public ObjectInfo(String type, OpBlockChain b, ObjectInfo pi) {
+	public ObjectInstancesById(String type, ObjectInstancesById pi) {
 		this.type = type;
-		this.blc = b;
-//		this.parentInfo = pi;
-		if(pi != null) {
-			this.objects.putAll(pi.objects);
-		}
+		this.parentInfo = pi;
 	}
 	
-	public OpObject getObjectById(int subind, List<String> o) {
-		return objects.get(new ListKey(subind, o));
+	public OpObject getObjectById(int subind, List<String> key) {
+		ListKey k = new ListKey(subind, key);
+		return getByKey(k);
+	}
+
+	private OpObject getByKey(ListKey k) {
+		OpObject o = objects.get(k);
+		ObjectInstancesById p = parentInfo;
+		while(o == null && p != null) {
+			o = p.objects.get(k);
+			p = p.parentInfo;
+		}
+		return o;
 	}
 	
 	public OpObject getObjectById(String primaryKey, String secondaryKey) {
-		return objects.get(new ListKey(primaryKey, secondaryKey));
+		return getByKey(new ListKey(primaryKey, secondaryKey)); 
 	}
 	
 	public void add(List<String> id, OpObject newObj) {
-		objects.put(new ListKey(0, id), newObj);
+		if(newObj == null) {
+			objects.put(new ListKey(0, id), newObj);
+		} else {
+			objects.remove(new ListKey(0, id));
+		}
 	}
 	
-	
-	public Collection<OpObject> getAllObjects() {
-		return objects.values();
-	}
 	
 	public String getType() {
 		return type;
 	}
 	
-	public OpBlockChain getBlc() {
-		return blc;
-	}
-
-
 	private static class ListKey {
 		final String first;
 		final String second;

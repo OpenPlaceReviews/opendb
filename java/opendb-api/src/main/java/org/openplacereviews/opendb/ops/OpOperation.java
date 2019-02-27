@@ -64,8 +64,6 @@ public class OpOperation extends OpObject {
 		return getStringList(F_SIGNED_BY);
 	}
 	
-	
-	
 	@Override
 	public String getType() {
 		return TYPE_OP;
@@ -103,6 +101,41 @@ public class OpOperation extends OpObject {
 		return getStringValue(F_COMMENT);
 	}
 	
+	
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((newObjects == null) ? 0 : newObjects.hashCode());
+		result = prime * result + ((type == null) ? 0 : type.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		OpOperation other = (OpOperation) obj;
+		if (newObjects == null) {
+			if (other.newObjects != null)
+				return false;
+		} else if (!newObjects.equals(other.newObjects))
+			return false;
+		if (type == null) {
+			if (other.type != null)
+				return false;
+		} else if (!type.equals(other.type))
+			return false;
+		return true;
+	}
+
+
+
 	public static class OpDefinitionBeanAdapter implements JsonDeserializer<OpOperation>,
 			JsonSerializer<OpOperation> {
 		
@@ -144,7 +177,4 @@ public class OpOperation extends OpObject {
 		}
 
 	}
-
-
-	
 }
