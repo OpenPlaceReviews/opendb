@@ -103,18 +103,6 @@ public class OpOperation extends OpObject {
 		return getStringValue(F_COMMENT);
 	}
 	
-	public void clearNonSignificantBlockFields() {
-		String hash = getHash();
-		String name = getName();
-		String cmt = getComment();
-		
-		fields.clear();
-
-		putStringValue(F_HASH, hash);
-		putStringValue(F_NAME, name);
-		putStringValue(F_COMMENT, cmt);
-	}
-	
 	public static class OpDefinitionBeanAdapter implements JsonDeserializer<OpOperation>,
 			JsonSerializer<OpOperation> {
 		

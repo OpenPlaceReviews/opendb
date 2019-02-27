@@ -41,7 +41,7 @@ public class BlockController {
 
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
     @ResponseBody
-    public String createBlock() {
+    public String createBlock() throws FailedVerificationException {
     	return manager.createBlock();
     }
     

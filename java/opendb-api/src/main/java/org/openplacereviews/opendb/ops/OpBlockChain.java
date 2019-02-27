@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -25,7 +26,7 @@ public class OpBlockChain {
 	private boolean immutable;
 
 	
-	public OpBlockChain(OpBlockChain parent, boolean operations) {
+	public OpBlockChain(OpBlockChain parent) {
 		this.parent = parent;
 		this.operations = new ConcurrentLinkedDeque<OpOperation>();
 		this.blocks = new ConcurrentLinkedDeque<OpBlock>();
@@ -49,9 +50,20 @@ public class OpBlockChain {
 		rules.validateBlock(this, block, getLastBlock());
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
+		operations.clear();
 		blockDepth.put(blockHash, blockId);
 		blocks.push(block);
 		return block;
+	}
+	
+	public synchronized void rebase(OpBlockChain blc) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	public synchronized void compact() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 	public synchronized boolean addOperation(OpOperation op, OpBlockchainRules rules) {
@@ -68,35 +80,14 @@ public class OpBlockChain {
 		addOperationAfterPrepare(op, validationCtx);
 		return valid;
 	}
-
-	private void addOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
-		for(OpObject newObj : u.getNew()){
-			List<String> id = newObj.getId();
-			if(id != null && id.size() > 0) {
-				String objType = id.get(0);
-				ObjectInfo oinf = getObjectsByType(objType, true);
-				oinf.add(id, newObj);
-			}
-		}
-		List<String> deletedRefs = u.getOld();
-		for(int i = 0; i < deletedRefs.size(); i++) {
-			String delRef = deletedRefs.get(i);
-			String delHash = getHashFromAbsRef(delRef);
-			int delInd = getIndexFromAbsRef(delRef);
-			OperationDeleteInfo pi = opsByHash.get(delHash);
-			if(pi == null) {
-				pi = new OperationDeleteInfo();
-				pi.op = validationCtx.deletedOpsCache.get(i);
-				pi.deletedObjects = new int[pi.op.getNew().size()];
-				opsByHash.put(delHash, pi);
-			}
-			pi.deletedObjects[delInd] = getLastBlockId() + 1;
-		}
-		OperationDeleteInfo infop = new OperationDeleteInfo();
-		infop.op = u;
-		opsByHash.put(u.getHash(), infop);
+	
+	public Collection<OpOperation> getOperations() {
+		return operations;
 	}
-
+	
+	public OpBlockChain getParent() {
+		return parent;
+	}
 	
 	public boolean isImmutable() {
 		return immutable;
@@ -109,62 +100,8 @@ public class OpBlockChain {
 		}
 		return blocks.peekFirst();
 	}
-	
-	private String getHashFromAbsRef(String r) {
-		int i = r.indexOf(':');
-		if(i == -1) {
-			return r;
-		}
-		return r.substring(0, i);
-	}
-	
-	private int getIndexFromAbsRef(String r) {
-		int i = r.indexOf(':');
-		if (i == -1) {
-			return 0;
-		}
-		return Integer.parseInt(r.substring(i + 1));
-	}
-	
-	private OperationDeleteInfo getOperationInfo(String hash) {
-		OperationDeleteInfo opInfo = null;
-		OpBlockChain blc = this;
-		while (blc != null && opInfo == null) {
-			opInfo = blc.opsByHash.get(hash);
-			blc = blc.parent;
-		}
-		return opInfo;
-	}
-	
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
-		OperationDeleteInfo oin = getOperationInfo(u.getHash());
-		boolean valid = true;
-		if(oin != null) {
-			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
-		}
-		valid = prepareDeletedObjects(u, ctx);
-		if(!valid) {
-			return false;
-		}
-		valid = prepareReferencedObjects(u, ctx);
-		if(!valid) {
-			return valid;
-		}
-		valid = ctx.rules.validateHash(u);
-		if(!valid) {
-			return valid;
-		}
-		valid = ctx.rules.validateSignatures(this, u);
-		if(!valid) {
-			return valid;
-		}
-		valid = ctx.rules.validateRoles(this, u, ctx.deletedObjsCache, ctx.refObjsCache);
-		if(!valid) {
-			return valid;
-		}
-		return true;
-	}
-	
+
+
 	
 	public int getLastBlockId() {
 		OpBlock o = getLastBlock();
@@ -205,6 +142,123 @@ public class OpBlockChain {
 	}
 	
 
+	
+	private ObjectInfo getObjectsByType(String type, boolean create) {
+		ObjectInfo oi = objByName.get(type);
+		if(oi == null) {
+			ObjectInfo pi = parent == null ? null : parent.getObjectsByType(type, false);
+			if(create) {
+				oi = new ObjectInfo(type, this, pi);
+			} else {
+				oi = pi;
+			}
+		}
+		return oi;
+	}
+	
+	public OpObject getObjectByName(String type, String key) {
+		ObjectInfo ot = getObjectsByType(type, false);
+		if(ot == null) {
+			return null;
+		}
+		return ot.getObjectById(key, null);
+	}
+	
+	public OpObject getObjectByName(String type, String key, String secondary) {
+		ObjectInfo ot = getObjectsByType(type, false);
+		if(ot == null) {
+			return null;
+		}
+		return ot.getObjectById(key, secondary);
+	}
+	
+	private OpObject getObjectByName(List<String> o) {
+		String objType = o.get(0);
+		ObjectInfo ot = getObjectsByType(objType, false);
+		if(ot == null) {
+			return null;
+		}
+		return ot.getObjectById(1, o);
+	}
+	
+	
+	private String getHashFromAbsRef(String r) {
+		int i = r.indexOf(':');
+		if(i == -1) {
+			return r;
+		}
+		return r.substring(0, i);
+	}
+	
+	private int getIndexFromAbsRef(String r) {
+		int i = r.indexOf(':');
+		if (i == -1) {
+			return 0;
+		}
+		return Integer.parseInt(r.substring(i + 1));
+	}
+	
+	private void addOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
+		for(OpObject newObj : u.getNew()){
+			List<String> id = newObj.getId();
+			if(id != null && id.size() > 0) {
+				String objType = id.get(0);
+				ObjectInfo oinf = getObjectsByType(objType, true);
+				oinf.add(id, newObj);
+			}
+		}
+		List<String> deletedRefs = u.getOld();
+		for(int i = 0; i < deletedRefs.size(); i++) {
+			String delRef = deletedRefs.get(i);
+			String delHash = getHashFromAbsRef(delRef);
+			int delInd = getIndexFromAbsRef(delRef);
+			OperationDeleteInfo pi = opsByHash.get(delHash);
+			if(pi == null) {
+				pi = new OperationDeleteInfo();
+				pi.op = validationCtx.deletedOpsCache.get(i);
+				pi.deletedObjects = new int[pi.op.getNew().size()];
+				opsByHash.put(delHash, pi);
+			}
+			pi.deletedObjects[delInd] = getLastBlockId() + 1;
+		}
+		OperationDeleteInfo infop = new OperationDeleteInfo();
+		infop.op = u;
+		opsByHash.put(u.getHash(), infop);
+	}
+	
+	private OperationDeleteInfo getOperationInfo(String hash) {
+		OperationDeleteInfo opInfo = null;
+		OpBlockChain blc = this;
+		while (blc != null && opInfo == null) {
+			opInfo = blc.opsByHash.get(hash);
+			blc = blc.parent;
+		}
+		return opInfo;
+	}
+	
+	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
+		OperationDeleteInfo oin = getOperationInfo(u.getHash());
+		boolean valid = true;
+		if(oin != null) {
+			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
+		}
+		valid = prepareDeletedObjects(u, ctx);
+		if(!valid) {
+			return false;
+		}
+		valid = prepareReferencedObjects(u, ctx);
+		if(!valid) {
+			return valid;
+		}
+		valid = ctx.rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache);
+		if(!valid) {
+			return valid;
+		}
+		return true;
+	}
+	
+	
+	
 	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
 		Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
@@ -256,46 +310,6 @@ public class OpBlockChain {
 		}
 		return true;
 	}
-	
-	private ObjectInfo getObjectsByType(String type, boolean create) {
-		ObjectInfo oi = objByName.get(type);
-		if(oi == null) {
-			ObjectInfo pi = parent == null ? null : parent.getObjectsByType(type, false);
-			if(create) {
-				oi = new ObjectInfo(type, this, pi);
-			} else {
-				oi = pi;
-			}
-		}
-		return oi;
-	}
-	
-	public OpObject getObjectByName(String type, String key) {
-		ObjectInfo ot = getObjectsByType(type, false);
-		if(ot == null) {
-			return null;
-		}
-		return ot.getObjectById(key, null);
-	}
-	
-	public OpObject getObjectByName(String type, String key, String secondary) {
-		ObjectInfo ot = getObjectsByType(type, false);
-		if(ot == null) {
-			return null;
-		}
-		return ot.getObjectById(key, secondary);
-	}
-	
-	private OpObject getObjectByName(List<String> o) {
-		String objType = o.get(0);
-		ObjectInfo ot = getObjectsByType(objType, false);
-		if(ot == null) {
-			return null;
-		}
-		return ot.getObjectById(1, o);
-	}
-	
-	
 
 
 
@@ -313,6 +327,6 @@ public class OpBlockChain {
 		private OpOperation op;
 		private int[] deletedObjects;
 	}
-	
-	
+
+
 }

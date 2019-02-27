@@ -25,8 +25,11 @@ public class OpBlockchainRules {
 
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBServer.class);
 	
-	public static final int MAX_BLOCK_SIZE = 1000;
+	// it is questionable whether size validation should be part of blockchain or not
+	public static final int MAX_BLOCK_SIZE_OPS = 1024;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
+	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
+	
 	public static final int BLOCK_VERSION = 1;
 	// not used by this implementation
 	private static final String BLOCK_CREATION_DETAILS = "";
@@ -292,11 +295,27 @@ public class OpBlockchainRules {
 		return true;
 	}
 	
-	public boolean validateHash(OpOperation o) {
-		if(!OUtils.equals(calculateOperationHash(o, false), o.getHash())) {
-			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(o, false), o.getHash());
+	
+	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, List<OpObject> deletedObjsCache,
+			Map<String, OpObject> refObjsCache) {
+		if(!OUtils.equals(calculateOperationHash(u, false), u.getHash())) {
+			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
 		}
-		return true;
+		
+		int sz = formatter.toJson(u).length();
+		if (sz > OpBlockchainRules.MAX_OP_SIZE_MB) {
+			return error(ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
+		}
+		boolean valid = validateSignatures(opBlockChain, u);
+		if(!valid) {
+			return valid;
+		}
+		valid = validateRoles(opBlockChain, u, deletedObjsCache, refObjsCache);
+		if(!valid) {
+			return valid;
+		}
+		
+		return false;
 	}
 	
 	public KeyPair getLoginKeyPair(OpBlockChain ctx, String signedByName, String privateKey) throws FailedVerificationException {
@@ -407,6 +426,7 @@ public class OpBlockchainRules {
 		BLOCK_SIGNATURE_FAILED("Block '%s': signature of '%s' failed to validate"),
 		BLOCK_HASH_IS_DUPLICATED("Block hash is duplicated '%s' in block '%d' and '%d'"),
 		
+		OP_SIZE_IS_EXCEEDED("Operation '%s' size '%d' exceeds the limit '%d'"),
 		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
 		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
 		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
@@ -425,4 +445,6 @@ public class OpBlockchainRules {
 			return String.format(msg, args);
 		}
 	}
+
+	
 }
