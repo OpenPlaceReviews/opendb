@@ -42,7 +42,11 @@ public class BlockController {
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String createBlock() throws FailedVerificationException {
-    	return manager.createBlock();
+    	OpBlock block = manager.createBlock();
+    	if(block == null) {
+    		return "{\"status\":\"FAILED\", \"msg\":\"Block creation failed\"}";
+    	}
+    	return formatter.objectToJson(block);
     }
     
     @PostMapping(path = "/toggle-pause", produces = "text/json;charset=UTF-8")

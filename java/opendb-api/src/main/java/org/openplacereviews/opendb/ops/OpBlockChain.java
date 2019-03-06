@@ -36,6 +36,7 @@ public class OpBlockChain {
 	private static final int LOCKED_ERROR = -1;
 	private static final int LOCKED_SUCCESS =  1;
 	private static final int UNLOCKED =  0;
+	private static final int COMPACT_COEF = 1; 
 	private int locked = UNLOCKED; // 0, -1 error, 1 intentional
 
 	// parent chain
@@ -157,8 +158,59 @@ public class OpBlockChain {
 		this.blockDepth.clear();
 	}
 	
-	public synchronized void compact() {
-		// cause internal objects will be changed 
+	public synchronized boolean mergeWithParent() {
+		// no need to change that state is not locked
+		if(parent != null) {
+			OpBlockChain newParent = parent.parent;
+			parent.blockDepth.putAll(this.blockDepth);
+			for(OpBlock last : parent.blocks) {
+				this.blocks.addLast(last);
+			}
+			Iterator<OpOperation> desc = operations.descendingIterator();
+			while(desc.hasNext()) {
+				operations.addFirst(desc.next());
+			}
+			Iterator<Entry<String, OperationDeleteInfo>> deleteInfoIt = parent.opsByHash.entrySet().iterator();
+			while(deleteInfoIt.hasNext()) {
+				Entry<String, OperationDeleteInfo> e = deleteInfoIt.next();
+				if(!this.opsByHash.containsKey(e.getKey())) {
+					this.opsByHash.put(e.getKey(), e.getValue());
+				} else {
+					OperationDeleteInfo ndi = mergeDeleteInfo(this.opsByHash.get(e.getKey()), 
+							e.getValue());
+					this.opsByHash.put(e.getKey(), ndi);
+				}
+			}
+			Iterator<Entry<String, ObjectInstancesById>> byNameIterator = parent.objByName.entrySet().iterator();
+			while(byNameIterator.hasNext()) {
+				Entry<String, ObjectInstancesById> e = byNameIterator.next();
+				ObjectInstancesById exId = this.objByName.get(e.getKey());
+				if(exId == null) {
+					this.objByName.put(e.getKey(), e.getValue());
+				} else {
+					exId.mergeWith(e.getValue());
+				}
+			}
+			parent = newParent;
+		}
+		return true;
+	}
+	
+	public synchronized boolean compact() {
+		// synchronized cause internal objects could be changed
+		// 1, 1, 1 -> 1, 2
+		// 1, 1, 2 -> 1, 3
+		// 1, 1, 3
+		// 1, 2, 3
+		if(parent != null && parent.parent != null) {
+			if(COMPACT_COEF * (parent.getSubchainSize()  + getSubchainSize()) >= parent.parent.getSubchainSize() ) {
+				parent.mergeWithParent();
+			} else {
+				parent.compact();
+			}
+		}
+		return true;
+		
 		
 	}
 	
@@ -394,24 +446,29 @@ public class OpBlockChain {
 			pdi = parent.getOperationInfo(hash, maxdepth);
 		}
 		if(cdi != null && pdi != null) {
-			OperationDeleteInfo ndi = new OperationDeleteInfo();
-			ndi.create = pdi.create || cdi.create;
-			int psz = pdi.deletedObjects == null ? 0 : pdi.deletedObjects.length;
-			int sz = cdi.deletedObjects == null ? 0 : cdi.deletedObjects.length;
-			int length = Math.max(sz, psz);
-			ndi.deletedObjects = new boolean[length];
-			for(int i = 0; i < length; i++) {
-				if(pdi.deletedObjects != null && i < pdi.deletedObjects.length && pdi.deletedObjects[i]) {
-					ndi.deletedObjects[i] = true;
-				}
-				if(cdi.deletedObjects != null && i < cdi.deletedObjects.length && cdi.deletedObjects[i]) {
-					ndi.deletedObjects[i] = true;
-				}
-			}
+			return mergeDeleteInfo(cdi, pdi);
 		} else if(cdi != null) {
 			return cdi;
 		} 
 		return pdi;
+	}
+
+	private OperationDeleteInfo mergeDeleteInfo(OperationDeleteInfo cdi, OperationDeleteInfo pdi) {
+		OperationDeleteInfo ndi = new OperationDeleteInfo();
+		ndi.create = pdi.create || cdi.create;
+		int psz = pdi.deletedObjects == null ? 0 : pdi.deletedObjects.length;
+		int sz = cdi.deletedObjects == null ? 0 : cdi.deletedObjects.length;
+		int length = Math.max(sz, psz);
+		ndi.deletedObjects = new boolean[length];
+		for(int i = 0; i < length; i++) {
+			if(pdi.deletedObjects != null && i < pdi.deletedObjects.length && pdi.deletedObjects[i]) {
+				ndi.deletedObjects[i] = true;
+			}
+			if(cdi.deletedObjects != null && i < cdi.deletedObjects.length && cdi.deletedObjects[i]) {
+				ndi.deletedObjects[i] = true;
+			}
+		}
+		return ndi;
 	}
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {

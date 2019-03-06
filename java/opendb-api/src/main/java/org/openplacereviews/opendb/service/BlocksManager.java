@@ -87,23 +87,42 @@ public class BlocksManager {
 	}
 	
 	public void addOperation(OpOperation op) {
+		// TODO LOG success or failure (create queue of failed) ops
 		blockchain.addOperation(op, blockchainRules);
 	}
 	
-	public String createBlock() throws FailedVerificationException {
+	public OpBlock createBlock() throws FailedVerificationException {
 		if (this.currentState != BlockchainState.BLOCKCHAIN_READY) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
+		// TODO add logging for failures like addOperation, createBlock, changeParent
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getOperations());
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent());
 		for (OpOperation o : candidates) {
-			blc.addOperation(o, blockchainRules);
+			if(!blc.addOperation(o, blockchainRules)) {
+				return null;
+			}
 		}
 		OpBlock opBlock = blc.createBlock(blockchainRules);
-		blockchain.changeParent(blc);
+		if(opBlock == null) {
+			return null;
+		}
+		boolean changeParent = blockchain.changeParent(blc);
+		if(!changeParent) {
+			return null;
+		}
 		blc.compact();
-		return formatter.objectToJson(opBlock);
+		return opBlock;
 	}
+	
+	// parameter limit
+	public List<OpBlock> getBlockcchain() {
+		// TODO
+		return Collections.emptyList();
+//		return blockchain.getLastBlockId() < 0 ? Collections.emptyList() : blockchain.g;
+	}
+
+
 	
 	
 	public void init(MetadataDb metadataDB) {
@@ -156,13 +175,6 @@ public class BlocksManager {
 	}
 	
 	
-	// parameter limit
-	public List<OpBlock> getBlockcchain() {
-		// TODO
-		return Collections.emptyList();
-//		return blockchain.getLastBlockId() < 0 ? Collections.emptyList() : blockchain.g;
-	}
-
 	
 	public KeyPair getLoginKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
 		return blockchainRules.getSignUpKeyPairFromPwd(blockchain, name, pwd);
