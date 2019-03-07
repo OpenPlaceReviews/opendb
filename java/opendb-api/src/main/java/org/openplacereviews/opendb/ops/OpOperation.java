@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class OpOperation extends OpObject {
 	private List<OpObject> newObjects = new LinkedList<OpObject>();
 	
 	public OpOperation() {
-		this.operation = this;
+		this.operation = null;
 	}
 	
 	public OpOperation(OpOperation cp) {
@@ -136,7 +137,7 @@ public class OpOperation extends OpObject {
 
 
 
-	public static class OpDefinitionBeanAdapter implements JsonDeserializer<OpOperation>,
+	public static class OpOperationBeanAdapter implements JsonDeserializer<OpOperation>,
 			JsonSerializer<OpOperation> {
 		
 		@Override
@@ -161,18 +162,16 @@ public class OpOperation extends OpObject {
 
 		@Override
 		public JsonElement serialize(OpOperation src, Type typeOfSrc, JsonSerializationContext context) {
-			JsonObject o = new JsonObject();
-			o.addProperty(F_TYPE, src.type);
 			TreeMap<String, Object> tm = new TreeMap<>(src.fields);
 			tm.put(F_TYPE, src.type);
 			if(src.hasNew()) {
-				tm.put(F_NEW, src.newObjects);
+				List<Map<String, Object>> list = new ArrayList<>();
+				for (OpObject obj : src.newObjects) {
+					list.add(obj.fields);
+				}
+				tm.put(F_NEW, list);
 			}
-			
-			for(String k : src.fields.keySet()) {
-				Object ob = src.fields.get(k);
-				o.add(k, context.serialize(ob));
-			}
+			JsonObject o = (JsonObject) context.serialize(tm);
 			return o;
 		}
 

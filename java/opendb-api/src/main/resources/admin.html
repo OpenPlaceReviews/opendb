@@ -120,7 +120,7 @@ function loadErrorsData() {
         }
         if(op.operation) {
           items += "<br><b>Operation</b>: " + 
-                  op.operation.operation +  " " + op.operation.name + " " + op.operation.hash;
+                  op.operation.type + " " + op.operation.hash;
         }
         
         if(op.block) {
@@ -168,7 +168,7 @@ function loadBlocksData() {
 }
 
 function loadQueueData() {
-  $.getJSON( "/queue/list", function( data ) {
+  $.getJSON( "/api/queue", function( data ) {
       var items = "";
       $("#queue-tab").html("Queue (" + data.operations.length + ")");
       for(var i = 0; i < data.operations.length; i++)  {
@@ -184,9 +184,15 @@ function loadQueueData() {
             // console.log("'"+JSON.stringify(clone)+"'");
           }
         });
-        items += "<br><li><b>Hash</b>: " + op.hash;
-        items += "<br><b>Operation</b>: " + op.operation;
-        items += "<br><b>Name</b>: " + op.name;
+        items += "<br><li><b>Operation</b>: " + op.type;
+        items += "<br><b>Hash</b>: " + op.hash;
+        items += "<br><b>Add/remove objects</b>: " + 
+                (op.new ? op.new.length : "0") + " / " + (op.old ? op.old.length : "0");
+        if(op.new && op.new.length > 0) {
+          items += "<br><b>Name</b>: " + op.new[0].name;
+        } else if(op.old && op.old.length > 0) {
+          items += "<br><b>Name</b>: " + op.old[0].name;
+        }
         items += "<br><b>Signed by</b>: " + op.signed_by;
         items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
         items += "<br><details><summary><b>JSON</b></summary><pre>" + 
@@ -200,7 +206,7 @@ function loadQueueData() {
 $( document ).ready(function() {
     loadData();
     $("#clear-list-btn").click(function(){
-      $.post("/queue/clear", {},  function(data, status){
+      $.post("/api/queue/clear", {},  function(data, status){
         loadData();
       });
     });
@@ -240,7 +246,7 @@ $( document ).ready(function() {
         "publicKey":$("#signup-user-pbk").val(),
         "userDetails":$("#signup-details").val()
       };
-      $.post("/op/signup", obj)
+      $.post("/api/signup", obj)
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
@@ -255,7 +261,7 @@ $( document ).ready(function() {
         "loginPubKey":$("#login-public-key").val(),
         "loginAlgo":"EC"
       };
-      $.post("/op/login", obj)
+      $.post("/api/login", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });

@@ -68,6 +68,14 @@ public class OpBlockchainRules {
 		this.serverUser = serverUser;
 		this.serverKeyPair = serverKeyPair;
 	}
+	
+	public KeyPair getServerKeyPair() {
+		return serverKeyPair;
+	}
+	
+	public String getServerUser() {
+		return serverUser;
+	}
 
 	
 	public String getSignupDescription() {
@@ -179,6 +187,11 @@ public class OpBlockchainRules {
 		ob.putObjectValue(OpOperation.F_SIGNATURE, sig);
 		ob.putObjectValue(OpOperation.F_VALIDATION, validation);
 		return hash;
+	}
+	
+
+	public JsonFormatter getFormatter() {
+		return formatter;
 	}
 
 	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
@@ -447,5 +460,6 @@ public class OpBlockchainRules {
 		}
 	}
 
+	
 	
 }

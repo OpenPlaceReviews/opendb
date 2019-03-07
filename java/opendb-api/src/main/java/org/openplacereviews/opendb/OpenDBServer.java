@@ -13,7 +13,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.LogOperationService;
-import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -45,9 +44,6 @@ public class OpenDBServer  {
 	
 	@Autowired
 	OperationsRegistry operationRegistry;
-	
-	@Autowired
-	OperationsQueueManager queueManager;
 	
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
@@ -104,7 +100,6 @@ public class OpenDBServer  {
 				MetadataDb metadataDB = loadMetadata();
 				dbDataManager.init(metadataDB);
 				logOperationService.init(metadataDB);
-				queueManager.init(metadataDB);
 				operationRegistry.init(metadataDB);
 				blocksManager.init(metadataDB);
 				System.out.println("Application has started");

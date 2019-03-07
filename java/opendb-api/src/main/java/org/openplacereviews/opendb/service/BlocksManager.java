@@ -3,7 +3,6 @@ package org.openplacereviews.opendb.service;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -34,10 +33,10 @@ public class BlocksManager {
 	private LogOperationService logSystem;
 	
 	@Autowired
-    private JsonFormatter formatter;
+	private JdbcTemplate jdbcTemplate;
 	
 	@Autowired
-	private JdbcTemplate jdbcTemplate;
+	JsonFormatter formatter = new JsonFormatter();
 	
 	@Value("${opendb.user}")
 	private String serverUser;
@@ -48,7 +47,7 @@ public class BlocksManager {
 	@Value("${opendb.publicKey}")
 	private String serverPublicKey;
 	
-	private KeyPair serverKeyPair;
+	
 	private OpBlockChain blockchain; 
 	private OpBlockchainRules blockchainRules;
 	
@@ -58,16 +57,6 @@ public class BlocksManager {
 		BLOCKCHAIN_INIT,
 		BLOCKCHAIN_READY,
 		BLOCKCHAIN_PAUSED
-	}
-	
-	public BlocksManager() {
-		try {
-			serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
-		} catch (FailedVerificationException e) {
-			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
-		}
-		blockchainRules = new OpBlockchainRules(formatter, serverUser, serverKeyPair);
-		blockchain = new OpBlockChain(null);
 	}
 	
 	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
@@ -83,12 +72,16 @@ public class BlocksManager {
 	}
 	
 	public KeyPair getServerLoginKeyPair() {
-		return serverKeyPair;
+		return blockchainRules.getServerKeyPair();
 	}
 	
 	public void addOperation(OpOperation op) {
 		// TODO LOG success or failure (create queue of failed) ops
 		blockchain.addOperation(op, blockchainRules);
+	}
+	
+	public void clearQueue() {
+		blockchain = new OpBlockChain(blockchain.getParent());
 	}
 	
 	public OpBlock createBlock() throws FailedVerificationException {
@@ -115,18 +108,22 @@ public class BlocksManager {
 		return opBlock;
 	}
 	
-	// parameter limit
-	public List<OpBlock> getBlockcchain() {
-		// TODO
-		return Collections.emptyList();
-//		return blockchain.getLastBlockId() < 0 ? Collections.emptyList() : blockchain.g;
+	public OpBlockChain getBlockcchain() {
+		return blockchain;
 	}
 
-
-	
-	
 	public void init(MetadataDb metadataDB) {
 		LOGGER.info("... Blockchain. Loading blocks...");
+		KeyPair serverKeyPair;
+		try {
+			serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
+		} catch (FailedVerificationException e) {
+			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
+			throw new RuntimeException(e);
+		}
+		blockchainRules = new OpBlockchainRules(formatter, serverUser, serverKeyPair);
+		blockchain = new OpBlockChain(null);
+		
 		String msg = "";
 		// db is bootstraped
 		currentState = BlockchainState.BLOCKCHAIN_READY;
@@ -187,6 +184,8 @@ public class BlocksManager {
 	public OpObject getLoginObj(String nickname) {
 		return blockchainRules.getLoginKeyObj(blockchain, nickname);
 	}
+
+	
 
 	
 }

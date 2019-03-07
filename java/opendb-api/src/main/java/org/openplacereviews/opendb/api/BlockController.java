@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.api ;
 
 import java.security.KeyPair;
-import java.util.List;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -11,7 +11,6 @@ import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.BlocksManager.BlockchainState;
-import org.openplacereviews.opendb.service.OperationsQueueManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -31,9 +30,6 @@ public class BlockController {
     
     @Autowired
     private BlocksManager manager;
-    
-    @Autowired
-    private OperationsQueueManager queue;
     
     
     @Autowired
@@ -87,7 +83,7 @@ public class BlockController {
 					op.setSignedBy(serverName);
 					op = manager.generateHashAndSign(op, kp);
 				}
-				queue.addOperation(op);
+				manager.addOperation(op);
 			}
 		}
 		// return manager.createBlock();
@@ -97,9 +93,7 @@ public class BlockController {
     public static class BlockchainResult {
     	public String status;
     	public String serverUser;
-    	public OpBlock currentBlock;
-		public OpOperation currentTx;
-		public List<OpBlock> blockchain;
+		public Collection<OpBlock> blockchain;
     }
     
     
@@ -107,7 +101,7 @@ public class BlockController {
     @ResponseBody
 	public String blocksList() throws FailedVerificationException {
 		BlockchainResult res = new BlockchainResult();
-		res.blockchain = manager.getBlockcchain();
+		res.blockchain = manager.getBlockcchain().getBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState().name();
 		return formatter.objectToJson(res);

@@ -87,17 +87,17 @@ public class OperationsRegistry {
 	}
 	
 	public void init(MetadataDb metadataDB) {
-		LOGGER.info("... Operations registry. Loading operation definitions ...");
-		if(metadataDB.tablesSpec.containsKey(DBConstants.OP_DEFINITIONS_TABLE)) {
-			List<OpOperation> ops = dbManager.loadOperations(DBConstants.OP_DEFINITIONS_TABLE);
-			for(OpOperation o : ops) {
-				String opName = o.getStringValue(F_NAME);
-				operations.put(opName, new OperationTypeDefinition(o));
-				dbManager.registerMappingOperation(opName, o);
-			}
-		} else {
-			regDefaultSysOperaitons();
-		}
+		LOGGER.info("... TODO Operations registry. Loading operation definitions ...");
+//		if(metadataDB.tablesSpec.containsKey(DBConstants.OP_DEFINITIONS_TABLE)) {
+//			List<OpOperation> ops = dbManager.loadOperations(DBConstants.OP_DEFINITIONS_TABLE);
+//			for(OpOperation o : ops) {
+//				String opName = o.getStringValue(F_NAME);
+//				operations.put(opName, new OperationTypeDefinition(o));
+//				dbManager.registerMappingOperation(opName, o);
+//			}
+//		} else {
+//			regDefaultSysOperaitons();
+//		}
 		LOGGER.info(String.format("+++ Operations registry. Loaded %d operations.", operations.size()));
 	}
 	

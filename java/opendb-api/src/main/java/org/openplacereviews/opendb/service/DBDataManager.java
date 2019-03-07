@@ -67,14 +67,14 @@ public class DBDataManager {
 	}
 	
 	public void init(MetadataDb metadataDB) {
-		LOGGER.info("... Database mapping. Loading table definitions and mappings ...");
-		System.out.println(metadataDB.tablesSpec);
-		if(metadataDB.tablesSpec.containsKey(DBConstants.TABLES_TABLE)) {
-			List<OpOperation> ops = loadOperations(DBConstants.TABLES_TABLE);
-			for(OpOperation op : ops) {
-				registerTableDefinition(op, false);
-			}
-		}
+		LOGGER.info("... TODO Database mapping. Loading table definitions and mappings ...");
+//		System.out.println(metadataDB.tablesSpec);
+//		if(metadataDB.tablesSpec.containsKey(DBConstants.TABLES_TABLE)) {
+//			List<OpOperation> ops = loadOperations(DBConstants.TABLES_TABLE);
+//			for(OpOperation op : ops) {
+//				registerTableDefinition(op, false);
+//			}
+//		}
 		LOGGER.info(String.format("+++ Database mapping is inititialized. Loaded %d table definitions, %d mappings", 
 				tableDefinitions.size(), opTableMappings.size()));
 	}

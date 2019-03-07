@@ -335,6 +335,10 @@ public class OpBlockChain {
 		return getLastBlockId();
 	}
 	
+	public Deque<OpBlock> getBlocks() {
+		return blocks;
+	}
+	
 	public int getSubchainSize() {
 		return blocks.size();
 	}
@@ -517,6 +521,9 @@ public class OpBlockChain {
 	
 	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
+		if(refs == null) {
+			return true;
+		}
 		Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
 		while(it.hasNext()) {
 			Entry<String, List<String>> e = it.next();

@@ -35,7 +35,7 @@ public class OpObject {
 	}
 	
 	protected Map<String, Object> fields = new TreeMap<>();
-	protected OpOperation operation;
+	protected transient OpOperation operation;
 	
 	public OpObject() {}
 	
