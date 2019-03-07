@@ -108,8 +108,8 @@ public class OpBlockChain {
 		if(blocks.size() > 0) {
 			return false;
 		}
-		for(OpBlock o : blocks) {
-			int blDept = newParent.getBlockDepth(o.getHash());
+		for(OpBlock bl : blocks) {
+			int blDept = newParent.getBlockDepth(bl.getHash());
 			if(blDept < 0) {
 				return false;
 			}
@@ -143,7 +143,7 @@ public class OpBlockChain {
 		Iterator<OpOperation> it = operations.iterator();
 		while(it.hasNext()) {
 			OpOperation o = it.next();
-			OperationDeleteInfo odi = newParent.getOperationInfo(o.getHash(), depth);
+			OperationDeleteInfo odi = newParent.getOperationInfo(o.getRawHash(), depth);
 			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
 			if(odi != null && odi.create) {
 				it.remove();
@@ -243,7 +243,7 @@ public class OpBlockChain {
 
 	private void atomicRemoveOperation(OpOperation op, List<OpOperation> prevOperationsSameType) {
 		// delete operation itself
-		OperationDeleteInfo odi = opsByHash.get(op.getHash());
+		OperationDeleteInfo odi = opsByHash.get(op.getRawHash());
 		odi.create = false;
 		// delete deleted objects by name
 		List<String> deletedRefs = op.getOld();
@@ -261,9 +261,9 @@ public class OpBlockChain {
 		for (OpObject ok : op.getNew()) {
 			List<String> id = ok.getId();
 			if (id != null && id.size() > 0) {
-				String objType = id.get(0);
+				String objType = op.getType();
 				ObjectInstancesById oinf = getObjectsByIdMap(objType, true);
-				OpObject currentObj = oinf.getObjectById(1, id);
+				OpObject currentObj = oinf.getObjectById(id);
 				if (ok.equals(currentObj)) {
 					OpObject p = null;
 					if (prevOperationsSameType != null) {
@@ -403,13 +403,12 @@ public class OpBlockChain {
 		return ot.getObjectById(key, secondary);
 	}
 	
-	private OpObject getObjectByName(List<String> o) {
-		String objType = o.get(0);
+	private OpObject getObjectByName(String objType, List<String> o) {
 		ObjectInstancesById ot = getObjectsByIdMap(objType, false);
 		if(ot == null) {
 			return null;
 		}
-		return ot.getObjectById(1, o);
+		return ot.getObjectById(o);
 	}
 	
 	
@@ -430,10 +429,10 @@ public class OpBlockChain {
 	}
 	
 	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
-		for(OpObject newObj : u.getNew()){
+		for (OpObject newObj : u.getNew()) {
 			List<String> id = newObj.getId();
-			if(id != null && id.size() > 0) {
-				String objType = id.get(0);
+			if (id != null && id.size() > 0) {
+				String objType = u.getType();
 				ObjectInstancesById oinf = getObjectsByIdMap(objType, true);
 				oinf.add(id, newObj);
 			}
@@ -455,11 +454,13 @@ public class OpBlockChain {
 		OperationDeleteInfo infop = new OperationDeleteInfo();
 		infop.op = u;
 		infop.create = true;
-		opsByHash.put(u.getHash(), infop);
+		opsByHash.put(u.getRawHash(), infop);
+		
+		operations.add(u);
 	}
 	
 	private OperationDeleteInfo getOperationInfo(String hash, int maxdepth) {
-		if(getLastBlockId() <= maxdepth) {
+		if(getLastBlockId() <= maxdepth && maxdepth != -1) {
 			return null;
 		}
 		OperationDeleteInfo cdi = opsByHash.get(hash);
@@ -497,12 +498,17 @@ public class OpBlockChain {
 	}
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
-		OperationDeleteInfo oin = getOperationInfo(u.getHash(), -1);
-		boolean valid = true;
+		OperationDeleteInfo oin = getOperationInfo(u.getRawHash(), -1);
 		if(oin != null) {
-			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
+			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getRawHash(), ctx.blockHash);
 		}
+		boolean valid = true;
 		valid = prepareDeletedObjects(u, ctx);
+		if(!valid) {
+			return false;
+		}
+		// should be called after prepareDeletedObjects (so cache is prepared)
+		valid = prepareNoNewDuplicatedObjects(u, ctx);
 		if(!valid) {
 			return false;
 		}
@@ -533,13 +539,15 @@ public class OpBlockChain {
 			if(refObjName.size() > 1) {
 				// type is necessary
 				OpBlockChain blc = this;
+				String objType = refObjName.get(0);
+				List<String> refKey = refObjName.subList(1, refObjName.size());
 				while (blc != null && oi == null) {
-					oi = blc.getObjectByName(refObjName);
+					oi = blc.getObjectByName(objType, refKey);
 					blc = blc.parent;
 				}
 			}
 			if(oi == null) {
-				return ctx.rules.error(ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
+				return ctx.rules.error(ErrorType.REF_OBJ_NOT_FOUND, u.getRawHash(), refObjName);
 			}
 			ctx.refObjsCache.put(refName, oi);
 		}
@@ -557,17 +565,47 @@ public class OpBlockChain {
 			
 			OperationDeleteInfo opInfo = getOperationInfo(delHash, -1);
 			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
-				return ctx.rules.error(ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), delRef);
+				return ctx.rules.error(ErrorType.DEL_OBJ_NOT_FOUND, u.getRawHash(), delRef);
 			}
 			if(opInfo.deletedObjects != null || delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd]) {
-					return ctx.rules.error(ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
+					return ctx.rules.error(ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getRawHash(), 
 							delRef, opInfo.deletedObjects[delInd]);
 				}
 			}
 			List<OpObject> nw = opInfo.op.getNew();
 			ctx.deletedObjsCache.add(nw.get(delInd));
 			ctx.deletedOpsCache.add(opInfo.op);
+		}
+		return true;
+	}
+	
+	private boolean prepareNoNewDuplicatedObjects(OpOperation u, LocalValidationCtx ctx) {
+		List<OpObject> list = u.getNew();
+		for(int i = 0; i < list.size(); i++) {
+			OpObject o = list.get(i);
+			// check duplicates in same operation
+			for(int j = 0; j < i; j++) {
+				OpObject oj = list.get(j);
+				if(OUtils.equals(oj.getId(), o.getId())) {
+					return ctx.rules.error(ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getRawHash(), 
+							o.getId());
+				}
+			}
+			boolean newVersion = false;
+			for(OpObject del : ctx.deletedObjsCache) {
+				if(OUtils.equals(del.getId(), o.getId())) {
+					newVersion = true;
+					break;
+				}
+			}
+			if(!newVersion) {
+				OpObject exObj = getObjectByName(u.getType(), o.getId());
+				if(exObj != null) {
+					return ctx.rules.error(ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getRawHash(), 
+							o.getId());	
+				}
+			}
 		}
 		return true;
 	}

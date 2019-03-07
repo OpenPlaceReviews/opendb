@@ -44,14 +44,15 @@ public class LoginSignupController {
 			if (!OUtils.isEmpty(pwd)) {
 				kp = manager.getLoginKeyPairFromPwd(name, pwd);
 			} else if (!OUtils.isEmpty(privateKey)) {
-				kp = manager.getLoginKeyPair(name, privateKey);
+				kp = SecUtils.getKeyPair(SecUtils.ALGO_EC, privateKey, null);
 			}
 			if (kp == null) {
 				throw new IllegalArgumentException("Couldn't validate sign up key");
 			}
 			op.setSignedBy(name);
 		}
-		if (!OUtils.isEmpty(manager.getServerUser()) && OUtils.isEmpty(dontSignByServer)) {
+		if (!OUtils.isEmpty(manager.getServerUser()) && 
+				(OUtils.isEmpty(dontSignByServer) || !dontSignByServer.equals("on"))) {
 			if (!OUtils.isEmpty(name)) {
 				op.addOtherSignedBy(manager.getServerUser());
 				altKp = manager.getServerLoginKeyPair();

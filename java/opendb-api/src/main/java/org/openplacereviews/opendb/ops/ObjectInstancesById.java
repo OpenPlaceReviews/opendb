@@ -21,8 +21,8 @@ public class ObjectInstancesById {
 		this.parentInfo = pi;
 	}
 	
-	public OpObject getObjectById(int subind, List<String> key) {
-		ListKey k = new ListKey(subind, key);
+	public OpObject getObjectById(List<String> key) {
+		ListKey k = new ListKey(0, key);
 		return getByKey(k);
 	}
 
@@ -59,7 +59,7 @@ public class ObjectInstancesById {
 	}
 	
 	public void add(List<String> id, OpObject newObj) {
-		if(newObj == null) {
+		if(newObj != null) {
 			objects.put(new ListKey(0, id), newObj);
 		} else {
 			objects.remove(new ListKey(0, id));

@@ -88,6 +88,20 @@
         <br>
         <input type="submit" value="Login" id="login-btn"/>
       </div>
+      <h3>Sign message</h3>
+      <div>
+          1. Json: <input type="text" id="sign-json"/> 
+        <br>
+          2. Name (empty will be server): <input type="text" id="sign-name"/> 
+        <br>
+          3a. Password: <input type="text" id="sign-pwd"/> 
+        <br>
+          3b. Signup private key: <input type="text" id="sign-pk"/> 
+        <br>
+          4. Don't sign by server: <input type="checkbox" id="sign-by-server"/>  
+        <br>
+        <input type="submit" value="Sign message" id="sign-btn"/>
+      </div>
     </div>
   </div>
 </body>
@@ -251,6 +265,18 @@ $( document ).ready(function() {
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
+    $("#sign-btn").click(function() {
+      var obj = {
+        "json":$("#sign-json").val(),
+        "name":$("#sign-name").val(),
+        "pwd":$("#sign-pwd").val(),
+        "privateKey":$("#sign-pk").val(),
+        "dontSignByServer":$("#sign-by-server").val()
+      };
+      $.post("/api/sign-msg", obj)
+          .done(function(data){  $("#result").html(data); loadData();})
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+    });
     $("#login-btn").click(function() {
       var obj = {
         "name":$("#login-name").val(),

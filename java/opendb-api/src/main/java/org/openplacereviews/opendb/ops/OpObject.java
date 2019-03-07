@@ -49,10 +49,6 @@ public class OpObject {
 		this.fields.putAll(cp.fields);
 	}
 	
-	public String getType() {
-		return operation != null ? operation.getOperationType() : null;
-	}
-	
 	public List<String> getId() {
 		return getStringList(F_ID);
 	}

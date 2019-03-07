@@ -65,13 +65,21 @@ public class OpOperation extends OpObject {
 		return getStringList(F_SIGNED_BY);
 	}
 	
-	@Override
 	public String getType() {
-		return TYPE_OP;
+		return type;
 	}
 	
 	public String getHash() {
 		return getStringValue(F_HASH);
+	}
+	
+	public String getRawHash() {
+		String rw = getStringValue(F_HASH);
+		// drop algorithm and everything else
+		if(rw != null) {
+			rw = rw.substring(rw.lastIndexOf(':') + 1);
+		}
+		return rw;
 	}
 	
 	public List<String> getSignatureList() {
