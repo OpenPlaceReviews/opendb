@@ -203,9 +203,9 @@ function loadQueueData() {
         items += "<br><b>Add/remove objects</b>: " + 
                 (op.new ? op.new.length : "0") + " / " + (op.old ? op.old.length : "0");
         if(op.new && op.new.length > 0) {
-          items += "<br><b>Name</b>: " + op.new[0].name;
+          items += "<br><b>Name</b>: " + op.new[0].id;
         } else if(op.old && op.old.length > 0) {
-          items += "<br><b>Name</b>: " + op.old[0].name;
+          items += "<br><b>Name</b>: " + op.old[0].id;
         }
         items += "<br><b>Signed by</b>: " + op.signed_by;
         items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);

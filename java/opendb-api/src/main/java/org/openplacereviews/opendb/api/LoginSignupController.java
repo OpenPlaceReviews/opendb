@@ -85,7 +85,7 @@ public class LoginSignupController {
     	op.setOperationType(OperationsRegistry.OP_SIGNUP);
     	OpObject obj = new OpObject();
     	op.addNew(obj);
-    	obj.putStringValue(OpBlockchainRules.F_NAME, name);
+    	obj.setId(name);
     	if(!OUtils.isEmpty(userDetails)) {
     		obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
     	}
@@ -150,11 +150,12 @@ public class LoginSignupController {
     	op.setOperationType(OperationsRegistry.OP_LOGIN);
     	OpObject obj = new OpObject();
     	op.addNew(obj);
-    	obj.putStringValue(OpBlockchainRules.F_NAME, name);
+    	
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
 		String nickname = OpBlockchainRules.getNicknameFromUser(name);
 		String purpose = OpBlockchainRules.getSiteFromUser(name);
+		obj.setId(nickname, purpose);
 		if(!OpBlockchainRules.validateNickname(purpose)) {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}
@@ -186,7 +187,7 @@ public class LoginSignupController {
 			op.setSignedBy(serverName);
 		}
 		if (kp == null) {
-			throw new IllegalArgumentException("Couldn't validate sign up key or server key for oauth");
+			throw new IllegalArgumentException("Couldn't validate/find sign up key or server key for oauth");
 		}
     	
     	KeyPair loginPair;

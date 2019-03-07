@@ -53,6 +53,17 @@ public class OpObject {
 		return getStringList(F_ID);
 	}
 	
+	public void setId(String id) {
+		addOrSetStringValue(F_ID, id);;
+	}
+	
+	public void setId(String id, String id2) {
+		List<String> list = new ArrayList<String>();
+		list.add(id);
+		list.add(id2);
+		fields.put(F_ID, list);
+	}
+	
 	public OpOperation getOperation() {
 		return operation;
 	}
