@@ -101,7 +101,7 @@ public class BlockController {
     @ResponseBody
 	public String blocksList() throws FailedVerificationException {
 		BlockchainResult res = new BlockchainResult();
-		res.blockchain = manager.getBlockcchain().getBlocks();
+		res.blockchain = manager.getBlockchain().getBlocks(100);
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState().name();
 		return formatter.objectToJson(res);

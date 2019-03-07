@@ -242,7 +242,7 @@ public class OpBlockchainRules {
 			return error(ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED, blockHash, calculateSigMerkleTreeHash(block),
 					block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH));
 		}
-		if (!OUtils.equals(calculateHash(block), prevBlock.getHash())) {
+		if (!OUtils.equals(calculateHash(block), block.getHash())) {
 			return error(ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
 		}
 		OpObject keyObj = getLoginKeyObj(blockChain, block.getStringValue(OpBlock.F_SIGNED_BY));
@@ -281,7 +281,7 @@ public class OpBlockchainRules {
 		if(OperationsRegistry.OP_SIGNUP.equals(ob.getType()) && ob.getNew().size() == 1) {
 			OpObject obj = ctx.getObjectByName(OperationsRegistry.OP_SIGNUP, signupName);
 			firstSignup = obj == null;
-			signupName =  ob.getNew().get(0).getName();
+			signupName =  ob.getNew().get(0).getId().get(0);
 		}
 		// 1st signup could be signed by itself
 		for (int i = 0; i < sigs.size(); i++) {
@@ -383,8 +383,8 @@ public class OpBlockchainRules {
 		OpBlock block = new OpBlock();
 		block.operations.addAll(ops);
 		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
-		block.putObjectValue(OpBlock.F_BLOCKID, (Integer) (prevOpBlock.getBlockId() + 1));
-		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlock.getHash());
+		block.putObjectValue(OpBlock.F_BLOCKID, prevOpBlock == null ? 0 : (prevOpBlock.getBlockId() + 1));
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlock == null ? "" : prevOpBlock.getHash());
 		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, calculateMerkleTreeHash(block));
 		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, calculateSigMerkleTreeHash(block));
 		if (serverUser != null) {

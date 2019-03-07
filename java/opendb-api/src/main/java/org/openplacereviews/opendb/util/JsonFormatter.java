@@ -22,6 +22,7 @@ public class JsonFormatter {
 		GsonBuilder builder = new GsonBuilder();
 		builder.disableHtmlEscaping();
 		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpOperationBeanAdapter());
+		builder.registerTypeAdapter(OpBlock.class, new OpBlock.OpBlockBeanAdapter());
 		gson = builder.create();
 	}
 	

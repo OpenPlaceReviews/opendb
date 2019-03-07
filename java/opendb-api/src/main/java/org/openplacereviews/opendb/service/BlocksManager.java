@@ -108,7 +108,7 @@ public class BlocksManager {
 		return opBlock;
 	}
 	
-	public OpBlockChain getBlockcchain() {
+	public OpBlockChain getBlockchain() {
 		return blockchain;
 	}
 

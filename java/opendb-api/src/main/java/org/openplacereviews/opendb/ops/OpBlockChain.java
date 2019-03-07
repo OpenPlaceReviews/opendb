@@ -335,10 +335,20 @@ public class OpBlockChain {
 		return getLastBlockId();
 	}
 	
-	public Deque<OpBlock> getBlocks() {
-		return blocks;
+	public List<OpBlock> getBlocks(int depth) {
+		List<OpBlock> lst = new ArrayList<>();
+		fetchBlocks(lst, depth);
+		return lst;
 	}
 	
+	private void fetchBlocks(List<OpBlock> lst, int depth) {
+		lst.addAll(blocks);
+		depth -= blocks.size();
+		if(parent != null && depth > 0) {
+			parent.fetchBlocks(lst, depth);
+		}
+	}
+
 	public int getSubchainSize() {
 		return blocks.size();
 	}
