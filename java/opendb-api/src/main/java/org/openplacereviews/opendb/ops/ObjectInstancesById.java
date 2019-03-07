@@ -1,8 +1,10 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.openplacereviews.opendb.OUtils;
@@ -36,6 +38,24 @@ public class ObjectInstancesById {
 	
 	public OpObject getObjectById(String primaryKey, String secondaryKey) {
 		return getByKey(new ListKey(primaryKey, secondaryKey)); 
+	}
+	
+	public void mergeWithParent(ObjectInstancesById prev) {
+		if(!OUtils.equals(prev.type, type) ) {
+			throw new IllegalStateException(String.format("Previous type %s doesn't match current type %s", prev.type, type)); 
+		}
+		if (prev != parentInfo) {
+			throw new IllegalStateException(String.format("Current obj by name map doesn't match parent with merge parent %s",type));
+		}
+		this.parentInfo = parentInfo.parentInfo;
+		Iterator<Entry<ListKey, OpObject>> objs = prev.objects.entrySet().iterator();
+		while(objs.hasNext()) {
+			Entry<ListKey, OpObject> e = objs.next();
+			if(!objects.containsKey(e.getKey())) {
+				objects.put(e.getKey(), e.getValue());
+			}
+		}
+		
 	}
 	
 	public void add(List<String> id, OpObject newObj) {
@@ -126,9 +146,6 @@ public class ObjectInstancesById {
 			return true;
 		}
 	}
-
-	
-
 
 	
 }

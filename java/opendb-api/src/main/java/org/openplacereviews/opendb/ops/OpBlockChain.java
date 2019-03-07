@@ -27,7 +27,12 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
  *      - to properly prepare for modification and know that none of the internal objects will change during validation & preparation
  *      - method compact / merge requires 2 objects to go synchronized
  *  4. Change methods return true/false and throw exception, if object remains unlocked it means that exception wasn't fatal
- *  
+ *  5. There are 5 atomic operations: 
+ *      - atomicCreateBlockFromAllOps / createBlock - combines queue operations into a block
+ *      - atomicChangeParent / changeParent - change parent blockchain (git rebase), used for replication between blockchains or resolving conflicts
+ *      - atomicMergeWithParent / compact + mergeWithParent - used for compacting blockchain and create super blocks
+ *      - atomicRemoveOperation / - - used in atomicChangeParent
+ *      - atomicAddOperationAfterPrepare  / addOperation - used to add operation into a queue
  *
  */
 public class OpBlockChain {
@@ -36,19 +41,21 @@ public class OpBlockChain {
 	private static final int LOCKED_ERROR = -1;
 	private static final int LOCKED_SUCCESS =  1;
 	private static final int UNLOCKED =  0;
-	private static final int COMPACT_COEF = 1; 
+	// check SimulateSuperblockCompactSequences to verify numbers
+	private static final double COMPACT_COEF = 0.5;
 	private int locked = UNLOCKED; // 0, -1 error, 1 intentional
 
-	// parent chain
+	// 0. parent chain
 	private OpBlockChain parent;
-	// list of blocks
+	// 1. list of blocks
 	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
+	// 2. block hash ids link to blocks
 	private final Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
-	// operations to be stored like a queue 
+	// 3. operations to be stored like a queue 
 	private final Deque<OpOperation> operations = new ConcurrentLinkedDeque<OpOperation>();
-	// stores information about created and deleted objects in this blockchain 
+	// 4. stores information about created and deleted objects in this blockchain 
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
-	// stores information about last object by name in this blockchain
+	// 5. stores information about last object by name in this blockchain
 	private final Map<String, ObjectInstancesById> objByName = new ConcurrentHashMap<>();
 
 	
@@ -161,53 +168,67 @@ public class OpBlockChain {
 	public synchronized boolean mergeWithParent() {
 		// no need to change that state is not locked
 		if(parent != null) {
-			OpBlockChain newParent = parent.parent;
-			parent.blockDepth.putAll(this.blockDepth);
-			for(OpBlock last : parent.blocks) {
-				this.blocks.addLast(last);
-			}
-			Iterator<OpOperation> desc = operations.descendingIterator();
-			while(desc.hasNext()) {
-				operations.addFirst(desc.next());
-			}
-			Iterator<Entry<String, OperationDeleteInfo>> deleteInfoIt = parent.opsByHash.entrySet().iterator();
-			while(deleteInfoIt.hasNext()) {
-				Entry<String, OperationDeleteInfo> e = deleteInfoIt.next();
-				if(!this.opsByHash.containsKey(e.getKey())) {
-					this.opsByHash.put(e.getKey(), e.getValue());
-				} else {
-					OperationDeleteInfo ndi = mergeDeleteInfo(this.opsByHash.get(e.getKey()), 
-							e.getValue());
-					this.opsByHash.put(e.getKey(), ndi);
+			locked = LOCKED_SUCCESS;
+			try {
+				atomicMergeWithParent();
+				locked = UNLOCKED;
+			} finally {
+				if(locked == LOCKED_SUCCESS) {
+					locked = LOCKED_ERROR;
 				}
 			}
-			Iterator<Entry<String, ObjectInstancesById>> byNameIterator = parent.objByName.entrySet().iterator();
-			while(byNameIterator.hasNext()) {
-				Entry<String, ObjectInstancesById> e = byNameIterator.next();
-				ObjectInstancesById exId = this.objByName.get(e.getKey());
-				if(exId == null) {
-					this.objByName.put(e.getKey(), e.getValue());
-				} else {
-					exId.mergeWith(e.getValue());
-				}
-			}
-			parent = newParent;
 		}
 		return true;
+	}
+
+	private void atomicMergeWithParent() {
+		OpBlockChain newParent = parent.parent;
+		// 1, 2. add blocks and their hashes
+		for(OpBlock last : parent.blocks) {
+			this.blocks.addLast(last);
+		}
+		blockDepth.putAll(this.parent.blockDepth);
+		
+		// 3. merge queue operations
+		Iterator<OpOperation> desc = operations.descendingIterator();
+		while(desc.hasNext()) {
+			operations.addFirst(desc.next());
+		}
+		// 4. merge operations cache with create delete info
+		Iterator<Entry<String, OperationDeleteInfo>> deleteInfoIt = parent.opsByHash.entrySet().iterator();
+		while(deleteInfoIt.hasNext()) {
+			Entry<String, OperationDeleteInfo> e = deleteInfoIt.next();
+			if(!this.opsByHash.containsKey(e.getKey())) {
+				this.opsByHash.put(e.getKey(), e.getValue());
+			} else {
+				OperationDeleteInfo ndi = mergeDeleteInfo(this.opsByHash.get(e.getKey()), 
+						e.getValue());
+				this.opsByHash.put(e.getKey(), ndi);
+			}
+		}
+		// 5. merge named objects 
+		Iterator<Entry<String, ObjectInstancesById>> byNameIterator = parent.objByName.entrySet().iterator();
+		while(byNameIterator.hasNext()) {
+			Entry<String, ObjectInstancesById> e = byNameIterator.next();
+			ObjectInstancesById exId = this.objByName.get(e.getKey());
+			if(exId == null) {
+				this.objByName.put(e.getKey(), e.getValue());
+			} else {
+				exId.mergeWithParent(e.getValue());
+			}
+		}
+		// 0. change parent
+		parent = newParent;
 	}
 	
 	public synchronized boolean compact() {
 		// synchronized cause internal objects could be changed
-		// 1, 1, 1 -> 1, 2
-		// 1, 1, 2 -> 1, 3
-		// 1, 1, 3
-		// 1, 2, 3
+ 
 		if(parent != null && parent.parent != null) {
 			if(COMPACT_COEF * (parent.getSubchainSize()  + getSubchainSize()) >= parent.parent.getSubchainSize() ) {
 				parent.mergeWithParent();
-			} else {
-				parent.compact();
 			}
+			parent.compact();
 		}
 		return true;
 		
