@@ -286,7 +286,7 @@ public class OpBlockchainRules {
 		// 1st signup could be signed by itself
 		for (int i = 0; i < sigs.size(); i++) {
 			Exception cause = null;
-			boolean validate = true;
+			boolean validate = false;
 			try {
 				String sig = sigs.get(i);
 				String signedByName = signedBy.get(i);
@@ -366,6 +366,9 @@ public class OpBlockchainRules {
 		return null;
 	}	
 	private KeyPair getKeyPairFromObj(OpObject op, String privatekey) throws FailedVerificationException {
+		if(op == null) {
+			return null;
+		}
 		String algo = op.getStringValue(F_ALGO);
 		KeyPair kp = SecUtils.getKeyPair(algo, privatekey, op.getStringValue(F_PUBKEY));
 		if (privatekey == null || SecUtils.validateKeyPair(algo, kp.getPrivate(), kp.getPublic())) {

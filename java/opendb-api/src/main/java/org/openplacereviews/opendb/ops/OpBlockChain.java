@@ -446,8 +446,10 @@ public class OpBlockChain {
 			if(pi == null) {
 				pi = new OperationDeleteInfo();
 				pi.op = validationCtx.deletedOpsCache.get(i);
-				pi.deletedObjects = new boolean[pi.op.getNew().size()];
 				opsByHash.put(delHash, pi);
+			}
+			if(pi.deletedObjects == null) {
+				pi.deletedObjects = new boolean[pi.op.getNew().size()];
 			}
 			pi.deletedObjects[delInd] = true;
 		}
@@ -567,7 +569,7 @@ public class OpBlockChain {
 			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
 				return ctx.rules.error(ErrorType.DEL_OBJ_NOT_FOUND, u.getRawHash(), delRef);
 			}
-			if(opInfo.deletedObjects != null || delInd < opInfo.deletedObjects.length){
+			if(opInfo.deletedObjects != null && delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd]) {
 					return ctx.rules.error(ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getRawHash(), 
 							delRef, opInfo.deletedObjects[delInd]);

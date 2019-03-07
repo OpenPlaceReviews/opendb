@@ -98,6 +98,10 @@ public class OpOperation extends OpObject {
 		return newObjects;
 	}
 	
+	public void addNew(OpObject o) {
+		newObjects.add(o);
+	}
+	
 	public boolean hasNew() {
 		return newObjects.size() > 0;
 	}
