@@ -29,6 +29,9 @@ public class OpObject {
 	public static final String TYPE_OP = "sys.op";
 	public static final String TYPE_BLOCK = "sys.block";
 	public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+	// transient info about validation timing etc
+	public static final String F_VALIDATION = "validation";
+
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	{
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));

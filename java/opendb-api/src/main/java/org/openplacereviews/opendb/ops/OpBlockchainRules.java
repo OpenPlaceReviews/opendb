@@ -213,10 +213,12 @@ public class OpBlockchainRules {
 		return true;
 	}
 	
-	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock) {
+	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock, 
+			ValidationTimer tmr) {
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
 		int pid = -1;
+		int timerBlockValid = tmr.startExtra();
 		if (prevBlock != null) {
 			if (!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
 				return error(ErrorType.BLOCK_PREV_HASH, prevBlock.getHash(),
@@ -245,6 +247,7 @@ public class OpBlockchainRules {
 		if (!OUtils.equals(calculateHash(block), block.getHash())) {
 			return error(ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
 		}
+		
 		OpObject keyObj = getLoginKeyObj(blockChain, block.getStringValue(OpBlock.F_SIGNED_BY));
 		boolean validateSig = true;
 		Exception ex = null;
@@ -266,6 +269,7 @@ public class OpBlockchainRules {
 		if (!validateSig) {
 			return error(ErrorType.BLOCK_SIGNATURE_FAILED, blockHash, block.getStringValue(OpBlock.F_SIGNED_BY), ex);
 		}
+		tmr.measure(timerBlockValid, ValidationTimer.BLOCK_HEADER_VALID);
 		return true;
 	}
 	
@@ -310,7 +314,7 @@ public class OpBlockchainRules {
 	
 	
 	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, List<OpObject> deletedObjsCache,
-			Map<String, OpObject> refObjsCache) {
+			Map<String, OpObject> refObjsCache, ValidationTimer vld) {
 		if(!OUtils.equals(calculateOperationHash(u, false), u.getHash())) {
 			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
 		}
@@ -319,15 +323,19 @@ public class OpBlockchainRules {
 		if (sz > OpBlockchainRules.MAX_OP_SIZE_MB) {
 			return error(ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
 		}
+		int timerSigs = vld.startExtra();
 		boolean valid = validateSignatures(opBlockChain, u);
+		vld.measure(timerSigs, ValidationTimer.OP_SIG);
 		if(!valid) {
 			return valid;
 		}
+		int timerRoles = vld.startExtra();
 		valid = validateRoles(opBlockChain, u, deletedObjsCache, refObjsCache);
+		vld.measure(timerRoles, ValidationTimer.OP_SIG);
+		
 		if(!valid) {
 			return valid;
 		}
-		
 		return true;
 	}
 	

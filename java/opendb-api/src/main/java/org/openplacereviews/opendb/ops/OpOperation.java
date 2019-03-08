@@ -22,8 +22,6 @@ public class OpOperation extends OpObject {
 	public static final String F_HASH = "hash";
 	
 	public static final String F_SIGNATURE = "signature";
-	// transient info about validation timing etc
-	public static final String F_VALIDATION = "validation";
 	
 	public static final String F_REF = "ref";
 	public static final String F_NEW = "new";

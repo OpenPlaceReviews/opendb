@@ -29,6 +29,7 @@
           <div>
             <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
             <input type="submit" value="Create block" id="block-create-btn"/>
+            <input type="submit" value="Revert super block" id="block-revert-btn"/>
             <input type="submit" value="Toggle pause blockchain" id="block-pause-btn"/>
           </div>
     </div>
@@ -237,6 +238,11 @@ $( document ).ready(function() {
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
+    $("#block-revert-btn").click(function(){
+       $.post("/blockchain-mgmt/revert-superblock", {})
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
     $("#block-pause-btn").click(function(){
        $.post("/blockchain-mgmt/toggle-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })

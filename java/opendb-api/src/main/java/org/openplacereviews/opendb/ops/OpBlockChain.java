@@ -57,6 +57,7 @@ public class OpBlockChain {
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
 	// 5. stores information about last object by name in this blockchain
 	private final Map<String, ObjectInstancesById> objByName = new ConcurrentHashMap<>();
+	private ValidationTimer vld;
 
 	
 	public OpBlockChain(OpBlockChain parent) {
@@ -82,10 +83,10 @@ public class OpBlockChain {
 		}
 	}
 	
-	public synchronized OpBlock createBlock(OpBlockchainRules rules) throws FailedVerificationException {
+	public synchronized OpBlock createBlock(OpBlockchainRules rules, ValidationTimer timer) throws FailedVerificationException {
 		validateIsUnlocked();
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock());
-		boolean valid = rules.validateBlock(this, block, getLastBlock());
+		boolean valid = rules.validateBlock(this, block, getLastBlock(), timer);
 		if(!valid) {
 			return null;
 		}
@@ -351,6 +352,11 @@ public class OpBlockChain {
 		return lst;
 	}
 	
+	
+	public Collection<OpBlock> getSubchainBlocks() {
+		return blocks;
+	}
+	
 	private void fetchBlocks(List<OpBlock> lst, int depth) {
 		lst.addAll(blocks);
 		depth -= blocks.size();
@@ -520,6 +526,7 @@ public class OpBlockChain {
 	}
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
+		vld = new ValidationTimer().start();
 		OperationDeleteInfo oin = getOperationInfo(u.getRawHash(), -1);
 		if(oin != null) {
 			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getRawHash(), ctx.blockHash);
@@ -538,10 +545,13 @@ public class OpBlockChain {
 		if(!valid) {
 			return valid;
 		}
-		valid = ctx.rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache);
+		vld.measure(ValidationTimer.OP_PREPARATION);
+		valid = ctx.rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache, vld);
 		if(!valid) {
 			return valid;
 		}
+		vld.measure(ValidationTimer.OP_VALIDATION);
+		u.putObjectValue(OpObject.F_VALIDATION, vld.getTimes());
 		return true;
 	}
 	

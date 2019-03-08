@@ -15,6 +15,7 @@ import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.ValidationTimer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,36 +68,86 @@ public class BlocksManager {
 		return blockchainRules.getServerKeyPair();
 	}
 	
-	public synchronized void addOperation(OpOperation op) {
+	public synchronized boolean addOperation(OpOperation op) {
 		// TODO LOG success or failure (create queue of failed) ops
-		blockchain.addOperation(op, blockchainRules);
+		return blockchain.addOperation(op, blockchainRules);
 	}
 	
 	public synchronized void clearQueue() {
+		// there is no proper clear queue on atomc load
 		blockchain = new OpBlockChain(blockchain.getParent());
 	}
 	
-	public synchronized OpBlock createBlock() throws FailedVerificationException {
+	public synchronized boolean revertSuperblock() throws FailedVerificationException {
+		// TODO add logging for failures like addOperation, createBlock, changeParent
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
+		if(blockchain.getParent() == null) {
+			return false;
+		}
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent());
+		OpBlockChain pnt = blockchain.getParent();
+		for(OpBlock bl :  pnt.getSubchainBlocks()) {
+			for (OpOperation u : bl.getOperations()) {
+				if (!blc.addOperation(u, blockchainRules)) {
+					return false;
+				}
+			}
+		}
+		for(OpOperation o: blockchain.getOperations()) {
+			if(!blc.addOperation(o, blockchainRules)) {
+				return false;
+			}
+		}
+		blockchain = blc;
+		return true;
+	}
+	
+	public synchronized OpBlock createBlock() throws FailedVerificationException {
+		// should be changed synchronized in future:
+		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
+		
 		// TODO add logging for failures like addOperation, createBlock, changeParent
+		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
+			throw new IllegalStateException("Blockchain is not ready to create block");
+		}
+		ValidationTimer timer = new ValidationTimer();
+		timer.start();
+		
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getOperations());
+		
+		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent());
 		for (OpOperation o : candidates) {
 			if(!blc.addOperation(o, blockchainRules)) {
 				return null;
 			}
 		}
-		OpBlock opBlock = blc.createBlock(blockchainRules);
+		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
+		
+		int tmNewBlock = timer.startExtra();
+		OpBlock opBlock = blc.createBlock(blockchainRules, timer);
 		if(opBlock == null) {
 			return null;
 		}
+		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
+		
+		
+		int tmRebase = timer.startExtra();
 		boolean changeParent = blockchain.changeParent(blc);
 		if(!changeParent) {
 			return null;
 		}
+		timer.measure(tmRebase, ValidationTimer.BLC_REBASE);
+		
+		
+		int tmCompact = timer.startExtra();
 		blc.compact();
+		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
+		
+		timer.measure(ValidationTimer.BLC_TOTAL_BLOCK);
+		opBlock.putObjectValue(OpObject.F_VALIDATION, timer.getTimes());
 		return opBlock;
 	}
 	

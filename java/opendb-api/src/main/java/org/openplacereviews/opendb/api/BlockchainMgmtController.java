@@ -41,6 +41,15 @@ public class BlockchainMgmtController {
     	return formatter.objectToJson(block);
     }
     
+    @PostMapping(path = "/revert-superblock", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public String revertSuperblock() throws FailedVerificationException {
+    	if(!manager.revertSuperblock()) {
+    		return "{\"status\":\"FAILED\", \"msg\":\"Revert super block failed\"}";
+    	}
+    	return "{\"status\":\"OK\", \"msg\":\"Blocks are reverted and operations added to the queue.\"}";
+    }
+    
     @PostMapping(path = "/toggle-pause", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String toggleBlockCreation() {

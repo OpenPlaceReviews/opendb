@@ -74,7 +74,7 @@
 			"signed_by": "openplacereviews",
 			"new" : {
 				"id" : "only_one_mod_possible_for_valid",
-				"type" : ["sys:role", "sys.validate"],
+				"type" : ["sys.role", "sys.validate"],
 				"role" : "none",
 				"validate" : [
 					"bool:leq(std:size(.old), 1)",
