@@ -67,16 +67,16 @@ public class BlocksManager {
 		return blockchainRules.getServerKeyPair();
 	}
 	
-	public void addOperation(OpOperation op) {
+	public synchronized void addOperation(OpOperation op) {
 		// TODO LOG success or failure (create queue of failed) ops
 		blockchain.addOperation(op, blockchainRules);
 	}
 	
-	public void clearQueue() {
+	public synchronized void clearQueue() {
 		blockchain = new OpBlockChain(blockchain.getParent());
 	}
 	
-	public OpBlock createBlock() throws FailedVerificationException {
+	public synchronized OpBlock createBlock() throws FailedVerificationException {
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
@@ -104,7 +104,7 @@ public class BlocksManager {
 		return blockchain;
 	}
 
-	public void init(MetadataDb metadataDB) {
+	public synchronized void init(MetadataDb metadataDB) {
 		LOGGER.info("... Blockchain. Loading blocks...");
 		KeyPair serverKeyPair;
 		try {
@@ -122,7 +122,7 @@ public class BlocksManager {
 	}
 	
 	
-	public boolean resumeBlockCreation() {
+	public synchronized boolean resumeBlockCreation() {
 		if(blockchain.getStatus() == OpBlockChain.LOCKED_SUCCESS) {
 			blockchain.makeMutable();
 			return true;
@@ -130,7 +130,7 @@ public class BlocksManager {
 		return false;
 	}
 	
-	public boolean pauseBlockCreation() {
+	public synchronized boolean pauseBlockCreation() {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
 			blockchain.makeImmutable();
 			return true;
@@ -148,9 +148,25 @@ public class BlocksManager {
 	}
 	
 	public boolean isBlockchainPaused() {
-		return blockchain.getStatus() == OpBlockChain.UNLOCKED;
+		return blockchain.getStatus() != OpBlockChain.UNLOCKED;
 	}
 	
+	public OpBlock getLastBlock() {
+		return blockchain.getLastBlock();
+	}
+
+	public KeyPair getLoginKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
+		return blockchainRules.getSignUpKeyPairFromPwd(blockchain, name, pwd);
+	}
+	
+	public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
+		return blockchainRules.getLoginKeyPair(blockchain, name, privateKey);
+	}
+
+	public OpObject getLoginObj(String nickname) {
+		return blockchainRules.getLoginKeyObj(blockchain, nickname);
+	}
+
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();
@@ -165,28 +181,7 @@ public class BlocksManager {
 			candidates.add(o);
 		}
 		return candidates;
-	}
-
-	public OpBlock getLastBlock() {
-		return blockchain.getLastBlock();
-	}
-	
-	
-	
-	public KeyPair getLoginKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
-		return blockchainRules.getSignUpKeyPairFromPwd(blockchain, name, pwd);
-	}
-	
-	public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
-		return blockchainRules.getLoginKeyPair(blockchain, name, privateKey);
-	}
-
-	public OpObject getLoginObj(String nickname) {
-		return blockchainRules.getLoginKeyObj(blockchain, nickname);
-	}
-
-
-	
+	}	
 
 	
 }

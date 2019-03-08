@@ -157,7 +157,7 @@ function loadErrorsData() {
 }
 
 function loadBlocksData() {
-  $.getJSON( "/blocks", function( data ) {
+  $.getJSON( "/api/blocks", function( data ) {
       var items = "";
       $("#blockchain-status").html(data.status);
       $("#admin-user").html(data.serverUser);

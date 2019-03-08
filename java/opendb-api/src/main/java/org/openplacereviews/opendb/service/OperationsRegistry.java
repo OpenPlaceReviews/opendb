@@ -1,12 +1,10 @@
 package org.openplacereviews.opendb.service;
 
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.springframework.beans.factory.annotation.Autowired;
