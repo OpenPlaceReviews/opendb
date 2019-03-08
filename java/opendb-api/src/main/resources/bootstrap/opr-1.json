@@ -56,11 +56,11 @@
 				"comment" : "Operation to define other operations with description and fields",
 				"version" : 0,
 				"fields": {
-					"id" : "TODO",
-					"fields" : "TODO",
-					"arity" : "TODO",
-					"comment" : "TODO",
-					"version" : "TODO"	
+					"id" : "operation name usually written as <package_name>.<op_name>",
+					"fields" : "map of fields accepted by operation with their description",
+					"arity" : "integer number describing arity of operation, 0 - means that operation could create/delete 0 or 1 object maximum.",
+					"comment" : "description of the operation, purpose and how it could be used",
+					"version" : "int version of the defined operation"	
 				}
 			}]
 		},
@@ -103,14 +103,11 @@
 			"type" : "sys.operation",
 			"new": [{	
 				"id" : ["sys.validate"],
-				"comment" : "TODO TODO Operation to create login pair of private key",
+				"comment" : "Operation that defines validation on blockchain operations",
 				"version" : 0,
 				"arity" : 0,
 				"fields": {
-					"id" : "combined id 'signup_name':'purpose', purpose could describe website, bot name or application",
-					"algo" : "crypto algorithm of generated public key",
-					"auth_method" : "one of 'provided' (provided or generated private key), 'oauth' ",
-					"pubkey" : "public key to be used to validate signature"
+					"id" : "TODO"
 				}
 			}]
 		},
@@ -118,14 +115,11 @@
 			"type" : "sys.operation",
 			"new": [{	
 				"id" : ["sys.role"],
-				"comment" : "TODO TODO Operation to create login pair of private key",
+				"comment" : "Operation that defines role for user, role restriction are defined by validation operations",
 				"version" : 0,
 				"arity" : 0,
 				"fields": {
-					"id" : "combined id 'signup_name':'purpose', purpose could describe website, bot name or application",
-					"algo" : "crypto algorithm of generated public key",
-					"auth_method" : "one of 'provided' (provided or generated private key), 'oauth' ",
-					"pubkey" : "public key to be used to validate signature"
+					"id" : "TODO"
 				}
 			}]
 		},
@@ -133,14 +127,11 @@
 			"type" : "sys.operation",
 			"new": [{	
 				"id" : ["sys.grant"],
-				"comment" : "TODO TODO Operation to create login pair of private key",
+				"comment" : "Operation that assigns user to a specific role",
 				"version" : 0,
 				"arity" : 0,
 				"fields": {
-					"id" : "combined id 'signup_name':'purpose', purpose could describe website, bot name or application",
-					"algo" : "crypto algorithm of generated public key",
-					"auth_method" : "one of 'provided' (provided or generated private key), 'oauth' ",
-					"pubkey" : "public key to be used to validate signature"
+					"id" : "TODO"
 				}
 			}]
 		}

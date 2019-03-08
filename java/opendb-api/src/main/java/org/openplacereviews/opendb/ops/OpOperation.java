@@ -1,12 +1,12 @@
 package org.openplacereviews.opendb.ops;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -155,18 +155,21 @@ public class OpOperation extends OpObject {
 				throws JsonParseException {
 			JsonObject jsonObj = json.getAsJsonObject();
 			OpOperation op = new OpOperation();
-			String opType = jsonObj.get(F_TYPE).getAsString();
-			op.type = opType;
-			op.fields = context.deserialize(jsonObj, TreeMap.class);
-			op.fields.remove(F_TYPE);
-			List<Map<String, Object>> lst = op.getListStringObjMap(F_NEW);
-			op.fields.remove(F_NEW);
-			if(lst != null) {
-				for(Map<String, Object> mp : lst) {
-					OpObject e = new OpObject(op, mp);
-					op.newObjects.add(e);
+			JsonElement tp = jsonObj.remove(F_TYPE);
+			if(tp != null) {
+				String opType = tp.getAsString();
+				op.type = opType;
+			} else {
+				op.type = "";
+			}
+			JsonElement newObjs = jsonObj.remove(F_NEW);
+			if(newObjs != null) {
+				JsonArray ar = newObjs.getAsJsonArray();
+				for(int i = 0; i < ar.size(); i++) {
+					op.newObjects.add(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
+			op.fields = context.deserialize(jsonObj, TreeMap.class);
 			return op;
 		}
 
@@ -175,14 +178,9 @@ public class OpOperation extends OpObject {
 			TreeMap<String, Object> tm = new TreeMap<>(src.fields);
 			tm.put(F_TYPE, src.type);
 			if(src.hasNew()) {
-				List<Map<String, Object>> list = new ArrayList<>();
-				for (OpObject obj : src.newObjects) {
-					list.add(obj.fields);
-				}
-				tm.put(F_NEW, list);
+				tm.put(F_NEW, context.serialize(src.newObjects));
 			}
-			JsonObject o = (JsonObject) context.serialize(tm);
-			return o;
+			return context.serialize(tm);
 		}
 
 	}

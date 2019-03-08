@@ -17,6 +17,7 @@
       <li><a data-toggle="tab" href="#queue" id="queue-tab">Queue</a></li>
       <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
       <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
+      <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
       <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
   </ul>
   <div class="tab-content">
@@ -47,6 +48,17 @@
         </ul>
 
     </div>
+
+    <div id="objects" class="tab-pane fade">
+      <h3>Objects</h3>
+      <label>Select object type:&nbsp;</label><select id="objects-type-list">
+      </select>
+      <p id="object-type-description"/>
+      <ul id="objects-list">
+      </ul>
+
+    </div>
+
 
     <div id="errors" class="tab-pane fade">
       <h3>Log</h3>
@@ -111,6 +123,7 @@
 
 function loadData() {
   loadQueueData();
+  loadObjectsData();
   loadBlocksData();
   loadErrorsData();
 }
@@ -157,6 +170,42 @@ function loadErrorsData() {
   });
 }
 
+var globalObjectTypes = {};
+function loadObjectsData() {
+
+  let selectType = $("#objects-type-list").val();
+  $.getJSON( "/api/objects?type=sys.operation", function( data ) {
+      var types = "<option value = 'none'>none</option>";
+      $("#objects-tab").html("Objects (" + data.objects.length + ")");
+      for(var i = 0; i < data.objects.length; i++)  {
+        let obj = data.objects[i];
+        let objType = obj.id[0];
+        globalObjectTypes[objType] = obj;
+
+        types += "<option value = '"+objType+"' " + 
+                (selectType == objType ? "selected" : "") + ">"+objType+"</option>";
+      }
+      $("#objects-type-list").html(types);
+  });
+
+  if(selectType != "none" && globalObjectTypes[selectType]) {
+    $.getJSON( "/api/objects?type="+selectType, function( data ) {
+        var items = "";
+        $("#object-type-description").html(globalObjectTypes[selectType].comment);
+        $("#objects-tab").html("Objects (" + data.objects.length + ")");
+        for(var i = 0; i < data.objects.length; i++)  {
+          let obj = data.objects[i];
+          items += "<br><li><b>Object id</b>: " + obj.id;
+          items += "<br><b>Comment</b>: " + obj.comment;
+          items += "<br><details><summary><b>Simple json</b></summary><pre>" + 
+                JSON.stringify(obj, null, 4) + "</pre></details>";
+          items += "</li>";
+        }
+        $("#objects-list").html(items);
+    });
+  }
+}
+
 function loadBlocksData() {
   $.getJSON( "/api/blocks", function( data ) {
       var items = "";
@@ -201,7 +250,7 @@ function loadQueueData() {
         });
         items += "<br><li><b>Operation</b>: " + op.type;
         items += "<br><b>Hash</b>: " + op.hash;
-        items += "<br><b>Add/remove objects</b>: " + 
+        items += "<br><b>Added/removed objects</b>: " + 
                 (op.new ? op.new.length : "0") + " / " + (op.old ? op.old.length : "0");
         if(op.new && op.new.length > 0) {
           items += "<br><b>Name</b>: " + op.new[0].id;
@@ -221,7 +270,7 @@ function loadQueueData() {
 $( document ).ready(function() {
     loadData();
     $("#clear-list-btn").click(function(){
-      $.post("/api/queue/clear", {},  function(data, status){
+      $.post("/blockchain-mgmt/queue-clear", {},  function(data, status){
         loadData();
       });
     });
@@ -230,6 +279,9 @@ $( document ).ready(function() {
       $.post("/log/clear", {},  function(data, status){
         loadData();
       });
+    });
+    $("#objects-type-list").change(function() {
+      loadObjectsData();
     });
 
     $("#block-create-btn").click(function(){
@@ -255,6 +307,7 @@ $( document ).ready(function() {
         .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
+    
     $("#signup-btn").click(function() {
       var obj = {
         "pwd":$("#signup-pwd").val(),

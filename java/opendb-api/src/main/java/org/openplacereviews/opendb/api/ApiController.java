@@ -6,6 +6,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -13,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -43,13 +44,6 @@ public class ApiController {
     }
  
    
-    @PostMapping(path = "/queue/clear")
-    @ResponseBody
-    public String addToQueue() {
-    	manager.clearQueue();
-        return "{\"status\":\"OK\"}";
-    }
-    
     @GetMapping(path = "/queue", produces = "text/json;charset=UTF-8")
     @ResponseBody
 	public String queueList() throws FailedVerificationException {
@@ -66,6 +60,10 @@ public class ApiController {
 		public Collection<OpBlock> blockchain;
     }
     
+    public static class ObjectsResult {
+		public Collection<OpObject> objects;
+    }
+    
     
     @GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
     @ResponseBody
@@ -77,9 +75,21 @@ public class ApiController {
 		return formatter.objectToJson(res);
 	}
     
+    
+    
+    @GetMapping(path = "/objects", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+	public String objects(@RequestParam(required = true) String type, 
+			@RequestParam(required = false, defaultValue="100") int limit) throws FailedVerificationException {
+    	OpBlockChain blc = manager.getBlockchain();
+    	ObjectsResult res = new ObjectsResult();
+    	res.objects = blc.getObjects(type, limit);
+		return formatter.objectToJson(res);
+	}
+    
 
     
-    @GetMapping(path = "/block", produces = "text/json;charset=UTF-8")
+    @GetMapping(path = "/block-bootstrap", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public InputStreamResource block(@RequestParam(required = true) String id) {
         return new InputStreamResource(formatter.getBlock(id));

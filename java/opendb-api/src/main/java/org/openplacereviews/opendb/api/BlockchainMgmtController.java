@@ -41,6 +41,14 @@ public class BlockchainMgmtController {
     	return formatter.objectToJson(block);
     }
     
+    @PostMapping(path = "/queue-clear")
+    @ResponseBody
+    public String addToQueue() {
+    	manager.clearQueue();
+        return "{\"status\":\"OK\"}";
+    }
+    
+    
     @PostMapping(path = "/revert-superblock", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String revertSuperblock() throws FailedVerificationException {

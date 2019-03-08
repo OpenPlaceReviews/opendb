@@ -32,7 +32,7 @@
 		</appender>
  		-->
  		<appender name="FILE_ERROR" class="ch.qos.logback.core.FileAppender">
-        	<file>/var/log/ogr-server-logs/error.log</file>
+        	<file>${LOG_FOLDER}/error.log</file>
         	<append>true</append>
 			<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
 				<level>ERROR</level>

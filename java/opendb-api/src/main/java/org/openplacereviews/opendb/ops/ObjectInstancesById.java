@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,10 @@ public class ObjectInstancesById {
 	public OpObject getObjectById(List<String> key) {
 		ListKey k = new ListKey(0, key);
 		return getByKey(k);
+	}
+	
+	public Collection<OpObject> getObjects() {
+		return objects.values();
 	}
 
 	private OpObject getByKey(ListKey k) {

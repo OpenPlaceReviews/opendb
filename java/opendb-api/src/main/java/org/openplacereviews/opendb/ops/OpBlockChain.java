@@ -421,6 +421,25 @@ public class OpBlockChain {
 		return ot.getObjectById(key, null);
 	}
 	
+	
+	public List<OpObject> getObjects(String type, int limit) {
+		List<OpObject> list = new ArrayList<OpObject>();
+		fetchObjects(list, type, limit);
+		return list;
+	}
+	
+	private void fetchObjects(List<OpObject> lst, String type, int limit) {
+		ObjectInstancesById ot = getObjectsByIdMap(type, false);
+		if(ot != null) {
+			Collection<OpObject> objects = ot.getObjects();
+			lst.addAll(objects);
+			limit -= objects.size();
+		}
+		if(parent != null && limit > 0) {
+			parent.fetchObjects(lst, type, limit);
+		}
+	}
+	
 	public OpObject getObjectByName(String type, String key, String secondary) {
 		ObjectInstancesById ot = getObjectsByIdMap(type, false);
 		if(ot == null) {

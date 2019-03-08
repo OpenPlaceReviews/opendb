@@ -16,7 +16,6 @@ import org.openplacereviews.opendb.OUtils;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
@@ -235,21 +234,14 @@ public class OpObject {
 		@Override
 		public OpObject deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
-			JsonObject o = json.getAsJsonObject();
 			OpObject bn = new OpObject();
-			bn.fields = context.deserialize(o, TreeMap.class); 
+			bn.fields = context.deserialize(json, TreeMap.class); 
 			return bn;
 		}
 
 		@Override
 		public JsonElement serialize(OpObject src, Type typeOfSrc, JsonSerializationContext context) {
-			JsonObject o = new JsonObject();
-			// o.addProperty(F_OPERATION, src.type + ":" + src.operation);
-			for(String k : src.fields.keySet()) {
-				Object ob = src.fields.get(k);
-				o.add(k, context.serialize(ob));
-			}
-			return o;
+			return context.serialize(src.fields);
 		}
 
 

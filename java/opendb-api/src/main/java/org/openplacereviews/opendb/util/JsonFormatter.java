@@ -11,6 +11,7 @@ import java.util.TreeMap;
 
 import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,7 @@ public class JsonFormatter {
 		GsonBuilder builder = new GsonBuilder();
 		builder.disableHtmlEscaping();
 		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpOperationBeanAdapter());
+		builder.registerTypeAdapter(OpObject.class, new OpObject.OpObjectAdapter());
 		builder.registerTypeAdapter(OpBlock.class, new OpBlock.OpBlockBeanAdapter());
 		builder.registerTypeAdapter(TreeMap.class, new MapDeserializerDoubleAsIntFix());
 		gson = builder.create();
