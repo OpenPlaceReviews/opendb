@@ -254,7 +254,7 @@ public class OpBlockChain {
 
 	private void atomicRemoveOperation(OpOperation op, List<OpOperation> prevOperationsSameType) {
 		// delete operation itself
-		OperationDeleteInfo odi = opsByHash.get(op.getRawHash());
+		OperationDeleteInfo odi = opsByHash.remove(op.getRawHash());
 		odi.create = false;
 		// delete deleted objects by name
 		List<String> deletedRefs = op.getOld();
