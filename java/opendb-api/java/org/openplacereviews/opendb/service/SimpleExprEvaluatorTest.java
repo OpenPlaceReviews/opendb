@@ -7,7 +7,6 @@ import org.openplacereviews.opendb.util.SimpleExprEvaluator;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 public class SimpleExprEvaluatorTest {
 
@@ -16,14 +15,7 @@ public class SimpleExprEvaluatorTest {
 	public Object evaluateExpr(String e) {
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
-		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(new DBDataManager() {
-			@Override
-			public JsonObject queryByIdentity(String tableName, Object val) {
-				JsonObject obj = new JsonObject();
-				obj.addProperty("uid", "1");
-				return obj;
-			}
-		}, null, obj.getAsJsonObject());
+		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(null, obj.getAsJsonObject());
 		return SimpleExprEvaluator.parseMappingExpression(e).evaluateObject(ectx);
 	}
 	

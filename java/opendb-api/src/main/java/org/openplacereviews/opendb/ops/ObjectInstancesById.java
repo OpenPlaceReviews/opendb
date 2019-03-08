@@ -16,6 +16,8 @@ public class ObjectInstancesById {
 	private final String type;
 	private ObjectInstancesById parentInfo;
 	private Map<ListKey, OpObject> objects = new ConcurrentHashMap<>();
+	private volatile Object cacheObject;
+	private volatile int cacheVersion;
 	
 	public ObjectInstancesById(String type, ObjectInstancesById pi) {
 		this.type = type;
@@ -29,6 +31,14 @@ public class ObjectInstancesById {
 	
 	public Collection<OpObject> getObjects() {
 		return objects.values();
+	}
+	
+	
+	public void fetchAllObjects(List<OpObject> lst) {
+		lst.addAll(objects.values());
+		if(parentInfo != null) {
+			parentInfo.fetchAllObjects(lst);
+		}
 	}
 
 	private OpObject getByKey(ListKey k) {
@@ -52,6 +62,7 @@ public class ObjectInstancesById {
 		if (prev != parentInfo) {
 			throw new IllegalStateException(String.format("Current obj by name map doesn't match parent with merge parent %s",type));
 		}
+		resetCache();
 		this.parentInfo = parentInfo.parentInfo;
 		Iterator<Entry<ListKey, OpObject>> objs = prev.objects.entrySet().iterator();
 		while(objs.hasNext()) {
@@ -62,8 +73,14 @@ public class ObjectInstancesById {
 		}
 		
 	}
+
+	private void resetCache() {
+		cacheVersion++;
+		cacheObject = null;
+	}
 	
 	public void add(List<String> id, OpObject newObj) {
+		resetCache();
 		if(newObj != null) {
 			objects.put(new ListKey(0, id), newObj);
 		} else {
@@ -72,7 +89,25 @@ public class ObjectInstancesById {
 	}
 	
 	public void setParent(ObjectInstancesById pid) {
+		resetCache();
 		this.parentInfo = pid;
+	}
+	
+	public Object getCacheObject() {
+		if(parentInfo == null) {
+			return cacheObject;
+		}
+		return objects.isEmpty() ? parentInfo.getCacheObject() : cacheObject;
+	}
+	
+	public int getCacheVersion() {
+		return cacheVersion;
+	}
+	
+	public void setCacheObject(Object cacheObject, int cacheVersion) {
+		if(this.cacheVersion == cacheVersion) {
+			this.cacheObject = cacheObject;
+		}
 	}
 	
 	public String getType() {
@@ -151,6 +186,8 @@ public class ObjectInstancesById {
 			return true;
 		}
 	}
+
+	
 
 	
 }

@@ -19,11 +19,10 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -38,6 +37,7 @@ public class SimpleExprEvaluator {
 	public static final String FUNCTION_OP_MOD = "op:op_mod";
 	public static final String FUNCTION_OP_GROUP = "op:op_group";
 	public static final String FUNCTION_M_PLUS = "m:plus";
+	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
 	// TODO
 	// op:op_signatures
@@ -51,12 +51,10 @@ public class SimpleExprEvaluator {
 
 	public static class EvaluationContext {
 		JsonObject ctx;
-		JdbcTemplate jdbc;
-		DBDataManager mgr;
+		OpBlockChain op;
 
-		public EvaluationContext(DBDataManager mgr, JdbcTemplate jdbc, JsonObject ctx) {
-			this.mgr = mgr;
-			this.jdbc = jdbc;
+		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx) {
+			this.op = blockchain;
 			this.ctx = ctx;
 		}
 
@@ -136,14 +134,22 @@ public class SimpleExprEvaluator {
 
 	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
 		switch (functionName) {
-		case FUNCTION_DB_FIND_UNIQUE:
-			String tableName = getStringArgument(functionName, args, 0);
-			Object val = getObjArgument(functionName, args, 1);
-			return ctx.mgr.queryByIdentity(tableName, val);
 		case FUNCTION_M_PLUS:
 			long l1 = getLongArgument(functionName, args, 0);
 			long l2 = getLongArgument(functionName, args, 1);
 			return l1 + l2;
+		case FUNCTION_BLC_FIND:
+			if(args.size() > 3) {
+				throw new UnsupportedOperationException("blc:find Not supported multiple args yet");
+			} else if(args.size() == 3) {
+				return ctx.op.getObjectByName(getStringArgument(functionName, args, 0), 
+						getStringArgument(functionName, args, 1), getStringArgument(functionName, args, 2));
+			} else if(args.size() == 2) {
+				return ctx.op.getObjectByName(getStringArgument(functionName, args, 0), 
+						getStringArgument(functionName, args, 1));
+			} else {
+				throw new UnsupportedOperationException("blc:find not enough arguments");
+			}
 		case FUNCTION_STR_FIRST:
 		case FUNCTION_STR_SECOND:
 			String ffs = getStringArgument(functionName, args, 0);

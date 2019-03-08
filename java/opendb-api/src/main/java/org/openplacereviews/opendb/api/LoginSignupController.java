@@ -9,7 +9,6 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.OperationsRegistry;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -85,7 +84,7 @@ public class LoginSignupController {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
     	
-    	op.setOperationType(OperationsRegistry.OP_SIGNUP);
+    	op.setOperationType(OpBlockchainRules.OP_SIGNUP);
     	OpObject obj = new OpObject();
     	op.addNew(obj);
     	obj.setId(name);
@@ -150,7 +149,7 @@ public class LoginSignupController {
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
     	OpOperation op = new OpOperation();
-    	op.setOperationType(OperationsRegistry.OP_LOGIN);
+    	op.setOperationType(OpBlockchainRules.OP_LOGIN);
     	OpObject obj = new OpObject();
     	op.addNew(obj);
     	

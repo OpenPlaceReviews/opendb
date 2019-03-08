@@ -10,7 +10,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -248,33 +247,6 @@ public class DBDataManager {
 	}
 	
 	
-
-	public void executeMappingOperation(String op, JsonObject obj) {
-		List<TableMapping> tableMappings = opTableMappings.get(op);
-		if (tableMappings != null) {
-			SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(this, jdbcTemplate,
-					obj);
-			for (TableMapping t : tableMappings) {
-				try {
-					Object[] o = new Object[t.columnMappings.size()];
-					for (int i = 0; i < t.columnMappings.size(); i++) {
-						ColumnMapping colMapping = t.columnMappings.get(i);
-						o[i] = colMapping.expression.evaluateObject(colMapping.type, ectx);
-					}
-
-					jdbcTemplate.update(t.preparedStatement, o);
-				} catch (RuntimeException e) {
-					LOGGER.warn("SQL failed: " + e.getMessage(), e);
-					throw e;
-				}
-			}
-		}
-	}
-
-
-
-
-
 	private SqlColumnType getSqlType(String colType) {
 		if(colType != null) {
 			if(colType.contains("int") || colType.contains("serial")) {

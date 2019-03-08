@@ -399,7 +399,7 @@ public class OpBlockChain {
 	}
 	
 	
-	private ObjectInstancesById getObjectsByIdMap(String type, boolean create) {
+	ObjectInstancesById getObjectsByIdMap(String type, boolean create) {
 		ObjectInstancesById oi = objByName.get(type);
 		if(oi == null) {
 			ObjectInstancesById pi = parent == null ? null : parent.getObjectsByIdMap(type, true);
@@ -427,6 +427,8 @@ public class OpBlockChain {
 		fetchObjects(list, type, limit);
 		return list;
 	}
+	
+	
 	
 	private void fetchObjects(List<OpObject> lst, String type, int limit) {
 		ObjectInstancesById ot = getObjectsByIdMap(type, false);

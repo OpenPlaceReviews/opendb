@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -15,8 +16,10 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.service.OperationsRegistry;
+import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.SimpleExprEvaluator;
+import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
 
 /**
  * State less blockchain rules to validate roles and calculate hashes
@@ -34,6 +37,22 @@ public class OpBlockchainRules {
 	// not used by this implementation
 	private static final String BLOCK_CREATION_DETAILS = "";
 	private static final long BLOCK_EXTRA = 0;
+
+	// system operations
+	public static final String OP_TYPE_SYS  = "sys.";
+	// auth
+	public static final String OP_LOGIN = OP_TYPE_SYS + "login";
+	public static final String OP_SIGNUP = OP_TYPE_SYS + "signup";
+	// roles / validation
+	public static final String OP_ROLE = OP_TYPE_SYS + "role";
+	public static final String OP_GRANT = OP_TYPE_SYS + "grant";
+	public static final String OP_VALIDATE = OP_TYPE_SYS + "validate";
+	// limit external ops 
+	public static final String OP_LIMIT = OP_TYPE_SYS + "limit";
+	// ddl?
+	public static final String OP_TABLE = OP_TYPE_SYS + "table";
+	// meta  & mapping
+	public static final String OP_OPERATION = OP_TYPE_SYS + "operation";
 	
 	public static final String F_DIGEST = "digest"; // signature
 	public static final String F_ALGO = "algo"; // login, signup, signature
@@ -45,10 +64,13 @@ public class OpBlockchainRules {
 	public static final String F_OAUTHID_HASH = "oauthid_hash"; // hash with salt of the oauth_id
 	public static final String F_KEYGEN_METHOD = "keygen_method"; // optional login, signup (for pwd important)
 	public static final String F_DETAILS = "details"; // signup
+	public static final String F_TYPE = "type"; 
 
 	// transient - not stored in blockchain
 	public static final String F_PRIVATEKEY = "privatekey"; // private key to return to user
 	public static final String F_UID = "uid"; // user identifier
+	public static final String F_VALIDATE = "validate"; // sys.validate
+	public static final String F_IF = "if"; // sys.validate
 
 	public static final String METHOD_OAUTH = "oauth";
 	public static final String METHOD_PWD = "pwd";
@@ -58,6 +80,9 @@ public class OpBlockchainRules {
 
 	// this char is not allowed in the nickname!
 	public static final char USER_LOGIN_CHAR = ':';
+
+	private static final String WILDCARD_RULE = "*";
+
 	
 	private JsonFormatter formatter;
 	private String serverUser;
@@ -207,10 +232,61 @@ public class OpBlockchainRules {
 
 	
 	public boolean validateRoles(OpBlockChain blockchain, OpOperation o, 
-			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache) {
-		// TODO here we could validate any ops 
-		// sys.op_validate, sys.grant, sys.role, sys.limit, sys.operation
+			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache, ValidationTimer timer) {
+		Map<String, List<OpObject>> validationRules = getValidationRUles(blockchain);
+		List<OpObject> toValidate = validationRules.get(o.getType());
+		if(toValidate != null) {
+			for(OpObject rule : toValidate) {
+				if(!validateRule(blockchain, rule, o, deletedObjsCache, refObjsCache, timer)) {
+					return false;
+				}
+			}
+		}
+		toValidate = validationRules.get(WILDCARD_RULE);
+		if(toValidate != null) {
+			for(OpObject rule : toValidate) {
+				if(!validateRule(blockchain, rule, o, deletedObjsCache, refObjsCache, timer)) {
+					return false;
+				}
+			}
+		}
 		return true;
+	}
+
+	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, List<OpObject> deletedObjsCache,
+			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
+		List<String> lst = rule.getStringList(F_VALIDATE);
+		for(String s : lst) {
+			// TODO here we could cache expr evaluator
+			SimpleExprEvaluator expr = SimpleExprEvaluator.parseMappingExpression(s);
+			Object obj = expr.evaluateObject(new EvaluationContext(blockchain, formatter.toJsonObject(o)));
+			if(obj == null || (obj instanceof Number && ((Number) obj).intValue() == 0)) {
+				return error(ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId());
+			}
+		}
+		return true;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, List<OpObject>> getValidationRUles(OpBlockChain blockchain) {
+		ObjectInstancesById oid = blockchain.getObjectsByIdMap(OP_VALIDATE, true);
+		Map<String, List<OpObject>> validationRules = (Map<String,  List<OpObject>>) oid.getCacheObject();
+		if(validationRules == null) {
+			validationRules = new TreeMap<String, List<OpObject>>();
+			int cacheVersion = oid.getCacheVersion();
+			List<OpObject> allValidations = new ArrayList<>();
+			oid.fetchAllObjects(allValidations);
+			for(OpObject vld : allValidations) {
+				for(String type : vld.getStringList(F_TYPE)) {
+					if(!validationRules.containsKey(type)) {
+						validationRules.put(type, new ArrayList<OpObject>());
+					}
+					validationRules.get(type).add(vld);
+				}
+			}
+			oid.setCacheObject(validationRules, cacheVersion);
+		}
+		return validationRules;
 	}
 	
 	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock, 
@@ -282,8 +358,8 @@ public class OpBlockchainRules {
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());
 		boolean firstSignup = false;
 		String signupName = "";
-		if(OperationsRegistry.OP_SIGNUP.equals(ob.getType()) && ob.getNew().size() == 1) {
-			OpObject obj = ctx.getObjectByName(OperationsRegistry.OP_SIGNUP, signupName);
+		if(OpBlockchainRules.OP_SIGNUP.equals(ob.getType()) && ob.getNew().size() == 1) {
+			OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
 			firstSignup = obj == null;
 			signupName =  ob.getNew().get(0).getId().get(0);
 		}
@@ -330,7 +406,7 @@ public class OpBlockchainRules {
 			return valid;
 		}
 		int timerRoles = vld.startExtra();
-		valid = validateRoles(opBlockChain, u, deletedObjsCache, refObjsCache);
+		valid = validateRoles(opBlockChain, u, deletedObjsCache, refObjsCache, vld);
 		vld.measure(timerRoles, ValidationTimer.OP_SIG);
 		
 		if(!valid) {
@@ -348,9 +424,9 @@ public class OpBlockchainRules {
 		OpObject keyObj;
 		int n = signedByName.indexOf(USER_LOGIN_CHAR);
 		if(n == -1) {
-			keyObj = ctx.getObjectByName(OperationsRegistry.OP_SIGNUP, signedByName);
+			keyObj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signedByName);
 		} else  {
-			keyObj = ctx.getObjectByName(OperationsRegistry.OP_LOGIN, signedByName.substring(0, n),
+			keyObj = ctx.getObjectByName(OpBlockchainRules.OP_LOGIN, signedByName.substring(0, n),
 					signedByName.substring(n + 1));
 		}
 		return keyObj;
@@ -360,7 +436,7 @@ public class OpBlockchainRules {
 
 	public KeyPair getSignUpKeyPairFromPwd(OpBlockChain blc,
 			String name, String pwd) throws FailedVerificationException {
-		OpObject op = blc.getObjectByName(OperationsRegistry.OP_SIGNUP, name); 
+		OpObject op = blc.getObjectByName(OpBlockchainRules.OP_SIGNUP, name); 
 		if (op == null) {
 			return null;
 		}
@@ -460,6 +536,7 @@ public class OpBlockchainRules {
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found "),
 		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%d'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
+		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'")
 		;
 		private final String msg;
 

@@ -28,9 +28,6 @@ public class BlocksManager {
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
 	@Autowired
-	private OperationsRegistry registry;
-	
-	@Autowired
 	private LogOperationService logSystem;
 	
 	@Autowired
