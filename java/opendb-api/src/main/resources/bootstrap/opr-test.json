@@ -2,51 +2,6 @@
 	"block_id":-1,
 	"date":"2019-02-15T00:00:00.000Z",
 	"ops": [
-		{
-			"type" : "sys.signup",
-			"signed_by": "openplacereviews",
-			"new": [{	
-				"id": "openplacereviews",
-				"name" : "openplacereviews",
-				"algo": "EC",
-				"auth_method": "provided",
-				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw==",
-			}],
-			"hash": "json:sha256:995583de02acd33789d38f5cc5ba9e7575c15d1313254e02430aec109f6c0a8b",
-			"signature": "ECDSA:base64:MEUCID0xc3gpUJjPnY1p0U/ukgnPMGOp6HvUmbKfffir+qmJAiEAguFxdswqAzscyCPK9e+UeYeZoyE7p0RuOXHVUbEeuaQ="
-		},
-		{
-			"type" : "sys.login",
-			"signed_by": "openplacereviews",
-			"ref" : {
-				"s" : ["sys.signup","openplacereviews"]
-			},
-			"new" : [{	
-				"id" : ["openplacereviews","test_1"],
-				"algo" : "EC",
-				"auth_method" : "provided",
-				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",
-			}],
-			"hash": "json:sha256:6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417",
-			"signature": "ECDSA:base64:MEYCIQD9eRuBCyrfRlUTzQtVI2ENFia1m4SrMB6hDVbX/ExNtgIhAMRk224TP6rjP0cS2v8PGk/q8m/EZkMGiFAhvDOglEtA"
-		},
-		{
-			"type" : "sys.login",
-			"signed_by": "openplacereviews",
-			"ref" : {
-				"s" : ["sys.signup","openplacereviews"]
-			},
-			"old" : ["6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417:0"],
-			"new": [{	
-				"id": ["openplacereviews","test_1"],
-				"algo": "EC",
-				"auth_method": "provided",
-				"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==",
-			}],
-			
-			"hash": "json:sha256:6cdeeceeff0c83484acf7cae41aa241ae0ce79185794cb176752276a8de90417",
-			"signature": "ECDSA:base64:MEYCIQD9eRuBCyrfRlUTzQtVI2ENFia1m4SrMB6hDVbX/ExNtgIhAMRk224TP6rjP0cS2v8PGk/q8m/EZkMGiFAhvDOglEtA",
-		},
 
 
 		// 	1."comment"   : "Check that only registrator could signup and login users",
@@ -128,63 +83,7 @@
 
 		// "usr:balance", "new" : { "id" : "$usr:$asset:$", "asset" }
 		// validation: sum(old.balance) = new.0.balance + new.1.balance
-		{
-			"operation"  : "sys:role",
-			"name" : "owner",
-			"comment" : "Create role owner and specify that nobody could change it",
-			"owner_role" : "none",
-			"super_roles": []
-		},
-		{
-			"operation" : "sys:role",
-			"name"		: "master",
-			"comment"   : "Create role master and specify that only owner could change it",
-			"owner_role" : "owner",
-			"super_roles" : ["owner"]
-		},
-		{
-			"operation" : "sys:role",
-			"name"		: "registrator",
-			"comment"   : "Create role registrator and specify that only owner could change it",
-			"owner_role" : "owner",
-			"super_roles" : ["master"]
-		},
-
-		{  
-			"operation" : "sys:grant",
-			"name" : "openplacereviews",
-			"roles" : ["owner"]
-		},
-		{
-			"operation" : "sys:table:edit",
-			"prev_hash" : "json:sha256:e744a5c320c3b5bf7cf14ffb403d42ba6f96240aef99620850b4b3f325c80e51",
-			"version" : 1,
-			"name" : "users",
-			"comment" : "Extend table to store roles",
-			"add" : {
-				"table_columns" : {
-				}
-			},
-
-			"table" : "users",
-			"table_columns": {
-				"name" : ".name",
-				"role" : ".roles",
-
-			}
-		},
-		{
-			"operation" : "sys:operation",
-			"name" : "sys:grant",
-			"comment" : "Operation to grant permission to user signup",
-			"versionining" : "true",
-			"table" : "users",
-			"table_columns": {
-				"name" : ".name",
-				"role" : ".roles"
-			}
-		},
-
+	
 
 		{
 			"operation" : "sys:op_validate",

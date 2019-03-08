@@ -125,7 +125,7 @@
 		},
 		{
 			"type" : "sys.operation",
-			"new": [{	
+			"new": [{
 				"id" : ["sys.grant"],
 				"comment" : "Operation that assigns user to a specific role",
 				"version" : 0,
@@ -133,6 +133,57 @@
 				"fields": {
 					"id" : "TODO"
 				}
+			}]
+		},
+
+
+
+		{
+			"type"  : "sys.role",
+			"new" : [{
+				"id" : ["owner"],
+				"comment" : "Owner role is a super role that nobody could change it",
+				"owner_role" : "none",
+				"super_roles": []
+			}]
+		},
+		{
+			"type" : "sys.role",
+			"new" : [{ 
+				"id"	: ["master"],
+				"comment"   : "Role master and only owner could change it",
+				"owner_role" : "owner",
+				"super_roles" : ["owner"]
+			}]
+		},
+		{
+			"type" : "sys.role",
+			"new" : [{ 
+				"id"	: ["registrator"],
+				"comment"   : "Role registrator for user signup and only owner could change it",
+				"owner_role" : "owner",
+				"super_roles" : ["master"]
+			}]
+		},
+
+		{  
+			"type" : "sys.grant",
+			"new" : [{ 
+				"id" : ["openplacereviews"],
+				"roles" : ["owner"]
+			}]
+		},
+
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["validate_op_type_registered"],
+				"type" : ["*"],
+				"comment" : "Validate that operation is registered",
+				"role" : "owner",
+				"validate" : [
+					"blc:find('sys.operation',.type)"
+				]
 			}]
 		}
 	]

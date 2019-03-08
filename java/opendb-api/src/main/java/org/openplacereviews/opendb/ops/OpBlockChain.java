@@ -546,6 +546,9 @@ public class OpBlockChain {
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
 		vld = new ValidationTimer().start();
+		if(OUtils.isEmpty(u.getRawHash())) {
+			return ctx.rules.error(ErrorType.OP_HASH_IS_NOT_CORRECT, u.getRawHash(), "");
+		}
 		OperationDeleteInfo oin = getOperationInfo(u.getRawHash(), -1);
 		if(oin != null) {
 			return ctx.rules.error(ErrorType.OP_HASH_IS_DUPLICATED, u.getRawHash(), ctx.blockHash);

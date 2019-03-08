@@ -31,11 +31,12 @@ public class LoginSignupController {
 	
 	 
 
-    @PostMapping(path = "/sign-msg")
+    @PostMapping(path = "/sign-operation")
     @ResponseBody
     public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey, 
-    		@RequestParam(required = false) String dontSignByServer)
+    		@RequestParam(required = false, defaultValue = "false") boolean dontSignByServer,
+    		@RequestParam(required = false, defaultValue = "false") boolean addToQueue)
 			throws FailedVerificationException {
 		KeyPair kp = null;
 		KeyPair altKp = null;
@@ -51,8 +52,7 @@ public class LoginSignupController {
 			}
 			op.setSignedBy(name);
 		}
-		if (!OUtils.isEmpty(manager.getServerUser()) && 
-				(OUtils.isEmpty(dontSignByServer) || !dontSignByServer.equals("on"))) {
+		if (!OUtils.isEmpty(manager.getServerUser()) && !dontSignByServer) {
 			if (!OUtils.isEmpty(name)) {
 				op.addOtherSignedBy(manager.getServerUser());
 				altKp = manager.getServerLoginKeyPair();
@@ -65,6 +65,9 @@ public class LoginSignupController {
 			manager.generateHashAndSign(op, kp, altKp);
 		} else if(kp != null) {
 			manager.generateHashAndSign(op, kp);
+		}
+		if(addToQueue) {
+			manager.addOperation(op);
 		}
 		return formatter.toJson(op);
 	}

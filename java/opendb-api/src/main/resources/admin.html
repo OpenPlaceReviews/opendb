@@ -114,6 +114,7 @@
           4. Don't sign by server: <input type="checkbox" id="sign-by-server"/>  
         <br>
         <input type="submit" value="Sign message" id="sign-btn"/>
+        <input type="submit" value="Sign operation and add to queue" id="sign-add-btn"/>
       </div>
     </div>
   </div>
@@ -330,9 +331,22 @@ $( document ).ready(function() {
         "name":$("#sign-name").val(),
         "pwd":$("#sign-pwd").val(),
         "privateKey":$("#sign-pk").val(),
-        "dontSignByServer":$("#sign-by-server").val()
+        "dontSignByServer":$("#sign-by-server").is(':checked')
       };
-      $.post("/api/sign-msg", obj)
+      $.post("/api/sign-operation", obj)
+          .done(function(data){  $("#result").html(data); loadData();})
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+    });
+    $("#sign-add-btn").click(function() {
+      var obj = {
+        "json":$("#sign-json").val(),
+        "name":$("#sign-name").val(),
+        "pwd":$("#sign-pwd").val(),
+        "privateKey":$("#sign-pk").val(),
+        "addToQueue" : "true",
+        "dontSignByServer":$("#sign-by-server").is(':checked')
+      };
+      $.post("/api/sign-operation", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });
