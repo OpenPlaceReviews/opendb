@@ -38,9 +38,9 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 public class OpBlockChain {
 	
 	
-	private static final int LOCKED_ERROR = -1;
-	private static final int LOCKED_SUCCESS =  1;
-	private static final int UNLOCKED =  0;
+	public static final int LOCKED_ERROR = -1;
+	public static final int LOCKED_SUCCESS =  1;
+	public static final int UNLOCKED =  0;
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 0.5;
 	private int locked = UNLOCKED; // 0, -1 error, 1 intentional
@@ -74,6 +74,14 @@ public class OpBlockChain {
 		}
 	}
 	
+	public synchronized void makeMutable() {
+		if(this.locked == LOCKED_SUCCESS) {
+			this.locked = UNLOCKED;
+		} else if(this.locked != UNLOCKED) {
+			throw new IllegalStateException("This chain is locked with a broken state");
+		}
+	}
+	
 	public synchronized OpBlock createBlock(OpBlockchainRules rules) throws FailedVerificationException {
 		validateIsUnlocked();
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock());
@@ -93,6 +101,10 @@ public class OpBlockChain {
 			}
 		}
 		return block;
+	}
+	
+	public int getStatus() {
+		return locked;
 	}
 
 	private void atomicCreateBlockFromAllOps(OpBlock block, String blockHash, int blockId) {
@@ -223,16 +235,14 @@ public class OpBlockChain {
 	
 	public synchronized boolean compact() {
 		// synchronized cause internal objects could be changed
- 
 		if(parent != null && parent.parent != null) {
 			if(COMPACT_COEF * (parent.getSubchainSize()  + getSubchainSize()) >= parent.parent.getSubchainSize() ) {
 				parent.mergeWithParent();
+			} else {
+				parent.compact();
 			}
-			parent.compact();
 		}
 		return true;
-		
-		
 	}
 	
 	private void validateIsUnlocked() {
@@ -639,6 +649,7 @@ public class OpBlockChain {
 		private boolean create;
 		private boolean[] deletedObjects;
 	}
+
 
 
 }

@@ -3,9 +3,9 @@ package org.openplacereviews.opendb.ops;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -95,8 +95,11 @@ public class OpBlock extends OpObject {
 			OpBlock op = new OpBlock();
 			JsonElement operations = jsonObj.remove(F_OPERATIONS);
 			op.fields = context.deserialize(jsonObj, TreeMap.class);
-			if (operations != null) {
-				op.operations = context.deserialize(operations, List.class);
+			if (operations != null && operations.isJsonArray()) {
+				JsonArray ar = operations.getAsJsonArray();
+				for(int i = 0; i < ar.size(); i++) {
+					op.operations.add(context.deserialize(ar.get(i), OpOperation.class));
+				}
 			}
 			return op;
 		}

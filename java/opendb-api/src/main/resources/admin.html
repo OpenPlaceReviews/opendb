@@ -157,7 +157,7 @@ function loadErrorsData() {
 }
 
 function loadBlocksData() {
-  $.getJSON( "/block/list", function( data ) {
+  $.getJSON( "/blocks", function( data ) {
       var items = "";
       $("#blockchain-status").html(data.status);
       $("#admin-user").html(data.serverUser);
@@ -166,7 +166,7 @@ function loadBlocksData() {
       for(var i = 0; i < data.blockchain.length; i++)  {
         let op = data.blockchain[i];
         items += "<br><li><b>Block id</b>: " + op.block_id;
-        items += "<br><b>Operations count</b>: " + op.operations.length;
+        items += "<br><b>Operations count</b>: " + op.ops.length;
         items += "<br><b>Hash</b>: " + op.hash;
         items += "<br><b>Signed by</b>: " + op.signed_by;
         items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
@@ -184,9 +184,9 @@ function loadBlocksData() {
 function loadQueueData() {
   $.getJSON( "/api/queue", function( data ) {
       var items = "";
-      $("#queue-tab").html("Queue (" + data.operations.length + ")");
-      for(var i = 0; i < data.operations.length; i++)  {
-        let op = data.operations[i];
+      $("#queue-tab").html("Queue (" + data.ops.length + ")");
+      for(var i = 0; i < data.ops.length; i++)  {
+        let op = data.ops[i];
         let clone = JSON.parse(JSON.stringify(op));
         delete clone.hash;
         delete clone.signature;
@@ -232,19 +232,19 @@ $( document ).ready(function() {
     });
 
     $("#block-create-btn").click(function(){
-       $.post("/block/create", {})
+       $.post("/blockchain-mgmt/create", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
     $("#block-pause-btn").click(function(){
-       $.post("/block/toggle-pause", {})
+       $.post("/blockchain-mgmt/toggle-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
     $("#block-bootstrap-btn").click(function(){
-      $.post("/block/bootstrap", {})
+      $.post("/blockchain-mgmt/bootstrap", {})
         .done(function(data){  $("#result").html(data); loadData(); })
         .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });

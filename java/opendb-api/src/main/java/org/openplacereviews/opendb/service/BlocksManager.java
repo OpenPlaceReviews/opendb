@@ -51,14 +51,6 @@ public class BlocksManager {
 	private OpBlockChain blockchain; 
 	private OpBlockchainRules blockchainRules;
 	
-	private volatile BlockchainState currentState = BlockchainState.BLOCKCHAIN_INIT;
-	
-	public enum BlockchainState {
-		BLOCKCHAIN_INIT,
-		BLOCKCHAIN_READY,
-		BLOCKCHAIN_PAUSED
-	}
-	
 	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
 		return blockchainRules.generateHashAndSign(op, keyPair);
 	}
@@ -85,7 +77,7 @@ public class BlocksManager {
 	}
 	
 	public OpBlock createBlock() throws FailedVerificationException {
-		if (this.currentState != BlockchainState.BLOCKCHAIN_READY) {
+		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
 		// TODO add logging for failures like addOperation, createBlock, changeParent
@@ -126,29 +118,37 @@ public class BlocksManager {
 		
 		String msg = "";
 		// db is bootstraped
-		currentState = BlockchainState.BLOCKCHAIN_READY;
 		LOGGER.info("+++ Blockchain is inititialized. " + msg);
 	}
 	
 	
 	public boolean resumeBlockCreation() {
-		if(currentState == BlockchainState.BLOCKCHAIN_PAUSED) {
-			currentState = BlockchainState.BLOCKCHAIN_READY;
+		if(blockchain.getStatus() == OpBlockChain.LOCKED_SUCCESS) {
+			blockchain.makeMutable();
 			return true;
 		}
 		return false;
 	}
 	
 	public boolean pauseBlockCreation() {
-		if(currentState == BlockchainState.BLOCKCHAIN_READY) {
-			currentState = BlockchainState.BLOCKCHAIN_PAUSED;
+		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
+			blockchain.makeImmutable();
 			return true;
 		}
 		return false;
 	}
 	
-	public BlockchainState getCurrentState() {
-		return currentState;
+	public String getCurrentState() {
+		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
+			return "READY";
+		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_SUCCESS) {
+			return "LOCKED";
+		}
+		return "ERROR";
+	}
+	
+	public boolean isBlockchainPaused() {
+		return blockchain.getStatus() == OpBlockChain.UNLOCKED;
 	}
 	
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
@@ -184,6 +184,7 @@ public class BlocksManager {
 	public OpObject getLoginObj(String nickname) {
 		return blockchainRules.getLoginKeyObj(blockchain, nickname);
 	}
+
 
 	
 
