@@ -15,7 +15,7 @@ public class SimpleExprEvaluatorTest {
 	public Object evaluateExpr(String e) {
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
-		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(null, obj.getAsJsonObject());
+		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(null, obj.getAsJsonObject(), null, null);
 		return SimpleExprEvaluator.parseMappingExpression(e).evaluateObject(ectx);
 	}
 	
@@ -73,7 +73,6 @@ public class SimpleExprEvaluatorTest {
 		assertEquals(-2l, evaluateExpr("m:plus(1,-3)"));
 		assertEquals("1", evaluateExpr("str:first('1:3')"));
 		assertEquals("3", evaluateExpr("str:second('1:3')"));
-		assertEquals("1", evaluateExprJson("db:find_unique('users', str:first(.name)).uid"));
 		
 	}
 }

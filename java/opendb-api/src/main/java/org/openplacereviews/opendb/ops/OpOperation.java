@@ -48,7 +48,15 @@ public class OpOperation extends OpObject {
 	}
 	
 	public void setOperationType(String name) {
+		checkNotImmutable();
 		type = name;
+	}
+	
+	public void makeImmutable() {
+		isImmutable = true;
+		for(OpObject o : newObjects) {
+			o.makeImmutable();
+		}
 	}
 	
 	public void setSignedBy(String value) {
@@ -97,6 +105,7 @@ public class OpOperation extends OpObject {
 	}
 	
 	public void addNew(OpObject o) {
+		checkNotImmutable();
 		newObjects.add(o);
 	}
 	

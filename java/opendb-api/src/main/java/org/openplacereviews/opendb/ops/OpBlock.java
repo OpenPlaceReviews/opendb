@@ -16,7 +16,6 @@ import com.google.gson.JsonSerializer;
 
 public class OpBlock extends OpObject {
 	
-	
 
 	public static final String F_HASH = "hash";
 	public static final String F_BLOCKID = "block_id";
@@ -38,6 +37,13 @@ public class OpBlock extends OpObject {
 	
 	public OpBlock(OpBlock cp) {
 		super(cp);
+	}
+	
+	public void makeImmutable() {
+		isImmutable = true;
+		for(OpOperation o : operations) {
+			o.makeImmutable();
+		}
 	}
 	
 	public List<OpOperation> getOperations() {

@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -20,8 +21,11 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
+import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
 import org.postgresql.util.PGobject;
 
 import com.google.gson.JsonElement;
@@ -52,10 +56,15 @@ public class SimpleExprEvaluator {
 	public static class EvaluationContext {
 		JsonObject ctx;
 		OpBlockChain op;
+		List<OpObject> deletedObjsCache;
+		Map<String, OpObject> refObjsCache;
 
-		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx) {
+		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx, 
+				List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache) {
 			this.op = blockchain;
 			this.ctx = ctx;
+			this.deletedObjsCache = deletedObjsCache;
+			this.refObjsCache = refObjsCache;
 		}
 
 	}
@@ -67,6 +76,14 @@ public class SimpleExprEvaluator {
 
 	public Object evaluateObject(EvaluationContext obj) {
 		return eval(ectx, obj);
+	}
+	
+	public boolean evaluteBoolean(EvaluationContext ctx) {
+		Object obj = evaluateObject(ctx);
+		if(obj == null || (obj instanceof Number && ((Number) obj).intValue() == 0)) {
+			return false;
+		}
+		return true;
 	}
 	
 	public Object evaluateObject(SqlColumnType type, EvaluationContext obj) {
@@ -284,6 +301,8 @@ public class SimpleExprEvaluator {
 					charPositionInLine, msg));
 		}
 	}
+
+	
 
 
 

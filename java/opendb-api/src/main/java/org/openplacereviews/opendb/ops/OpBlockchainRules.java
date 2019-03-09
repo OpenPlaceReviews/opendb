@@ -16,7 +16,6 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.SimpleExprEvaluator;
 import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
@@ -65,6 +64,7 @@ public class OpBlockchainRules {
 	public static final String F_KEYGEN_METHOD = "keygen_method"; // optional login, signup (for pwd important)
 	public static final String F_DETAILS = "details"; // signup
 	public static final String F_TYPE = "type"; 
+	public static final String F_ERROR_MESSAGE = "error_message"; // sys.validate
 
 	// transient - not stored in blockchain
 	public static final String F_PRIVATEKEY = "privatekey"; // private key to return to user
@@ -82,6 +82,7 @@ public class OpBlockchainRules {
 	public static final char USER_LOGIN_CHAR = ':';
 
 	private static final String WILDCARD_RULE = "*";
+
 
 	
 	private JsonFormatter formatter;
@@ -233,7 +234,7 @@ public class OpBlockchainRules {
 	
 	public boolean validateRoles(OpBlockChain blockchain, OpOperation o, 
 			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache, ValidationTimer timer) {
-		Map<String, List<OpObject>> validationRules = getValidationRUles(blockchain);
+		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
 		List<OpObject> toValidate = validationRules.get(o.getType());
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
@@ -255,20 +256,38 @@ public class OpBlockchainRules {
 
 	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, List<OpObject> deletedObjsCache,
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
-		List<String> lst = rule.getStringList(F_VALIDATE);
-		for(String s : lst) {
-			// TODO here we could cache expr evaluator
-			SimpleExprEvaluator expr = SimpleExprEvaluator.parseMappingExpression(s);
-			Object obj = expr.evaluateObject(new EvaluationContext(blockchain, formatter.toJsonObject(o)));
-			if(obj == null || (obj instanceof Number && ((Number) obj).intValue() == 0)) {
-				return error(ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId());
+		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonObject(o),
+				deletedObjsCache, refObjsCache);
+		List<SimpleExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
+		List<SimpleExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
+		for(SimpleExprEvaluator s : ifs) {
+			if(!s.evaluteBoolean(ctx)) {
+				return true;
+			}
+		}
+		for(SimpleExprEvaluator s : vld) {
+			if(!s.evaluteBoolean(ctx)) {
+				return error(ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(), rule.getStringValue(F_ERROR_MESSAGE));
 			}
 		}
 		return true;
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, List<OpObject>> getValidationRUles(OpBlockChain blockchain) {
+	private List<SimpleExprEvaluator> getValidateExpresions(String field, OpObject rule) {
+		List<SimpleExprEvaluator> validate = (List<SimpleExprEvaluator>) rule.getCacheObject(field);
+		if(validate == null) {
+			validate = new ArrayList<SimpleExprEvaluator>();
+			for(String expr: rule.getStringList(field)){
+				validate.add(SimpleExprEvaluator.parseMappingExpression(expr));
+			}
+			rule.putCacheObject(field, validate);
+		}
+		return validate;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, List<OpObject>> getValidationRules(OpBlockChain blockchain) {
 		ObjectInstancesById oid = blockchain.getObjectsByIdMap(OP_VALIDATE, true);
 		Map<String, List<OpObject>> validationRules = (Map<String,  List<OpObject>>) oid.getCacheObject();
 		if(validationRules == null) {
@@ -483,6 +502,7 @@ public class OpBlockchainRules {
 			block.putStringValue(OpBlock.F_SIGNATURE,
 					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
 		}
+		block.makeImmutable();
 		return block;
 	}
 	
@@ -536,7 +556,7 @@ public class OpBlockchainRules {
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found "),
 		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%d'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
-		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'")
+		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s")
 		;
 		private final String msg;
 

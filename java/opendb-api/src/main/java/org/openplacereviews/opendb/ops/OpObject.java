@@ -12,6 +12,7 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -36,8 +37,10 @@ public class OpObject {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 	
-	protected Map<String, Object> fields = new TreeMap<>();
 	protected transient OpOperation operation;
+	protected transient Map<String, Object> cacheFields;
+	protected Map<String, Object> fields = new TreeMap<>();
+	protected boolean isImmutable;
 	
 	public OpObject() {}
 	
@@ -59,11 +62,35 @@ public class OpObject {
 		addOrSetStringValue(F_ID, id);;
 	}
 	
+	public boolean isImmutable() {
+		return isImmutable;
+	}
+	
+	public void makeImmutable() {
+		isImmutable = true;
+	}
+	
+	public Object getCacheObject(String f) {
+		if(cacheFields == null) {
+			return null;
+		}
+		return cacheFields.get(f);
+	}
+	
+	public void putCacheObject(String f, Object o) {
+		if(isImmutable()) {
+			if(cacheFields == null) {
+				cacheFields = new TreeMap<String, Object>();
+			}
+			cacheFields.put(f, o);
+		}
+	}
+	
 	public void setId(String id, String id2) {
 		List<String> list = new ArrayList<String>();
 		list.add(id);
 		list.add(id2);
-		fields.put(F_ID, list);
+		putObjectValue(F_ID, list);
 	}
 	
 	public OpOperation getOperation() {
@@ -156,6 +183,7 @@ public class OpObject {
 	}
 	
 	public void putStringValue(String key, String value) {
+		checkNotImmutable();
 		if(value == null) {
 			fields.remove(key);
 		} else {
@@ -171,6 +199,7 @@ public class OpObject {
 	 */
 	@SuppressWarnings("unchecked")
 	public void addOrSetStringValue(String key, String value) {
+		checkNotImmutable();
 		Object o = fields.get(key);
 		if(o == null) {
 			fields.put(key, value);
@@ -185,6 +214,7 @@ public class OpObject {
 	}
 	
 	public void putObjectValue(String key, Object value) {
+		checkNotImmutable();
 		if(value == null) {
 			fields.remove(key);
 		} else {
@@ -192,7 +222,15 @@ public class OpObject {
 		}
 	}
 	
+	protected void checkNotImmutable() {
+		if(isImmutable) {
+			throw new IllegalStateException("Object is immutable");
+		}
+		
+	}
+
 	public Object remove(String key) {
+		checkNotImmutable();
 		return fields.remove(key);
 	}
 	
@@ -246,6 +284,9 @@ public class OpObject {
 
 
 	}
+
+	
+
 
 
 }
