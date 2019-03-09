@@ -43,7 +43,7 @@
 			"signed_by": "openplacereviews",
 			"new" : {
 				"id" : "change_validate_requires_to_have_role",
-				"type" : ["sys:role"],
+				"type" : ["sys.role"],
 				"comment" : "Check that operation of validate edit should be signed by previous role. Couldn't be changed!",
 				"role" : "none",
 				"if" : [

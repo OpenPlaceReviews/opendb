@@ -16,6 +16,7 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.SimpleExprEvaluator;
 import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
@@ -82,17 +83,19 @@ public class OpBlockchainRules {
 	public static final char USER_LOGIN_CHAR = ':';
 
 	private static final String WILDCARD_RULE = "*";
-
-
 	
 	private JsonFormatter formatter;
 	private String serverUser;
 	private KeyPair serverKeyPair;
+	private ValidationListener logValidation;
 	
-	public OpBlockchainRules(JsonFormatter formatter, String serverUser, KeyPair serverKeyPair) {
+	
+	
+	public OpBlockchainRules(JsonFormatter formatter, String serverUser, KeyPair serverKeyPair, ValidationListener logValidation) {
 		this.formatter = formatter;
 		this.serverUser = serverUser;
 		this.serverKeyPair = serverKeyPair;
+		this.logValidation = logValidation;
 	}
 	
 	public KeyPair getServerKeyPair() {
@@ -267,7 +270,7 @@ public class OpBlockchainRules {
 		}
 		for(SimpleExprEvaluator s : vld) {
 			if(!s.evaluteBoolean(ctx)) {
-				return error(ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(), rule.getStringValue(F_ERROR_MESSAGE));
+				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(), rule.getStringValue(F_ERROR_MESSAGE));
 			}
 		}
 		return true;
@@ -316,31 +319,31 @@ public class OpBlockchainRules {
 		int timerBlockValid = tmr.startExtra();
 		if (prevBlock != null) {
 			if (!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
-				return error(ErrorType.BLOCK_PREV_HASH, prevBlock.getHash(),
+				return error(block, ErrorType.BLOCK_PREV_HASH, prevBlock.getHash(),
 						block.getStringValue(OpBlock.F_PREV_BLOCK_HASH), blockHash);
 			}
 			pid = prevBlock.getBlockId();
 		}
 		if (pid + 1 != blockId) {
-			return error(ErrorType.BLOCK_PREV_ID, pid, block.getBlockId(), blockHash);
+			return error(block, ErrorType.BLOCK_PREV_ID, pid, block.getBlockId(), blockHash);
 		}
 		int dupBl = blockChain.getBlockDepth(block.getHash());
 		if (dupBl != -1) {
-			return error(ErrorType.BLOCK_HASH_IS_DUPLICATED, blockHash, block.getBlockId(), dupBl);
+			return error(block, ErrorType.BLOCK_HASH_IS_DUPLICATED, blockHash, block.getBlockId(), dupBl);
 		}
 		if (block.getOperations().size() == 0) {
-			return error(ErrorType.BLOCK_EMPTY, blockHash);
+			return error(block, ErrorType.BLOCK_EMPTY, blockHash);
 		}
 		if (!OUtils.equals(calculateMerkleTreeHash(block), block.getStringValue(OpBlock.F_MERKLE_TREE_HASH))) {
-			return error(ErrorType.BLOCK_MERKLE_TREE_FAILED, blockHash, calculateMerkleTreeHash(block),
+			return error(block, ErrorType.BLOCK_MERKLE_TREE_FAILED, blockHash, calculateMerkleTreeHash(block),
 					block.getStringValue(OpBlock.F_MERKLE_TREE_HASH));
 		}
 		if (!OUtils.equals(calculateSigMerkleTreeHash(block), block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH))) {
-			return error(ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED, blockHash, calculateSigMerkleTreeHash(block),
+			return error(block, ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED, blockHash, calculateSigMerkleTreeHash(block),
 					block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH));
 		}
 		if (!OUtils.equals(calculateHash(block), block.getHash())) {
-			return error(ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
+			return error(block, ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
 		}
 		
 		OpObject keyObj = getLoginKeyObj(blockChain, block.getStringValue(OpBlock.F_SIGNED_BY));
@@ -362,7 +365,7 @@ public class OpBlockchainRules {
 			ex = e;
 		}
 		if (!validateSig) {
-			return error(ErrorType.BLOCK_SIGNATURE_FAILED, blockHash, block.getStringValue(OpBlock.F_SIGNED_BY), ex);
+			return error(block, ErrorType.BLOCK_SIGNATURE_FAILED, blockHash, block.getStringValue(OpBlock.F_SIGNED_BY), ex);
 		}
 		tmr.measure(timerBlockValid, ValidationTimer.BLOCK_HEADER_VALID);
 		return true;
@@ -372,7 +375,7 @@ public class OpBlockchainRules {
 		List<String> sigs = ob.getSignatureList();
 		List<String> signedBy = ob.getSignedBy();
 		if (signedBy.size() != sigs.size()) {
-			return error(ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs);
+			return error(ob, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs);
 		}
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());
 		boolean firstSignup = false;
@@ -401,7 +404,7 @@ public class OpBlockchainRules {
 				cause = e;
 			}
 			if (!validate) {
-				return error(ErrorType.OP_SIGNATURE_FAILED, cause, ob.getHash(), sigs.get(i));
+				return error(ob, ErrorType.OP_SIGNATURE_FAILED, cause, ob.getHash(), sigs.get(i));
 			}
 		}
 		return true;
@@ -411,12 +414,12 @@ public class OpBlockchainRules {
 	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, List<OpObject> deletedObjsCache,
 			Map<String, OpObject> refObjsCache, ValidationTimer vld) {
 		if(!OUtils.equals(calculateOperationHash(u, false), u.getHash())) {
-			return error(ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
+			return error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
 		}
 		
 		int sz = formatter.toJson(u).length();
 		if (sz > OpBlockchainRules.MAX_OP_SIZE_MB) {
-			return error(ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
+			return error(u, ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
 		}
 		int timerSigs = vld.startExtra();
 		boolean valid = validateSignatures(opBlockChain, u);
@@ -529,11 +532,19 @@ public class OpBlockchainRules {
 	}
 
 	
-	public boolean error(ErrorType e, Object... args) {
+	public boolean error(OpObject o, ErrorType e, Object... args) {
+		String eMsg = e.getErrorFormat(args);
+		if(logValidation != null) {
+			logValidation.logError(o, e, eMsg, null);
+		}
 		throw new IllegalArgumentException(e.getErrorFormat(args));
 	}
 	
-	public boolean error(ErrorType e, Exception cause, Object... args) {
+	public boolean error(OpObject o, ErrorType e, Exception cause, Object... args) {
+		String eMsg = e.getErrorFormat(args);
+		if(logValidation != null) {
+			logValidation.logError(o, e, eMsg, null);
+		}
 		throw new IllegalArgumentException(e.getErrorFormat(args), cause);
 	}
 	
@@ -567,6 +578,12 @@ public class OpBlockchainRules {
 		public String getErrorFormat(Object... args) {
 			return String.format(msg, args);
 		}
+	}
+	
+	public static interface ValidationListener {
+		
+		void logError(OpObject o, ErrorType e, String msg, Exception cause);
+		
 	}
 
 	

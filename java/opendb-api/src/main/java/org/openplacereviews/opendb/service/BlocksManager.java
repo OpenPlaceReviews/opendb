@@ -45,7 +45,6 @@ public class BlocksManager {
 	@Value("${opendb.publicKey}")
 	private String serverPublicKey;
 	
-	
 	private OpBlockChain blockchain; 
 	private OpBlockchainRules blockchainRules;
 	
@@ -66,7 +65,6 @@ public class BlocksManager {
 	}
 	
 	public synchronized boolean addOperation(OpOperation op) {
-		// TODO LOG success or failure (create queue of failed) ops
 		return blockchain.addOperation(op, blockchainRules);
 	}
 	
@@ -76,7 +74,6 @@ public class BlocksManager {
 	}
 	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
-		// TODO add logging for failures like addOperation, createBlock, changeParent
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
@@ -97,7 +94,11 @@ public class BlocksManager {
 				return false;
 			}
 		}
+		OpBlockChain p = blockchain;
 		blockchain = blc;
+		String msg = String.format("Revert superblock from '%s:%d' to '%s:%d'", 
+				p.getLastHash(), p.getLastBlockId(), blockchain.getLastHash(), blockchain.getLastBlockId());
+		logSystem.logSuccessBlock(blockchain.getLastBlock(), msg);
 		return true;
 	}
 	
@@ -105,7 +106,6 @@ public class BlocksManager {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
 		
-		// TODO add logging for failures like addOperation, createBlock, changeParent
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
@@ -145,6 +145,9 @@ public class BlocksManager {
 		
 		timer.measure(ValidationTimer.BLC_TOTAL_BLOCK);
 		opBlock.putObjectValue(OpObject.F_VALIDATION, timer.getTimes());
+		logSystem.logSuccessBlock(opBlock, 
+				String.format("New block '%s':%d  is created on top of '%s'. ",
+						opBlock.getHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		return opBlock;
 	}
 	
@@ -161,7 +164,7 @@ public class BlocksManager {
 			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
 			throw new RuntimeException(e);
 		}
-		blockchainRules = new OpBlockchainRules(formatter, serverUser, serverKeyPair);
+		blockchainRules = new OpBlockchainRules(formatter, serverUser, serverKeyPair, logSystem);
 		blockchain = new OpBlockChain(null);
 		
 		String msg = "";

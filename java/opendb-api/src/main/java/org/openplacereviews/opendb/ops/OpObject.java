@@ -214,7 +214,10 @@ public class OpObject {
 	}
 	
 	public void putObjectValue(String key, Object value) {
-		checkNotImmutable();
+		// validation times is mutable part
+		if(!OpObject.F_VALIDATION.equals(key)) {
+			checkNotImmutable();
+		}
 		if(value == null) {
 			fields.remove(key);
 		} else {

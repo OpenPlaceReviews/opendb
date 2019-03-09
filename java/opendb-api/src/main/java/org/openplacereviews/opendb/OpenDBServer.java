@@ -95,7 +95,6 @@ public class OpenDBServer  {
 				System.out.println("Application starting...");
 				MetadataDb metadataDB = loadMetadata();
 				dbDataManager.init(metadataDB);
-				logOperationService.init(metadataDB);
 				blocksManager.init(metadataDB);
 				System.out.println("Application has started");
 			} catch (RuntimeException e) {

@@ -23,9 +23,7 @@ import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
-import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
 import org.postgresql.util.PGobject;
 
 import com.google.gson.JsonElement;
@@ -43,7 +41,7 @@ public class SimpleExprEvaluator {
 	public static final String FUNCTION_M_PLUS = "m:plus";
 	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
-	// TODO
+	// TODOO
 	// op:op_signatures
 	// auth:has_sig_all_roles
 	// auth:has_sig_role

@@ -1,98 +1,62 @@
 package org.openplacereviews.opendb.service;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ValidationListener;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.springframework.stereotype.Service;
 
 @Service
-public class LogOperationService {
+public class LogOperationService implements ValidationListener {
 	protected static final Log LOGGER = LogFactory.getLog(LogOperationService.class);
+
+	private static final int LIMIT = 1000;
 	
-	ConcurrentLinkedQueue<LogEntry> log  = new ConcurrentLinkedQueue<LogOperationService.LogEntry>();
+	ConcurrentLinkedDeque<LogEntry> log  = new ConcurrentLinkedDeque<LogOperationService.LogEntry>();
 	
-	public enum OperationStatus {
-		FAILED_PREPARE(false),
-		FAILED_EXECUTE(false),
-		FAILED_DEPENDENCIES(false),
-		FAILED_VALIDATE(false),
-		EXECUTED(true);
-		
-		private boolean success;
-		private OperationStatus(boolean s) {
-			this.success = s;
-		}
-		
-		public boolean isSuccessful() {
-			return success;
-		}
-	}
-	
-	public ConcurrentLinkedQueue<LogEntry> getLog() {
+	public Collection<LogEntry> getLog() {
 		return log;
 	}
 	
-	public void init(MetadataDb metadataDB) {
-		// no persistence for now
+	@Override
+	public void logError(OpObject o, ErrorType e, String msg, Exception cause) {
+		LogEntry le = new LogEntry(cause, e, msg);
+		le.obj = o;
+		addLogEntry(le);		
 	}
 	
-	public void logOperation(OperationStatus status, OpOperation op, String message, boolean exceptionOnFail,
-			Exception cause) throws OperationFailException {
-		LogEntry le = new LogEntry(cause, status, message);
-		le.operation = op;
-		addLogEntry(exceptionOnFail, le);
+	public void logSuccessBlock(OpBlock op, String message) {
+		logError(op, null, message, null);
 	}
 	
-	public void logOperation(OperationStatus status, OpOperation op, String message, boolean exceptionOnFail) throws OperationFailException {
-		logOperation(status, op, message, exceptionOnFail, null);
-	}
-	
-	public void logOperation(OperationStatus status, OpOperation op, String message, Exception cause) {
-		logOperation(status, op, message, false, cause);
-	}
-	
-	public void logOperation(OperationStatus status, OpOperation op, String message) {
-		logOperation(status, op, message, false, null);
-	}
-	
-	
-	public void logBlock(OperationStatus status, OpBlock op, String message, boolean exceptionOnFail) {
-		logBlock(status, op, message, exceptionOnFail, null);
-	}
-	
-	public void logBlock(OperationStatus status, OpBlock op, String message, boolean exceptionOnFail, 
-			Exception cause) {
-		LogEntry le = new LogEntry(cause, status, message);
-		le.block = new OpBlock(op);
-		addLogEntry(exceptionOnFail, le);
-	}
 
-	private void addLogEntry(boolean exceptionOnFail, LogEntry le) {
+	private void addLogEntry(LogEntry le) {
+		while(log.size() > LIMIT) {
+			log.removeLast();
+		}
 		log.add(le);
-		if(le.status.isSuccessful()) {
+		if(le.status == null) {
 			LOGGER.info("SUCCESS: " + getMessage(le));
 		} else {
 			LOGGER.warn("FAILURE: " + getMessage(le), le.cause);
-		}
-		if(exceptionOnFail && !le.status.isSuccessful()) {
-			throw new OperationFailException(le);
 		}
 	}
 
 	private String getMessage(LogEntry le) {
 		String msg = le.message;
-		if(le.operation != null) {
-			msg += String.format(", operation: %s, %s, %s", le.operation.getOperationType(), 
-					le.operation.getName(), le.operation.getHash()); 
-		}
-		if(le.block != null) {
-			msg += String.format(", block: %s, %s, %s", le.block.getBlockId() +"", 
-					le.block.getDateString(), le.block.getHash());
-		}
+//		if(le.operation != null) {
+//			msg += String.format(", operation: %s, %s, %s", le.operation.getOperationType(), 
+//					le.operation.getName(), le.operation.getHash()); 
+//		}
+//		if(le.block != null) {
+//			msg += String.format(", block: %s, %s, %s", le.block.getBlockId() +"", 
+//					le.block.getDateString(), le.block.getHash());
+//		}
 		return msg;
 	}
 	
@@ -116,19 +80,20 @@ public class LogOperationService {
 	}
 	
 	public static class LogEntry {
-		OpOperation operation;
-		OpBlock block;
+		OpObject obj;
 		String message;
-		OperationStatus status;
+		ErrorType status;
 		Exception cause;
 		long utcTime;
 		
-		public LogEntry(Exception cause, OperationStatus status, String message) {
+		public LogEntry(Exception cause, ErrorType status, String message) {
 			this.utcTime = System.currentTimeMillis();
 			this.cause = cause;
 			this.message = message;
 			this.status = status;
 		}
 	}
+
+	
 
 }
