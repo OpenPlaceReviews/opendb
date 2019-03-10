@@ -224,8 +224,19 @@ public class OpBlockchainRules {
 	}
 
 	
-	public boolean validateRoles(OpBlockChain blockchain, OpOperation o, 
+	public boolean validateRules(OpBlockChain blockchain, OpOperation o, 
 			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache, ValidationTimer timer) {
+		if(OpBlockchainRules.OP_VALIDATE.equals(o.getType())) {
+			// validate expression
+			for(OpObject obj : o.getNew()) {
+				try {
+					getValidateExpresions(F_IF, obj);
+					getValidateExpresions(F_VALIDATE, obj);
+				} catch(RuntimeException e) {
+					return error(o, e, ErrorType.OP_INVALID_VALIDATE_EXPRESSION, o.getHash(), e.getMessage());
+				}
+			}
+		}
 		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
 		List<OpObject> toValidate = validationRules.get(o.getType());
 		if(toValidate != null) {
@@ -253,12 +264,12 @@ public class OpBlockchainRules {
 		List<SimpleExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<SimpleExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(SimpleExprEvaluator s : ifs) {
-			if(!s.evaluteBoolean(ctx)) {
+			if(!s.evaluateBoolean(ctx)) {
 				return true;
 			}
 		}
 		for (SimpleExprEvaluator s : vld) {
-			if (!s.evaluteBoolean(ctx)) {
+			if (!s.evaluateBoolean(ctx)) {
 				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(),
 						rule.getStringValue(F_ERROR_MESSAGE));
 			}
@@ -272,7 +283,7 @@ public class OpBlockchainRules {
 		if(validate == null) {
 			validate = new ArrayList<SimpleExprEvaluator>();
 			for (String expr : rule.getStringList(field)) {
-				validate.add(SimpleExprEvaluator.parseMappingExpression(expr));
+				validate.add(SimpleExprEvaluator.parseExpression(expr));
 			}
 			rule.putCacheObject(field, validate);
 		}
@@ -394,7 +405,7 @@ public class OpBlockchainRules {
 				cause = e;
 			}
 			if (!validate) {
-				return error(ob, ErrorType.OP_SIGNATURE_FAILED, cause, ob.getHash(), sigs.get(i));
+				return error(ob, cause, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs.get(i));
 			}
 		}
 		return true;
@@ -418,7 +429,7 @@ public class OpBlockchainRules {
 			return valid;
 		}
 		int timerRoles = vld.startExtra();
-		valid = validateRoles(opBlockChain, u, deletedObjsCache, refObjsCache, vld);
+		valid = validateRules(opBlockChain, u, deletedObjsCache, refObjsCache, vld);
 		vld.measure(timerRoles, ValidationTimer.OP_SIG);
 		
 		if(!valid) {
@@ -530,7 +541,7 @@ public class OpBlockchainRules {
 		throw new IllegalArgumentException(e.getErrorFormat(args));
 	}
 	
-	public boolean error(OpObject o, ErrorType e, Exception cause, Object... args) {
+	public boolean error(OpObject o, Exception cause, ErrorType e, Object... args) {
 		String eMsg = e.getErrorFormat(args);
 		if(logValidation != null) {
 			logValidation.logError(o, e, eMsg, null);
@@ -557,7 +568,8 @@ public class OpBlockchainRules {
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found "),
 		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%d'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
-		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s")
+		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
+		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s")
 		;
 		private final String msg;
 

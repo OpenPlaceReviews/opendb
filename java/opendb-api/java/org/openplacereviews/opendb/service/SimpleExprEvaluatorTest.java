@@ -16,7 +16,7 @@ public class SimpleExprEvaluatorTest {
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
 		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(null, obj.getAsJsonObject(), null, null);
-		return SimpleExprEvaluator.parseMappingExpression(e).evaluateObject(ectx);
+		return SimpleExprEvaluator.parseExpression(e).evaluateObject(ectx);
 	}
 	
 	public Object evaluateExprJson(String e) {

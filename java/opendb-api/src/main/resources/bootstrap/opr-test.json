@@ -2,34 +2,13 @@
 	"block_id":-1,
 	"date":"2019-02-15T00:00:00.000Z",
 	"ops": [
-		{  
-			"type" : "sys.validate",
-			"new" : [{ 
-				"id" : ["validate_validation_changes"],
-				"type" : ["sys.validate"],
-				"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
-				"role" : "none",
-				"if" : [
-					"std:eq(std:size(.old), 1)"
-				],
-				"validate" : [
-					"auth:one_has_role(.old.role, .signed_by)",
-					"std:eq(.new.id,.old.id)"
-				]
-			}]
-		},
+
 		{
-			"type" : "sys.validate",
-			"new" : [{
-				"id" : ["role_none_couldnot_be_created"],
-				"type" : ["sys.role"],
-				"comment" : "Check that role none could not be created. Couldn't be changed!",
-				"role" : "none",
-				"validate" : [
-					"std:neq(new.id, 'none')"
-				]
+			"type" : "sys.role",
+			"new" : [{ 
+				"id" : ["none"]
 			}]
-		}
+		},		
 
 		// 	1."comment"   : "Check that only registrator could signup and login users",
 		// if(type == 'sys:login' || type == 'sys:signup' ) { has_role('registrator', this.signed_by)) }
@@ -120,7 +99,18 @@
 
 
 
-
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["validate_op_type_registered_easy"],
+				"type" : ["*"],
+				"comment" : "Validate that operation is registered - TODO delete",
+				"role" : "owner",
+				"validate" : [
+					"blc:find('sys.operation',.type)"
+				]
+			}]
+		},
 
 		{
 			"operation" : "op:splitfunds",

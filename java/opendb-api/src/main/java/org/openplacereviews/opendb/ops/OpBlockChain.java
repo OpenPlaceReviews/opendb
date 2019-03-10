@@ -556,11 +556,11 @@ public class OpBlockChain {
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
 		vld = new ValidationTimer().start();
 		if(OUtils.isEmpty(u.getRawHash())) {
-			return ctx.rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getRawHash(), "");
+			return ctx.rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
 		OperationDeleteInfo oin = getOperationInfo(u.getRawHash(), -1);
 		if(oin != null) {
-			return ctx.rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getRawHash(), ctx.blockHash);
+			return ctx.rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
 		boolean valid = true;
 		valid = prepareDeletedObjects(u, ctx);
@@ -608,7 +608,7 @@ public class OpBlockChain {
 					}
 				}
 				if (oi == null) {
-					return ctx.rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getRawHash(), refObjName);
+					return ctx.rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
 				}
 				ctx.refObjsCache.put(refName, oi);
 			}
@@ -628,11 +628,11 @@ public class OpBlockChain {
 			
 			OperationDeleteInfo opInfo = getOperationInfo(delHash, -1);
 			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
-				return ctx.rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getRawHash(), delRef);
+				return ctx.rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), delRef);
 			}
 			if(opInfo.deletedObjects != null && delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd]) {
-					return ctx.rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getRawHash(), 
+					return ctx.rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
 							delRef, opInfo.deletedObjects[delInd]);
 				}
 			}
@@ -651,7 +651,7 @@ public class OpBlockChain {
 			for(int j = 0; j < i; j++) {
 				OpObject oj = list.get(j);
 				if(OUtils.equals(oj.getId(), o.getId())) {
-					return ctx.rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getRawHash(), 
+					return ctx.rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());
 				}
 			}
@@ -665,7 +665,7 @@ public class OpBlockChain {
 			if(!newVersion) {
 				OpObject exObj = getObjectByName(u.getType(), o.getId());
 				if(exObj != null) {
-					return ctx.rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getRawHash(), 
+					return ctx.rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());	
 				}
 			}

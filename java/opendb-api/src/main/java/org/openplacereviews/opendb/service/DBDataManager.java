@@ -207,7 +207,7 @@ public class DBDataManager {
 				}
 				
 				cm.type = getSqlType(colType);
-				cm.expression = SimpleExprEvaluator.parseMappingExpression(expr);
+				cm.expression = SimpleExprEvaluator.parseExpression(expr);
 				cm.name = colName;
 				tableMapping.columnMappings.add(cm);
 				values.append("?");
