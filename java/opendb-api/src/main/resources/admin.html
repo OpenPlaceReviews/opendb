@@ -2,7 +2,6 @@
 <html>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <style>
         body {padding: 40px;}
@@ -132,18 +131,27 @@
 </body>
 <script>
 
-
+var loginName = "";
 function loadData() {
   refreshUser();
+  $.getJSON( "/api/auth/admin-status", function( data ) {
+    loginName = data.admin;
+    refreshUser();
+    loadAllData();
+  });
+} 
+
+
+function loadAllData() {
   loadQueueData();
   loadObjectsData();
   loadBlocksData();
   loadErrorsData();
 }
+
 function refreshUser() {
-  var name = $.cookie("admin-login") 
-  if(name && name != "") {
-    $("#admin-login-user").html(name);
+  if(loginName != "") {
+    $("#admin-login-user").html(loginName);
     $("#admin-actions").show();
     $("#admin-login-div").hide();
     $("#reg").show();

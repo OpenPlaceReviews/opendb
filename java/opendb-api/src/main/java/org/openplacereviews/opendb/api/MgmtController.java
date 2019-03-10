@@ -14,10 +14,7 @@ import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,9 +51,7 @@ public class MgmtController {
 	}
     
     private ResponseEntity<String> unauthorizedByServer() {
-    	HttpCookie cookie = ResponseCookie.from(OpApiController.ADMIN_COOKIE, "").path("/").build();
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.header(HttpHeaders.SET_COOKIE, cookie.toString())
     			.body("{\"status\":\"ERROR\"}");
 	}
     

@@ -16,12 +16,10 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,7 +30,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("/api/auth")
 public class OpApiController {
     
-	public static final String ADMIN_COOKIE = "admin-login";
 	public static final String ADMIN_LOGIN_NAME = "admin_name";
 	public static final String ADMIN_LOGIN_PWD = "admin_pwd";
 	
@@ -44,6 +41,13 @@ public class OpApiController {
     @Autowired
     private JsonFormatter formatter;
 
+    @GetMapping(path = "/admin-status")
+	public ResponseEntity<String> serverLogin(HttpSession session) {
+		String serverUser = getServerUser(session);
+		return ResponseEntity.status(HttpStatus.OK).body(
+				"{\"admin\":\"" + (serverUser == null ? "" : serverUser) + "\"}");
+	}
+    
     @PostMapping(path = "/admin-login")
     @ResponseBody
     public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name, 
@@ -54,15 +58,9 @@ public class OpApiController {
     		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
     		session.setMaxInactiveInterval(-1);
     		keyPairs.put(name, manager.getServerLoginKeyPair());
-    	    HttpCookie cookie = ResponseCookie.from(ADMIN_COOKIE, name).path("/").build();
-    	    return ResponseEntity.ok()
-    	            .header(HttpHeaders.SET_COOKIE, cookie.toString())
-    	            .body("{\"status\":\"OK\"}");
+    	    return ResponseEntity.ok().body("{\"status\":\"OK\"}");
     	}
-    	HttpCookie cookie = ResponseCookie.from(ADMIN_COOKIE, "").path("/").build();
-    	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.header(HttpHeaders.SET_COOKIE, cookie.toString())
-    			.body("{\"status\":\"ERROR\"}");
+    	return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("{\"status\":\"ERROR\"}");
     }
     
     public boolean validateServerLogin(HttpSession session) {
@@ -79,9 +77,7 @@ public class OpApiController {
 	}
     
     private ResponseEntity<String> unauthorizedByServer() {
-    	HttpCookie cookie = ResponseCookie.from(OpApiController.ADMIN_COOKIE, "").path("/").build();
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.header(HttpHeaders.SET_COOKIE, cookie.toString())
     			.body("{\"status\":\"ERROR\"}");
 	}
     

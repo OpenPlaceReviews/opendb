@@ -194,7 +194,7 @@ public class SimpleExprEvaluator {
 			n2 = (Number) getObjArgument(functionName, args, 0);
 			return n1.doubleValue() < n2.doubleValue() ? 1 : 0;
 		case FUNCTION_STD_SIZE:
-			Object ob = getObjArgument(functionName, args, 0);
+			Object ob = getObjArgument(functionName, args, 0, false);
 			if(ob instanceof JsonArray) {
 				return ((JsonArray) ob).size();
 			} else if(ob instanceof JsonObject) {
@@ -210,16 +210,26 @@ public class SimpleExprEvaluator {
 	
 
 	private String getStringArgument(String functionName, List<Object> args, int i) {
-		validateSize(functionName, args, i);
-		Object o = args.get(i);
+		Object o = getObjArgument(functionName, args, i);
 		return o == null ? null : o.toString();
 	}
 	
+	private long getLongArgument(String functionName, List<Object> args, int i) {
+		Object o = getObjArgument(functionName, args, i);
+		if(o instanceof Number) {
+			return ((Number)o).longValue();
+		}
+		return 0;
+	}
 	
 	private Object getObjArgument(String functionName, List<Object> args, int i) {
+		return getObjArgument(functionName, args, i, true);
+	}
+	
+	private Object getObjArgument(String functionName, List<Object> args, int i, boolean expandSingleArray) {
 		validateSize(functionName, args, i);
 		 Object obj= args.get(i);
-		 if(obj instanceof JsonArray) {
+		 if(obj instanceof JsonArray && expandSingleArray) {
 			 if(((JsonArray) obj).size() == 1) {
 				 obj = ((JsonArray) obj).get(0);
 			 }
@@ -241,12 +251,6 @@ public class SimpleExprEvaluator {
 		}
 	}
 
-	private long getLongArgument(String functionName, List<Object> args, int i) {
-		Object o = getObjArgument(functionName, args, i);
-		return o == null ? 0 : Long.parseLong(o.toString());
-	}
-	
-	
 
 	private Object eval(ExpressionContext expr, EvaluationContext ctx) {
 		ParseTree child = expr.getChild(0);
