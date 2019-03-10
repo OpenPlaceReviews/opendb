@@ -53,7 +53,7 @@ public class OpApiController {
     		session.setAttribute(ADMIN_LOGIN_NAME, name);
     		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
     		session.setMaxInactiveInterval(-1);
-    		keyPairs.put(pwd, manager.getServerLoginKeyPair());
+    		keyPairs.put(name, manager.getServerLoginKeyPair());
     	    HttpCookie cookie = ResponseCookie.from(ADMIN_COOKIE, name).path("/").build();
     	    return ResponseEntity.ok()
     	            .header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -67,7 +67,7 @@ public class OpApiController {
     
     public boolean validateServerLogin(HttpSession session) {
     	Object loginName = session.getAttribute(ADMIN_LOGIN_NAME);
-    	return loginName != null && keyPairs.containsKey(session.getAttribute(ADMIN_LOGIN_NAME));
+    	return loginName != null && keyPairs.containsKey(loginName);
 	}
     
     private KeyPair getServerLoginKeyPair(HttpSession session) {
