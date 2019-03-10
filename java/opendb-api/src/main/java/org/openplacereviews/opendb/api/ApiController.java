@@ -5,6 +5,7 @@ import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -102,6 +103,21 @@ public class ApiController {
     	ObjectsResult res = new ObjectsResult();
     	res.objects = blc.getObjects(type, limit);
 		return formatter.objectToJson(res);
+	}
+    
+    
+    @GetMapping(path = "/object-by-id", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+	public String objects(@RequestParam(required = true) String type, 
+			@RequestParam(required = false) String key, @RequestParam(required = false) String key2) throws FailedVerificationException {
+    	OpBlockChain blc = manager.getBlockchain();
+    	OpObject obj;
+    	if(OUtils.isEmpty(key2)) {
+    		obj = blc.getObjectByName(type, key);
+    	} else {
+    		obj = blc.getObjectByName(type, key, key2);
+    	}
+		return formatter.objectToJson(obj);
 	}
     
 
