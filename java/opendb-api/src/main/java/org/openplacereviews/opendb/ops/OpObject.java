@@ -12,7 +12,6 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;

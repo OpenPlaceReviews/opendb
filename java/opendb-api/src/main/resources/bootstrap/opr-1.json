@@ -55,10 +55,12 @@
 				"id" : ["sys.operation"],
 				"comment" : "Operation to define other operations with description and fields",
 				"version" : 0,
+				"versioning" : true,
 				"fields": {
 					"id" : "operation name usually written as <package_name>.<op_name>",
 					"fields" : "map of fields accepted by operation with their description",
 					"arity" : "integer number describing arity of operation, 0 - means that operation could create/delete 0 or 1 object maximum.",
+					"versioning" : "defines whether object should have subsequent version field",
 					"comment" : "description of the operation, purpose and how it could be used",
 					"version" : "int version of the defined operation"	
 				}
@@ -177,12 +179,82 @@
 		{  
 			"type" : "sys.validate",
 			"new" : [{ 
+				"id" : ["validate_op_type_registered_easy"],
+				"type" : ["*"],
+				"comment" : "Validate that operation is registered - TODO delete",
+				"role" : "owner",
+				"validate" : [
+					"blc:find('sys.operation',.type)"
+				]
+			}]
+		},
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
 				"id" : ["validate_op_type_registered"],
 				"type" : ["*"],
 				"comment" : "Validate that operation is registered",
 				"role" : "owner",
 				"validate" : [
-					"blc:find('sys.operation',.type)"
+					"std:eq(ref.op.type,.type)"
+				]
+			}]
+		},
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["validate_op_arity"],
+				"type" : ["*"],
+				"comment" : "Validate operation arity",
+				"role" : "none",
+				"if" : [
+					"std:eq(ref.op.arity, 0)"
+				],
+				"validate" : [
+					"std:leq(std:size(.new),1)",
+					"std:leq(std:size(.old),1)"
+				]
+			}]
+		},
+		
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["validate_new_validation"],
+				"type" : ["sys.validate"],
+				"comment" : "Validate new validation. It is strict and nobody could change it",
+				"role" : "none",
+				"validate" : [
+					"std:eq(std:size(.new),1)",
+					"std:leq(std:size(.old),1)",
+				]
+			}]
+		},
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["validate_validation_changes"],
+				"type" : ["sys.validate"],
+				"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
+				"role" : "none",
+				"if" : [
+					"bool:eq(std:size(.old), 1)"
+				],
+				"validate" : [
+					"auth:one_has_role(.old.role, .signed_by)",
+					"std:eq(.new.id,.old.id)"
+				]
+			}]
+		},
+		{
+			"type" : "sys.validate",
+			"new" : [{
+				"id" : ["role_none_couldnot_be_created"],
+				"type" : ["sys.role"],
+				"comment" : "Check that role none could not be created. Couldn't be changed!",
+				"role" : "none",
+				"validate" : [
+					"std:neq(new.id, 'none')"
 				]
 			}]
 		}

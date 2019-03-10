@@ -10,6 +10,8 @@ import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.LogOperationService;
+import org.openplacereviews.opendb.service.LogOperationService.LogEntry;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -30,6 +32,9 @@ public class ApiController {
     
     @Autowired
     private JsonFormatter formatter;
+    
+    @Autowired
+    private LogOperationService logService;
     
     @GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
     @ResponseBody
@@ -52,6 +57,18 @@ public class ApiController {
 			bl.getOperations().add(ob);
 		}
 		return formatter.toJson(bl);
+	}
+    
+    public static class LogResult {
+		public Collection<LogEntry> logs;
+    }
+
+    @GetMapping(path = "/logs", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+	public String logsList() throws FailedVerificationException {
+    	LogResult r = new LogResult();
+    	r.logs = logService.getLog();
+		return formatter.objectToJson(r);
 	}
     
     public static class BlockchainResult {

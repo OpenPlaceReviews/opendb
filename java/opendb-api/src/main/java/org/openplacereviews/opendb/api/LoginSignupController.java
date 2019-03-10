@@ -1,6 +1,11 @@
 package org.openplacereviews.opendb.api;
 
 import java.security.KeyPair;
+import java.util.Map;
+import java.util.TreeMap;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
@@ -11,6 +16,11 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,24 +29,74 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 
 @Controller
-@RequestMapping("/api")
+@RequestMapping("/api/auth")
 public class LoginSignupController {
     
+	public static String ADMIN_LOGIN_NAME = "admin_name";
+	public static String ADMIN_LOGIN_PWD = "admin_pwd";
+	
+	Map<String, KeyPair> keyPairs = new TreeMap<>(); 
+	
     @Autowired
     private BlocksManager manager;
     
     @Autowired
     private JsonFormatter formatter;
-	
-	 
 
+    @PostMapping(path = "/admin-login")
+    @ResponseBody
+    public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name, 
+    		@RequestParam(required = true) String pwd, HttpSession session, HttpServletResponse response) {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
+    	if(OUtils.equals(manager.getServerUser(), name) && 
+    			OUtils.equals(manager.getServerPrivateKey(), pwd)) {
+    		session.setAttribute(ADMIN_LOGIN_NAME, name);
+    		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
+    		session.setMaxInactiveInterval(-1);
+    		keyPairs.put(pwd, manager.getServerLoginKeyPair());
+    	    HttpCookie cookie = ResponseCookie.from("admin-login", name).path("/").build();
+    	    return ResponseEntity.ok()
+    	            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+    	            .body("{\"status\":\"OK\"}");
+    	}
+    	HttpCookie cookie = ResponseCookie.from("admin-login", "").path("/").build();
+    	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+    			.header(HttpHeaders.SET_COOKIE, cookie.toString())
+    			.body("{\"status\":\"ERROR\"}");
+    }
+    
+    public boolean validateServerLogin(HttpSession session) {
+    	return keyPairs.containsKey(session.getAttribute(ADMIN_LOGIN_NAME));
+	}
+    
+    private KeyPair getServerLoginKeyPair(HttpSession session) {
+    	return keyPairs.get(session.getAttribute(ADMIN_LOGIN_NAME));
+	}
+    
+    private String getServerUser(HttpSession session) {
+		return (String) session.getAttribute(ADMIN_LOGIN_NAME);
+	}
+    
+    private ResponseEntity<String> unauthorizedByServer() {
+    	HttpCookie cookie = ResponseCookie.from("admin-login", "").path("/").build();
+    	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+    			.header(HttpHeaders.SET_COOKIE, cookie.toString())
+    			.body("{\"status\":\"ERROR\"}");
+	}
+    
     @PostMapping(path = "/sign-operation")
     @ResponseBody
-    public String signMessage(@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
+    public ResponseEntity<String> signMessage(HttpSession session, 
+    		@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey, 
     		@RequestParam(required = false, defaultValue = "false") boolean dontSignByServer,
     		@RequestParam(required = false, defaultValue = "false") boolean addToQueue)
 			throws FailedVerificationException {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
 		KeyPair kp = null;
 		KeyPair altKp = null;
 		OpOperation op = formatter.parseOperation(json);
@@ -51,13 +111,13 @@ public class LoginSignupController {
 			}
 			op.setSignedBy(name);
 		}
-		if (!OUtils.isEmpty(manager.getServerUser()) && !dontSignByServer) {
+		if (!OUtils.isEmpty(getServerUser(session)) && !dontSignByServer) {
 			if (!OUtils.isEmpty(name)) {
-				op.addOtherSignedBy(manager.getServerUser());
-				altKp = manager.getServerLoginKeyPair();
+				op.addOtherSignedBy(getServerUser(session));
+				altKp = getServerLoginKeyPair(session);
 			} else {
 				op.setSignedBy(manager.getServerUser());
-				kp = manager.getServerLoginKeyPair();
+				kp = getServerLoginKeyPair(session);
 			}
 		}
 		if (altKp != null) {
@@ -68,12 +128,12 @@ public class LoginSignupController {
 		if(addToQueue) {
 			manager.addOperation(op);
 		}
-		return formatter.toJson(op);
+		return ResponseEntity.ok(formatter.toJson(op));
 	}
-    
-    @PostMapping(path = "/signup")
+
+	@PostMapping(path = "/signup")
     @ResponseBody
-    public String signup(@RequestParam(required = true) String name,  
+    public ResponseEntity<String> signup(HttpSession session, @RequestParam(required = true) String name,  
     		@RequestParam(required = false) String pwd,  
     		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
@@ -106,9 +166,9 @@ public class LoginSignupController {
     		obj.putStringValue(OpBlockchainRules.F_SALT, salt);
     		obj.putStringValue(OpBlockchainRules.F_KEYGEN_METHOD, keyGen);
         	op.setSignedBy(name);
-    		if(!OUtils.isEmpty(manager.getServerUser())) {
-    			op.addOtherSignedBy(manager.getServerUser());
-    			otherKeyPair = manager.getServerLoginKeyPair();
+    		if(!OUtils.isEmpty(getServerUser(session))) {
+    			op.addOtherSignedBy(getServerUser(session));
+    			otherKeyPair = getServerLoginKeyPair(session);
     			if(otherKeyPair == null) {
     				throw new IllegalArgumentException(
     						String.format("Server %s to signup user doesn't have valid login key", manager.getServerUser()));
@@ -139,15 +199,19 @@ public class LoginSignupController {
     		manager.generateHashAndSign(op, keyPair, otherKeyPair);
     	}
     	manager.addOperation(op);
-        return formatter.toJson(op);
+    	return ResponseEntity.ok(formatter.toJson(op));
     }
     
     @PostMapping(path = "/login")
     @ResponseBody
-    public String login(@RequestParam(required = true) String name,  
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String signupPrivateKey,
+    public ResponseEntity<String> login(HttpSession session,
+    		@RequestParam(required = true) String name,  @RequestParam(required = false) String pwd, 
+    		@RequestParam(required = false) String signupPrivateKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
     	OpOperation op = new OpOperation();
     	op.setOperationType(OpBlockchainRules.OP_LOGIN);
     	OpObject obj = new OpObject();
@@ -214,9 +278,9 @@ public class LoginSignupController {
     	if(loginPair.getPrivate() != null) {
     		OpOperation copy = new OpOperation(op);
     		copy.putStringValue(OpBlockchainRules.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
-    		return formatter.toJson(copy);
+    		return ResponseEntity.ok(formatter.toJson(copy));
     	}
-        return formatter.toJson(op);
+    	return ResponseEntity.ok(formatter.toJson(op));
     }
     
     

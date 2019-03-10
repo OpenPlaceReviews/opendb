@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
+import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
@@ -83,9 +84,10 @@ public class OpBlockChain {
 		}
 	}
 	
-	public synchronized OpBlock createBlock(OpBlockchainRules rules, ValidationTimer timer) throws FailedVerificationException {
+	public synchronized OpBlock createBlock(OpBlockchainRules rules, String user, KeyPair keyPair, 
+			ValidationTimer timer) throws FailedVerificationException {
 		validateIsUnlocked();
-		OpBlock block = rules.createAndSignBlock(operations, getLastBlock());
+		OpBlock block = rules.createAndSignBlock(operations, getLastBlock(), user, keyPair);
 		boolean valid = rules.validateBlock(this, block, getLastBlock(), timer);
 		if(!valid) {
 			return null;

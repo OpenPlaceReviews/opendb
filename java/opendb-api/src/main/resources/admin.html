@@ -2,6 +2,7 @@
 <html>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <style>
         body {padding: 40px;}
@@ -25,18 +26,29 @@
           <h1>Admin harness for OpenDB</h1>
           <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
           <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
+          <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
           
           <h3>Admin actions</h3>
-          <div>
-            <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
+          <div id="admin-login-div">
+            <input type="text" id="admin-login-name"/>  
+            <input type="password" id="admin-login-key"/>  
+            <input type="submit" value="Login as admin" id="admin-login-btn"/>
+          </div>
+          <div id="admin-actions" style="display:none">
+            
             <input type="submit" value="Create block" id="block-create-btn"/>
+            <input type="submit" value="Clear log" id="clear-log-btn" />
+            <input type="submit" value="Clear queue" id="clear-list-btn" />
+            <br><br>
+            <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
             <input type="submit" value="Revert super block" id="block-revert-btn"/>
+            <br><br>
             <input type="submit" value="Toggle pause blockchain" id="block-pause-btn"/>
+
           </div>
     </div>
     <div id="queue" class="tab-pane fade">
       <h3>Operations in Queue</h3>
-        <input type="submit" value="Clear queue" id="clear-list-btn" />
         <ul id="operations-list">
         </ul>
 
@@ -62,7 +74,6 @@
 
     <div id="errors" class="tab-pane fade">
       <h3>Log</h3>
-        <input type="submit" value="Clear log" id="clear-log-btn" />
         <ul id="errors-list">
         </ul>
 
@@ -123,20 +134,37 @@
 
 
 function loadData() {
+  refreshUser();
   loadQueueData();
   loadObjectsData();
   loadBlocksData();
   loadErrorsData();
 }
+function refreshUser() {
+  var name = $.cookie("admin-login") 
+  if(name && name != "") {
+    $("#admin-login-user").html(name);
+    $("#admin-actions").show();
+    $("#admin-login-div").hide();
+    $("#reg").show();
+    $("#reg-tab").show();
+  } else {
+    $("#admin-actions").hide();
+    $("#admin-login-div").show();
+    $("#reg-tab").hide();
+    $("#reg").hide();
+  }
+  
+}
 
 function loadErrorsData() {
-  $.getJSON( "/log/list", function( data ) {
+  $.getJSON( "/api/logs", function( data ) {
       var items = "";
       var errs = 0;
       for(var i = 0; i < data.logs.length; i++)  {
         let op = data.logs[i];
         items += "<br><li><b>Status</b>: " + op.status;
-        if(op.status != "EXECUTED") {
+        if(op.status) {
           errs++;
         }
         items += "<br><b>Message</b>: " + op.message;
@@ -271,13 +299,13 @@ function loadQueueData() {
 $( document ).ready(function() {
     loadData();
     $("#clear-list-btn").click(function(){
-      $.post("/blockchain-mgmt/queue-clear", {},  function(data, status){
+      $.post("/api/mgmt/queue-clear", {},  function(data, status){
         loadData();
       });
     });
 
     $("#clear-log-btn").click(function(){
-      $.post("/log/clear", {},  function(data, status){
+      $.post("/api/mgmt/logs-clear", {},  function(data, status){
         loadData();
       });
     });
@@ -286,28 +314,37 @@ $( document ).ready(function() {
     });
 
     $("#block-create-btn").click(function(){
-       $.post("/blockchain-mgmt/create", {})
+       $.post("/api/mgmt/create", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
     $("#block-revert-btn").click(function(){
-       $.post("/blockchain-mgmt/revert-superblock", {})
+       $.post("/api/mgmt/revert-superblock", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
     $("#block-pause-btn").click(function(){
-       $.post("/blockchain-mgmt/toggle-pause", {})
+       $.post("/api/mgmt/toggle-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
     $("#block-bootstrap-btn").click(function(){
-      $.post("/blockchain-mgmt/bootstrap", {})
+      $.post("/api/mgmt/bootstrap", {})
         .done(function(data){  $("#result").html(data); loadData(); })
         .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
 
+    $("#admin-login-btn").click(function() {
+      var obj = {
+        "pwd":$("#admin-login-key").val(),
+        "name":$("#admin-login-name").val()
+      };
+      $.post("/api/auth/admin-login", obj)
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
+    });
     
     $("#signup-btn").click(function() {
       var obj = {
@@ -320,7 +357,7 @@ $( document ).ready(function() {
         "publicKey":$("#signup-user-pbk").val(),
         "userDetails":$("#signup-details").val()
       };
-      $.post("/api/signup", obj)
+      $.post("/api/auth/signup", obj)
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
@@ -333,7 +370,7 @@ $( document ).ready(function() {
         "privateKey":$("#sign-pk").val(),
         "dontSignByServer":$("#sign-by-server").is(':checked')
       };
-      $.post("/api/sign-operation", obj)
+      $.post("/api/auth/sign-operation", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });
@@ -346,7 +383,7 @@ $( document ).ready(function() {
         "addToQueue" : "true",
         "dontSignByServer":$("#sign-by-server").is(':checked')
       };
-      $.post("/api/sign-operation", obj)
+      $.post("/api/auth/sign-operation", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });
@@ -360,7 +397,7 @@ $( document ).ready(function() {
         "loginPubKey":$("#login-public-key").val(),
         "loginAlgo":"EC"
       };
-      $.post("/api/login", obj)
+      $.post("/api/auth/login", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });

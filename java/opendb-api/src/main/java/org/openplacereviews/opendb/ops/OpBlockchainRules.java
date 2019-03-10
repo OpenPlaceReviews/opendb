@@ -16,7 +16,6 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.SimpleExprEvaluator;
 import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
@@ -85,27 +84,14 @@ public class OpBlockchainRules {
 	private static final String WILDCARD_RULE = "*";
 	
 	private JsonFormatter formatter;
-	private String serverUser;
-	private KeyPair serverKeyPair;
 	private ValidationListener logValidation;
 	
 	
-	
-	public OpBlockchainRules(JsonFormatter formatter, String serverUser, KeyPair serverKeyPair, ValidationListener logValidation) {
+	public OpBlockchainRules(JsonFormatter formatter, ValidationListener logValidation) {
 		this.formatter = formatter;
-		this.serverUser = serverUser;
-		this.serverKeyPair = serverKeyPair;
 		this.logValidation = logValidation;
 	}
 	
-	public KeyPair getServerKeyPair() {
-		return serverKeyPair;
-	}
-	
-	public String getServerUser() {
-		return serverUser;
-	}
-
 	
 	public String getSignupDescription() {
 		return "This operation signs up new user in DB."
@@ -484,7 +470,7 @@ public class OpBlockchainRules {
 	}
 
 	
-	public OpBlock createAndSignBlock(Collection<OpOperation> ops, OpBlock prevOpBlock)
+	public OpBlock createAndSignBlock(Collection<OpOperation> ops, OpBlock prevOpBlock, String serverUser, KeyPair serverKeyPair)
 			throws FailedVerificationException {
 		OpBlock block = new OpBlock();
 		block.operations.addAll(ops);

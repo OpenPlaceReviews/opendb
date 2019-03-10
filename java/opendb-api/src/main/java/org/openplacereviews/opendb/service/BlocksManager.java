@@ -44,9 +44,11 @@ public class BlocksManager {
 	
 	@Value("${opendb.publicKey}")
 	private String serverPublicKey;
+	private KeyPair serverKeyPair;
 	
 	private OpBlockChain blockchain; 
 	private OpBlockchainRules blockchainRules;
+
 	
 	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
 		return blockchainRules.generateHashAndSign(op, keyPair);
@@ -61,7 +63,7 @@ public class BlocksManager {
 	}
 	
 	public KeyPair getServerLoginKeyPair() {
-		return blockchainRules.getServerKeyPair();
+		return serverKeyPair;
 	}
 	
 	public synchronized boolean addOperation(OpOperation op) {
@@ -124,7 +126,7 @@ public class BlocksManager {
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
 		
 		int tmNewBlock = timer.startExtra();
-		OpBlock opBlock = blc.createBlock(blockchainRules, timer);
+		OpBlock opBlock = blc.createBlock(blockchainRules, serverUser, serverKeyPair, timer);
 		if(opBlock == null) {
 			return null;
 		}
@@ -157,14 +159,13 @@ public class BlocksManager {
 
 	public synchronized void init(MetadataDb metadataDB) {
 		LOGGER.info("... Blockchain. Loading blocks...");
-		KeyPair serverKeyPair;
 		try {
-			serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
+			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
 		} catch (FailedVerificationException e) {
 			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
 			throw new RuntimeException(e);
 		}
-		blockchainRules = new OpBlockchainRules(formatter, serverUser, serverKeyPair, logSystem);
+		blockchainRules = new OpBlockchainRules(formatter, logSystem);
 		blockchain = new OpBlockChain(null);
 		
 		String msg = "";

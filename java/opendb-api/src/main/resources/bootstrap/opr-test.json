@@ -3,7 +3,6 @@
 	"date":"2019-02-15T00:00:00.000Z",
 	"ops": [
 
-
 		// 	1."comment"   : "Check that only registrator could signup and login users",
 		// if(type == 'sys:login' || type == 'sys:signup' ) { has_role('registrator', this.signed_by)) }
 
@@ -11,75 +10,6 @@
 		// if(type == 'sys:login' && "link.signup.auth_method" == "provided")
 		// intersects_not_empty(this.signed_by, link.signup.signed_by)
 
-		{
-			"type" : "sys.validate",
-			"signed_by": "openplacereviews",
-			"new" : {
-				"id" : "only_one_mod_possible_for_auth",
-				"type" : ["sys.login", "sys.signup"],
-				"role" : "owner",
-				"validate" : [
-					"std:leq(std:size(.old), 1)",
-					"std:eq(std:size(.new), 1)",
-				]
-			}
-		},
-		{
-			"type" : "sys.validate",
-			"signed_by": "openplacereviews",
-			"new" : {
-				"id" : "only_one_mod_possible_for_valid",
-				"type" : ["sys.role", "sys.validate"],
-				"role" : "none",
-				"validate" : [
-					"bool:leq(std:size(.old), 1)",
-					"bool:eq(std:size(.new), 1)",
-				]
-			}
-		},
-
-		{
-			"type" : "sys.validate",
-			"signed_by": "openplacereviews",
-			"new" : {
-				"id" : "change_validate_requires_to_have_role",
-				"type" : ["sys.role"],
-				"comment" : "Check that operation of validate edit should be signed by previous role. Couldn't be changed!",
-				"role" : "none",
-				"if" : [
-					"bool:eq(std:size(.old), 1)"
-				],
-				"validate" : [
-					"auth:one_has_role(.old.role, .signed_by)"
-				]
-			}
-		},
-		{
-			"type" : "sys.validate",
-			"signed_by": "openplacereviews",
-			"new" : {
-				"id" : "role_none_couldnot_be_created",
-				"type" : ["sys:role"],
-				"comment" : "Check that role none could not be created. Couldn't be changed!",
-				"role" : "none",
-				"validate" : [
-					"bool:not_equals(new.name, 'none')"
-				]
-			}
-		},
-		{
-			"type" : "sys.validate",
-			"signed_by": "openplacereviews",
-			"new" : {
-				"id" : "all_operations_should_be_registered",
-				"type" : ["sys:role"],
-				"comment" : "All operations should be registered by sys operation",
-				"role" : "owner",
-				"validate" : [
-					"bl:find_by_id('sys:operation', .type)"
-				]
-			}
-		},
 
 		// "usr:balance", "new" : { "id" : "$usr:$asset:$", "asset" }
 		// validation: sum(old.balance) = new.0.balance + new.1.balance

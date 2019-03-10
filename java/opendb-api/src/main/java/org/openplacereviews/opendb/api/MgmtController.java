@@ -9,6 +9,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -19,14 +20,16 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 
 @Controller
-@RequestMapping("/blockchain-mgmt")
-public class BlockchainMgmtController {
+@RequestMapping("/api/mgmt")
+public class MgmtController {
 	
-    protected static final Log LOGGER = LogFactory.getLog(BlockchainMgmtController.class);
+    protected static final Log LOGGER = LogFactory.getLog(MgmtController.class);
     
     @Autowired
     private BlocksManager manager;
     
+    @Autowired
+    private LogOperationService logService;
     
     @Autowired
     private JsonFormatter formatter;
@@ -43,8 +46,15 @@ public class BlockchainMgmtController {
     
     @PostMapping(path = "/queue-clear")
     @ResponseBody
-    public String addToQueue() {
+    public String clearQueue() {
     	manager.clearQueue();
+        return "{\"status\":\"OK\"}";
+    }
+    
+    @PostMapping(path = "/logs-clear")
+    @ResponseBody
+    public String logsClear() {
+    	logService.clearLogs();
         return "{\"status\":\"OK\"}";
     }
     
