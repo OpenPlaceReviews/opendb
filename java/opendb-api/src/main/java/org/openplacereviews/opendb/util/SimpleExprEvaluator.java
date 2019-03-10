@@ -15,6 +15,7 @@ import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.expr.OpenDBExprLexer;
 import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
@@ -35,10 +36,10 @@ public class SimpleExprEvaluator {
 	public static final String FUNCTION_DB_FIND_UNIQUE = "db:find_unique";
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
-	public static final String FUNCTION_OP_NAME = "op:op_name";
-	public static final String FUNCTION_OP_MOD = "op:op_mod";
-	public static final String FUNCTION_OP_GROUP = "op:op_group";
 	public static final String FUNCTION_M_PLUS = "m:plus";
+	public static final String FUNCTION_STD_EQ = "std:eq";
+	public static final String FUNCTION_STD_LEQ = "std:leq";
+	public static final String FUNCTION_STD_LE = "std:le";
 	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
 	// TODOO
@@ -148,6 +149,7 @@ public class SimpleExprEvaluator {
 	}
 
 	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
+		Number n1, n2;
 		switch (functionName) {
 		case FUNCTION_M_PLUS:
 			long l1 = getLongArgument(functionName, args, 0);
@@ -176,29 +178,25 @@ public class SimpleExprEvaluator {
 				}
 			}
 			return ffs;
-		case FUNCTION_OP_GROUP:
-			return getSplitElement(ctx.ctx.get(OpOperation.F_TYPE), 0);
-		case FUNCTION_OP_MOD:
-			return getSplitElement(ctx.ctx.get(OpOperation.F_TYPE), 2);
-		case FUNCTION_OP_NAME:
-			return getSplitElement(ctx.ctx.get(OpOperation.F_TYPE), 1);
+		case FUNCTION_STD_EQ:
+			Object obj1 = getObjArgument(functionName, args, 0);
+			Object obj2 = getObjArgument(functionName, args, 1);
+			return OUtils.equals(obj1, obj2) ? 1 : 0;
+		case FUNCTION_STD_LEQ:
+			n1 = getNumberArgument(functionName, args, 0);
+			n2 = getNumberArgument(functionName, args, 0);
+			return n1.doubleValue() <= n2.doubleValue() ? 1 : 0;
+		case FUNCTION_STD_LE:
+			n1 = getNumberArgument(functionName, args, 0);
+			n2 = getNumberArgument(functionName, args, 0);
+			return n1.doubleValue() < n2.doubleValue() ? 1 : 0;
 		default:
 			break;
 		}
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
 	}
 
-	private String getSplitElement(JsonElement jsonElement, int i) {
-		if(jsonElement == null || !jsonElement.isJsonPrimitive()) {
-			return null;
-		}
-		String[] s = jsonElement.getAsString().split(":");
-		if(s.length > i) {
-			return s[i];
-		}
-		return null;
-		
-	}
+	
 
 	private String getStringArgument(String functionName, List<Object> args, int i) {
 		validateSize(functionName, args, i);
@@ -223,6 +221,12 @@ public class SimpleExprEvaluator {
 		validateSize(functionName, args, i);
 		Object o = args.get(i);
 		return o == null ? 0 : Long.parseLong(o.toString());
+	}
+	
+	private Number getNumberArgument(String functionName, List<Object> args, int i) {
+		validateSize(functionName, args, i);
+		Object o = args.get(i);
+		return o == null ? 0 : ((Number)o);
 	}
 
 	private Object eval(ExpressionContext expr, EvaluationContext ctx) {

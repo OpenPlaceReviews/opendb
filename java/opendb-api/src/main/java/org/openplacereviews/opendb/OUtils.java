@@ -58,8 +58,7 @@ public class OUtils {
 		}
 		return true;
 	}
-	
-	public static boolean equals(String s1, String s2) {
+	public static boolean equals(Object s1, Object s2) {
 		if(s1 == null) {
 			return s1 == s2;
 		}

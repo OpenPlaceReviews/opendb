@@ -196,7 +196,7 @@
 				"comment" : "Validate that operation is registered",
 				"role" : "owner",
 				"validate" : [
-					"std:eq(ref.op.type,.type)"
+					"std:eq(.ref.op.type,.type)"
 				]
 			}]
 		},
@@ -208,7 +208,7 @@
 				"comment" : "Validate operation arity",
 				"role" : "none",
 				"if" : [
-					"std:eq(ref.op.arity, 0)"
+					"std:eq(.ref.op.arity, 0)"
 				],
 				"validate" : [
 					"std:leq(std:size(.new),1)",

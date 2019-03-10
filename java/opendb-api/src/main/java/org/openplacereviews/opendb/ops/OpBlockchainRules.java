@@ -254,9 +254,10 @@ public class OpBlockchainRules {
 				return true;
 			}
 		}
-		for(SimpleExprEvaluator s : vld) {
-			if(!s.evaluteBoolean(ctx)) {
-				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(), rule.getStringValue(F_ERROR_MESSAGE));
+		for (SimpleExprEvaluator s : vld) {
+			if (!s.evaluteBoolean(ctx)) {
+				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(),
+						rule.getStringValue(F_ERROR_MESSAGE));
 			}
 		}
 		return true;
@@ -267,7 +268,7 @@ public class OpBlockchainRules {
 		List<SimpleExprEvaluator> validate = (List<SimpleExprEvaluator>) rule.getCacheObject(field);
 		if(validate == null) {
 			validate = new ArrayList<SimpleExprEvaluator>();
-			for(String expr: rule.getStringList(field)){
+			for (String expr : rule.getStringList(field)) {
 				validate.add(SimpleExprEvaluator.parseMappingExpression(expr));
 			}
 			rule.putCacheObject(field, validate);
