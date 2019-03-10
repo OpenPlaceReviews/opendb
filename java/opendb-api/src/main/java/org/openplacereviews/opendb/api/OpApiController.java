@@ -48,9 +48,6 @@ public class OpApiController {
     @ResponseBody
     public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name, 
     		@RequestParam(required = true) String pwd, HttpSession session, HttpServletResponse response) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
     	if(OUtils.equals(manager.getServerUser(), name) && 
     			OUtils.equals(manager.getServerPrivateKey(), pwd)) {
     		session.setAttribute(ADMIN_LOGIN_NAME, name);
