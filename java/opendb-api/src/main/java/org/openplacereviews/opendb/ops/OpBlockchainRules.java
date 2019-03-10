@@ -189,6 +189,9 @@ public class OpBlockchainRules {
 
 	// hash and signature operations
 	public String calculateOperationHash(OpOperation ob, boolean set) {
+		if(ob.isImmutable()) {
+			ob = new OpOperation(ob);
+		}
 		String oldHash = (String) ob.remove(OpOperation.F_HASH);
 		Object sig = ob.remove(OpOperation.F_SIGNATURE);
 		Object validation = ob.remove(OpOperation.F_VALIDATION);
@@ -246,7 +249,7 @@ public class OpBlockchainRules {
 	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, List<OpObject> deletedObjsCache,
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
 		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonObject(o),
-				deletedObjsCache, refObjsCache);
+				formatter.toJsonElement(deletedObjsCache), formatter.toJsonObject(refObjsCache));
 		List<SimpleExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<SimpleExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(SimpleExprEvaluator s : ifs) {

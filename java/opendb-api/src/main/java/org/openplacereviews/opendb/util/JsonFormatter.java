@@ -108,13 +108,15 @@ public class JsonFormatter {
 		return gson.toJson(bl);
 	}
 	
-	public JsonObject toJsonObject(OpBlock bl) {
-		return gson.toJsonTree(bl).getAsJsonObject();
-	}
 	
-	public JsonObject toJsonObject(OpOperation o) {
+	public JsonObject toJsonObject(Object o) {
 		return gson.toJsonTree(o).getAsJsonObject();
 	}
+	
+	public JsonElement toJsonElement(Object o) {
+		return gson.toJsonTree(o);
+	}
+	
 	
 	public String objectToJson(Object o) {
 		return gson.toJson(o);

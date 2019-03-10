@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -22,11 +21,10 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -38,8 +36,10 @@ public class SimpleExprEvaluator {
 	public static final String FUNCTION_STR_SECOND = "str:second";
 	public static final String FUNCTION_M_PLUS = "m:plus";
 	public static final String FUNCTION_STD_EQ = "std:eq";
+	public static final String FUNCTION_STD_NEQ = "std:neq";
 	public static final String FUNCTION_STD_LEQ = "std:leq";
 	public static final String FUNCTION_STD_LE = "std:le";
+	public static final String FUNCTION_STD_SIZE = "std:size";
 	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
 	// TODOO
@@ -55,15 +55,13 @@ public class SimpleExprEvaluator {
 	public static class EvaluationContext {
 		JsonObject ctx;
 		OpBlockChain op;
-		List<OpObject> deletedObjsCache;
-		Map<String, OpObject> refObjsCache;
 
 		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx, 
-				List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache) {
+				JsonElement deleted, JsonObject refs) {
 			this.op = blockchain;
 			this.ctx = ctx;
-			this.deletedObjsCache = deletedObjsCache;
-			this.refObjsCache = refObjsCache;
+			this.ctx.add("ref", refs);
+			this.ctx.add("old", deleted);
 		}
 
 	}
@@ -150,6 +148,7 @@ public class SimpleExprEvaluator {
 
 	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
 		Number n1, n2;
+		Object obj1, obj2;
 		switch (functionName) {
 		case FUNCTION_M_PLUS:
 			long l1 = getLongArgument(functionName, args, 0);
@@ -179,17 +178,29 @@ public class SimpleExprEvaluator {
 			}
 			return ffs;
 		case FUNCTION_STD_EQ:
-			Object obj1 = getObjArgument(functionName, args, 0);
-			Object obj2 = getObjArgument(functionName, args, 1);
+			obj1 = getObjArgument(functionName, args, 0);
+			obj2 = getObjArgument(functionName, args, 1);
 			return OUtils.equals(obj1, obj2) ? 1 : 0;
+		case FUNCTION_STD_NEQ:
+			obj1 = getObjArgument(functionName, args, 0);
+			obj2 = getObjArgument(functionName, args, 1);
+			return OUtils.equals(obj1, obj2) ? 0 : 1;
 		case FUNCTION_STD_LEQ:
-			n1 = getNumberArgument(functionName, args, 0);
-			n2 = getNumberArgument(functionName, args, 0);
+			n1 = (Number) getObjArgument(functionName, args, 0);
+			n2 = (Number) getObjArgument(functionName, args, 0);
 			return n1.doubleValue() <= n2.doubleValue() ? 1 : 0;
 		case FUNCTION_STD_LE:
-			n1 = getNumberArgument(functionName, args, 0);
-			n2 = getNumberArgument(functionName, args, 0);
+			n1 = (Number) getObjArgument(functionName, args, 0);
+			n2 = (Number) getObjArgument(functionName, args, 0);
 			return n1.doubleValue() < n2.doubleValue() ? 1 : 0;
+		case FUNCTION_STD_SIZE:
+			Object ob = getObjArgument(functionName, args, 0);
+			if(ob instanceof JsonArray) {
+				return ((JsonArray) ob).size();
+			} else if(ob instanceof JsonObject) {
+				return ((JsonObject) ob).size();
+			}
+			return 1;
 		default:
 			break;
 		}
@@ -207,7 +218,20 @@ public class SimpleExprEvaluator {
 	
 	private Object getObjArgument(String functionName, List<Object> args, int i) {
 		validateSize(functionName, args, i);
-		return args.get(i);
+		 Object obj= args.get(i);
+		 if(obj instanceof JsonArray) {
+			 if(((JsonArray) obj).size() == 1) {
+				 obj = ((JsonArray) obj).get(0);
+			 }
+		 }
+		 if(obj instanceof JsonPrimitive) {
+			 if(((JsonPrimitive) obj).isNumber()) {
+				 return ((JsonPrimitive) obj).getAsNumber();
+			 } else {
+				 return ((JsonPrimitive) obj).getAsString();
+			 }
+		 }
+		 return obj;
 	}
 
 	private void validateSize(String functionName, List<Object> args, int i) {
@@ -218,16 +242,11 @@ public class SimpleExprEvaluator {
 	}
 
 	private long getLongArgument(String functionName, List<Object> args, int i) {
-		validateSize(functionName, args, i);
-		Object o = args.get(i);
+		Object o = getObjArgument(functionName, args, i);
 		return o == null ? 0 : Long.parseLong(o.toString());
 	}
 	
-	private Number getNumberArgument(String functionName, List<Object> args, int i) {
-		validateSize(functionName, args, i);
-		Object o = args.get(i);
-		return o == null ? 0 : ((Number)o);
-	}
+	
 
 	private Object eval(ExpressionContext expr, EvaluationContext ctx) {
 		ParseTree child = expr.getChild(0);
@@ -238,7 +257,14 @@ public class SimpleExprEvaluator {
 			} else if (t.getSymbol().getType() == OpenDBExprParser.THIS) {
 				return ctx.ctx;
 			} else if (t.getSymbol().getType() == OpenDBExprParser.DOT) {
-				return unwrap(ctx.ctx.getAsJsonObject().get(expr.getChild(1).getText()));
+				Object obj = ctx.ctx;
+//				System.out.println(expr.getChild(0).getText());
+//				System.out.println(expr.getText());
+				for(int i = 1; i < expr.getChildCount(); i++) {
+					obj = unwrap(((JsonObject)obj).get(expr.getChild(i).getText()));
+				}
+				return obj;
+//				return unwrap(ctx.ctx.get(expr.getChild(1).getText()));
 			} else if (t.getSymbol().getType() == OpenDBExprParser.STRING_LITERAL1) {
 				return t.getText().substring(1, t.getText().length() - 1).replace("\\\'", "\'");
 			} else if (t.getSymbol().getType() == OpenDBExprParser.STRING_LITERAL2) {
@@ -259,11 +285,14 @@ public class SimpleExprEvaluator {
 			MethodCallContext mcc = ((MethodCallContext) child);
 			String functionName = mcc.getChild(0).getText();
 			List<Object> args = new ArrayList<Object>();
-			
+			System.out.println(functionName + " ");
 			for (int i = 0; i < mcc.getChildCount(); i++) {
 				ParseTree pt = mcc.getChild(i);
+				System.out.println(" -> " + pt.getText());
 				if(pt instanceof ExpressionContext){
-					args.add(eval((ExpressionContext) pt, ctx));
+					Object obj = eval((ExpressionContext) pt, ctx);
+					System.out.println(obj);
+					args.add(obj);
 				}
 			}
 			return callFunction(functionName, args, ctx);

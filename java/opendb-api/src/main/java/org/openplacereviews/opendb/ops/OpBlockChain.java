@@ -590,30 +590,30 @@ public class OpBlockChain {
 	
 	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
-		if(refs == null) {
-			return true;
-		}
-		Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
-		while(it.hasNext()) {
-			Entry<String, List<String>> e = it.next();
-			String refName = e.getKey();
-			List<String> refObjName = e.getValue();
-			OpObject oi = null;
-			if(refObjName.size() > 1) {
-				// type is necessary
-				OpBlockChain blc = this;
-				String objType = refObjName.get(0);
-				List<String> refKey = refObjName.subList(1, refObjName.size());
-				while (blc != null && oi == null) {
-					oi = blc.getObjectByName(objType, refKey);
-					blc = blc.parent;
+		if (refs != null) {
+			Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<String, List<String>> e = it.next();
+				String refName = e.getKey();
+				List<String> refObjName = e.getValue();
+				OpObject oi = null;
+				if (refObjName.size() > 1) {
+					// type is necessary
+					OpBlockChain blc = this;
+					String objType = refObjName.get(0);
+					List<String> refKey = refObjName.subList(1, refObjName.size());
+					while (blc != null && oi == null) {
+						oi = blc.getObjectByName(objType, refKey);
+						blc = blc.parent;
+					}
 				}
+				if (oi == null) {
+					return ctx.rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getRawHash(), refObjName);
+				}
+				ctx.refObjsCache.put(refName, oi);
 			}
-			if(oi == null) {
-				return ctx.rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getRawHash(), refObjName);
-			}
-			ctx.refObjsCache.put(refName, oi);
 		}
+		ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
 		return true;
 	}
 	

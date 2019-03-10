@@ -196,7 +196,7 @@
 				"comment" : "Validate that operation is registered",
 				"role" : "owner",
 				"validate" : [
-					"std:eq(.ref.op.type,.type)"
+					"std:eq(.ref.op.id,.type)"
 				]
 			}]
 		},
@@ -226,7 +226,7 @@
 				"role" : "none",
 				"validate" : [
 					"std:eq(std:size(.new),1)",
-					"std:leq(std:size(.old),1)",
+					"std:leq(std:size(.old),1)"
 				]
 			}]
 		},
@@ -238,7 +238,7 @@
 				"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
 				"role" : "none",
 				"if" : [
-					"bool:eq(std:size(.old), 1)"
+					"std:eq(std:size(.old), 1)"
 				],
 				"validate" : [
 					"auth:one_has_role(.old.role, .signed_by)",
