@@ -30,10 +30,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/api/auth")
-public class LoginSignupController {
+public class OpApiController {
     
-	public static String ADMIN_LOGIN_NAME = "admin_name";
-	public static String ADMIN_LOGIN_PWD = "admin_pwd";
+	public static final String ADMIN_COOKIE = "admin-login";
+	public static final String ADMIN_LOGIN_NAME = "admin_name";
+	public static final String ADMIN_LOGIN_PWD = "admin_pwd";
 	
 	Map<String, KeyPair> keyPairs = new TreeMap<>(); 
 	
@@ -56,19 +57,20 @@ public class LoginSignupController {
     		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
     		session.setMaxInactiveInterval(-1);
     		keyPairs.put(pwd, manager.getServerLoginKeyPair());
-    	    HttpCookie cookie = ResponseCookie.from("admin-login", name).path("/").build();
+    	    HttpCookie cookie = ResponseCookie.from(ADMIN_COOKIE, name).path("/").build();
     	    return ResponseEntity.ok()
     	            .header(HttpHeaders.SET_COOKIE, cookie.toString())
     	            .body("{\"status\":\"OK\"}");
     	}
-    	HttpCookie cookie = ResponseCookie.from("admin-login", "").path("/").build();
+    	HttpCookie cookie = ResponseCookie.from(ADMIN_COOKIE, "").path("/").build();
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
     			.header(HttpHeaders.SET_COOKIE, cookie.toString())
     			.body("{\"status\":\"ERROR\"}");
     }
     
     public boolean validateServerLogin(HttpSession session) {
-    	return keyPairs.containsKey(session.getAttribute(ADMIN_LOGIN_NAME));
+    	Object loginName = session.getAttribute(ADMIN_LOGIN_NAME);
+    	return loginName != null && keyPairs.containsKey(session.getAttribute(ADMIN_LOGIN_NAME));
 	}
     
     private KeyPair getServerLoginKeyPair(HttpSession session) {
@@ -80,7 +82,7 @@ public class LoginSignupController {
 	}
     
     private ResponseEntity<String> unauthorizedByServer() {
-    	HttpCookie cookie = ResponseCookie.from("admin-login", "").path("/").build();
+    	HttpCookie cookie = ResponseCookie.from(OpApiController.ADMIN_COOKIE, "").path("/").build();
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
     			.header(HttpHeaders.SET_COOKIE, cookie.toString())
     			.body("{\"status\":\"ERROR\"}");
@@ -116,7 +118,7 @@ public class LoginSignupController {
 				op.addOtherSignedBy(getServerUser(session));
 				altKp = getServerLoginKeyPair(session);
 			} else {
-				op.setSignedBy(manager.getServerUser());
+				op.setSignedBy(getServerUser(session));
 				kp = getServerLoginKeyPair(session);
 			}
 		}
@@ -138,6 +140,9 @@ public class LoginSignupController {
     		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
+		if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
     	OpOperation op = new OpOperation();
     	name = name.trim(); // reduce errors by having trailing spaces
     	if(!OpBlockchainRules.validateNickname(name)) {
@@ -171,7 +176,7 @@ public class LoginSignupController {
     			otherKeyPair = getServerLoginKeyPair(session);
     			if(otherKeyPair == null) {
     				throw new IllegalArgumentException(
-    						String.format("Server %s to signup user doesn't have valid login key", manager.getServerUser()));
+    						String.format("Server %s to signup user doesn't have valid login key", getServerUser(session)));
     			}
     		}
     	} else if(!OUtils.isEmpty(oauthId)) {
@@ -179,8 +184,8 @@ public class LoginSignupController {
     		obj.putStringValue(OpBlockchainRules.F_SALT, name);
     		obj.putStringValue(OpBlockchainRules.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
     		obj.putStringValue(OpBlockchainRules.F_OAUTH_PROVIDER, oauthProvider);
-    		keyPair = manager.getServerLoginKeyPair();
-    		op.setSignedBy(manager.getServerUser());
+    		keyPair = getServerLoginKeyPair(session);
+    		op.setSignedBy(getServerUser(session));
     	} else {
     		obj.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PROVIDED);
     		op.setSignedBy(name);
@@ -225,7 +230,7 @@ public class LoginSignupController {
 		if(!OpBlockchainRules.validateNickname(purpose)) {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}
-		String serverName = manager.getServerUser();
+		String serverName = getServerUser(session);
 		if (!OUtils.isEmpty(pwd) || !OUtils.isEmpty(signupPrivateKey)) {
 			if(!OUtils.isEmpty(signupPrivateKey)) {
 				kp = manager.getLoginKeyPair(nickname, signupPrivateKey);	
@@ -236,14 +241,14 @@ public class LoginSignupController {
 			// sign with server is it necessary or make it optional? 
 			if(!OUtils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
-    			otherKeyPair = manager.getServerLoginKeyPair();
+    			otherKeyPair = getServerLoginKeyPair(session);
     			if(otherKeyPair == null) {
     				throw new IllegalArgumentException(
     						String.format("Server %s to signup user doesn't have valid login key", serverName));
     			}
     		}
 		} else if (!OUtils.isEmpty(oauthId)) {
-			kp = manager.getServerLoginKeyPair();
+			kp = getServerLoginKeyPair(session);
 			OpObject sop = manager.getLoginObj(nickname);
 			if(!SecUtils.validateHash(sop.getStringValue(OpBlockchainRules.F_OAUTHID_HASH), 
 					sop.getStringValue(OpBlockchainRules.F_SALT), oauthId) || 
