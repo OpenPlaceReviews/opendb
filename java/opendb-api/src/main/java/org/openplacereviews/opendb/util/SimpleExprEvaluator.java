@@ -289,13 +289,13 @@ public class SimpleExprEvaluator {
 			MethodCallContext mcc = ((MethodCallContext) child);
 			String functionName = mcc.getChild(0).getText();
 			List<Object> args = new ArrayList<Object>();
-			System.out.println(functionName + " ");
+//			System.out.println(functionName + " ");
 			for (int i = 0; i < mcc.getChildCount(); i++) {
 				ParseTree pt = mcc.getChild(i);
-				System.out.println(" -> " + pt.getText());
+//				System.out.println(" -> " + pt.getText());
 				if(pt instanceof ExpressionContext){
 					Object obj = eval((ExpressionContext) pt, ctx);
-					System.out.println(obj);
+//					System.out.println(obj);
 					args.add(obj);
 				}
 			}
