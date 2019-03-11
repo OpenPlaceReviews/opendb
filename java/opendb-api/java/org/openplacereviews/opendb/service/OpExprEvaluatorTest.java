@@ -3,20 +3,20 @@ package org.openplacereviews.opendb.service;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
-import org.openplacereviews.opendb.util.SimpleExprEvaluator;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 
-public class SimpleExprEvaluatorTest {
+public class OpExprEvaluatorTest {
 
 	public static final String SIMPLE_JSON = "{'a':1, 'b': 'b', 'c' : ['1', '2'], 'e' : {'a': {'a':3}} }";
 
 	public Object evaluateExpr(String e) {
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
-		SimpleExprEvaluator.EvaluationContext ectx = new SimpleExprEvaluator.EvaluationContext(null, obj.getAsJsonObject(), null, null);
-		return SimpleExprEvaluator.parseExpression(e).evaluateObject(ectx);
+		OpExprEvaluator.EvaluationContext ectx = new OpExprEvaluator.EvaluationContext(null, obj.getAsJsonObject(), null, null);
+		return OpExprEvaluator.parseExpression(e).evaluateObject(ectx);
 	}
 	
 	public Object evaluateExprJson(String e) {

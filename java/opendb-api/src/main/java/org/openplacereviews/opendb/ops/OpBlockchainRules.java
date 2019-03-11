@@ -17,8 +17,8 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.SimpleExprEvaluator;
-import org.openplacereviews.opendb.util.SimpleExprEvaluator.EvaluationContext;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
+import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
 
 /**
  * State less blockchain rules to validate roles and calculate hashes
@@ -261,14 +261,14 @@ public class OpBlockchainRules {
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
 		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonObject(o),
 				formatter.toJsonElement(deletedObjsCache), formatter.toJsonObject(refObjsCache));
-		List<SimpleExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
-		List<SimpleExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
-		for(SimpleExprEvaluator s : ifs) {
+		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
+		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
+		for(OpExprEvaluator s : ifs) {
 			if(!s.evaluateBoolean(ctx)) {
 				return true;
 			}
 		}
-		for (SimpleExprEvaluator s : vld) {
+		for (OpExprEvaluator s : vld) {
 			if (!s.evaluateBoolean(ctx)) {
 				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(),
 						rule.getStringValue(F_ERROR_MESSAGE));
@@ -278,12 +278,12 @@ public class OpBlockchainRules {
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<SimpleExprEvaluator> getValidateExpresions(String field, OpObject rule) {
-		List<SimpleExprEvaluator> validate = (List<SimpleExprEvaluator>) rule.getCacheObject(field);
+	private List<OpExprEvaluator> getValidateExpresions(String field, OpObject rule) {
+		List<OpExprEvaluator> validate = (List<OpExprEvaluator>) rule.getCacheObject(field);
 		if(validate == null) {
-			validate = new ArrayList<SimpleExprEvaluator>();
+			validate = new ArrayList<OpExprEvaluator>();
 			for (String expr : rule.getStringList(field)) {
-				validate.add(SimpleExprEvaluator.parseExpression(expr));
+				validate.add(OpExprEvaluator.parseExpression(expr));
 			}
 			rule.putCacheObject(field, validate);
 		}

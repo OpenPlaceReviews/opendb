@@ -14,7 +14,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.SimpleExprEvaluator;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -45,7 +45,7 @@ public class DBDataManager {
 	protected static class ColumnMapping {
 		String name;
 		SqlColumnType type;
-		SimpleExprEvaluator expression;
+		OpExprEvaluator expression;
 	}
 	
 	protected static class TableMapping {
@@ -207,7 +207,7 @@ public class DBDataManager {
 				}
 				
 				cm.type = getSqlType(colType);
-				cm.expression = SimpleExprEvaluator.parseExpression(expr);
+				cm.expression = OpExprEvaluator.parseExpression(expr);
 				cm.name = colName;
 				tableMapping.columnMappings.add(cm);
 				values.append("?");

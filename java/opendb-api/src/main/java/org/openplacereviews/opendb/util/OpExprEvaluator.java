@@ -29,7 +29,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
-public class SimpleExprEvaluator {
+public class OpExprEvaluator {
 
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
@@ -70,7 +70,7 @@ public class SimpleExprEvaluator {
 
 	}
 
-	private SimpleExprEvaluator(ExpressionContext ectx) {
+	private OpExprEvaluator(ExpressionContext ectx) {
 		this.ectx = ectx;
 
 	}
@@ -136,7 +136,7 @@ public class SimpleExprEvaluator {
 		return o.toString();
 	}
 	
-	public static SimpleExprEvaluator parseExpression(String value) throws RecognitionException {
+	public static OpExprEvaluator parseExpression(String value) throws RecognitionException {
 		OpenDBExprLexer lexer = new OpenDBExprLexer(new ANTLRInputStream(value));
 		ThrowingErrorListener twt = new ThrowingErrorListener(value);
 		lexer.removeErrorListeners();
@@ -145,7 +145,7 @@ public class SimpleExprEvaluator {
 		parser.removeErrorListeners();
 		parser.addErrorListener(twt);
 		ExpressionContext ectx = parser.expression();
-		return new SimpleExprEvaluator(ectx);
+		return new OpExprEvaluator(ectx);
 	}
 
 	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
