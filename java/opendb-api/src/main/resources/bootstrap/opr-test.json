@@ -2,74 +2,80 @@
 	"block_id":-1,
 	"date":"2019-02-15T00:00:00.000Z",
 	"ops": [
+		// test double objects could not be created
+		{"type" : "sys.role","new" : [{ "id" : ["none5"]}, { "id" : ["none4"]}]},
+		// test none could not be created
+		{"type" : "sys.role","new" : [{ "id" : ["none"]} ]},
 
+		// ROLES & Grant
 		{
-			"type" : "sys.role",
-			"new" : [{ 
-				"id" : ["none"]
+			"type" : "sys.validate",
+			"new" : [{
+				"id" : ["check_role_assigned_and_signed"],
+				"type" : ["sys.grant"],
+				"comment" : "Check that role is assigned by person who has it. Master role could change that validation.",
+				"owner_role" : "master",
+				"validate" : [
+					"auth:has_sig_roles(.roles)",
+					"auth:has_sig_roles(old.roles)"
+				]
 			}]
-		},		
-
-		// 	1."comment"   : "Check that only registrator could signup and login users",
-		// if(type == 'sys:login' || type == 'sys:signup' ) { has_role('registrator', this.signed_by)) }
-
-		// 2. check_self_signed_login_signup
-		// if(type == 'sys:login' && "link.signup.auth_method" == "provided")
-		// intersects_not_empty(this.signed_by, link.signup.signed_by)
+		},
 
 
-		// "usr:balance", "new" : { "id" : "$usr:$asset:$", "asset" }
-		// validation: sum(old.balance) = new.0.balance + new.1.balance
-	
+		// LOGIN & SIGNUP
+		{
+			"type" : "sys.validate",
+			"new" : [{
+				"id" : ["check_login_signup_by_administrator"],
+				"type" : ["sys.login", "sys.signup"],
+				"comment" : "Check that only administrator could signup and login users",
+				"owner_role" : "master",
+				"validate" : [
+					"auth:has_sig_roles('administrator')"
+				]
+			}]
+		},
 
 		{
-			"operation" : "sys:op_validate",
-			"name" : "check_role_assigned_and_signed",
-			"comment" : "Check if role assigned by person who has it. Master role could change validation.",
-			"owner_role" : "master",
-			"operations" : ["sys:grant"],
-			"if" : {},
-			"validate" : [
-				"auth:has_sig_all_roles(.roles)",
-				"auth:has_sig_all_roles(old.roles)"
-			]
+			"type" : "sys.validate",
+			"new" : [{
+				"id" : ["login_should_reference_its_signup"],
+				"type" : ["sys.login"],
+				"comment"   : "Every login should reference signup (that validates signup is active)",
+				"owner_role" : "none",
+				"validate" : [
+					"std:eq(.ref.s.type, 'sys.signup')",
+					"std:eq(.new.id.0, .ref.s.signup.id.0)"
+				]
+			}]
 		},
+
+
+
+		///////// TODO 4
+		// auth_method=provided: signup - 0 - signed by itself; login - 0 signed by itself [owner='none']
+		// auth_method=pwd: signup, 0 - signed by itself; login - 0 signed by itself [owner='owner']
+		// auth_method=oauth: no rules it is regulated by administrator
+		// 1. TODO if auth_method  provided
 		{
-			"operation" : "sys:op_validate",
-			"name"		: "check_login_signup_by_registrator",
-			"comment"   : "Check that only registrator could signup and login users",
-			"owner_role" : "master",
-			"operations" : ["sys:login", "sys:signup"],
-			"if" :  {},
-			"validate" : [
-				"auth:has_sig_role('registrator')"
-			]
+			"type" : "sys.validate",
+			"new" : [{
+				"id" : ["check_self_signed_login_signup"],
+				"type" : ["sys.login"],
+				"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
+				"owner_role" : "none",
+				"if" :  [
+					"std:eq(s.auth_method,'provided')"
+				],
+				"validate" : [
+					"std:in(.new.id, .signed_by)",
+					"std:in(.signed_by, s.signup.signed_by)",
+					"auth:has_sig_user(.name, .signup)"
+				]
+			}]
 		},
-		{
-			"operation" : "sys:op_validate",
-			"name" : "login_should_reference_its_signup",
-			"comment"   : "Every login should reference signup",
-			"owner_role" : "none",
-			"operations" : ["sys:login"],
-			"validate" : [
-				"std:type(s, 'sys:signup')",
-				"std:eq(new.id.0, s.signup.id)"
-			]
-		},
-		{
-			"operation" : "sys:op_validate",
-			"name" : "check_self_signed_login_signup",
-			"comment"   : "Check that signup is signed by itself and login is signed by signup key. Nobody could change that rule",
-			"owner_role" : "none",
-			"operations" : ["sys:login"],
-			"if" :  {
-				"s.auth_method" : ["provided"]
-			},
-			"validate" : [
-				"std:in(new.name, .signed_by)",
-				"std:in(.signed_by, s.signup.signed_by)"
-			]
-		},
+		// 1. TODO if auth_method  provided signup user
 		{
 			"operation" : "sys:op_validate",
 			"name" : "check_self_signed_login_signup",
@@ -99,6 +105,11 @@
 
 
 
+
+
+
+
+
 		{  
 			"type" : "sys.validate",
 			"new" : [{ 
@@ -111,6 +122,11 @@
 				]
 			}]
 		},
+
+
+		// "usr:balance", "new" : { "id" : "$usr:$asset:$", "asset" }
+		// validation: sum(old.balance) = new.0.balance + new.1.balance
+	
 
 		{
 			"operation" : "op:splitfunds",

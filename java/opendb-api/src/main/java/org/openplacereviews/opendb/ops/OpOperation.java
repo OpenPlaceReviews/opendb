@@ -40,6 +40,7 @@ public class OpOperation extends OpObject {
 	public OpOperation(OpOperation cp) {
 		super(cp);
 		this.type = cp.type;
+		this.newObjects.addAll(cp.newObjects);
 		this.operation = this;
 	}
 	

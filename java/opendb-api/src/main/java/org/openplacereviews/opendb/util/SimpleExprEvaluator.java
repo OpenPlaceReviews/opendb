@@ -37,20 +37,21 @@ public class SimpleExprEvaluator {
 	public static final String FUNCTION_M_MULT = "m:mult";
 	public static final String FUNCTION_M_DIV = "m:div";
 	public static final String FUNCTION_M_MINUS = "m:minus";
+	
 	public static final String FUNCTION_STD_EQ = "std:eq";
 	public static final String FUNCTION_STD_NEQ = "std:neq";
 	public static final String FUNCTION_STD_LEQ = "std:leq";
 	public static final String FUNCTION_STD_LE = "std:le";
 	public static final String FUNCTION_STD_SIZE = "std:size";
+	
 	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
-	public static boolean TRACE_EXPRESSIONS = true;
+	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
+	public static final String FUNCTION_AUTH_HAS_SIG_USER = "auth:has_sig_user";
 	
-	// TODO
-	// auth:has_sig_all_roles
-	// auth:has_sig_role
-	// auth:has_sig_user
-	// auth:has_sig_any_user(op:op_signatures(db:find_op(signup)))
+	
+	public static boolean TRACE_EXPRESSIONS = false;
+	
 	
 	private ExpressionContext ectx;
 
@@ -243,15 +244,15 @@ public class SimpleExprEvaluator {
 			return OUtils.equals(obj1, obj2) ? 0 : 1;
 		case FUNCTION_STD_LEQ:
 			n1 = (Number) getObjArgument(functionName, args, 0);
-			n2 = (Number) getObjArgument(functionName, args, 0);
+			n2 = (Number) getObjArgument(functionName, args, 1);
 			if(n1.doubleValue() == Math.ceil(n1.doubleValue()) && 
 					n2.doubleValue() == Math.ceil(n2.doubleValue())) {
-				return n1.longValue() <= n2.longValue();
+				return n1.longValue() <= n2.longValue() ? 1 : 0;		
 			}
 			return n1.doubleValue() <= n2.doubleValue() ? 1 : 0;
 		case FUNCTION_STD_LE:
 			n1 = (Number) getObjArgument(functionName, args, 0);
-			n2 = (Number) getObjArgument(functionName, args, 0);
+			n2 = (Number) getObjArgument(functionName, args, 1);
 			if(n1.doubleValue() == Math.ceil(n1.doubleValue()) && 
 					n2.doubleValue() == Math.ceil(n2.doubleValue())) {
 				return n1.longValue() < n2.longValue();
