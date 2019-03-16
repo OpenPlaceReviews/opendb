@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.api;
 
 import java.security.KeyPair;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -142,7 +143,7 @@ public class OpApiController {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
     	
-    	op.setOperationType(OpBlockchainRules.OP_SIGNUP);
+    	op.setType(OpBlockchainRules.OP_SIGNUP);
     	OpObject obj = new OpObject();
     	op.addNew(obj);
     	obj.setId(name);
@@ -211,7 +212,7 @@ public class OpApiController {
     		return unauthorizedByServer();
     	}
     	OpOperation op = new OpOperation();
-    	op.setOperationType(OpBlockchainRules.OP_LOGIN);
+    	op.setType(OpBlockchainRules.OP_LOGIN);
     	OpObject obj = new OpObject();
     	op.addNew(obj);
     	
@@ -224,6 +225,7 @@ public class OpApiController {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}
 		String serverName = getServerUser(session);
+		OpObject sop = manager.getLoginObj(nickname);
 		if (!OUtils.isEmpty(pwd) || !OUtils.isEmpty(signupPrivateKey)) {
 			if(!OUtils.isEmpty(signupPrivateKey)) {
 				kp = manager.getLoginKeyPair(nickname, signupPrivateKey);	
@@ -242,7 +244,6 @@ public class OpApiController {
     		}
 		} else if (!OUtils.isEmpty(oauthId)) {
 			kp = getServerLoginKeyPair(session);
-			OpObject sop = manager.getLoginObj(nickname);
 			if(!SecUtils.validateHash(sop.getStringValue(OpBlockchainRules.F_OAUTHID_HASH), 
 					sop.getStringValue(OpBlockchainRules.F_SALT), oauthId) || 
 					!oauthProvider.equals(sop.getStringValue(OpBlockchainRules.F_OAUTH_PROVIDER))) {
@@ -263,8 +264,10 @@ public class OpApiController {
     		loginPair = SecUtils.generateRandomEC256K1KeyPair();
     	}
 		obj.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
-    	
-    	
+		Map<String, Object> refs = new TreeMap<String, Object>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, nickname));
+    	op.putObjectValue(OpOperation.F_REF, refs);
+
     	if(otherKeyPair == null) {
     		manager.generateHashAndSign(op, kp);
     	} else {

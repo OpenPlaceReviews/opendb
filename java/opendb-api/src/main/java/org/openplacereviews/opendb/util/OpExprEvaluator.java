@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -21,6 +23,7 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
 
@@ -33,6 +36,7 @@ public class OpExprEvaluator {
 
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
+	
 	public static final String FUNCTION_M_PLUS = "m:plus";
 	public static final String FUNCTION_M_MULT = "m:mult";
 	public static final String FUNCTION_M_DIV = "m:div";
@@ -44,13 +48,14 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_STD_LE = "std:le";
 	public static final String FUNCTION_STD_SIZE = "std:size";
 	
+	public static final String FUNCTION_SET_IN = "set:in";
+	public static final String FUNCTION_SET_MINUS = "set:minus";
+	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
+	
 	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
-	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
-	public static final String FUNCTION_AUTH_HAS_SIG_USER = "auth:has_sig_user";
 	
-	
-	public static boolean TRACE_EXPRESSIONS = false;
+	public static boolean TRACE_EXPRESSIONS = true;
 	
 	
 	private ExpressionContext ectx;
@@ -219,29 +224,12 @@ public class OpExprEvaluator {
 		case FUNCTION_STD_EQ:
 			obj1 = getObjArgument(functionName, args, 0);
 			obj2 = getObjArgument(functionName, args, 1);
-			if(obj1 instanceof Number && obj2 instanceof Number) {
-				n1 = (Number) obj1;
-				n2 = (Number) obj2;
-				if(n1.doubleValue() == Math.ceil(n1.doubleValue()) && 
-						n2.doubleValue() == Math.ceil(n2.doubleValue())) {
-					return n1.longValue() == n2.longValue() ? 1 : 0;
-				}	
-				return n1.doubleValue() == n2.doubleValue() ? 1 : 0;
-			}
-			return OUtils.equals(obj1, obj2) ? 1 : 0;
+			return objEquals(obj1, obj2);
 		case FUNCTION_STD_NEQ:
 			obj1 = getObjArgument(functionName, args, 0);
 			obj2 = getObjArgument(functionName, args, 1);
-			if(obj1 instanceof Number && obj2 instanceof Number) {
-				n1 = (Number) obj1;
-				n2 = (Number) obj2;
-				if(n1.doubleValue() == Math.ceil(n1.doubleValue()) && 
-						n2.doubleValue() == Math.ceil(n2.doubleValue())) {
-					return n1.longValue() == n2.longValue() ? 0 : 1;
-				}	
-				return n1.doubleValue() == n2.doubleValue() ? 0 : 1;
-			}
-			return OUtils.equals(obj1, obj2) ? 0 : 1;
+			int r = objEquals(obj1, obj2);
+			return r == 0 ? 1 : 0;
 		case FUNCTION_STD_LEQ:
 			n1 = (Number) getObjArgument(functionName, args, 0);
 			n2 = (Number) getObjArgument(functionName, args, 1);
@@ -266,10 +254,109 @@ public class OpExprEvaluator {
 				return ((JsonObject) ob).size();
 			}
 			return 1;
+		case FUNCTION_AUTH_HAS_SIG_ROLES:
+			// TODO
+			return 1;
+		case FUNCTION_SET_MINUS:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			Set<String> obj1Set = new TreeSet<String>();
+			if(isJsonMapObj(obj1)) {
+				obj1Set.addAll(((JsonObject) obj1).keySet());
+			} else if(isJsonArrayObj(obj1)){
+				JsonArray j1 = ((JsonArray) obj1);
+				for(int i = 0; i < j1.size(); i++) {
+					obj1Set.add(toStringPrimitive(j1.get(i)));
+				}
+			} else {
+				obj1Set.add(toStringPrimitive(obj1));
+			}
+			
+			if(isJsonMapObj(obj2)) {
+				obj1Set.removeAll(((JsonObject) obj1).keySet());
+			} else if(isJsonArrayObj(obj1)){
+				JsonArray j2 = ((JsonArray) obj2);
+				for(int i = 0; i < j2.size(); i++) {
+					obj1Set.remove(toStringPrimitive(j2.get(i)));
+				}
+			} else {
+				obj1Set.remove(toStringPrimitive(obj2));
+			}
+			
+			JsonArray ar = new JsonArray(obj1Set.size());
+			for(String s : obj1Set) {
+				ar.add(s);
+			}
+			return ar;
+		case FUNCTION_SET_IN:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			if(!isJsonArrayObj(obj1) && !isJsonMapObj(obj1)) {
+				if(obj2 instanceof JsonArray) {
+					JsonArray j2 = ((JsonArray) obj2);
+					for(int i = 0; i < j2.size(); i++) {
+						if(objEquals(obj1, j2.get(i)) != 0) {
+							return 1;
+						}
+					}
+				} else if(obj2 instanceof JsonObject) {
+					JsonObject j2 = ((JsonObject) obj2);
+					for(String key : j2.keySet()) {
+						if(objEquals(obj1, key) != 0) {
+							return 1;
+						}
+					}
+				}
+				return 0;
+			} else {
+				if(obj2 instanceof JsonArray) {
+					JsonArray j2 = ((JsonArray) obj2);
+					for(int i = 0; i < j2.size(); i++) {
+						if(objEquals(obj1, j2.get(i)) != 0) {
+							return 1;
+						}
+					}
+				}
+				return objEquals(obj1, obj2);
+			}
 		default:
 			break;
 		}
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
+	}
+
+	private String toStringPrimitive(Object o) {
+		return o == null ? "" : o.toString();
+	}
+
+	private int objEquals(Object obj1, Object obj2) {
+		Number n1;
+		Number n2;
+		if(obj1 instanceof Number && obj2 instanceof Number) {
+			n1 = (Number) obj1;
+			n2 = (Number) obj2;
+			if(n1.doubleValue() == Math.ceil(n1.doubleValue()) && 
+					n2.doubleValue() == Math.ceil(n2.doubleValue())) {
+				return n1.longValue() == n2.longValue() ? 1 : 0;
+			}	
+			return n1.doubleValue() == n2.doubleValue() ? 1 : 0;
+		}
+		if(obj1 instanceof JsonPrimitive) {
+			obj1 = ((JsonPrimitive)obj1).getAsString();
+		}
+		if(obj2 instanceof JsonPrimitive) {
+			obj2 = ((JsonPrimitive)obj2).getAsString();
+		}
+		return OUtils.equals(obj1, obj2) ? 1 : 0;
+	}
+	
+	
+	public boolean isJsonMapObj(Object o) {
+		return o instanceof JsonObject;
+	}
+	
+	public boolean isJsonArrayObj(Object o) {
+		return o instanceof JsonArray;
 	}
 
 	
@@ -383,6 +470,8 @@ public class OpExprEvaluator {
 			return null;
 		} else if(obj instanceof JsonObject) {
 			return unwrap(((JsonObject) obj).get(field));
+		} else if("0".equals(field)) {
+			return obj;
 		}
 		return null;
 	}

@@ -2,7 +2,7 @@ grammar OpenDBExpr;
 
 // We define expression to be either a method call or a string.
 expression
-    : expression DOT NAME
+    : expression DOT ( NAME | INT )
     | THIS
     | methodCall 
     | DOT NAME

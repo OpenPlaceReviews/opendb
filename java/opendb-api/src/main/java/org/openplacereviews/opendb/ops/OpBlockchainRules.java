@@ -20,6 +20,10 @@ import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 /**
  * State less blockchain rules to validate roles and calculate hashes
  */
@@ -259,8 +263,16 @@ public class OpBlockchainRules {
 
 	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, List<OpObject> deletedObjsCache,
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
+		JsonArray deletedArray = (JsonArray) formatter.toJsonElement(deletedObjsCache);
+		for(int i = 0; i < deletedArray.size(); i++) {
+			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getType());
+		}
+		JsonObject refsMap = formatter.toJsonObject(refObjsCache);
+		for(String key : refObjsCache.keySet()) {
+			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getType());
+		}
 		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonObject(o),
-				formatter.toJsonElement(deletedObjsCache), formatter.toJsonObject(refObjsCache));
+				deletedArray, refsMap);
 		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(OpExprEvaluator s : ifs) {

@@ -30,7 +30,6 @@ public class OpOperation extends OpObject {
 	public static final String F_NAME = "name";
 	public static final String F_COMMENT = "comment";
 	
-	private String type;
 	private List<OpObject> newObjects = new LinkedList<OpObject>();
 	
 	public OpOperation() {
@@ -48,9 +47,12 @@ public class OpOperation extends OpObject {
 		return type;
 	}
 	
-	public void setOperationType(String name) {
+	public void setType(String name) {
 		checkNotImmutable();
 		type = name;
+		for(OpObject o : newObjects) {
+			o.setType(type);
+		}
 	}
 	
 	public void makeImmutable() {
@@ -70,10 +72,6 @@ public class OpOperation extends OpObject {
 	
 	public List<String> getSignedBy() {
 		return getStringList(F_SIGNED_BY);
-	}
-	
-	public String getType() {
-		return type;
 	}
 	
 	public String getHash() {
@@ -108,6 +106,9 @@ public class OpOperation extends OpObject {
 	public void addNew(OpObject o) {
 		checkNotImmutable();
 		newObjects.add(o);
+		if(type != null) {
+			o.setType(type);
+		}
 	}
 	
 	public boolean hasNew() {
@@ -176,7 +177,7 @@ public class OpOperation extends OpObject {
 			if(newObjs != null) {
 				JsonArray ar = newObjs.getAsJsonArray();
 				for(int i = 0; i < ar.size(); i++) {
-					op.newObjects.add(context.deserialize(ar.get(i), OpObject.class));
+					op.addNew(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
 			op.fields = context.deserialize(jsonObj, TreeMap.class);

@@ -40,6 +40,7 @@ public class OpObject {
 	protected transient Map<String, Object> cacheFields;
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected boolean isImmutable;
+	protected String type;
 	
 	public OpObject() {}
 	
@@ -98,6 +99,14 @@ public class OpObject {
 	
 	public String getName() {
 		return getStringValue(F_NAME);
+	}
+	
+	public String getType() {
+		return type;
+	}
+	
+	public void setType(String name) {
+		type = name;
 	}
 	
 	public String getComment() {

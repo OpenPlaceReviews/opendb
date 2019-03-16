@@ -13,11 +13,11 @@
 			"new" : [{
 				"id" : ["check_role_assigned_and_signed"],
 				"type" : ["sys.grant"],
-				"comment" : "Check that role is assigned by person who has it. Master role could change that validation.",
-				"owner_role" : "master",
+				"comment" : "Check that role is assigned by person who has it. Check that Owner role could change that validation.",
+				"owner_role" : "owner",
 				"validate" : [
-					"auth:has_sig_roles(.roles)",
-					"auth:has_sig_roles(old.roles)"
+					"auth:has_sig_roles(std:set_minus(.roles, .old.roles))",
+					"auth:has_sig_roles(std:set_minus(.old.roles, .roles))"
 				]
 			}]
 		},
@@ -121,44 +121,7 @@
 					"blc:find('sys.operation',.type)"
 				]
 			}]
-		},
-
-
-		// "usr:balance", "new" : { "id" : "$usr:$asset:$", "asset" }
-		// validation: sum(old.balance) = new.0.balance + new.1.balance
-	
-
-		{
-			"operation" : "op:splitfunds",
-			"name" : "auth:login",
-			"identity" : ".name",
-			"owner_role" : "TODO",
-			"validation" : {
-				"new" : {
-					"signature_all" : [
-						{ "req_sig_login:financial" : ".from" },
-						{ "req_sig_role" : "registrator" }
-					]
-				},
-				"edit" : {
-					"impossible" : "none"
-				}
-			}
-		},
-		{
-			"operation" : "user:vote",
-			"name" : "op:operation",
-			"owner_role" : "TODO",
-			"identity" : ".nickname .topic",
-			"EDIT" : "????? only owner ????",
-			"new" : {
-				"signature_all" : [
-					{ "req_sig_login" : ".name" },
-					{ "req_sig_role" : "vote_approval" }
-				]
-			},
-		}
-
+		}	
 
 	]
 }
