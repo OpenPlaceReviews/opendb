@@ -23,7 +23,6 @@ import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
 import org.postgresql.util.PGobject;
 
@@ -49,6 +48,7 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_STD_SIZE = "std:size";
 	
 	public static final String FUNCTION_SET_IN = "set:in";
+	public static final String FUNCTION_SET_ALL = "set:all";
 	public static final String FUNCTION_SET_MINUS = "set:minus";
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
 	
@@ -288,6 +288,18 @@ public class OpExprEvaluator {
 				ar.add(s);
 			}
 			return ar;
+		case FUNCTION_SET_ALL:
+			JsonArray arrayRes = new JsonArray();
+			for (Object o : args) {
+				if (o instanceof JsonElement) {
+					arrayRes.add((JsonElement) o);
+				} else if (o instanceof Number) {
+					arrayRes.add((Number) o);
+				} else {
+					arrayRes.add((String) o);
+				}
+			}
+			return arrayRes;
 		case FUNCTION_SET_IN:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			obj2 = getObjArgument(functionName, args, 1, false);

@@ -129,7 +129,11 @@
 				"version" : 0,
 				"arity" : 0,
 				"fields": {
-					"id" : "TODO"
+					"id" : "Unique name for validation",
+					"type" : "Array of operations to which validation is applicable (* is a global)",
+					"if" : "Array of preconditions (combined with AND) for validation to be applicable",
+					"validate" : "Array of validation rules (all should be evaluated to true or number != 0",
+					"role" : "Role of users could change that validation"
 				}
 			}]
 		},
@@ -161,6 +165,8 @@
 				}
 			}]
 		},
+
+		
 
 
 
@@ -196,7 +202,7 @@
 		{  
 			"type" : "sys.validate",
 			"new" : [{ 
-				"id" : ["validate_op_type_registered"],
+				"id" : ["all_op_type_registered"],
 				"type" : ["*"],
 				"comment" : "Validate that operation is registered",
 				"role" : "owner",
@@ -208,7 +214,7 @@
 		{  
 			"type" : "sys.validate",
 			"new" : [{ 
-				"id" : ["validate_op_arity"],
+				"id" : ["all_op_arity_new_del"],
 				"type" : ["*"],
 				"comment" : "Validate operation arity",
 				"role" : "none",
@@ -224,20 +230,44 @@
 		{  
 			"type" : "sys.validate",
 			"new" : [{ 
-				"id" : ["validate_new_validation"],
-				"type" : ["sys.validate"],
-				"comment" : "Validate new validation. It is strict and nobody could change it",
+				"id" : ["all_op_arity_same_type_and_id"],
+				"type" : ["*"],
+				"comment" : "Validate operation arity their types and ids",
 				"role" : "none",
-				"validate" : [
+				"if" : [
+					"std:eq(.ref.op.arity, 0)",
 					"std:eq(std:size(.new),1)",
-					"std:leq(std:size(.old),1)"
+					"std:eq(std:size(.old),1)"
+				],
+				"validate" : [
+					"std:eq(.type,.old.type)",
+					"std:eq(.id,.old.id)"
 				]
 			}]
 		},
 		{  
 			"type" : "sys.validate",
 			"new" : [{ 
-				"id" : ["validate_validation_changes"],
+				"id" : ["operation_std_arity_always_0"],
+				"type" : ["sys.operation"],
+				"comment" : "Validate that for all standard operation arity is always 0 and nobody could change it",
+				"role" : "none",
+				"if" : [
+					"set:in(.type, set:all('sys.operation','sys.validate','sys.role','sys.grant', 'sys.login', 'sys.signup'))",
+					"std:eq(std:size(.new),1)"
+				],
+				"validate" : [
+					"std:eq(.new.arity, 0)"
+				]
+			}]
+		},
+
+
+
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["sysvalidate_check_previous_role_for_change"],
 				"type" : ["sys.validate"],
 				"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
 				"role" : "none",
@@ -245,15 +275,14 @@
 					"std:eq(std:size(.old), 1)"
 				],
 				"validate" : [
-					"auth:has_sig_roles(.old.role)",
-					"std:eq(.new.id,.old.id)"
+					"auth:has_sig_roles(this, .old.role)"
 				]
 			}]
 		},
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["role_none_couldnot_be_created"],
+				"id" : ["role_none_could_not_be_created"],
 				"type" : ["sys.role"],
 				"comment" : "Check that role none could not be created. Couldn't be changed!",
 				"role" : "none",
@@ -266,25 +295,25 @@
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["check_role_assigned_and_signed"],
+				"id" : ["grant_check_op_role_and_check_assigned_role"],
 				"type" : ["sys.grant"],
-				"comment" : "Check that role is assigned by person who has it. Check that Owner role could change that validation.",
+				"comment" : "Check that role is assigned by person who has it. The role could be revoked or added only if operation is signed by a person who has that role. Check that Owner role could change that validation.",
 				"owner_role" : "owner",
 				"validate" : [
-					"auth:has_sig_roles(set:minus(.roles, .old.roles))",
-					"auth:has_sig_roles(set:minus(.old.roles, .roles))"
+					"auth:has_sig_roles(this, set:minus(.roles, .old.roles))",
+					"auth:has_sig_roles(this, set:minus(.old.roles, .roles))"
 				]
 			}]
 		},
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["check_login_signup_by_administrator"],
+				"id" : ["signup_login_only_by_administrator"],
 				"type" : ["sys.login", "sys.signup"],
 				"comment" : "Check that only administrator could signup and login users",
 				"owner_role" : "master",
 				"validate" : [
-					"auth:has_sig_roles('administrator')"
+					"auth:has_sig_roles(this, 'administrator')"
 				]
 			}]
 		},
@@ -304,7 +333,7 @@
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["check_self_signed_login_provided"],
+				"id" : ["login_self_signed_provided"],
 				"type" : ["sys.login"],
 				"comment"   : "Check that signup login is signed by signup key. Nobody could change that rule",
 				"owner_role" : "none",
@@ -319,7 +348,7 @@
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["check_self_signed_signup_provided"],
+				"id" : ["signup_self_signed_provided"],
 				"type" : ["sys.signup"],
 				"comment"   : "Check that signup is signed by itself. Nobody could change that rule",
 				"owner_role" : "none",
@@ -334,7 +363,7 @@
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["check_self_signed_login_pwd"],
+				"id" : ["login_self_signed_pwd"],
 				"type" : ["sys.login"],
 				"comment"   : "Check that signup login is signed by signup key. Nobody could change that rule",
 				"owner_role" : "owner",
@@ -349,7 +378,7 @@
 		{
 			"type" : "sys.validate",
 			"new" : [{
-				"id" : ["check_self_signed_signup_pwd"],
+				"id" : ["signup_self_signed_pwd"],
 				"type" : ["sys.signup"],
 				"comment"   : "Check that signup is signed by itself. Nobody could change that rule",
 				"owner_role" : "owner",
