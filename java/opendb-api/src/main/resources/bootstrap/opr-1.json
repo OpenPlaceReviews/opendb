@@ -53,7 +53,7 @@
 				"s" : ["sys.login","openplacereviews","test_1"]
 			},
 			"new" : [{ 
-				"id" : ["openplacereviews","test_1"],
+				"id" : ["openplacereviews:test_1"],
 				"roles" : ["master", "administrator"]
 			}]
 		},
@@ -76,14 +76,12 @@
 				"id" : ["sys.operation"],
 				"comment" : "Operation to define other operations with description and fields",
 				"version" : 0,
-				"versioning" : true,
 				"fields": {
 					"id" : "operation name usually written as <package_name>.<op_name>",
 					"fields" : "map of fields accepted by operation with their description",
 					"arity" : "integer number describing arity of operation, 0 - means that operation could create/delete 0 or 1 object maximum.",
-					"versioning" : "defines whether object should have subsequent version field",
 					"comment" : "description of the operation, purpose and how it could be used",
-					"version" : "int version of the defined operation"	
+					"version" : "optional int version of the defined operation"	
 				}
 			}]
 		},
@@ -279,6 +277,7 @@
 				]
 			}]
 		},
+
 		{
 			"type" : "sys.validate",
 			"new" : [{
@@ -288,6 +287,21 @@
 				"role" : "none",
 				"validate" : [
 					"std:neq(.new.id, 'none')"
+				]
+			}]
+		},
+		{
+			"type" : "sys.validate",
+			"new" : [{
+				"id" : ["role_could_be_changed_only_by_owner"],
+				"type" : ["sys.role"],
+				"comment" : "Check that role none could not be created. Couldn't be changed!",
+				"role" : "none",
+				"if" : [
+					"std:eq(std:size(.old), 1)"
+				],
+				"validate" : [
+					"auth:has_sig_roles(this, .old.owner_role)"
 				]
 			}]
 		},
