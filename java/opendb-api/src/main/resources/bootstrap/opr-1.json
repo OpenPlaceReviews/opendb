@@ -47,28 +47,6 @@
 			"hash": "json:sha256:41b132e7832099d14bf501606a969ba2a84ad2c46125b1c6470df709481d94b6",
 			"signature": "ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM"
 		},
-		{
-			"type" : "sys.grant",
-			"ref" : {
-				"s" : ["sys.login","openplacereviews","test_1"]
-			},
-			"new" : [{ 
-				"id" : ["openplacereviews:test_1"],
-				"roles" : ["master", "administrator"]
-			}]
-		},
-		{
-			"type" : "sys.grant",
-			"ref" : {
-				"s" : ["sys.signup","openplacereviews"]
-			},
-			"new" : [{ 
-				"id" : ["openplacereviews"],
-				"roles" : ["owner"]
-			}]
-		},
-
-
 
 		{
 			"type" : "sys.operation",
@@ -196,6 +174,29 @@
 			}]
 		},
 
+		{
+			"type" : "sys.grant",
+			"ref" : {
+				"s" : ["sys.login","openplacereviews","test_1"]
+			},
+			"new" : [{ 
+				"id" : ["openplacereviews:test_1"],
+				"roles" : ["master", "administrator"]
+			}]
+		},
+		{
+			"type" : "sys.grant",
+			"ref" : {
+				"s" : ["sys.signup","openplacereviews"]
+			},
+			"new" : [{ 
+				"id" : ["openplacereviews"],
+				"roles" : ["owner"]
+			}]
+		},
+
+
+
 
 		{  
 			"type" : "sys.validate",
@@ -295,13 +296,14 @@
 			"new" : [{
 				"id" : ["role_could_be_changed_only_by_owner"],
 				"type" : ["sys.role"],
-				"comment" : "Check that role none could not be created. Couldn't be changed!",
+				"comment" : "Check that role coudl be changed only by owner. Role couldn't be deleted cause it will requre revoking all grant access!",
 				"role" : "none",
 				"if" : [
 					"std:eq(std:size(.old), 1)"
 				],
 				"validate" : [
-					"auth:has_sig_roles(this, .old.owner_role)"
+					"auth:has_sig_roles(this, .old.owner_role)",
+					"std:eq(std:size(.new), 1)"
 				]
 			}]
 		},

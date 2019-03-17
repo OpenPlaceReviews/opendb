@@ -6,6 +6,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -361,7 +362,7 @@ public class OpExprEvaluator {
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
 	}
 
-	private boolean checkSignaturesHasRole(String sign, String rl, EvaluationContext ctx) {
+	private boolean checkSignaturesHasRole(String sign, String roleToCheck, EvaluationContext ctx) {
 		OpObject grantObj = ctx.op.getObjectByName(OpBlockchainRules.OP_GRANT, sign);
 		if(grantObj == null) {
 			int indexOf = sign.indexOf(':');
@@ -370,10 +371,14 @@ public class OpExprEvaluator {
 			}
 		}
 		if (grantObj != null) {
-			List<String> rls = grantObj.getStringList("roles");
-			// TODO here we need to check super roles
-			for (String r : rls) {
-				if (OUtils.equals(r, rl)) {
+			Map<String, Set<String>> roleToChildRoles = OpBlockchainRules.getRoles(ctx.op);
+			List<String> grantedRoles = grantObj.getStringList("roles");
+			for (String grantedRole : grantedRoles) {
+				if (OUtils.equals(grantedRole, roleToCheck)) {
+					return true;
+				}
+				Set<String> derivedRoles = roleToChildRoles.get(grantedRole);
+				if(derivedRoles != null && derivedRoles.contains(roleToCheck)) {
 					return true;
 				}
 			}

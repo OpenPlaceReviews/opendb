@@ -6,9 +6,12 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,7 +24,6 @@ import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 /**
@@ -67,7 +69,9 @@ public class OpBlockchainRules {
 	public static final String F_OAUTHID_HASH = "oauthid_hash"; // hash with salt of the oauth_id
 	public static final String F_KEYGEN_METHOD = "keygen_method"; // optional login, signup (for pwd important)
 	public static final String F_DETAILS = "details"; // signup
-	public static final String F_TYPE = "type"; 
+	public static final String F_TYPE = "type";
+	public static final String F_SUPER_ROLES = "super_roles";
+	public static final String F_ROLES = "roles";
 	public static final String F_ERROR_MESSAGE = "error_message"; // sys.validate
 
 	// transient - not stored in blockchain
@@ -241,6 +245,33 @@ public class OpBlockchainRules {
 				}
 			}
 		}
+		// these 2 validations could be registered as blockchain sys.validate
+		if(OpBlockchainRules.OP_ROLE.equals(o.getType())) {
+			Map<String, Set<String>> builtInRoles = getRoles(blockchain);
+			for(OpObject obj : o.getNew()) {
+				String roleId = obj.getId().get(0);
+				Set<String> existingDescendants = builtInRoles.get(roleId);
+				for (String superRole : obj.getStringList(F_SUPER_ROLES)) {
+					if (existingDescendants != null && existingDescendants.contains(superRole)) {
+						return error(o, ErrorType.OP_ROLE_SUPER_ROLE_CIRCULAR_REF, o.getHash(), superRole, roleId);
+					}
+					if (!builtInRoles.containsKey(superRole)) {
+						return error(o, ErrorType.OP_ROLE_SUPER_ROLE_DOESNT_EXIST, o.getHash(), superRole, roleId);
+					}
+				}
+			}
+		}
+		// this validation could be registered as blockchain sys.validate
+		if(OpBlockchainRules.OP_GRANT.equals(o.getType())) {
+			Map<String, Set<String>> builtInRoles = getRoles(blockchain);
+			for(OpObject obj : o.getNew()) {
+				for (String role : obj.getStringList(F_ROLES)) {
+					if (!builtInRoles.containsKey(role)) {
+						return error(o, ErrorType.OP_GRANT_ROLE_DOESNT_EXIST, o.getHash(), role, obj.getId().toString());
+					}
+				}
+			}
+		}
 		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
 		List<OpObject> toValidate = validationRules.get(o.getType());
 		if(toValidate != null) {
@@ -300,6 +331,63 @@ public class OpBlockchainRules {
 			rule.putCacheObject(field, validate);
 		}
 		return validate;
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public static Map<String, Set<String>> getRoles(OpBlockChain blockchain) {
+		ObjectInstancesById oid = blockchain.getObjectsByIdMap(OP_ROLE, true);
+		Map<String, Set<String>> rolesMap = (Map<String,  Set<String>>) oid.getCacheObject();
+		if(rolesMap == null) {
+			rolesMap = new TreeMap<String, Set<String>>();
+			int cacheVersion = oid.getCacheVersion();
+			List<OpObject> allRoles = new ArrayList<>();
+			oid.fetchAllObjects(allRoles);
+			for(OpObject vld : allRoles) {
+				String roleId = vld.getId().get(0);
+				rolesMap.put(roleId, new TreeSet<String>());
+			}
+			for(OpObject vld : allRoles) {
+				String roleId = vld.getId().get(0);
+				rolesMap.get(roleId).add(roleId);
+				for(String superRole : vld.getStringList(F_SUPER_ROLES)) {
+					Set<String> sr = rolesMap.get(superRole);
+					if(sr != null) {
+						sr.add(roleId);
+					}
+				}
+			}
+			recalculateFullRolesMap(rolesMap);
+			oid.setCacheObject(rolesMap, cacheVersion);
+		}
+		return rolesMap;
+	}
+
+
+	private static void recalculateFullRolesMap(Map<String, Set<String>> rolesMap) {
+		boolean changed = true;
+		// number of iteration depends on the roles depth and in practice it shouldn't be more than 5-6 iterations
+		while(changed) {
+			changed = false;
+			for(String superRole : rolesMap.keySet()) {
+				Set<String> underlyingSuperRoles = rolesMap.get(superRole);
+				
+				Iterator<String> it = underlyingSuperRoles.iterator();
+				while(it.hasNext()) {
+					String role = it.next();
+					if(!role.equals(superRole)) {
+						// combine all underlying roles
+						Set<String> underlyingRoles = rolesMap.get(role);
+						boolean added = underlyingSuperRoles.addAll(underlyingRoles);
+						if(added) {
+							changed = true;
+							it = underlyingSuperRoles.iterator();
+						}
+					}
+				}
+			}
+			
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -580,8 +668,13 @@ public class OpBlockchainRules {
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found "),
 		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%d'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
+		
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
-		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s")
+		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),
+		
+		OP_ROLE_SUPER_ROLE_DOESNT_EXIST("Operation '%s': super role '%s' defined for '%s' is not defined"),
+		OP_ROLE_SUPER_ROLE_CIRCULAR_REF("Operation '%s': super role '%s' defined for '%s' has circular references"),
+		OP_GRANT_ROLE_DOESNT_EXIST("Operation '%s': role '%s' which is granted to '%s' doesn't exist"),
 		;
 		private final String msg;
 
