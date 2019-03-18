@@ -412,12 +412,10 @@ public class OpBlockchainRules {
 		return validationRules;
 	}
 	
-	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock, 
-			ValidationTimer tmr) {
+	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock) {
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
 		int pid = -1;
-		int timerBlockValid = tmr.startExtra();
 		if (prevBlock != null) {
 			if (!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
 				return error(block, ErrorType.BLOCK_PREV_HASH, prevBlock.getHash(),
@@ -468,7 +466,6 @@ public class OpBlockchainRules {
 		if (!validateSig) {
 			return error(block, ErrorType.BLOCK_SIGNATURE_FAILED, blockHash, block.getStringValue(OpBlock.F_SIGNED_BY), ex);
 		}
-		tmr.measure(timerBlockValid, ValidationTimer.BLOCK_HEADER_VALID);
 		return true;
 	}
 	

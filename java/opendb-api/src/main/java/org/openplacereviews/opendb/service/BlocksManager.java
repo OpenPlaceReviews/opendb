@@ -34,7 +34,7 @@ public class BlocksManager {
 	private JsonFormatter formatter;
 	
 	@Autowired
-	private DBDataManager dataManager;
+	private DBConsensusManager dataManager;
 	
 	@Value("${opendb.user}")
 	private String serverUser;
@@ -133,19 +133,22 @@ public class BlocksManager {
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
 		
 		int tmNewBlock = timer.startExtra();
-		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair, timer);
+		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair);
 		if(opBlock == null) {
 			return null;
 		}
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
+		int tmDbSave = timer.startExtra();
+		dataManager.insertBlock(opBlock);
+		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
+		// change only after block is inserted
 		int tmRebase = timer.startExtra();
 		boolean changeParent = blockchain.changeParent(blc);
 		if(!changeParent) {
 			return null;
 		}
-		dataManager.insertBlock(opBlock);
 		timer.measure(tmRebase, ValidationTimer.BLC_REBASE);
 		
 		
@@ -153,7 +156,10 @@ public class BlocksManager {
 		blc.compact();
 		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
 		
-		timer.measure(ValidationTimer.BLC_TOTAL_BLOCK);
+		int tmSDbSave = timer.startExtra();
+		dataManager.saveMainBlockchain(blc);
+		timer.measure(tmSDbSave, ValidationTimer.BLC_SAVE);
+		
 		opBlock.putObjectValue(OpObject.F_VALIDATION, timer.getTimes());
 		logSystem.logSuccessBlock(opBlock, 
 				String.format("New block '%s':%d  is created on top of '%s'. ",

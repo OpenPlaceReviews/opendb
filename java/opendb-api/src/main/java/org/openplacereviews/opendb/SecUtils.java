@@ -355,6 +355,14 @@ public class SecUtils {
 		throw new IllegalArgumentException("Unknown format for signature " + digest);
 	}
 
+	public static String hexify(byte[] bytes) {
+		if(bytes == null || bytes.length == 0) {
+			return "";
+		}
+		return Hex.encodeHexString(bytes);
+		
+	}
+
 	
 
 }

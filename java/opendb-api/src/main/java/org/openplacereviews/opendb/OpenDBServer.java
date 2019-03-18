@@ -12,7 +12,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.DBDataManager;
+import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -37,7 +37,7 @@ public class OpenDBServer  {
 	BlocksManager blocksManager;
 	
 	@Autowired
-	DBDataManager dbDataManager;
+	DBConsensusManager dbDataManager;
 	
 	@Autowired
 	LogOperationService logOperationService;

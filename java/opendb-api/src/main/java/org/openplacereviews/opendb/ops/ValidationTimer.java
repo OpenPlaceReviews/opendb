@@ -16,6 +16,8 @@ public class ValidationTimer {
 	public static final String BLC_NEW_BLOCK = "blc_new_block";
 	public static final String BLC_COMPACT = "blc_compact";
 	public static final String BLC_TOTAL_BLOCK = "blc_total_block";
+	public static final String BLC_SAVE = "blc_save";
+	public static final String BLC_BLOCK_SAVE = "blc_block_save";
 	
 	private Map<String, Long> times = new TreeMap<>();
 	

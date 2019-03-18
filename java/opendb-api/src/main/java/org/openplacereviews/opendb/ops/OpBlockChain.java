@@ -57,8 +57,7 @@ public class OpBlockChain {
 	private final OpBlockchainRules rules;
 	// 0.2 parent chain
 	private volatile OpBlockChain parent;
-	// 0.2 superblock hash calculation sha256(superblockMagic + all hashes) - to support uniqueness
-	private int superblockMagic = 0;
+	// 0.3 superblock hash calculation sha256(superblockMagic + all hashes) - to support uniqueness
 	private String superBlockHash = "";
 	
 	// 1. list of blocks
@@ -113,15 +112,10 @@ public class OpBlockChain {
 		}
 	}
 	
-	public synchronized OpBlock createBlock(String user, KeyPair keyPair, 
-			ValidationTimer timer) throws FailedVerificationException {
+	public synchronized OpBlock createBlock(String user, KeyPair keyPair) throws FailedVerificationException {
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock(), user, keyPair);
-		return replicateBlock(block, rules, timer);
-	}
-
-	public synchronized OpBlock replicateBlock(OpBlock block, OpBlockchainRules rules, ValidationTimer timer) {
 		validateIsUnlocked();
-		boolean valid = rules.validateBlock(this, block, getLastBlock(), timer);
+		boolean valid = rules.validateBlock(this, block, getLastBlock());
 		if(!valid) {
 			return null;
 		}
@@ -133,6 +127,34 @@ public class OpBlockChain {
 			locked = UNLOCKED;
 		} finally {
 			if(locked == LOCKED_SUCCESS) {
+				locked = LOCKED_ERROR;
+			}
+		}
+		return block;
+	}
+
+	public synchronized OpBlock replicateBlock(OpBlock block) {
+		validateIsUnlocked();
+		if (!operations.isEmpty()) {
+			// can't replicate blocks when operations are not empty
+			return null;
+		}
+		OpBlock prev = getLastBlock();
+		boolean valid = rules.validateBlock(this, block, prev);
+		if (!valid) {
+			return null;
+		}
+		locked = LOCKED_SUCCESS;
+		try {
+			for (OpOperation o : block.getOperations()) {
+				if (!addOperation(o)) {
+					return null;
+				}
+			}
+			atomicCreateBlockFromAllOps(block, block.getHash(), block.getBlockId());
+			locked = UNLOCKED;
+		} finally {
+			if (locked == LOCKED_SUCCESS) {
 				locked = LOCKED_ERROR;
 			}
 		}
@@ -182,6 +204,7 @@ public class OpBlockChain {
 	}
 
 	private void atomicChangeParent(OpBlockChain newParent, OpBlock lastBlock) {
+		// all blocks are present in new parent
 		int depth = lastBlock == null ? -1 : lastBlock.getBlockId();
 		for(OpBlock b : blocks) {
 			for(OpOperation o : b.getOperations()) {
@@ -211,8 +234,8 @@ public class OpBlockChain {
 		}
 		this.parent = newParent;
 		this.blocks.clear();
-		this.superBlockHash = "";
 		this.blockDepth.clear();
+		recalculateSuperBlockHash();
 	}
 	
 	public synchronized boolean mergeWithParent() {
@@ -273,12 +296,10 @@ public class OpBlockChain {
 	}
 	
 	private void recalculateSuperBlockHash() {
+		if(blocks.size() == 0) {
+			superBlockHash = "";
+		}
 		ByteArrayOutputStream bts = new ByteArrayOutputStream(blocks.size() * 256);
-		bts.write((superblockMagic >>> 24) & 0xFF);
-		bts.write((superblockMagic >>> 16) & 0xFF);
-		bts.write((superblockMagic >>>  8) & 0xFF);
-		bts.write((superblockMagic >>>  0) & 0xFF);
-		bts.write(superblockMagic);
 		for(OpBlock b : blocks) { 
 			byte[] hashBytes = SecUtils.getHashBytes(b.getHash());
 			try {
@@ -287,7 +308,7 @@ public class OpBlockChain {
 				throw new IllegalStateException(e);
 			}
 		}
-		superBlockHash = SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bts.toByteArray());
+		superBlockHash = SecUtils.hexify(SecUtils.calculateHash(SecUtils.HASH_SHA256, bts.toByteArray(), null));
 	}
 
 	public synchronized boolean compact() {

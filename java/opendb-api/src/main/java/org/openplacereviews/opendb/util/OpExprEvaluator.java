@@ -1,8 +1,5 @@
 package org.openplacereviews.opendb.util;
 
-import java.sql.Date;
-import java.sql.SQLException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,13 +20,10 @@ import org.openplacereviews.opendb.expr.OpenDBExprLexer;
 import org.openplacereviews.opendb.expr.OpenDBExprParser;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.ExpressionContext;
 import org.openplacereviews.opendb.expr.OpenDBExprParser.MethodCallContext;
-import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.DBDataManager.SqlColumnType;
-import org.postgresql.util.PGobject;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -95,54 +89,6 @@ public class OpExprEvaluator {
 		return true;
 	}
 
-	public Object evaluateObject(SqlColumnType type, EvaluationContext obj) {
-		Object o = eval(ectx, obj);
-		if (o == null) {
-			return null;
-		}
-		if (type == SqlColumnType.INT) {
-			if (o instanceof JsonPrimitive) {
-				return ((JsonPrimitive) o).getAsLong();
-			}
-			if (o instanceof Number) {
-				return ((Number) o).longValue();
-			}
-			return Long.parseLong(o.toString());
-		}
-		if (type == SqlColumnType.TIMESTAMP) {
-			String s = o.toString();
-			if (o instanceof JsonPrimitive) {
-				if (((JsonPrimitive) o).isNumber()) {
-					return new Date(((Number) o).longValue());
-				}
-				s = ((JsonPrimitive) o).getAsString();
-			}
-			if (o instanceof Number) {
-				return new Date(((Number) o).longValue());
-			}
-			try {
-				return OpBlock.dateFormat.parse(s);
-			} catch (ParseException e) {
-				throw new IllegalArgumentException(e);
-			}
-		}
-		if (type == SqlColumnType.JSONB) {
-			PGobject jsonObject = new PGobject();
-			jsonObject.setType("json");
-			try {
-				jsonObject.setValue(o.toString());
-			} catch (SQLException e) {
-				throw new IllegalArgumentException(e);
-			}
-			return jsonObject;
-		}
-		if (o instanceof JsonPrimitive) {
-			if (((JsonPrimitive) o).isString()) {
-				return ((JsonPrimitive) o).getAsString();
-			}
-		}
-		return o.toString();
-	}
 
 	public static OpExprEvaluator parseExpression(String value) throws RecognitionException {
 		OpenDBExprLexer lexer = new OpenDBExprLexer(new ANTLRInputStream(value));
