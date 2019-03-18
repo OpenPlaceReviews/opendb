@@ -151,7 +151,7 @@ public class DBConsensusManager {
 		return list;
 	}
 	
-	private SuperblockChain getOrCreateSuperblock(String superBlockHash, String psuperBlockHash) {
+	private SuperblockChain getOrCreateSuperblock(String superBlockHash, String psuperBlockHash, boolean trace) {
 		SuperblockChain sc = superBlockChains.get(superBlockHash);
 		if(sc == null) {
 			SuperblockChain parent = superBlockChains.get(psuperBlockHash);
@@ -159,6 +159,9 @@ public class DBConsensusManager {
 			if(parent != null) {
 				List<SuperblockChain> lst = new ArrayList<>(parent.leafSuperBlocks);
 				lst.add(sc);
+			}
+			if(trace) {
+				LOGGER.debug(String.format("Create superblock %s parent %s ", superBlockHash, psuperBlockHash));
 			}
 			superBlockChains.put(superBlockHash, sc);
 		}
@@ -185,7 +188,7 @@ public class DBConsensusManager {
 					for(int i = 0; i < superBlocks.length; i++) {
 						String superBlockHash = SecUtils.hexify(superBlocks[i]);
 						String psuperBlockHash = SecUtils.hexify(psuperBlocks[i]);
-						SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash);
+						SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash, false);
 						sc.blocksSet.add(blockHash);
 						sc.blocks.add(0, blockHash);
 					}
@@ -200,7 +203,7 @@ public class DBConsensusManager {
 						b.superblockHash, b.calculateRawSuperBlockHash()));
 			}
 		}
-		LOGGER.info(String.format("... Loaded %d (%d main) superblocks with %d blocks ...", superBlockChains.size(),  
+		LOGGER.info(String.format("... Loaded %d superblocks with %d blocks ...", superBlockChains.size(),  
 				blocksNumber[0]));
 		
 		List<SuperblockChain> leafSuperBlocks = getLeafSuperblocks();
@@ -274,7 +277,7 @@ public class DBConsensusManager {
 		jdbcTemplate.update("INSERT INTO blocks(hash, phash, blockid, details) VALUES (?, ?, ?, ?)" , 
 				blockHash, prevBlockHash, opBlock.getBlockId(), pGobject);
 		for(OpOperation o : opBlock.getOperations()) {
-			jdbcTemplate.update("UPDATE operations set blocks = || ? where hash = ?" , 
+			jdbcTemplate.update("UPDATE operations set blocks = blocks || ? where hash = ?" , 
 					blockHash, SecUtils.getHashBytes(o.getHash()));	
 		}
 	}
@@ -292,7 +295,7 @@ public class DBConsensusManager {
 			String psuperBlockHash = parent == null ? "" : parent.superblockHash;
 			// TODO make unique superBlockHash 
 			String superBlockHash = blc.getSuperBlockHash();
-			SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash);
+			SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash, true);
 			// size is not equal means it was created
 			if(sc.blocks.size() != blc.getSuperblockSize()) {
 				byte[] shash = SecUtils.getHashBytes(superBlockHash);
@@ -302,8 +305,11 @@ public class DBConsensusManager {
 				while(it.hasNext()) {
 					OpBlock o = it.next();
 					// assign parent hash only for last block
+					// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
 					jdbcTemplate.update("UPDATE blocks set superblocks = superblocks || ?, psuperblocks = psuperblocks || ? where hash = ?" , 
 							shash, it.hasNext() ? empty : phash, SecUtils.getHashBytes(o.getHash()));
+					sc.blocks.add(o.getHash());
+					sc.blocksSet.add(o.getHash());
 				}
 				
 			}

@@ -47,13 +47,7 @@ public class BlocksManager {
 	private KeyPair serverKeyPair;
 	
 	private OpBlockChain blockchain; 
-	private OpBlockchainRules blockchainRules;
-
 	
-	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
-		return blockchainRules.generateHashAndSign(op, keyPair);
-	}
-
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
 	}
@@ -179,7 +173,6 @@ public class BlocksManager {
 			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
 			throw new RuntimeException(e);
 		}
-		blockchainRules = new OpBlockchainRules(formatter, logSystem);
 		this.blockchain = initBlockchain;
 		
 		String msg = "";
@@ -221,16 +214,21 @@ public class BlocksManager {
 		return blockchain.getLastBlock();
 	}
 
+	
+	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
+		return blockchain.getRules().generateHashAndSign(op, keyPair);
+	}
+	
 	public KeyPair getLoginKeyPairFromPwd(String name, String pwd) throws FailedVerificationException {
-		return blockchainRules.getSignUpKeyPairFromPwd(blockchain, name, pwd);
+		return blockchain.getRules().getSignUpKeyPairFromPwd(blockchain, name, pwd);
 	}
 	
 	public KeyPair getLoginKeyPair(String name, String privateKey) throws FailedVerificationException {
-		return blockchainRules.getLoginKeyPair(blockchain, name, privateKey);
+		return blockchain.getRules().getLoginKeyPair(blockchain, name, privateKey);
 	}
 
 	public OpObject getLoginObj(String nickname) {
-		return blockchainRules.getLoginKeyObj(blockchain, nickname);
+		return blockchain.getRules().getLoginKeyObj(blockchain, nickname);
 	}
 
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
