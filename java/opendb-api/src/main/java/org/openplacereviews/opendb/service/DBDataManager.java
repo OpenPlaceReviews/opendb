@@ -48,13 +48,13 @@ public class DBDataManager {
 	
 	
 	//////////// SYSTEM TABLES DDL ////////////
-	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea, phash bytea, blockid int, details jsonb)";
+	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea, phash bytea, blockid int, superblocks bytea[], psuperblocks bytea[], details jsonb)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_HASH = "create index blocks_hash_ind on blocks(hash)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_PHASH = "create index blocks_phash_ind on blocks(phash)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_BLOCKID = "create index blocks_blockid_ind on blocks(blockid)";
 	
 	
-	protected static final String DDL_CREATE_TABLE_OPS = "create table operations (hash bytea, details jsonb)";
+	protected static final String DDL_CREATE_TABLE_OPS = "create table operations (hash bytea, blocks bytea[], details jsonb)";
 	protected static final String DDL_CREATE_TABLE_OPS_INDEX_HASH = "create index operations_hash_ind on operations(hash)";
 	// 
 	
@@ -96,14 +96,14 @@ public class DBDataManager {
 		LOGGER.info("... Loading blocks ...");
 		ValidationTimer timer = new ValidationTimer();
 		timer.start();
-		OpBlockChain blc = new OpBlockChain(null);
 		OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
+		OpBlockChain parent = new OpBlockChain(OpBlockChain.NULL, rules);
+		
+		// superblocks, psuperblocks
 		List<OpBlock> blocks = 
 				jdbcTemplate.query("SELECT blockId, details from blocks order by blockId asc", new RowMapper<OpBlock>() {
-
 			@Override
 			public OpBlock mapRow(ResultSet rs, int rowNum) throws SQLException {
-				
 				return formatter.parseBlock(rs.getString(2));
 			}
 			
@@ -113,18 +113,23 @@ public class DBDataManager {
 		Set<String> addedOperations = new TreeSet<String>(); 
 		for (OpBlock b : blocks) {
 			for (OpOperation o : b.getOperations()) {
-				if (!blc.addOperation(o, rules)) {
+				if (!parent.addOperation(o)) {
 					throw new IllegalStateException("Could not add operation: " + formatter.toJson(o));
 				}
 				addedOperations.add(o.getRawHash());
 			}
-			blc.replicateBlock(b, rules, timer);
+			parent.replicateBlock(b, rules, timer);
 			LOGGER.info(String.format("... Initialized block %d ...", blockId++));
 		}
+		if(blockId == 0) {
+			parent = null;
+		}
+		OpBlockChain blcQueue = new OpBlockChain(parent, rules);
 		LOGGER.info("... Loading operation queue ! TODO !  ...");
+		
 		LOGGER.info(String.format("+++ Database mapping is inititialized. Loaded %d table definitions, %d mappings", 
 				tableDefinitions.size(), opTableMappings.size()));
-		return blc;
+		return blcQueue;
 	}
 	
 	public void insertBlock(OpBlock opBlock) {

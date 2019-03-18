@@ -1,11 +1,14 @@
 package org.openplacereviews.opendb.ops;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -14,6 +17,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 
 /**
@@ -44,31 +48,53 @@ public class OpBlockChain {
 	public static final int UNLOCKED =  0;
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 0.5;
+	public static final OpBlockChain NULL = new OpBlockChain(true);
 	private int locked = UNLOCKED; // 0, -1 error, 1 intentional
 
-	// 0. parent chain
-	private OpBlockChain parent;
+	// 0.0 nullable object is always root (in order to perform operations in sync)
+	private final boolean nullObject;
+	// 0.1 immutable blockchain rules to validate operations
+	private final OpBlockchainRules rules;
+	// 0.2 parent chain
+	private volatile OpBlockChain parent;
+	// 0.2 superblock hash calculation sha256(superblockMagic + all hashes) - to support uniqueness
+	private int superblockMagic = 0;
+	private String superBlockHash = "";
+	
 	// 1. list of blocks
 	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
 	// 2. block hash ids link to blocks
 	private final Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
+	
+	// These objects should be stored on disk (DB)
 	// 3. operations to be stored like a queue 
 	private final Deque<OpOperation> operations = new ConcurrentLinkedDeque<OpOperation>();
 	// 4. stores information about created and deleted objects in this blockchain 
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
 	// 5. stores information about last object by name in this blockchain
 	private final Map<String, ObjectInstancesById> objByName = new ConcurrentHashMap<>();
-	private ValidationTimer vld;
-
 	
-	public OpBlockChain(OpBlockChain parent) {
-		this.parent = parent;
-		if(this.parent != null) {
-			this.parent.makeImmutable();
+	
+	private OpBlockChain(boolean nullParent) {
+		this.nullObject = true;
+		this.rules = null;
+		locked = LOCKED_SUCCESS;
+	}
+	
+	public OpBlockChain(OpBlockChain parent, OpBlockchainRules rules) {
+		this.rules = rules;
+		this.nullObject = false;
+		if(parent == null) {
+			throw new IllegalStateException("Parent can not be null, use null object for reference");
 		}
+		parent.makeImmutable();
+		this.parent = parent;
 	}
 	
 	public synchronized void makeImmutable() {
+		if(nullObject) {
+			return;
+		}
 		if(this.locked == UNLOCKED) {
 			this.locked = LOCKED_SUCCESS;
 		} else if(this.locked != LOCKED_SUCCESS) {
@@ -77,6 +103,9 @@ public class OpBlockChain {
 	}
 	
 	public synchronized void makeMutable() {
+		if(nullObject) {
+			return;
+		}
 		if(this.locked == LOCKED_SUCCESS) {
 			this.locked = UNLOCKED;
 		} else if(this.locked != UNLOCKED) {
@@ -84,7 +113,7 @@ public class OpBlockChain {
 		}
 	}
 	
-	public synchronized OpBlock createBlock(OpBlockchainRules rules, String user, KeyPair keyPair, 
+	public synchronized OpBlock createBlock(String user, KeyPair keyPair, 
 			ValidationTimer timer) throws FailedVerificationException {
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock(), user, keyPair);
 		return replicateBlock(block, rules, timer);
@@ -118,6 +147,7 @@ public class OpBlockChain {
 		operations.clear();
 		blockDepth.put(blockHash, blockId);
 		blocks.push(block);
+		recalculateSuperBlockHash();
 	}
 	
 	public synchronized boolean changeParent(OpBlockChain newParent) {
@@ -134,7 +164,7 @@ public class OpBlockChain {
 			}
 		}
 		
-		OpBlock lb = parent == null ? null : parent.getLastBlock();
+		OpBlock lb = parent.getLastBlock();
 		if(lb != null && newParent.getBlockDepth(lb.getHash()) == -1) {
 			// rebase is not allowed
 			return false;
@@ -181,12 +211,13 @@ public class OpBlockChain {
 		}
 		this.parent = newParent;
 		this.blocks.clear();
+		this.superBlockHash = "";
 		this.blockDepth.clear();
 	}
 	
 	public synchronized boolean mergeWithParent() {
 		// no need to change that state is not locked
-		if(parent != null) {
+		if(!nullObject && !parent.nullObject) {
 			locked = LOCKED_SUCCESS;
 			try {
 				atomicMergeWithParent();
@@ -206,6 +237,7 @@ public class OpBlockChain {
 		for(OpBlock last : parent.blocks) {
 			this.blocks.addLast(last);
 		}
+		recalculateSuperBlockHash();
 		blockDepth.putAll(this.parent.blockDepth);
 		
 		// 3. merge queue operations
@@ -240,19 +272,41 @@ public class OpBlockChain {
 		parent = newParent;
 	}
 	
+	private void recalculateSuperBlockHash() {
+		ByteArrayOutputStream bts = new ByteArrayOutputStream(blocks.size() * 256);
+		bts.write((superblockMagic >>> 24) & 0xFF);
+		bts.write((superblockMagic >>> 16) & 0xFF);
+		bts.write((superblockMagic >>>  8) & 0xFF);
+		bts.write((superblockMagic >>>  0) & 0xFF);
+		bts.write(superblockMagic);
+		for(OpBlock b : blocks) { 
+			byte[] hashBytes = SecUtils.getHashBytes(b.getHash());
+			try {
+				bts.write(hashBytes);
+			} catch (IOException e) {
+				throw new IllegalStateException(e);
+			}
+		}
+		superBlockHash = SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bts.toByteArray());
+	}
+
 	public synchronized boolean compact() {
+		OpBlockChain p = parent;
 		// synchronized cause internal objects could be changed
-		if(parent != null && parent.parent != null) {
-			if(COMPACT_COEF * (parent.getSubchainSize()  + getSubchainSize()) >= parent.parent.getSubchainSize() ) {
-				parent.mergeWithParent();
+		if(!p.nullObject && !p.parent.nullObject) {
+			if(COMPACT_COEF * (p.getSuperblockSize()  + getSuperblockSize()) >= p.parent.getSuperblockSize() ) {
+				p.mergeWithParent();
 			} else {
-				parent.compact();
+				p.compact();
 			}
 		}
 		return true;
 	}
 	
 	private void validateIsUnlocked() {
+		if(nullObject) {
+			throw new IllegalStateException("This chain is immutable (null chain)");
+		}
 		if(locked != UNLOCKED) {
 			throw new IllegalStateException("This chain is immutable");
 		}
@@ -307,10 +361,9 @@ public class OpBlockChain {
 	/**
 	 * Adds operation and validates it to block chain
 	 */
-	public synchronized boolean addOperation(OpOperation op, OpBlockchainRules rules) {
+	public synchronized boolean addOperation(OpOperation op) {
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx();
-		validationCtx.rules = rules;
 		validationCtx.blockHash = "";
 		boolean valid = validateAndPrepareOperation(op, validationCtx);
 		if(!valid) {
@@ -336,9 +389,16 @@ public class OpBlockChain {
 		return parent;
 	}
 	
+	public OpBlockchainRules getRules() {
+		return rules;
+	}
+	
 	public OpBlock getLastBlock() {
+		if(nullObject) {
+			return null;
+		}
 		if(blocks.size() == 0) {
-			return parent == null ? null : parent.getLastBlock();
+			return parent.getLastBlock();
 		}
 		return blocks.peekFirst();
 	}
@@ -357,6 +417,24 @@ public class OpBlockChain {
 		return getLastBlockId();
 	}
 	
+	public int getSuperblocksDepth() {
+		if(nullObject) {
+			return 0;
+		}
+		return parent.getSuperblocksDepth() + 1;
+	}
+	
+	public LinkedHashMap<String, List<OpBlock>> getBlocksBySuperBlocks(int depth, LinkedHashMap<String, List<OpBlock>> mp) {
+		if(mp == null) {
+			mp = new LinkedHashMap<String, List<OpBlock>>(); 
+		}
+		if(nullObject) {
+			return mp;
+		}
+		mp.put(getSuperBlockHash(), new ArrayList<OpBlock>(blocks));
+		return parent.getBlocksBySuperBlocks(depth, mp);
+	}
+	
 	public List<OpBlock> getBlocks(int depth) {
 		List<OpBlock> lst = new ArrayList<>();
 		fetchBlocks(lst, depth);
@@ -364,28 +442,38 @@ public class OpBlockChain {
 	}
 	
 	
-	public Collection<OpBlock> getSubchainBlocks() {
+	public String getSuperBlockHash() {
+		return superBlockHash;
+	}
+	
+	public Collection<OpBlock> getOneSuperBlock() {
 		return blocks;
 	}
 	
 	private void fetchBlocks(List<OpBlock> lst, int depth) {
+		if(nullObject) {
+			return;
+		}
 		lst.addAll(blocks);
 		depth -= blocks.size();
-		if(parent != null && depth > 0) {
+		if(depth > 0) {
 			parent.fetchBlocks(lst, depth);
 		}
 	}
 
-	public int getSubchainSize() {
+	public int getSuperblockSize() {
 		return blocks.size();
 	}
 	
 	public OpBlock getBlockById(int blockId) {
+		if(nullObject) {
+			return null;
+		}
 		int last = getLastBlockId();
 		if(last < blockId) {
 			return null;
 		}
-		int first = last - getSubchainSize() + 1;
+		int first = last - getSuperblockSize() + 1;
 		if(first <= blockId) {
 			int it = last - blockId; 
 			Iterator<OpBlock> its = blocks.iterator();
@@ -394,26 +482,29 @@ public class OpBlockChain {
 			}
 			return its.next();
 		}
-		return parent == null ? null : parent.getBlockById(blockId); 
+		return parent.getBlockById(blockId); 
 	}
 	
 
 	public int getBlockDepth(String hash) {
+		if(nullObject) {
+			return -1;
+		}
 		Integer n = blockDepth.get(hash);
 		if(n != null) {
 			return n;
 		}
-		if(parent != null) {
-			return parent.getBlockDepth(hash);
-		}
-		return -1;
+		return parent.getBlockDepth(hash);
 	}
 	
 	
 	ObjectInstancesById getObjectsByIdMap(String type, boolean create) {
+		if(nullObject) {
+			return null;
+		}
 		ObjectInstancesById oi = objByName.get(type);
 		if(oi == null) {
-			ObjectInstancesById pi = parent == null ? null : parent.getObjectsByIdMap(type, true);
+			ObjectInstancesById pi = parent.getObjectsByIdMap(type, true);
 			if(create) {
 				oi = new ObjectInstancesById(type, pi);
 				objByName.put(type, oi);
@@ -440,15 +531,17 @@ public class OpBlockChain {
 	}
 	
 	
-	
 	private void fetchObjects(List<OpObject> lst, String type, int limit) {
-		ObjectInstancesById ot = getObjectsByIdMap(type, false);
+		if(nullObject) {
+			return;
+		}
+		ObjectInstancesById ot = objByName.get(type);
 		if(ot != null) {
 			Collection<OpObject> objects = ot.getObjects();
 			lst.addAll(objects);
 			limit -= objects.size();
 		}
-		if(parent != null && limit > 0) {
+		if(limit > 0) {
 			parent.fetchObjects(lst, type, limit);
 		}
 	}
@@ -520,6 +613,9 @@ public class OpBlockChain {
 	}
 	
 	private OperationDeleteInfo getOperationInfo(String hash, int maxdepth) {
+		if(nullObject) {
+			return null;
+		}
 		if(getLastBlockId() <= maxdepth && maxdepth != -1) {
 			return null;
 		}
@@ -527,10 +623,7 @@ public class OpBlockChain {
 		if(cdi != null && cdi.create) {
 			return cdi;
 		}
-		OperationDeleteInfo pdi = null;
-		if(parent != null) {
-			pdi = parent.getOperationInfo(hash, maxdepth);
-		}
+		OperationDeleteInfo pdi = parent.getOperationInfo(hash, maxdepth);
 		if(cdi != null && pdi != null) {
 			return mergeDeleteInfo(cdi, pdi);
 		} else if(cdi != null) {
@@ -558,13 +651,13 @@ public class OpBlockChain {
 	}
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
-		vld = new ValidationTimer().start();
+		ValidationTimer vld = new ValidationTimer().start();
 		if(OUtils.isEmpty(u.getRawHash())) {
-			return ctx.rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
+			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
 		OperationDeleteInfo oin = getOperationInfo(u.getRawHash(), -1);
 		if(oin != null) {
-			return ctx.rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
+			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
 		boolean valid = true;
 		valid = prepareDeletedObjects(u, ctx);
@@ -581,7 +674,7 @@ public class OpBlockChain {
 			return valid;
 		}
 		vld.measure(ValidationTimer.OP_PREPARATION);
-		valid = ctx.rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache, vld);
+		valid = rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache, vld);
 		if(!valid) {
 			return valid;
 		}
@@ -612,7 +705,7 @@ public class OpBlockChain {
 					}
 				}
 				if (oi == null) {
-					return ctx.rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
+					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
 				}
 				ctx.refObjsCache.put(refName, oi);
 			}
@@ -632,11 +725,11 @@ public class OpBlockChain {
 			
 			OperationDeleteInfo opInfo = getOperationInfo(delHash, -1);
 			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
-				return ctx.rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), delRef);
+				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), delRef);
 			}
 			if(opInfo.deletedObjects != null && delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd]) {
-					return ctx.rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
+					return rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
 							delRef, opInfo.deletedObjects[delInd]);
 				}
 			}
@@ -655,7 +748,7 @@ public class OpBlockChain {
 			for(int j = 0; j < i; j++) {
 				OpObject oj = list.get(j);
 				if(OUtils.equals(oj.getId(), o.getId())) {
-					return ctx.rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
+					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());
 				}
 			}
@@ -669,7 +762,7 @@ public class OpBlockChain {
 			if(!newVersion) {
 				OpObject exObj = getObjectByName(u.getType(), o.getId());
 				if(exObj != null) {
-					return ctx.rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
+					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());	
 				}
 			}
@@ -686,7 +779,6 @@ public class OpBlockChain {
 		List<OpOperation> deletedOpsCache = new ArrayList<OpOperation>();
 		
 		String blockHash;
-		OpBlockchainRules rules;
 	}
 
 	private static class OperationDeleteInfo {
@@ -694,6 +786,7 @@ public class OpBlockChain {
 		private boolean create;
 		private boolean[] deletedObjects;
 	}
+
 
 
 

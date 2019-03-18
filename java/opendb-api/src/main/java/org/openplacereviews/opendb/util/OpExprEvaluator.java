@@ -66,13 +66,13 @@ public class OpExprEvaluator {
 
 	public static class EvaluationContext {
 		private JsonElement ctx;
-		private OpBlockChain op;
+		private OpBlockChain blc;
 		private int exprNested;
 
 		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx, JsonElement deleted, JsonObject refs) {
 			ctx.add("ref", refs);
 			ctx.add("old", deleted);
-			this.op = blockchain;
+			this.blc = blockchain;
 			this.ctx = ctx;
 		}
 
@@ -201,10 +201,10 @@ public class OpExprEvaluator {
 			if (args.size() > 3) {
 				throw new UnsupportedOperationException("blc:find Not supported multiple args yet");
 			} else if (args.size() == 3) {
-				return ctx.op.getObjectByName(getStringArgument(functionName, args, 0),
+				return ctx.blc.getObjectByName(getStringArgument(functionName, args, 0),
 						getStringArgument(functionName, args, 1), getStringArgument(functionName, args, 2));
 			} else if (args.size() == 2) {
-				return ctx.op.getObjectByName(getStringArgument(functionName, args, 0),
+				return ctx.blc.getObjectByName(getStringArgument(functionName, args, 0),
 						getStringArgument(functionName, args, 1));
 			} else {
 				throw new UnsupportedOperationException("blc:find not enough arguments");
@@ -363,15 +363,15 @@ public class OpExprEvaluator {
 	}
 
 	private boolean checkSignaturesHasRole(String sign, String roleToCheck, EvaluationContext ctx) {
-		OpObject grantObj = ctx.op.getObjectByName(OpBlockchainRules.OP_GRANT, sign);
+		OpObject grantObj = ctx.blc.getObjectByName(OpBlockchainRules.OP_GRANT, sign);
 		if(grantObj == null) {
 			int indexOf = sign.indexOf(':');
 			if (indexOf != -1) {
-				grantObj = ctx.op.getObjectByName(OpBlockchainRules.OP_GRANT, sign.substring(0, indexOf));
+				grantObj = ctx.blc.getObjectByName(OpBlockchainRules.OP_GRANT, sign.substring(0, indexOf));
 			}
 		}
 		if (grantObj != null) {
-			Map<String, Set<String>> roleToChildRoles = OpBlockchainRules.getRoles(ctx.op);
+			Map<String, Set<String>> roleToChildRoles = ctx.blc.getRules().getRoles(ctx.blc);
 			List<String> grantedRoles = grantObj.getStringList("roles");
 			for (String grantedRole : grantedRoles) {
 				if (OUtils.equals(grantedRole, roleToCheck)) {

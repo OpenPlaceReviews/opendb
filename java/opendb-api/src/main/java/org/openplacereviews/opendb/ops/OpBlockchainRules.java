@@ -335,7 +335,7 @@ public class OpBlockchainRules {
 	
 	
 	@SuppressWarnings("unchecked")
-	public static Map<String, Set<String>> getRoles(OpBlockChain blockchain) {
+	public Map<String, Set<String>> getRoles(OpBlockChain blockchain) {
 		ObjectInstancesById oid = blockchain.getObjectsByIdMap(OP_ROLE, true);
 		Map<String, Set<String>> rolesMap = (Map<String,  Set<String>>) oid.getCacheObject();
 		if(rolesMap == null) {
@@ -364,7 +364,7 @@ public class OpBlockchainRules {
 	}
 
 
-	private static void recalculateFullRolesMap(Map<String, Set<String>> rolesMap) {
+	private void recalculateFullRolesMap(Map<String, Set<String>> rolesMap) {
 		boolean changed = true;
 		// number of iteration depends on the roles depth and in practice it shouldn't be more than 5-6 iterations
 		while(changed) {

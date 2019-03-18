@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.service;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -69,14 +70,14 @@ public class BlocksManager {
 		if(blockchain == null) {
 			return false;
 		}
-		boolean added = blockchain.addOperation(op, blockchainRules);
+		boolean added = blockchain.addOperation(op);
 		dataManager.insertOperation(op);
 		return added;
 	}
 	
 	public synchronized void clearQueue() {
 		// there is no proper clear queue on atomc load
-		blockchain = new OpBlockChain(blockchain.getParent());
+		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 	}
 	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
@@ -86,17 +87,19 @@ public class BlocksManager {
 		if(blockchain.getParent() == null) {
 			return false;
 		}
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent());
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
 		OpBlockChain pnt = blockchain.getParent();
-		for(OpBlock bl :  pnt.getSubchainBlocks()) {
+		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getOneSuperBlock());
+		Collections.reverse(lst);
+		for(OpBlock bl :  lst) {
 			for (OpOperation u : bl.getOperations()) {
-				if (!blc.addOperation(u, blockchainRules)) {
+				if (!blc.addOperation(u)) {
 					return false;
 				}
 			}
 		}
 		for(OpOperation o: blockchain.getOperations()) {
-			if(!blc.addOperation(o, blockchainRules)) {
+			if(!blc.addOperation(o)) {
 				return false;
 			}
 		}
@@ -121,16 +124,16 @@ public class BlocksManager {
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getOperations());
 		
 		int tmAddOps = timer.startExtra();
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent());
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		for (OpOperation o : candidates) {
-			if(!blc.addOperation(o, blockchainRules)) {
+			if(!blc.addOperation(o)) {
 				return null;
 			}
 		}
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
 		
 		int tmNewBlock = timer.startExtra();
-		OpBlock opBlock = blc.createBlock(blockchainRules, serverUser, serverKeyPair, timer);
+		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair, timer);
 		if(opBlock == null) {
 			return null;
 		}
@@ -159,10 +162,10 @@ public class BlocksManager {
 	}
 	
 	public OpBlockChain getBlockchain() {
-		return blockchain;
+		return blockchain == null ? OpBlockChain.NULL : blockchain;
 	}
 
-	public synchronized void init(MetadataDb metadataDB, OpBlockChain blockchain) {
+	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
 		LOGGER.info("... Blockchain. Loading blocks...");
 		try {
 			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
@@ -171,7 +174,7 @@ public class BlocksManager {
 			throw new RuntimeException(e);
 		}
 		blockchainRules = new OpBlockchainRules(formatter, logSystem);
-		this.blockchain = blockchain;
+		this.blockchain = initBlockchain;
 		
 		String msg = "";
 		// db is bootstraped

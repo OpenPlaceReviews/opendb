@@ -30,6 +30,10 @@ public class OpBlock extends OpObject {
 	public static final String F_SIG_MERKLE_TREE_HASH = "sig_merkle_tree_hash";
 	public static final String F_OPERATIONS = "ops";
 	
+	// transient (depends on the chain where block belongs to)
+	public static final String F_SUPERBLOCK_HASH = "superblock_hash";
+	public static final String F_SUPERBLOCK_ID = "superblock_id";
+	
 	protected List<OpOperation> operations = new ArrayList<OpOperation>();
 	
 	public OpBlock() {
