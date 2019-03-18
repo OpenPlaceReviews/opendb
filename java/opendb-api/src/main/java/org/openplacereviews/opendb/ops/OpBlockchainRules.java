@@ -412,7 +412,7 @@ public class OpBlockchainRules {
 		return validationRules;
 	}
 	
-	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock) {
+	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock, boolean validateSignature) {
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
 		int pid = -1;
@@ -445,6 +445,9 @@ public class OpBlockchainRules {
 			return error(block, ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
 		}
 		
+		if(!validateSignature) {
+			return true;
+		}
 		OpObject keyObj = getLoginKeyObj(blockChain, block.getStringValue(OpBlock.F_SIGNED_BY));
 		boolean validateSig = true;
 		Exception ex = null;

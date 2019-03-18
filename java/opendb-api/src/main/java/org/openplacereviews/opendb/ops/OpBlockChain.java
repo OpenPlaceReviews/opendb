@@ -115,7 +115,7 @@ public class OpBlockChain {
 	public synchronized OpBlock createBlock(String user, KeyPair keyPair) throws FailedVerificationException {
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock(), user, keyPair);
 		validateIsUnlocked();
-		boolean valid = rules.validateBlock(this, block, getLastBlock());
+		boolean valid = rules.validateBlock(this, block, getLastBlock(), true);
 		if(!valid) {
 			return null;
 		}
@@ -140,16 +140,16 @@ public class OpBlockChain {
 			return null;
 		}
 		OpBlock prev = getLastBlock();
-		boolean valid = rules.validateBlock(this, block, prev);
+		boolean valid = rules.validateBlock(this, block, prev, block.getBlockId() != 0);
 		if (!valid) {
 			return null;
 		}
 		locked = LOCKED_SUCCESS;
 		try {
 			for (OpOperation o : block.getOperations()) {
-				if (!addOperation(o)) {
-					return null;
-				}
+				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getHash());
+				validateAndPrepareOperation(o, validationCtx);
+				atomicAddOperationAfterPrepare(o, validationCtx);
 			}
 			atomicCreateBlockFromAllOps(block, block.getHash(), block.getBlockId());
 			locked = UNLOCKED;
@@ -384,8 +384,7 @@ public class OpBlockChain {
 	 */
 	public synchronized boolean addOperation(OpOperation op) {
 		validateIsUnlocked();
-		LocalValidationCtx validationCtx = new LocalValidationCtx();
-		validationCtx.blockHash = "";
+		LocalValidationCtx validationCtx = new LocalValidationCtx("");
 		boolean valid = validateAndPrepareOperation(op, validationCtx);
 		if(!valid) {
 			return valid;
@@ -795,11 +794,16 @@ public class OpBlockChain {
 
 	// no multi thread issue (used only in synchronized blocks)
 	private static class LocalValidationCtx {
+		final String blockHash;
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		List<OpOperation> deletedOpsCache = new ArrayList<OpOperation>();
+
+		public LocalValidationCtx(String bhash) {
+			blockHash = bhash;
+		}
+
 		
-		String blockHash;
 	}
 
 	private static class OperationDeleteInfo {

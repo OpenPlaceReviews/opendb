@@ -244,7 +244,7 @@ public class DBConsensusManager {
 				final OpBlockChain newParent = parent;
 				blocks += sc.blocks.size();
 
-				Iterator<String> ds = sc.blocks.descendingIterator();
+				Iterator<String> ds = sc.blocks.iterator();
 				while(ds.hasNext()) {
 					String blockHash = ds.next();
 					jdbcTemplate.query("SELECT details from blocks where hash = ? ",
