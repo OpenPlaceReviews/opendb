@@ -19,7 +19,6 @@ import org.openplacereviews.opendb.ops.ValidationTimer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 
@@ -31,10 +30,10 @@ public class BlocksManager {
 	private LogOperationService logSystem;
 	
 	@Autowired
-	private JdbcTemplate jdbcTemplate;
+	private JsonFormatter formatter;
 	
 	@Autowired
-	JsonFormatter formatter = new JsonFormatter();
+	private DBDataManager dataManager;
 	
 	@Value("${opendb.user}")
 	private String serverUser;
@@ -67,7 +66,12 @@ public class BlocksManager {
 	}
 	
 	public synchronized boolean addOperation(OpOperation op) {
-		return blockchain.addOperation(op, blockchainRules);
+		if(blockchain == null) {
+			return false;
+		}
+		boolean added = blockchain.addOperation(op, blockchainRules);
+		dataManager.insertOperation(op);
+		return added;
 	}
 	
 	public synchronized void clearQueue() {
@@ -138,6 +142,7 @@ public class BlocksManager {
 		if(!changeParent) {
 			return null;
 		}
+		dataManager.insertBlock(opBlock);
 		timer.measure(tmRebase, ValidationTimer.BLC_REBASE);
 		
 		
@@ -157,7 +162,7 @@ public class BlocksManager {
 		return blockchain;
 	}
 
-	public synchronized void init(MetadataDb metadataDB) {
+	public synchronized void init(MetadataDb metadataDB, OpBlockChain blockchain) {
 		LOGGER.info("... Blockchain. Loading blocks...");
 		try {
 			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
@@ -166,7 +171,7 @@ public class BlocksManager {
 			throw new RuntimeException(e);
 		}
 		blockchainRules = new OpBlockchainRules(formatter, logSystem);
-		blockchain = new OpBlockChain(null);
+		this.blockchain = blockchain;
 		
 		String msg = "";
 		// db is bootstraped

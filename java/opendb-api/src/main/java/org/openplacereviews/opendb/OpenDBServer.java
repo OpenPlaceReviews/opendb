@@ -10,6 +10,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBDataManager;
 import org.openplacereviews.opendb.service.LogOperationService;
@@ -94,8 +95,8 @@ public class OpenDBServer  {
 			try {
 				System.out.println("Application starting...");
 				MetadataDb metadataDB = loadMetadata();
-				dbDataManager.init(metadataDB);
-				blocksManager.init(metadataDB);
+				OpBlockChain blockchain = dbDataManager.init(metadataDB);
+				blocksManager.init(metadataDB, blockchain);
 				System.out.println("Application has started");
 			} catch (RuntimeException e) {
 				LOGGER.error(e.getMessage(), e);

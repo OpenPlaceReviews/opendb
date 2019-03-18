@@ -86,8 +86,12 @@ public class OpBlockChain {
 	
 	public synchronized OpBlock createBlock(OpBlockchainRules rules, String user, KeyPair keyPair, 
 			ValidationTimer timer) throws FailedVerificationException {
-		validateIsUnlocked();
 		OpBlock block = rules.createAndSignBlock(operations, getLastBlock(), user, keyPair);
+		return replicateBlock(block, rules, timer);
+	}
+
+	public synchronized OpBlock replicateBlock(OpBlock block, OpBlockchainRules rules, ValidationTimer timer) {
+		validateIsUnlocked();
 		boolean valid = rules.validateBlock(this, block, getLastBlock(), timer);
 		if(!valid) {
 			return null;

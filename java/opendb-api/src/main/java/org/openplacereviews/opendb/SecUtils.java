@@ -330,6 +330,7 @@ public class SecUtils {
 			throw new IllegalArgumentException(e);
 		}
 	}
+	
 
 	public static boolean validateHash(String hash, String salt, String msg) {
 		int s = hash.indexOf(":");
@@ -353,5 +354,7 @@ public class SecUtils {
 		}
 		throw new IllegalArgumentException("Unknown format for signature " + digest);
 	}
+
+	
 
 }
