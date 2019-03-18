@@ -6,19 +6,20 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
@@ -31,6 +32,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
+
+import wiremock.org.eclipse.jetty.util.ConcurrentHashSet;
 
 @Service
 public class DBConsensusManager {
@@ -56,8 +59,8 @@ public class DBConsensusManager {
 		public final String superblockHash;
 		
 		private List<SuperblockChain> leafSuperBlocks = Collections.emptyList();
-		final Set<String> blocksSet = new TreeSet<String>();
-		final List<String> blocks = new ArrayList<String>();
+		final Set<String> blocksSet = new ConcurrentHashSet<String>();
+		final Deque<String> blocks = new ConcurrentLinkedDeque<String>();
 		
 		public SuperblockChain(String superBlockHash, SuperblockChain parent) {
 			this.parent = parent;
@@ -77,8 +80,9 @@ public class DBConsensusManager {
 				return "";
 			}
 			ByteArrayOutputStream bts = new ByteArrayOutputStream(blocks.size() * 256);
-			for(String b : blocks) { 
-				byte[] hashBytes = SecUtils.getHashBytes(b);
+			Iterator<String> ds = blocks.descendingIterator();
+			while(ds.hasNext()) {
+				byte[] hashBytes = SecUtils.getHashBytes(ds.next());
 				try {
 					bts.write(hashBytes);
 				} catch (IOException e) {
@@ -178,21 +182,32 @@ public class DBConsensusManager {
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
 				blocksNumber[0]++;
-				byte[][] superBlocks = (byte[][]) rs.getArray(3).getArray();
-				byte[][] psuperBlocks = (byte[][]) rs.getArray(4).getArray();
+				Object[] superBlocks = (Object[]) rs.getArray(3).getArray();
+				Object[] psuperBlocks = (Object[]) rs.getArray(4).getArray();
 				String blockHash = SecUtils.hexify(rs.getBytes(1));
 				int blockId = rs.getInt(2);
 				if(superBlocks == null || superBlocks.length == 0) {
 					orphanedBlocks.put(blockHash, blockId);
 				} else {
 					for(int i = 0; i < superBlocks.length; i++) {
-						String superBlockHash = SecUtils.hexify(superBlocks[i]);
-						String psuperBlockHash = SecUtils.hexify(psuperBlocks[i]);
+						String superBlockHash = getHexFromPgObject((PGobject) superBlocks[i]);
+						String psuperBlockHash = getHexFromPgObject((PGobject) psuperBlocks[i]);
 						SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash, false);
 						sc.blocksSet.add(blockHash);
-						sc.blocks.add(0, blockHash);
+						sc.blocks.add(blockHash);
 					}
 				}
+			}
+
+			private String getHexFromPgObject(PGobject o) {
+				String s = o.getValue();
+				if(s == null) {
+					return "";
+				}
+				if(!s.startsWith("\\x")) {
+					throw new UnsupportedOperationException();
+				}
+				return s.substring(2);
 			}
 
 			
@@ -229,7 +244,9 @@ public class DBConsensusManager {
 				final OpBlockChain newParent = parent;
 				blocks += sc.blocks.size();
 
-				for (String blockHash : sc.blocks) {
+				Iterator<String> ds = sc.blocks.descendingIterator();
+				while(ds.hasNext()) {
+					String blockHash = ds.next();
 					jdbcTemplate.query("SELECT details from blocks where hash = ? ",
 							new Object[] { SecUtils.getHashBytes(blockHash) }, new RowCallbackHandler() {
 
@@ -308,7 +325,7 @@ public class DBConsensusManager {
 					// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
 					jdbcTemplate.update("UPDATE blocks set superblocks = superblocks || ?, psuperblocks = psuperblocks || ? where hash = ?" , 
 							shash, it.hasNext() ? empty : phash, SecUtils.getHashBytes(o.getHash()));
-					sc.blocks.add(o.getHash());
+					sc.blocks.addFirst(o.getHash());
 					sc.blocksSet.add(o.getHash());
 				}
 				

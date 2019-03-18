@@ -35,8 +35,8 @@ public class ExternalHttpTest {
 		adminLogin(client);
 //		executeMgmtOp(client, MGMT_BOOTSTRAP);
 //		executeMgmtOp(client, MGMT_TOGGLE_PAUSE);
-		int userInd = 1000;
-		for(int i = 1; i < 1000; i++) {
+		int userInd = 2000;
+		for(int i = 1; i < 30; i++) {
 			// userSignup(client, "user_"+userInd++, "supersecretepassword");
 			// userSignup(client, "user_"+userInd++, "supersecretepassword");
 			userLogin(client, "user_1:"+userInd++, "supersecretepassword");
