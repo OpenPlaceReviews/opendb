@@ -611,7 +611,11 @@ public class OpBlockchainRules {
 	}
 	
 	public String calculateSuperblockHash(int size, String lastBlockHash) {
-		return Integer.toHexString(size) + lastBlockHash;
+		String sz = Integer.toHexString(size);
+		if(sz.length() % 2 == 1) {
+			sz = "0" + sz;
+		}
+		return sz + lastBlockHash;
 	}
 	
 	public String calculateHash(OpBlock block) {

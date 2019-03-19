@@ -137,7 +137,7 @@ public class BlocksManager {
 		dataManager.insertBlock(opBlock);
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
-		// change only after block is inserted
+		// change only after block is inserted into db
 		int tmRebase = timer.startExtra();
 		boolean changeParent = blockchain.changeParent(blc);
 		if(!changeParent) {
@@ -145,14 +145,15 @@ public class BlocksManager {
 		}
 		timer.measure(tmRebase, ValidationTimer.BLC_REBASE);
 		
+		int tmSDbSave = timer.startExtra();
+		dataManager.saveMainBlockchain(blockchain.getParent());
+		timer.measure(tmSDbSave, ValidationTimer.BLC_SAVE);
+		
 		
 		int tmCompact = timer.startExtra();
-		blc.compact();
+		dataManager.compact(blockchain.getParent());
 		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
 		
-		int tmSDbSave = timer.startExtra();
-		dataManager.saveMainBlockchain(blc);
-		timer.measure(tmSDbSave, ValidationTimer.BLC_SAVE);
 		
 		opBlock.putObjectValue(OpObject.F_VALIDATION, timer.getTimes());
 		logSystem.logSuccessBlock(opBlock, 

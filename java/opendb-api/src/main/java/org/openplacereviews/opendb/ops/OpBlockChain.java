@@ -43,8 +43,6 @@ public class OpBlockChain {
 	public static final int LOCKED_ERROR = -1;
 	public static final int LOCKED_SUCCESS =  1;
 	public static final int UNLOCKED =  0;
-	// check SimulateSuperblockCompactSequences to verify numbers
-	private static final double COMPACT_COEF = 0.5;
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 	private int locked = UNLOCKED; // 0, -1 error, 1 intentional
 
@@ -287,19 +285,6 @@ public class OpBlockChain {
 		parent = newParent;
 	}
 	
-	public synchronized boolean compact() {
-		OpBlockChain p = parent;
-		// synchronized cause internal objects could be changed
-		if(!p.nullObject && !p.parent.nullObject) {
-			if(COMPACT_COEF * (p.getSuperblockSize()  + getSuperblockSize()) >= p.parent.getSuperblockSize() ) {
-				p.mergeWithParent();
-			} else {
-				p.compact();
-			}
-		}
-		return true;
-	}
-	
 	private void validateIsUnlocked() {
 		if(nullObject) {
 			throw new IllegalStateException("This chain is immutable (null chain)");
@@ -413,6 +398,11 @@ public class OpBlockChain {
 		return getLastBlockId();
 	}
 	
+	
+	public boolean isNullBlock() {
+		return nullObject;
+	}
+	
 	public int getSuperblocksDepth() {
 		if(nullObject) {
 			return 0;
@@ -439,15 +429,15 @@ public class OpBlockChain {
 	
 	
 	public String getSuperBlockHash() {
-		if(blocks.size() == 0) {
+		if (blocks.size() == 0) {
 			return "";
 		}
 		String hsh = getLastHash();
 		int i = hsh.lastIndexOf(':');
-		if(i >= 0 ){
+		if (i >= 0) {
 			hsh = hsh.substring(i + 1);
 		}
-		return Integer.toHexString(blocks.size()) + hsh;
+		return rules.calculateSuperblockHash(blocks.size(), hsh);
 	}
 	
 	public Collection<OpBlock> getOneSuperBlock() {
