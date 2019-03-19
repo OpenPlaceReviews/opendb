@@ -37,14 +37,14 @@ public class ExternalHttpTest {
 //		executeMgmtOp(client, MGMT_CREATE_BLOCK);
 		
 //		executeMgmtOp(client, MGMT_TOGGLE_PAUSE);
-		int userInd = (int) ((System.currentTimeMillis() % 10000l) * 10000l);
-//		userSignup(client, "user_1", "supersecretepassword");
-//		executeMgmtOp(client, MGMT_CREATE_BLOCK);
+		final int userInd = (int) ((System.currentTimeMillis() % 10000l) * 10000l);
+		userSignup(client, "user_"+userInd, "supersecretepassword");
+		executeMgmtOp(client, MGMT_CREATE_BLOCK);
 		
-		for(int i = 1; i < 10; i++) {
+		for (int i = 1; i < 10; i++) {
 			// userSignup(client, "user_"+userInd++, "supersecretepassword");
 			// userSignup(client, "user_"+userInd++, "supersecretepassword");
-			userLogin(client, "user_1:"+userInd++, "supersecretepassword");
+			userLogin(client, "user_" + userInd + ":" + (userInd+i), "supersecretepassword");
 			executeMgmtOp(client, MGMT_CREATE_BLOCK);
 		}
 		

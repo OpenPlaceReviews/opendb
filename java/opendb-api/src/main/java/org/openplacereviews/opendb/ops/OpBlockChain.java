@@ -395,7 +395,7 @@ public class OpBlockChain {
 	}
 	
 	public int getDepth() {
-		return getLastBlockId();
+		return getLastBlockId() + 1;
 	}
 	
 	

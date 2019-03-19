@@ -233,7 +233,7 @@ public class DBConsensusManager {
 		
 		LOGGER.info(String.format("### Selected main blockchain with '%s' and %d depth. Orphaned blocks %d. ###", 
 				getLastBlockHash(topChain), getDepth(topChain), orphanedBlocks.size()));
-		LOGGER.info("... Loading blocks into memory...");
+		LOGGER.info("... Loading blocks from database ...");
 		
 		OpBlockChain parent = loadBlockchain(rules, topChain);
 		LOGGER.info(String.format("### Loaded %d blocks ###", parent.getDepth()));
@@ -344,7 +344,8 @@ public class DBConsensusManager {
 	private BlockInfo selectTopBlockFromOrphanedBlcoks() {
 		BlockInfo topBlockInfo = null;
 		for(BlockInfo bi : orphanedBlocks.values()) {
-			if(topBlockInfo == null || topBlockInfo.depth < bi.depth || topBlockInfo.hash.compareTo(bi.hash) < 0){
+			if(topBlockInfo == null || topBlockInfo.depth < bi.depth ||
+					(topBlockInfo.depth == bi.depth && topBlockInfo.hash.compareTo(bi.hash) > 0)){
 				topBlockInfo = bi;
 			}
 		}
@@ -400,18 +401,17 @@ public class DBConsensusManager {
 	
 	
 	public synchronized void saveMainBlockchain(OpBlockChain blc) {
-		printBlockChain(blc);
 		// find saved part of chain
 		Deque<OpBlockChain> notSaved = new LinkedList<OpBlockChain>();
 		OpBlockChain p = blc;
-		String lastBlockHash = getLastBlockHash(mainSavedChain);
+		String lastBlockHash = getSuperblockHash(mainSavedChain);
 		while(p != null && !p.getSuperBlockHash().equals(lastBlockHash)) {
 			notSaved.addFirst(p);
 			p = p.getParent();
 		}
 		if(p == null) {
 			printBlockChain(blc);
-			throw new IllegalStateException("Runtime blockchain doesn't match db blockchain:" + getLastBlockHash());
+			throw new IllegalStateException("Runtime blockchain doesn't match db blockchain:" + getSuperblockHash(mainSavedChain));
 		} 
 		for(OpBlockChain ns : notSaved) {
 			mainSavedChain = saveSuperblock(ns);
@@ -431,16 +431,19 @@ public class DBConsensusManager {
 		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
 		byte[] phash = SecUtils.getHashBytes(getSuperblockHash(parent));
+		
 		byte[] empty = new byte[0];
 		Iterator<OpBlock> it = blc.getOneSuperBlock().iterator();
 		while (it.hasNext()) {
 			OpBlock o = it.next();
+			byte[] blHash = SecUtils.getHashBytes(o.getHash());
+			String blockRawHash = SecUtils.hexify(blHash);
 			// assign parent hash only for last block
 			// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
 			jdbcTemplate.update("UPDATE blocks set superblock = ?, psuperblock =  ? where hash = ?",
-							shash, it.hasNext() ? empty : phash, SecUtils.getHashBytes(o.getHash()));
-			sc.blocks.addFirst(o.getHash());
-			sc.blocksSet.add(o.getHash());
+							shash, it.hasNext() ? empty : phash, blHash);
+			sc.blocks.addFirst(blockRawHash);
+			sc.blocksSet.add(blockRawHash);
 		}
 		superblocks.put(superBlockHash, sc);
 		return sc;
@@ -448,42 +451,43 @@ public class DBConsensusManager {
 	
 	public synchronized void compact(OpBlockChain blc) {
 		OpBlockChain p = blc;
-		String lastBlockHash = getLastBlockHash(mainSavedChain);
+		String lastBlockHash = getSuperblockHash(mainSavedChain);
 		while(p != null && !p.getSuperBlockHash().equals(lastBlockHash)) {
 			p = p.getParent();
 		}
-		if(p != null) {
-			boolean compacted = true;
-			int iterations = COMPACT_ITERATIONS;
-			while(compacted && iterations -- > 0) {
-				compacted = compact(p, mainSavedChain) != null;
+		if (p != null) {
+			printBlockChain(blc);
+			Superblock compacted = compact(p, mainSavedChain);
+			if (compacted != null) {
+				mainSavedChain = compacted;
 			}
 		}
 	}
 
 	private Superblock compact(OpBlockChain runtimeChain, Superblock sc) {
 		// nothing to compact
-		if (runtimeChain == null || runtimeChain.isNullBlock()) {
+		if (runtimeChain == null || runtimeChain.isNullBlock() || runtimeChain.getParent().isNullBlock()) {
 			return null;
 		}
-		if (runtimeChain.getParent().isNullBlock() || runtimeChain.getParent().getParent().isNullBlock()) {
-			return null;
-		}
-		if(runtimeChain.getSuperBlockHash().equals(getSuperblockHash(sc)) || 
+		if(!runtimeChain.getSuperBlockHash().equals(getSuperblockHash(sc)) || 
 				!runtimeChain.getParent().getSuperBlockHash().equals(getSuperblockHash(sc.parent))) {
-			LOGGER.error(String.format("ERROR situation with compactin '%s' = '%s' and '%s' = '%s' ", 
+			LOGGER.error(String.format("ERROR situation with compacting '%s' = '%s' and '%s' = '%s' ", 
 					runtimeChain.getSuperBlockHash(), getSuperblockHash(sc), 
 					runtimeChain.getParent().getSuperBlockHash(), getSuperblockHash(sc.parent)));
 			return null;
 		}
+		boolean lastTwoBlocks = runtimeChain.getParent().getParent().isNullBlock();
 		Superblock compacted = compact(runtimeChain.getParent(), sc.parent);
 		if(compacted == null) {
-			if(COMPACT_COEF * (runtimeChain.getSuperblockSize()  + runtimeChain.getParent().getSuperblockSize()) >= 
-					runtimeChain.getParent().getParent().getSuperblockSize() ) {
+			boolean compactCondition = !lastTwoBlocks && COMPACT_COEF * (runtimeChain.getSuperblockSize()  + runtimeChain.getParent().getSuperblockSize()) >= 
+					runtimeChain.getParent().getParent().getSuperblockSize();
+			compactCondition = compactCondition || (runtimeChain.getSuperblockSize() > runtimeChain.getParent().getSuperblockSize());
+			if(compactCondition) { 
 				Superblock oldParent = sc.parent;
 				if(runtimeChain.mergeWithParent()) {
 					LOGGER.info(String.format("Compact superblock '%s' into  superblock '%s' ", oldParent.superblockHash, sc.superblockHash));
 					superblocks.remove(oldParent.superblockHash);
+					sc.parent = oldParent.parent;
 					return saveSuperblock(runtimeChain);
 				}
 			}
@@ -509,7 +513,18 @@ public class DBConsensusManager {
 			}
 			p = p.getParent();
 		}
-		LOGGER.info(String.format("New superblock chain %s", superBlocksChain));
+		LOGGER.info(String.format("Runtime chain %s", superBlocksChain));
+		
+		superBlocksChain.clear();
+		Superblock s = mainSavedChain;
+		while(s != null) {
+			String sh = s.superblockHash;
+			if(sh.length() > 10) {
+				superBlocksChain.add(sh.substring(0, 10));
+			}
+			s = s.parent;
+		}
+		LOGGER.info(String.format("DB chain %s", superBlocksChain));
 	}
 		
 		
