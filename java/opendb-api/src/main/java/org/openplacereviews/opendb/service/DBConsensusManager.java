@@ -212,6 +212,11 @@ public class DBConsensusManager {
 	
 	public int getDepth() {
 		Superblock s = mainSavedChain;
+		return getDepth(s);
+	}
+
+
+	private int getDepth(Superblock s) {
 		return s == null ? 0 : s.getDepth();
 	}
 	
@@ -227,11 +232,11 @@ public class DBConsensusManager {
 		Superblock topChain = putBlocksOnTopOfchain(topBlockInfo, mainSavedChain);
 		
 		LOGGER.info(String.format("### Selected main blockchain with '%s' and %d depth. Orphaned blocks %d. ###", 
-				getLastBlockHash(), getDepth(), orphanedBlocks.size()));
+				getLastBlockHash(topChain), getDepth(topChain), orphanedBlocks.size()));
 		LOGGER.info("... Loading blocks into memory...");
 		
 		OpBlockChain parent = loadBlockchain(rules, topChain);
-		LOGGER.info(String.format("### Loaded %d blocks ###", getDepth()));
+		LOGGER.info(String.format("### Loaded %d blocks ###", parent.getDepth()));
 		
 		OpBlockChain blcQueue = new OpBlockChain(parent, rules);
 		
@@ -315,7 +320,7 @@ public class DBConsensusManager {
 				if(OUtils.isEmpty(superblock)) {
 					orphanedBlocks.put(blockHash, blockInfo);
 				} else {
-					String hsh = getSuperblockHash();
+					String hsh = getSuperblockHash(res[0]);
 					if(OUtils.equals(hsh, superblock)) {
 						// reuse mainchain
 					} else if(OUtils.equals(hsh, psuperblock)){
@@ -324,9 +329,9 @@ public class DBConsensusManager {
 					} else {
 						throw new IllegalStateException(String.format("Illegal parent '%s' for superblock '%s'", psuperblock, superblock));
 					}
+					res[0].blocks.addLast(blockHash);
+					res[0].blocksSet.add(blockHash);
 				}
-				res[0].blocks.addLast(blockHash);
-				res[0].blocksSet.add(blockHash);
 			}
 
 			
@@ -353,11 +358,11 @@ public class DBConsensusManager {
 		if(topBlockInfo != null && chain != null && !topBlockInfo.containsBlock(lastBlockOfMainChain)) {
 			throw new IllegalStateException(String.format("Top selected block '%s' doesn't contain last block '%s' from superblock", topBlockInfo.hash, lastBlockOfMainChain));
 		}
-		Superblock res = new Superblock(LEAF_SUPERBLOCK_ID, chain);
-		superblocks.put(LEAF_SUPERBLOCK_ID, chain);
-		if(topBlockInfo != null && OUtils.equals(topBlockInfo.hash, lastBlockOfMainChain)) {
+		Superblock res = chain;
+		if(topBlockInfo != null && !OUtils.equals(topBlockInfo.hash, lastBlockOfMainChain)) {
 			BlockInfo bi = topBlockInfo;
-			while(!lastBlockOfMainChain.equals(bi.hash)) {
+			res = new Superblock(LEAF_SUPERBLOCK_ID, chain);
+			while(!lastBlockOfMainChain.equals(bi == null ? "": bi.hash)) {
 				res.blocks.addFirst(bi.hash);
 				res.blocksSet.add(bi.hash);
 				orphanedBlocks.remove(bi.hash);
@@ -416,9 +421,12 @@ public class DBConsensusManager {
 	private Superblock saveSuperblock(OpBlockChain blc) {
 		String superBlockHash = blc.getSuperBlockHash();
 		LOGGER.info(String.format("Save superblock %s ", superBlockHash));
-		Superblock parent = blc.getParent() == null ? null : superblocks.get(blc.getParent().getSuperBlockHash());
-		if(blc.getParent() != null && parent == null) {
-			throw new IllegalStateException();
+		Superblock parent = null;
+		if(!blc.getParent().isNullBlock()) {
+			parent = superblocks.get(blc.getParent().getSuperBlockHash());
+			if(parent == null) {
+				throw new IllegalStateException();
+			}
 		}
 		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
