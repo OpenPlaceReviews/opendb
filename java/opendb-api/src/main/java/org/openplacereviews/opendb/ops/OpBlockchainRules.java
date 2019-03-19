@@ -610,6 +610,10 @@ public class OpBlockchainRules {
 		return block;
 	}
 	
+	public String calculateSuperblockHash(int size, String lastBlockHash) {
+		return Integer.toHexString(size) + lastBlockHash;
+	}
+	
 	public String calculateHash(OpBlock block) {
 		ByteArrayOutputStream bs = new ByteArrayOutputStream();
 		DataOutputStream dous = new DataOutputStream(bs);
@@ -692,6 +696,8 @@ public class OpBlockchainRules {
 		void logError(OpObject o, ErrorType e, String msg, Exception cause);
 		
 	}
+
+	
 
 	
 	

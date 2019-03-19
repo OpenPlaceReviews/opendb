@@ -1,7 +1,5 @@
 package org.openplacereviews.opendb.ops;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +15,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 
 /**
@@ -57,8 +54,6 @@ public class OpBlockChain {
 	private final OpBlockchainRules rules;
 	// 0.2 parent chain
 	private volatile OpBlockChain parent;
-	// 0.3 superblock hash calculation sha256(superblockMagic + all hashes) - to support uniqueness
-	private String superBlockHash = "";
 	
 	// 1. list of blocks
 	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
@@ -169,7 +164,6 @@ public class OpBlockChain {
 		operations.clear();
 		blockDepth.put(blockHash, blockId);
 		blocks.push(block);
-		recalculateSuperBlockHash();
 	}
 	
 	public synchronized boolean changeParent(OpBlockChain newParent) {
@@ -235,7 +229,6 @@ public class OpBlockChain {
 		this.parent = newParent;
 		this.blocks.clear();
 		this.blockDepth.clear();
-		recalculateSuperBlockHash();
 	}
 	
 	public synchronized boolean mergeWithParent() {
@@ -260,7 +253,6 @@ public class OpBlockChain {
 		for(OpBlock last : parent.blocks) {
 			this.blocks.addLast(last);
 		}
-		recalculateSuperBlockHash();
 		blockDepth.putAll(this.parent.blockDepth);
 		
 		// 3. merge queue operations
@@ -295,22 +287,6 @@ public class OpBlockChain {
 		parent = newParent;
 	}
 	
-	private void recalculateSuperBlockHash() {
-		if(blocks.size() == 0) {
-			superBlockHash = "";
-		}
-		ByteArrayOutputStream bts = new ByteArrayOutputStream(blocks.size() * 256);
-		for(OpBlock b : blocks) { 
-			byte[] hashBytes = SecUtils.getHashBytes(b.getHash());
-			try {
-				bts.write(hashBytes);
-			} catch (IOException e) {
-				throw new IllegalStateException(e);
-			}
-		}
-		superBlockHash = SecUtils.hexify(SecUtils.calculateHash(SecUtils.HASH_SHA256, bts.toByteArray(), null));
-	}
-
 	public synchronized boolean compact() {
 		OpBlockChain p = parent;
 		// synchronized cause internal objects could be changed
@@ -463,7 +439,15 @@ public class OpBlockChain {
 	
 	
 	public String getSuperBlockHash() {
-		return superBlockHash;
+		if(blocks.size() == 0) {
+			return "";
+		}
+		String hsh = getLastHash();
+		int i = hsh.lastIndexOf(':');
+		if(i >= 0 ){
+			hsh = hsh.substring(i + 1);
+		}
+		return Integer.toHexString(blocks.size()) + hsh;
 	}
 	
 	public Collection<OpBlock> getOneSuperBlock() {

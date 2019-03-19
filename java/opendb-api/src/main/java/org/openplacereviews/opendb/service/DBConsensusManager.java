@@ -40,6 +40,7 @@ public class DBConsensusManager {
 	protected static final Log LOGGER = LogFactory.getLog(DBConsensusManager.class);
 	
 	private static final String FIELD_NAME = "name";
+	private static final int COMPACT_ITERATIONS = 5;
 	
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
@@ -50,19 +51,19 @@ public class DBConsensusManager {
 	@Autowired
 	private LogOperationService logSystem;
 
-	private Map<String, SuperblockChain> superBlockChains = new ConcurrentHashMap<String, DBConsensusManager.SuperblockChain>();
+	private Map<String, Superblock> superBlocks = new ConcurrentHashMap<String, DBConsensusManager.Superblock>();
 	private Map<String, Integer> orphanedBlocks = new ConcurrentHashMap<String, Integer>();
-	private SuperblockChain mainChain;
+	private Superblock mainChain;
 	
-	public static class SuperblockChain {
-		public final SuperblockChain parent;
+	public static class Superblock {
+		public final Superblock parent;
 		public final String superblockHash;
 		
-		private List<SuperblockChain> leafSuperBlocks = Collections.emptyList();
+		private List<Superblock> leafSuperBlocks = Collections.emptyList();
 		final Set<String> blocksSet = new ConcurrentHashSet<String>();
 		final Deque<String> blocks = new ConcurrentLinkedDeque<String>();
 		
-		public SuperblockChain(String superBlockHash, SuperblockChain parent) {
+		public Superblock(String superBlockHash, Superblock parent) {
 			this.parent = parent;
 			this.superblockHash = superBlockHash;
 		}
@@ -102,10 +103,10 @@ public class DBConsensusManager {
 			return false;
 		}
 
-		public List<SuperblockChain> getAllFromBottom(List<SuperblockChain> l) {
+		public List<Superblock> getAllFromBottom(List<Superblock> l) {
 			if (parent == null) {
 				if (l == null) {
-					l = new ArrayList<SuperblockChain>();
+					l = new ArrayList<Superblock>();
 				}
 			} else {
 				l = parent.getAllFromBottom(l);
@@ -127,7 +128,8 @@ public class DBConsensusManager {
 	protected static final String DDL_CREATE_TABLE_OPS_INDEX_HASH = "create index operations_hash_ind on operations(hash)";
 	// Query / insert values 
 	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';
-	// insert into test(b) values (decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex');
+	// insert into test(b) values (decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
+	// UPDATE blocks SET superblocks = array_remove(superblocks, decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
 
 	public static void main(String[] args) {
 		System.out.println(DDL_CREATE_TABLE_BLOCKS + ';');
@@ -145,34 +147,43 @@ public class DBConsensusManager {
 		return orphanedBlocks;
 	}
 	
-	public List<SuperblockChain> getLeafSuperblocks() {
-		List<SuperblockChain> list = new ArrayList<DBConsensusManager.SuperblockChain>();
-		for(SuperblockChain lc :  superBlockChains.values()) {
-			if(lc.leafSuperBlocks.isEmpty()) {
+	public List<Superblock> getLeafSuperblocks() {
+		List<Superblock> list = new ArrayList<DBConsensusManager.Superblock>();
+		for (Superblock lc : superBlocks.values()) {
+			if (lc.leafSuperBlocks.isEmpty()) {
 				list.add(lc);
 			}
 		}
 		return list;
 	}
 	
-	private SuperblockChain getOrCreateSuperblock(String superBlockHash, String psuperBlockHash, boolean trace) {
-		SuperblockChain sc = superBlockChains.get(superBlockHash);
+	private Superblock getOrCreateSuperblock(String superBlockHash, String psuperBlockHash) {
+		Superblock sc = superBlocks.get(superBlockHash);
 		if(sc == null) {
-			SuperblockChain parent = superBlockChains.get(psuperBlockHash);
-			sc = new SuperblockChain(superBlockHash, parent);
-			if(parent != null) {
-				List<SuperblockChain> lst = new ArrayList<>(parent.leafSuperBlocks);
-				lst.add(sc);
-			}
-			if(trace) {
-				LOGGER.debug(String.format("Create superblock %s parent %s ", superBlockHash, psuperBlockHash));
-			}
-			superBlockChains.put(superBlockHash, sc);
+			sc = createSuperBlock(superBlockHash, psuperBlockHash);
 		}
+		return sc;
+	}
+
+
+
+	private synchronized Superblock createSuperBlock(String superBlockHash, String psuperBlockHash) {
+		Superblock sc;
+		Superblock parent = superBlocks.get(psuperBlockHash);
+		if(!OUtils.isEmpty(psuperBlockHash) && parent == null) {
+			throw new IllegalStateException("Illegal parent for superblock :" + superBlockHash);
+		}
+		sc = new Superblock(superBlockHash, parent);
+		if(parent != null) {
+			List<Superblock> lst = new ArrayList<>(parent.leafSuperBlocks);
+			lst.add(sc);
+		}
+		superBlocks.put(superBlockHash, sc);
 		return sc;
 	}
 	
 	public OpBlockChain init(MetadataDb metadataDB) {
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading superblocks ...");
 		ValidationTimer timer = new ValidationTimer();
 		timer.start();
@@ -192,7 +203,7 @@ public class DBConsensusManager {
 					for(int i = 0; i < superBlocks.length; i++) {
 						String superBlockHash = getHexFromPgObject((PGobject) superBlocks[i]);
 						String psuperBlockHash = getHexFromPgObject((PGobject) psuperBlocks[i]);
-						SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash, false);
+						Superblock sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash);
 						sc.blocksSet.add(blockHash);
 						sc.blocks.add(blockHash);
 					}
@@ -212,18 +223,18 @@ public class DBConsensusManager {
 
 			
 		});
-		for(SuperblockChain b : superBlockChains.values()) {
-			if(!b.superblockHash.endsWith(b.calculateRawSuperBlockHash())) {
+		for(Superblock b : superBlocks.values()) {
+			if(!b.superblockHash.equals(rules.calculateSuperblockHash(b.blocks.size(), b.blocks.peekLast()))) {
 				throw new IllegalStateException(String.format("Super block hash '%s' doesn't match calculated superblock hash with blocks it conains '%s'.",
 						b.superblockHash, b.calculateRawSuperBlockHash()));
 			}
 		}
-		LOGGER.info(String.format("... Loaded %d superblocks with %d blocks ...", superBlockChains.size(),  
+		LOGGER.info(String.format("... Loaded %d superblocks with %d blocks ...", superBlocks.size(),  
 				blocksNumber[0]));
 		
-		List<SuperblockChain> leafSuperBlocks = getLeafSuperblocks();
+		List<Superblock> leafSuperBlocks = getLeafSuperblocks();
 		int mainDepth = 0;
-		for(SuperblockChain s : leafSuperBlocks) {
+		for(Superblock s : leafSuperBlocks) {
 			int dp = s.getDepth();
 			if(dp > mainDepth) {
 				mainDepth = dp;
@@ -233,13 +244,11 @@ public class DBConsensusManager {
 		LOGGER.info(String.format("... Select main blockchain with %d depth out of %d chains ...", mainDepth, leafSuperBlocks.size()));
 		
 
-		OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		OpBlockChain parent = OpBlockChain.NULL;
-		
 		if (mainChain != null) {
-			List<SuperblockChain> allChains = mainChain.getAllFromBottom(null);
+			List<Superblock> allChains = mainChain.getAllFromBottom(null);
 			int blocks = 0;
-			for (SuperblockChain sc : allChains) {
+			for (Superblock sc : allChains) {
 				parent = new OpBlockChain(parent, rules);
 				final OpBlockChain newParent = parent;
 				blocks += sc.blocks.size();
@@ -264,6 +273,10 @@ public class DBConsensusManager {
 			}
 			LOGGER.info(String.format("... Loaded %d blocks ...", blocks));
 		}
+		
+		LOGGER.info(String.format("... Compcate superblocks (delete duplicated) ..."));
+		compactSuperblocks(COMPACT_ITERATIONS);
+		
 		OpBlockChain blcQueue = new OpBlockChain(parent, rules);
 		LOGGER.info("... Loading operation queue  ...");
 		int[] ops = new int[1];
@@ -300,41 +313,75 @@ public class DBConsensusManager {
 	}
 	
 	public void saveMainBlockchain(OpBlockChain blc) {
-		mainChain = saveBlockchain(blc);
+		mainChain = saveSuperblocks(blc);
 	}
 	
-	private SuperblockChain saveBlockchain(OpBlockChain blc) {
-		if(blc != null && OUtils.isEmpty(blc.getSuperBlockHash())) {
+	private Superblock saveSuperblocks(OpBlockChain blc) {
+		if (blc != null && OUtils.isEmpty(blc.getSuperBlockHash())) {
 			blc = blc.getParent();
 		}
-		if(blc != null) {
-			SuperblockChain parent = saveBlockchain(blc.getParent());
-			String psuperBlockHash = parent == null ? "" : parent.superblockHash;
-			// TODO make unique superBlockHash 
-			String superBlockHash = blc.getSuperBlockHash();
-			SuperblockChain sc = getOrCreateSuperblock(superBlockHash, psuperBlockHash, true);
-			// size is not equal means it was created
-			if(sc.blocks.size() != blc.getSuperblockSize()) {
-				byte[] shash = SecUtils.getHashBytes(superBlockHash);
-				byte[] phash = SecUtils.getHashBytes(psuperBlockHash);
-				byte[] empty = new byte[0];
-				Iterator<OpBlock> it = blc.getOneSuperBlock().iterator();
-				while(it.hasNext()) {
-					OpBlock o = it.next();
-					// assign parent hash only for last block
-					// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
-					jdbcTemplate.update("UPDATE blocks set superblocks = superblocks || ?, psuperblocks = psuperblocks || ? where hash = ?" , 
-							shash, it.hasNext() ? empty : phash, SecUtils.getHashBytes(o.getHash()));
-					sc.blocks.addFirst(o.getHash());
-					sc.blocksSet.add(o.getHash());
-				}
-				
-			}
-			return sc;
+		if (blc == null) {
+			return null;
 		}
-		return null;
+		String superBlockHash = blc.getSuperBlockHash();
+		Superblock parent = saveSuperblocks(blc.getParent());
+		if (!superBlocks.containsKey(superBlockHash)) {
+			String psuperBlockHash = parent == null ? "" : parent.superblockHash;
+			LOGGER.debug(String.format("Create superblock %s parent %s ", superBlockHash, psuperBlockHash));
+			Superblock sc = createSuperBlock(superBlockHash, psuperBlockHash);
+			byte[] shash = SecUtils.getHashBytes(superBlockHash);
+			byte[] phash = SecUtils.getHashBytes(psuperBlockHash);
+			byte[] empty = new byte[0];
+			Iterator<OpBlock> it = blc.getOneSuperBlock().iterator();
+			while (it.hasNext()) {
+				OpBlock o = it.next();
+				// assign parent hash only for last block
+				// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
+				jdbcTemplate.update("UPDATE blocks set superblocks = superblocks || ?, psuperblocks = psuperblocks || ? where hash = ?",
+								shash, it.hasNext() ? empty : phash, SecUtils.getHashBytes(o.getHash()));
+				sc.blocks.addFirst(o.getHash());
+				sc.blocksSet.add(o.getHash());
+			}
+		}
+		return superBlocks.get(superBlockHash);
 	}
 	
+	private void compactSuperblocks(int iterations) {
+		Superblock m = mainChain;
+		if(m != null) {
+			String main = m.superblockHash;
+			boolean changed = true;
+			while(changed && iterations -- > 0) {
+				List<Superblock> ls = getLeafSuperblocks();
+				for(Superblock s : ls) {
+					if(!s.superblockHash.equals(main) && m.containsBlock(s.blocks.peekLast())) {
+ 						deleteSuperblock(s);
+						changed = true;
+					}
+				}
+			}
+		}
+	}
+	
+	private synchronized void deleteSuperblock(Superblock s) {
+		// orphaned blocks ?
+		if(!s.leafSuperBlocks.isEmpty()) {
+			return;
+		}
+		for(String blHash: s.blocks) {
+			jdbcTemplate.update("UPDATE blocks SET " +
+					" psuperblocks = psuperblocks[:array_position(superblocks,?)-1] || psuperblocks[array_position(superblocks,?)+1:],"+
+					" superblocks = array_remove(superblocks, ?) WHERE encode(hash::bytea, 'hex') = ?", 
+					s.superblockHash, s.superblockHash, s.superblockHash, blHash);
+		}
+		ArrayList<Superblock> lst = new ArrayList<>(s.parent.leafSuperBlocks); 
+		lst.remove(s.superblockHash);
+		s.parent.leafSuperBlocks = lst;
+		superBlocks.remove(s.superblockHash);
+	}
+
+
+
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
