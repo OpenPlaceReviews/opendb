@@ -155,7 +155,7 @@ public class BlocksManager {
 		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
 		
 		
-		opBlock.putObjectValue(OpObject.F_VALIDATION, timer.getTimes());
+		opBlock.putCacheObject(OpObject.F_VALIDATION, timer.getTimes());
 		logSystem.logSuccessBlock(opBlock, 
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
@@ -236,7 +236,7 @@ public class BlocksManager {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();
 		for (OpOperation o : q) {
-			int l = formatter.toJson(o).length();
+			int l = formatter.opToJson(o).length();
 			if (size + l > OpBlockchainRules.MAX_BLOCK_SIZE_MB) {
 				break;
 			}

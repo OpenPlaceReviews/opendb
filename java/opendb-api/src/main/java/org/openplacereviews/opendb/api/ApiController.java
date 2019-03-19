@@ -60,9 +60,9 @@ public class ApiController {
 	public String queueList() throws FailedVerificationException {
 		OpBlock bl = new OpBlock();
 		for (OpOperation ob : manager.getBlockchain().getOperations()) {
-			bl.getOperations().add(ob);
+			bl.addOperation(ob);
 		}
-		return formatter.toJson(bl);
+		return formatter.fullObjectToJson(bl);
 	}
     
     public static class LogResult {
@@ -74,7 +74,7 @@ public class ApiController {
 	public String logsList() throws FailedVerificationException {
     	LogResult r = new LogResult();
     	r.logs = logService.getLog();
-		return formatter.objectToJson(r);
+		return formatter.fullObjectToJson(r);
 	}
     
     public static class BlockchainResult {
@@ -99,18 +99,16 @@ public class ApiController {
 		while(it.hasNext()) {
 			Entry<String, List<OpBlock>> e = it.next();
 			for(OpBlock o : e.getValue()) {
-				OpBlock cp = new OpBlock(o);
-				cp.getOperations().addAll(o.getOperations());
-				cp.putStringValue(OpBlock.F_SUPERBLOCK_HASH, e.getKey());
-				cp.putStringValue(OpBlock.F_SUPERBLOCK_ID, superBlockId +"");
-				res.blockchain.add(cp);
+				o.putCacheObject(OpBlock.F_SUPERBLOCK_HASH, e.getKey());
+				o.putCacheObject(OpBlock.F_SUPERBLOCK_ID, superBlockId +"");
+				res.blockchain.add(o);
 			}
 			superBlockId++;
 		}
 		
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
-		return formatter.objectToJson(res);
+		return formatter.fullObjectToJson(res);
 	}
     
     
@@ -122,7 +120,7 @@ public class ApiController {
     	OpBlockChain blc = manager.getBlockchain();
     	ObjectsResult res = new ObjectsResult();
     	res.objects = blc.getObjects(type, limit);
-		return formatter.objectToJson(res);
+		return formatter.fullObjectToJson(res);
 	}
     
     
@@ -137,7 +135,7 @@ public class ApiController {
     	} else {
     		obj = blc.getObjectByName(type, key, key2);
     	}
-		return formatter.objectToJson(obj);
+		return formatter.fullObjectToJson(obj);
 	}
     
 

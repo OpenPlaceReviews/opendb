@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.ops;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -39,12 +40,9 @@ public class OpBlock extends OpObject {
 	public OpBlock() {
 	}
 	
-	public OpBlock(OpBlock cp) {
-		super(cp);
-	}
-	
 	public void makeImmutable() {
 		isImmutable = true;
+		operations = Collections.unmodifiableList(operations);
 		for(OpOperation o : operations) {
 			o.makeImmutable();
 		}
@@ -53,7 +51,12 @@ public class OpBlock extends OpObject {
 	public List<OpOperation> getOperations() {
 		return operations;
 	}
-
+	
+	public void addOperation(OpOperation op) {
+		checkNotImmutable();
+		operations.add(op);
+	}
+	
 	public int getBlockId() {
 		return super.getIntValue(F_BLOCKID, -1);
 	}
@@ -98,6 +101,12 @@ public class OpBlock extends OpObject {
 	
 	public static class OpBlockBeanAdapter implements JsonDeserializer<OpBlock>, JsonSerializer<OpBlock> {
 
+		private boolean fullOutput;
+
+		public OpBlockBeanAdapter(boolean fullOutput) {
+			this.fullOutput = fullOutput;
+		}
+
 		@Override
 		public OpBlock deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
@@ -116,10 +125,14 @@ public class OpBlock extends OpObject {
 
 		@Override
 		public JsonElement serialize(OpBlock src, Type typeOfSrc, JsonSerializationContext context) {
-			TreeMap<String, Object> tm = new TreeMap<>(src.fields);
+			TreeMap<String, Object> tm = new TreeMap<>(
+					fullOutput ? src.getMixedFieldsAndCacheMap() : src.fields);
 			tm.put(F_OPERATIONS, src.operations);
 			return context.serialize(tm);
 		}
 
-	}	
+	}
+
+
+		
 }

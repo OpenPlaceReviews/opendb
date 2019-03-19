@@ -66,7 +66,7 @@ public class MgmtController {
     		return ResponseEntity.status(HttpStatus.BAD_REQUEST).
     				body("{\"status\":\"FAILED\", \"msg\":\"Block creation failed\"}");
     	}
-    	return ResponseEntity.ok(formatter.objectToJson(block));
+    	return ResponseEntity.ok(formatter.fullObjectToJson(block));
     }
     
     @PostMapping(path = "/queue-clear")

@@ -29,15 +29,36 @@ import com.google.gson.JsonPrimitive;
 public class JsonFormatter {
 
 	private Gson gson;
+	
+	private Gson gsonOperationHash;
+
+	private Gson gsonFullOutput;
 
 	public JsonFormatter() {
 		GsonBuilder builder = new GsonBuilder();
 		builder.disableHtmlEscaping();
-		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpOperationBeanAdapter());
-		builder.registerTypeAdapter(OpObject.class, new OpObject.OpObjectAdapter());
-		builder.registerTypeAdapter(OpBlock.class, new OpBlock.OpBlockBeanAdapter());
+		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpOperationBeanAdapter(false));
+		builder.registerTypeAdapter(OpObject.class, new OpObject.OpObjectAdapter(false));
+		builder.registerTypeAdapter(OpBlock.class, new OpBlock.OpBlockBeanAdapter(false));
 		builder.registerTypeAdapter(TreeMap.class, new MapDeserializerDoubleAsIntFix());
 		gson = builder.create();
+		
+		builder = new GsonBuilder();
+		builder.disableHtmlEscaping();
+		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpOperationBeanAdapter(false, true));
+		builder.registerTypeAdapter(OpObject.class, new OpObject.OpObjectAdapter(false));
+		builder.registerTypeAdapter(TreeMap.class, new MapDeserializerDoubleAsIntFix());
+		gsonOperationHash = builder.create();
+		
+		builder = new GsonBuilder();
+		builder.disableHtmlEscaping();
+		builder.registerTypeAdapter(OpOperation.class, new OpOperation.OpOperationBeanAdapter(true));
+		builder.registerTypeAdapter(OpObject.class, new OpObject.OpObjectAdapter(true));
+		builder.registerTypeAdapter(OpBlock.class, new OpBlock.OpBlockBeanAdapter(true));
+		builder.registerTypeAdapter(TreeMap.class, new MapDeserializerDoubleAsIntFix());
+		gsonFullOutput = builder.create();
+		
+		
 	}
 	
 	public static class MapDeserializerDoubleAsIntFix implements JsonDeserializer<TreeMap<String, Object>>{
@@ -85,7 +106,6 @@ public class JsonFormatter {
 	        return null;
 	    }
 	}
-
 	
 //	operations to parse / format related
 	public InputStream getBlock(String id) {
@@ -108,32 +128,28 @@ public class JsonFormatter {
 		return gson.toJson(bl);
 	}
 	
-	
-	public JsonObject toJsonObject(Object o) {
-		return gson.toJsonTree(o).getAsJsonObject();
-	}
-	
 	public JsonElement toJsonElement(Object o) {
 		return gson.toJsonTree(o);
 	}
 	
-	
-	public String objectToJson(Object o) {
-		return gson.toJson(o);
-	}
-	
-	public String toJson(OpOperation op) {
-		return gson.toJson(op);
-	}
-
 	@SuppressWarnings("unchecked")
 	public TreeMap<String, Object> fromJsonToTreeMap(String json) {
 		return gson.fromJson(json, TreeMap.class);
 	}
 	
-	public JsonObject fromJsonToJsonObject(String json) {
-		return gson.fromJson(json, JsonObject.class);
+	
+	public String fullObjectToJson(Object o) {
+		return gsonFullOutput.toJson(o);
 	}
 	
+	
+	public String opToJsonNoHash(OpOperation op) {
+		return gsonOperationHash.toJson(op);
+	}
+	
+	public String opToJson(OpOperation op) {
+		return gson.toJson(op);
+	}
+
 	
 }

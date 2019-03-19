@@ -124,7 +124,7 @@ public class OpApiController {
 		if(addToQueue) {
 			manager.addOperation(op);
 		}
-		return ResponseEntity.ok(formatter.toJson(op));
+		return ResponseEntity.ok(formatter.fullObjectToJson(op));
 	}
 
 	@PostMapping(path = "/signup")
@@ -198,7 +198,7 @@ public class OpApiController {
     		manager.generateHashAndSign(op, keyPair, otherKeyPair);
     	}
     	manager.addOperation(op);
-    	return ResponseEntity.ok(formatter.toJson(op));
+    	return ResponseEntity.ok(formatter.fullObjectToJson(op));
     }
     
     @PostMapping(path = "/login")
@@ -277,11 +277,9 @@ public class OpApiController {
     	manager.addOperation(op);
     	// private key won't be stored on opendb
     	if(loginPair.getPrivate() != null) {
-    		OpOperation copy = new OpOperation(op);
-    		copy.putStringValue(OpBlockchainRules.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
-    		return ResponseEntity.ok(formatter.toJson(copy));
+    		op.putCacheObject(OpBlockchainRules.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
     	}
-    	return ResponseEntity.ok(formatter.toJson(op));
+    	return ResponseEntity.ok(formatter.fullObjectToJson(op));
     }
     
     

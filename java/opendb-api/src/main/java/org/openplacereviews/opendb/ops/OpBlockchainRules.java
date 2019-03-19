@@ -197,21 +197,11 @@ public class OpBlockchainRules {
 
 	// hash and signature operations
 	public String calculateOperationHash(OpOperation ob, boolean set) {
-		if(ob.isImmutable()) {
-			ob = new OpOperation(ob);
-		}
-		String oldHash = (String) ob.remove(OpOperation.F_HASH);
-		Object sig = ob.remove(OpOperation.F_SIGNATURE);
-		Object validation = ob.remove(OpOperation.F_VALIDATION);
 		String hash = JSON_MSG_TYPE + ":"
-				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.toJson(ob));
+				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.opToJsonNoHash(ob));
 		if (set) {
 			ob.putStringValue(OpOperation.F_HASH, hash);
-		} else {
-			ob.putStringValue(OpOperation.F_HASH, oldHash);
 		}
-		ob.putObjectValue(OpOperation.F_SIGNATURE, sig);
-		ob.putObjectValue(OpOperation.F_VALIDATION, validation);
 		return hash;
 	}
 	
@@ -298,11 +288,11 @@ public class OpBlockchainRules {
 		for(int i = 0; i < deletedArray.size(); i++) {
 			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getType());
 		}
-		JsonObject refsMap = formatter.toJsonObject(refObjsCache);
+		JsonObject refsMap = formatter.toJsonElement(refObjsCache).getAsJsonObject();
 		for(String key : refObjsCache.keySet()) {
 			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getType());
 		}
-		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonObject(o),
+		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonElement(o).getAsJsonObject(),
 				deletedArray, refsMap);
 		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
@@ -518,7 +508,7 @@ public class OpBlockchainRules {
 			return error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
 		}
 		
-		int sz = formatter.toJson(u).length();
+		int sz = formatter.opToJson(u).length();
 		if (sz > OpBlockchainRules.MAX_OP_SIZE_MB) {
 			return error(u, ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
 		}

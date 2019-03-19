@@ -127,6 +127,7 @@ public class OpBlockChain {
 	}
 
 	public synchronized OpBlock replicateBlock(OpBlock block) {
+		block.checkImmutable();
 		validateIsUnlocked();
 		if (!operations.isEmpty()) {
 			// can't replicate blocks when operations are not empty
@@ -344,6 +345,7 @@ public class OpBlockChain {
 	 * Adds operation and validates it to block chain
 	 */
 	public synchronized boolean addOperation(OpOperation op) {
+		op.checkImmutable();
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx("");
 		boolean valid = validateAndPrepareOperation(op, validationCtx);
@@ -673,7 +675,7 @@ public class OpBlockChain {
 			return valid;
 		}
 		vld.measure(ValidationTimer.OP_VALIDATION);
-		u.putObjectValue(OpObject.F_VALIDATION, vld.getTimes());
+		u.putCacheObject(OpObject.F_VALIDATION, vld.getTimes());
 		return true;
 	}
 	

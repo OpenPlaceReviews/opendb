@@ -533,7 +533,7 @@ public class DBConsensusManager {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
 		try {
-			pGobject.setValue(formatter.toJson(op));
+			pGobject.setValue(formatter.opToJson(op));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}

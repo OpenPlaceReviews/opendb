@@ -6,10 +6,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TimeZone;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.openplacereviews.opendb.OUtils;
 
@@ -36,21 +39,14 @@ public class OpObject {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 	
-	protected transient OpOperation operation;
-	protected transient Map<String, Object> cacheFields;
 	protected Map<String, Object> fields = new TreeMap<>();
+	protected transient Map<String, Object> cacheFields;
 	protected boolean isImmutable;
 	protected String type;
 	
 	public OpObject() {}
 	
-	public OpObject(OpOperation operation, Map<String, Object> fields) {
-		this.operation = operation;
-		this.fields.putAll(fields);
-	}
-	
 	public OpObject(OpObject cp) {
-		this.operation = cp.operation;
 		this.fields.putAll(cp.fields);
 	}
 	
@@ -78,9 +74,9 @@ public class OpObject {
 	}
 	
 	public void putCacheObject(String f, Object o) {
-		if(isImmutable()) {
-			if(cacheFields == null) {
-				cacheFields = new TreeMap<String, Object>();
+		if (isImmutable()) {
+			if (cacheFields == null) {
+				cacheFields = new ConcurrentHashMap<String, Object>();
 			}
 			cacheFields.put(f, o);
 		}
@@ -93,10 +89,6 @@ public class OpObject {
 		putObjectValue(F_ID, list);
 	}
 	
-	public OpOperation getOperation() {
-		return operation;
-	}
-	
 	public String getName() {
 		return getStringValue(F_NAME);
 	}
@@ -106,6 +98,10 @@ public class OpObject {
 	}
 	
 	public void setType(String name) {
+		if(OUtils.equals(name, type)) {
+			return;
+		}
+		checkNotImmutable();
 		type = name;
 	}
 	
@@ -222,10 +218,7 @@ public class OpObject {
 	}
 	
 	public void putObjectValue(String key, Object value) {
-		// validation times is mutable part
-		if(!OpObject.F_VALIDATION.equals(key)) {
-			checkNotImmutable();
-		}
+		checkNotImmutable();
 		if(value == null) {
 			fields.remove(key);
 		} else {
@@ -233,11 +226,17 @@ public class OpObject {
 		}
 	}
 	
-	protected void checkNotImmutable() {
+	public void checkNotImmutable() {
 		if(isImmutable) {
 			throw new IllegalStateException("Object is immutable");
 		}
 		
+	}
+	
+	public void checkImmutable() {
+		if(!isImmutable) {
+			throw new IllegalStateException("Object is mutable");
+		}
 	}
 
 	public Object remove(String key) {
@@ -245,13 +244,25 @@ public class OpObject {
 		return fields.remove(key);
 	}
 	
+	public Map<String, Object> getMixedFieldsAndCacheMap() {
+		TreeMap<String, Object> mp = new TreeMap<>(fields);
+		if(cacheFields != null) {
+			Iterator<Entry<String, Object>> it = cacheFields.entrySet().iterator();
+			while(it.hasNext()) {
+				Entry<String, Object> e = it.next();
+				if(!mp.containsKey(e.getKey())) {
+					mp.put(e.getKey(), e.getValue());
+				}
+			}
+		}
+		return mp;
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((fields == null) ? 0 : fields.hashCode());
-		result = prime * result + ((operation == null) ? 0 : operation.hashCode());
 		return result;
 	}
 
@@ -269,17 +280,18 @@ public class OpObject {
 				return false;
 		} else if (!fields.equals(other.fields))
 			return false;
-		if (operation == null) {
-			if (other.operation != null)
-				return false;
-		} else if (!operation.equals(other.operation))
-			return false;
 		return true;
 	}
 
 	public static class OpObjectAdapter implements JsonDeserializer<OpObject>,
 			JsonSerializer<OpObject> {
 		
+		private boolean fullOutput;
+
+		public OpObjectAdapter(boolean fullOutput) {
+			this.fullOutput = fullOutput;
+		}
+
 		@Override
 		public OpObject deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
@@ -290,14 +302,11 @@ public class OpObject {
 
 		@Override
 		public JsonElement serialize(OpObject src, Type typeOfSrc, JsonSerializationContext context) {
-			return context.serialize(src.fields);
+			return context.serialize(fullOutput ? src.getMixedFieldsAndCacheMap() : src.fields);
 		}
 
 
 	}
-
-	
-
 
 
 }

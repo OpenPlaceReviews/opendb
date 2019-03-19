@@ -1,5 +1,11 @@
 # opendb
-This is a service that provides database communication
+This is a service that represents blockchain. It provides API to communicate with blockchain, such as:
+- Query active objects
+- Get active block chain
+- Add operation to the queue
+- Sign any message
+- Generates login / signup keys
+- Administrative operations: create block, revert block
 
 ## Requirements
 1. JDK minimum 8

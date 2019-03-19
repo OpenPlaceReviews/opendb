@@ -33,14 +33,12 @@ public class OpOperation extends OpObject {
 	private List<OpObject> newObjects = new LinkedList<OpObject>();
 	
 	public OpOperation() {
-		this.operation = null;
 	}
 	
 	public OpOperation(OpOperation cp) {
 		super(cp);
 		this.type = cp.type;
 		this.newObjects.addAll(cp.newObjects);
-		this.operation = this;
 	}
 	
 	public String getOperationType() {
@@ -160,6 +158,21 @@ public class OpOperation extends OpObject {
 
 	public static class OpOperationBeanAdapter implements JsonDeserializer<OpOperation>,
 			JsonSerializer<OpOperation> {
+
+		// plain serialization to calculate hash
+		private boolean excludeHashAndSignature;
+		private boolean fullOutput;
+
+		public OpOperationBeanAdapter(boolean fullOutput, boolean excludeHashAndSignature) {
+			this.excludeHashAndSignature = excludeHashAndSignature;
+			this.fullOutput = fullOutput;
+		}
+		
+		public OpOperationBeanAdapter(boolean fullOutput) {
+			this.fullOutput = fullOutput;
+			this.excludeHashAndSignature = false;
+		}
+		
 		
 		@Override
 		public OpOperation deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
@@ -186,7 +199,11 @@ public class OpOperation extends OpObject {
 
 		@Override
 		public JsonElement serialize(OpOperation src, Type typeOfSrc, JsonSerializationContext context) {
-			TreeMap<String, Object> tm = new TreeMap<>(src.fields);
+			TreeMap<String, Object> tm = new TreeMap<>(fullOutput ? src.getMixedFieldsAndCacheMap() : src.fields);
+			if(excludeHashAndSignature) {
+				tm.remove(F_SIGNATURE);
+				tm.remove(F_HASH);
+			}
 			tm.put(F_TYPE, src.type);
 			if(src.hasNew()) {
 				tm.put(F_NEW, context.serialize(src.newObjects));
