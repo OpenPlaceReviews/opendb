@@ -1,7 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -102,21 +100,11 @@ public class DBConsensusManager {
 			return d;
 		}
 		
-		public String calculateRawSuperBlockHash() {
+		public String calculateRawSuperBlockHash(OpBlockchainRules rules) {
 			if(blocks.size() == 0) {
 				return "";
 			}
-			ByteArrayOutputStream bts = new ByteArrayOutputStream(blocks.size() * 256);
-			Iterator<String> ds = blocks.descendingIterator();
-			while(ds.hasNext()) {
-				byte[] hashBytes = SecUtils.getHashBytes(ds.next());
-				try {
-					bts.write(hashBytes);
-				} catch (IOException e) {
-					throw new IllegalStateException(e);
-				}
-			}
-			return SecUtils.hexify(SecUtils.calculateHash(SecUtils.HASH_SHA256, bts.toByteArray(), null));
+			return rules.calculateSuperblockHash(blocks.size(), blocks.peekLast());
 		}
 
 		public boolean containsBlock(String block) {
@@ -144,7 +132,7 @@ public class DBConsensusManager {
 	
 	
 	//////////// SYSTEM TABLES DDL ////////////
-	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, psuperblock bytea, details jsonb)";
+	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, details jsonb)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_HASH = "create index blocks_hash_ind on blocks(hash)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_PHASH = "create index blocks_phash_ind on blocks(phash)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_SUPERBLOCK = "create index blocks_superblock_ind on blocks(superblock)";
@@ -246,7 +234,9 @@ public class DBConsensusManager {
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
 				ops[0]++;
-				blcQueue.addOperation(formatter.parseOperation(rs.getString(1)));
+				OpOperation op = formatter.parseOperation(rs.getString(1));
+				op.makeImmutable();
+				blcQueue.addOperation(op);
 			}
 			
 		});
@@ -306,13 +296,12 @@ public class DBConsensusManager {
 
 	private Superblock loadBlockHeadersAndBuildMainChain() {
 		Superblock[] res = new Superblock[1];
-		jdbcTemplate.query("SELECT hash, phash, blockid, superblock, psuperblock from blocks order by blockId asc", new RowCallbackHandler() {
+		jdbcTemplate.query("SELECT hash, phash, blockid, superblock from blocks order by blockId asc", new RowCallbackHandler() {
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
 				String blockHash = SecUtils.hexify(rs.getBytes(1));
 				String pblockHash = SecUtils.hexify(rs.getBytes(2));
 				String superblock = SecUtils.hexify(rs.getBytes(4));
-				String psuperblock = SecUtils.hexify(rs.getBytes(5));
 				BlockInfo blockInfo = createBlockInfo(blockHash, pblockHash, rs.getInt(3));
 				if(blockInfo == null) {
 					return;
@@ -323,11 +312,11 @@ public class DBConsensusManager {
 					String hsh = getSuperblockHash(res[0]);
 					if(OUtils.equals(hsh, superblock)) {
 						// reuse mainchain
-					} else if(OUtils.equals(hsh, psuperblock)){
+					} else if (OUtils.equals(pblockHash, getLastBlockHash(res[0]))){
 						res[0] = new Superblock(superblock, res[0]);
 					} else {
 						throw new IllegalStateException(
-								String.format("Block '%s'. Illegal parent '%s' for superblock '%s'", blockHash, superblock, psuperblock));
+								String.format("Block '%s'. Illegal parent '%s' for superblock '%s'", blockHash, superblock));
 					}
 					res[0].blocks.addLast(blockHash);
 					res[0].blocksSet.add(blockHash);
@@ -453,11 +442,15 @@ public class DBConsensusManager {
 			p = p.getParent();
 		}
 		if (p != null) {
-			printBlockChain(blc);
-			Superblock compacted = compact(p, mainSavedChain);
-			if (compacted != null) {
-				mainSavedChain = compacted;
+			for (int i = 0; i < COMPACT_ITERATIONS; i++) {
+				Superblock compacted = compact(p, mainSavedChain);
+				if (compacted != null) {
+					mainSavedChain = compacted;
+				} else {
+					break;
+				}
 			}
+			printBlockChain(blc);
 		}
 	}
 
@@ -500,7 +493,7 @@ public class DBConsensusManager {
 
 	private void printBlockChain(OpBlockChain blc) {
 		List<String> superBlocksChain = new ArrayList<String>();
-		OpBlockChain p = blc.getParent();
+		OpBlockChain p = blc;
 		while(p != null) {
 			String sh = p.getSuperBlockHash();
 			if(sh.length() > 10) {
