@@ -417,9 +417,6 @@ public class DBConsensusManager {
 		}
 		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
-		byte[] phash = SecUtils.getHashBytes(getSuperblockHash(parent));
-		
-		byte[] empty = new byte[0];
 		Iterator<OpBlock> it = blc.getOneSuperBlock().iterator();
 		while (it.hasNext()) {
 			OpBlock o = it.next();
@@ -427,31 +424,35 @@ public class DBConsensusManager {
 			String blockRawHash = SecUtils.hexify(blHash);
 			// assign parent hash only for last block
 			// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
-			jdbcTemplate.update("UPDATE blocks set superblock = ?, psuperblock =  ? where hash = ?",
-							shash, it.hasNext() ? empty : phash, blHash);
+			jdbcTemplate.update("UPDATE blocks set superblock = ?where hash = ?",
+							shash, blHash);
 			sc.blocks.addFirst(blockRawHash);
 			sc.blocksSet.add(blockRawHash);
 		}
 		return sc;
 	}
 	
-	public synchronized void compact(OpBlockChain blc) {
+	public synchronized OpBlockChain compact(OpBlockChain blc) {
 		OpBlockChain p = blc;
 		String lastBlockHash = getSuperblockHash(mainSavedChain);
 		while(p != null && !p.getSuperBlockHash().equals(lastBlockHash)) {
 			p = p.getParent();
 		}
+		OpBlockChain res = blc;
 		if (p != null) {
 			for (int i = 0; i < COMPACT_ITERATIONS; i++) {
+				printBlockChain(blc);
 				CompactPair compacted = compact(p, mainSavedChain);
 				if (compacted != null) {
 					mainSavedChain = compacted.s;
+					res = compacted.o;
 				} else {
 					break;
 				}
 			}
 			printBlockChain(blc);
 		}
+		return res;
 	}
 	
 	private static class CompactPair {
@@ -492,7 +493,10 @@ public class DBConsensusManager {
 		} else {
 			// update parent (parent content didn't change only block sequence changed )
 			if(sc.parent != compacted.s) {
-				runtimeChain.changeToEqualParent(compacted.o);
+				boolean changeParent = runtimeChain.changeToEqualParent(compacted.o);
+				if(changeParent) {
+					throw new IllegalStateException();
+				}
 				sc.parent = compacted.s;
 			}
 			return new CompactPair(sc, runtimeChain);

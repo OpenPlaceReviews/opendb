@@ -98,8 +98,8 @@ public class ObjectInstancesById {
 	
 	public CacheObject getCacheObject() {
 		CacheObject c = cacheObject;
-		if(c.cacheVersion == editVersion.intValue()) {
-			return cacheObject;
+		if(c != null && c.cacheVersion == editVersion.intValue()) {
+			return c;
 		}
 		return null;
 	}

@@ -30,7 +30,11 @@ This object is make full concurrent and it shouldn't produce any exception while
 
 There is no synchronization going through all parent objects though it is not needed cause parent OpBlockchain is guaranteed to be unmodifiable. Once OpBlockchain is locked, it should provide consistent query results.
 
-QUESTION: mergeWithParent / atomicMergeWithParent ?
+There are 4 atomic operation for modifications:
+1. Atomic add operation - all caches reevaluated
+2. Atomic block creation from added operations - no blockchain content changed.
+3. Atomic change parent to equal parent - no blockchain content changed.
+4. Atomic rebase operations - operations are deleted from the queue which are present in new parent (only for queue management)
 
 # Immutability
 There are extra methods to lock/unlock by user request and they do not overlap with states locked by other subchain or blockchain is broken i.e. atomic operation that should be executed without problem was executed with a crash.

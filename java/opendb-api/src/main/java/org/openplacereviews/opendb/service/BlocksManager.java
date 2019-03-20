@@ -116,7 +116,10 @@ public class BlocksManager {
 		
 		
 		int tmCompact = timer.startExtra();
-		dataManager.compact(blockchain.getParent());
+		OpBlockChain newParent = dataManager.compact(blockchain.getParent());
+		if(newParent != blockchain.getParent()) {
+			blockchain.changeToEqualParent(newParent);
+		}
 		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
 		
 		

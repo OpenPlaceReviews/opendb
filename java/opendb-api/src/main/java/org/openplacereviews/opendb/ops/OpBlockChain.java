@@ -238,7 +238,7 @@ public class OpBlockChain {
 		}
 		// operation doesn't require locking mechanism
 		int status = locked;
-		if(status != LOCKED_SUCCESS || status != UNLOCKED) {
+		if(status != LOCKED_SUCCESS && status != UNLOCKED) {
 			return false;
 		}
 		locked = LOCKED_SUCCESS;
@@ -694,8 +694,8 @@ public class OpBlockChain {
 			// assert
 			throw new IllegalArgumentException("Operation was created twice");
 		}
-		int psz = (pdi != null && pdi.deletedObjects == null) ? 0 : pdi.deletedObjects.length;
-		int sz = (cdi != null && cdi.deletedObjects == null) ? 0 : cdi.deletedObjects.length;
+		int psz = (pdi == null || pdi.deletedObjects == null) ? 0 : pdi.deletedObjects.length;
+		int sz = (cdi == null || cdi.deletedObjects == null) ? 0 : cdi.deletedObjects.length;
 		int length = Math.max(sz, psz);
 		ndi.deletedObjects = new boolean[length];
 		for(int i = 0; i < length; i++) {
