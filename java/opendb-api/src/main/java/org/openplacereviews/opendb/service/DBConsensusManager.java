@@ -443,9 +443,9 @@ public class DBConsensusManager {
 		}
 		if (p != null) {
 			for (int i = 0; i < COMPACT_ITERATIONS; i++) {
-				Superblock compacted = compact(p, mainSavedChain);
+				CompactPair compacted = compact(p, mainSavedChain);
 				if (compacted != null) {
-					mainSavedChain = compacted;
+					mainSavedChain = compacted.s;
 				} else {
 					break;
 				}
@@ -453,8 +453,17 @@ public class DBConsensusManager {
 			printBlockChain(blc);
 		}
 	}
+	
+	private static class CompactPair {
+		Superblock s;
+		OpBlockChain o;
+		public CompactPair(Superblock s, OpBlockChain o) {
+			this.s = s;
+			this.o = o;
+		}
+	}
 
-	private Superblock compact(OpBlockChain runtimeChain, Superblock sc) {
+	private CompactPair compact(OpBlockChain runtimeChain, Superblock sc) {
 		// nothing to compact
 		if (runtimeChain == null || runtimeChain.isNullBlock() || runtimeChain.getParent().isNullBlock()) {
 			return null;
@@ -467,25 +476,26 @@ public class DBConsensusManager {
 			return null;
 		}
 		boolean lastTwoBlocks = runtimeChain.getParent().getParent().isNullBlock();
-		Superblock compacted = compact(runtimeChain.getParent(), sc.parent);
+		CompactPair compacted = compact(runtimeChain.getParent(), sc.parent);
 		if(compacted == null) {
 			boolean compactCondition = !lastTwoBlocks && COMPACT_COEF * (runtimeChain.getSuperblockSize()  + runtimeChain.getParent().getSuperblockSize()) >= 
 					runtimeChain.getParent().getParent().getSuperblockSize();
 			compactCondition = compactCondition || (runtimeChain.getSuperblockSize() > runtimeChain.getParent().getSuperblockSize());
 			if(compactCondition) { 
 				Superblock oldParent = sc.parent;
-				if(runtimeChain.mergeWithParent()) {
-					LOGGER.info(String.format("Compact superblock '%s' into  superblock '%s' ", oldParent.superblockHash, sc.superblockHash));
-					return saveSuperblock(runtimeChain, oldParent.parent);
-				}
+				OpBlockChain newParentChain = new OpBlockChain(runtimeChain,  runtimeChain.getParent(), runtimeChain.getRules());
+				LOGGER.info(String.format("Compact superblock '%s' into  superblock '%s' ", oldParent.superblockHash, sc.superblockHash));
+				Superblock ns = saveSuperblock(newParentChain, oldParent.parent);
+				return new CompactPair(ns, newParentChain);
 			}
 			return null;
 		} else {
 			// update parent (parent content didn't change only block sequence changed )
-			if(sc.parent != compacted) {
-				sc.parent = compacted;
+			if(sc.parent != compacted.s) {
+				runtimeChain.changeToEqualParent(compacted.o);
+				sc.parent = compacted.s;
 			}
-			return sc;
+			return new CompactPair(sc, runtimeChain);
 		}
 	}
 
