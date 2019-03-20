@@ -85,7 +85,7 @@ public class OpBlockChain {
 
 	private void atomicSetParent(OpBlockChain parent) {
 		if(!parent.isNullBlock()) {
-			if(this.rules == parent.rules) {
+			if(this.rules != parent.rules) {
 				throw new IllegalStateException("Blockchain rules should be consistent trhough whole chain");
 			}
 		}

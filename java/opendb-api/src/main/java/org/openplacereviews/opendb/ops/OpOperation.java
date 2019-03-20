@@ -203,6 +203,8 @@ public class OpOperation extends OpObject {
 			if(excludeHashAndSignature) {
 				tm.remove(F_SIGNATURE);
 				tm.remove(F_HASH);
+				// TODO should be removed later
+				tm.remove(F_VALIDATION);
 			}
 			tm.put(F_TYPE, src.type);
 			if(src.hasNew()) {

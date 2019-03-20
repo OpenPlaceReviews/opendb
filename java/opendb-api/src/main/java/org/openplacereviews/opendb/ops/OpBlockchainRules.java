@@ -198,7 +198,8 @@ public class OpBlockchainRules {
 	// hash and signature operations
 	public String calculateOperationHash(OpOperation ob, boolean set) {
 		String hash = JSON_MSG_TYPE + ":"
-				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, formatter.opToJsonNoHash(ob));
+				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null, 
+						formatter.opToJsonNoHash(ob));
 		if (set) {
 			ob.putStringValue(OpOperation.F_HASH, hash);
 		}

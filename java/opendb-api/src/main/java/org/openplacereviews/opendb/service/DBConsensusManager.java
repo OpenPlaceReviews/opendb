@@ -42,7 +42,7 @@ public class DBConsensusManager {
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 0.5;
-	private static final int COMPACT_ITERATIONS = 3;
+	protected static final int COMPACT_ITERATIONS = 3;
 		
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
@@ -279,6 +279,7 @@ public class DBConsensusManager {
 						@Override
 						public void processRow(ResultSet rs) throws SQLException {
 							OpBlock rawBlock = formatter.parseBlock(rs.getString(1));
+							rawBlock.makeImmutable();
 							OpBlock replicateBlock = newParent.replicateBlock(rawBlock);
 							if (replicateBlock == null) {
 								throw new IllegalStateException("Could not replicate block: "
