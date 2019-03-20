@@ -241,17 +241,12 @@ public class OpBlockChain {
 	}
 	
 	public synchronized boolean mergeWithParent() {
-		// no need to change that state is not locked
 		if(!nullObject && !parent.nullObject) {
-			locked = LOCKED_SUCCESS;
-			try {
-				atomicMergeWithParent();
-				locked = UNLOCKED;
-			} finally {
-				if(locked == LOCKED_SUCCESS) {
-					locked = LOCKED_ERROR;
-				}
-			}
+			// TODO
+//			if(locked != LOCKED_SUCCESS) {
+//				throw new IllegalStateException("To merge with parent the chain should be immutable");
+//			}
+			atomicMergeWithParent();
 		}
 		return true;
 	}
@@ -264,12 +259,7 @@ public class OpBlockChain {
 		}
 		blockDepth.putAll(this.parent.blockDepth);
 		
-		// 3. merge queue operations
-		Iterator<OpOperation> desc = operations.descendingIterator();
-		while(desc.hasNext()) {
-			operations.addFirst(desc.next());
-		}
-		// 4. merge operations cache with create delete info
+		// 3. merge operations cache with create delete info
 		Iterator<Entry<String, OperationDeleteInfo>> deleteInfoIt = parent.opsByHash.entrySet().iterator();
 		while(deleteInfoIt.hasNext()) {
 			Entry<String, OperationDeleteInfo> e = deleteInfoIt.next();
@@ -281,7 +271,7 @@ public class OpBlockChain {
 				this.opsByHash.put(e.getKey(), ndi);
 			}
 		}
-		// 5. merge named objects 
+		// 4. merge named objects 
 		Iterator<Entry<String, ObjectInstancesById>> byNameIterator = parent.objByName.entrySet().iterator();
 		while(byNameIterator.hasNext()) {
 			Entry<String, ObjectInstancesById> e = byNameIterator.next();
@@ -292,7 +282,7 @@ public class OpBlockChain {
 				exId.mergeWithParent(e.getValue());
 			}
 		}
-		// 6. change parent
+		// 5. change parent
 		atomicSetParent(newParent);
 	}
 	
