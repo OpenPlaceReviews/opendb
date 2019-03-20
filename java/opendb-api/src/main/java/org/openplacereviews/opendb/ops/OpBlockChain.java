@@ -624,7 +624,9 @@ public class OpBlockChain {
 		if(o != null) {
 			o.fetchAllObjects(request);
 		}
-		parent.fetchAllObjects(type, request);
+		if(request.limit == -1 || request.result.size() < request.limit) {
+			parent.fetchAllObjects(type, request);
+		}
 	}
 	
 	

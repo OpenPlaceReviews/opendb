@@ -13,6 +13,7 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
@@ -119,7 +120,10 @@ public class ApiController {
 			@RequestParam(required = false, defaultValue="100") int limit) throws FailedVerificationException {
     	OpBlockChain blc = manager.getBlockchain();
     	ObjectsResult res = new ObjectsResult();
-    	res.objects = blc.getObjects(type, limit);
+    	ObjectsSearchRequest r = new ObjectsSearchRequest();
+    	r.limit = limit;
+    	blc.fetchObjects(type, r);
+    	res.objects = r.result;
 		return formatter.fullObjectToJson(res);
 	}
     
