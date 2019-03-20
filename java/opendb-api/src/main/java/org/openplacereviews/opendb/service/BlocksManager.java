@@ -104,7 +104,7 @@ public class BlocksManager {
 		
 		// change only after block is inserted into db
 		int tmRebase = timer.startExtra();
-		boolean changeParent = blockchain.changeParent(blc);
+		boolean changeParent = blockchain.rebaseOperations(blc);
 		if(!changeParent) {
 			return null;
 		}
@@ -185,7 +185,7 @@ public class BlocksManager {
 	
 	public synchronized boolean resumeBlockCreation() {
 		if(blockchain.getStatus() == OpBlockChain.LOCKED_SUCCESS) {
-			blockchain.makeMutable();
+			blockchain.unlockByUser();
 			return true;
 		}
 		return false;
@@ -193,7 +193,7 @@ public class BlocksManager {
 	
 	public synchronized boolean pauseBlockCreation() {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
-			blockchain.makeImmutable();
+			blockchain.lockByUser();
 			return true;
 		}
 		return false;

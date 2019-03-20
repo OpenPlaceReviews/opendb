@@ -327,18 +327,17 @@ public class OpBlockchainRules {
 	
 	@SuppressWarnings("unchecked")
 	public Map<String, Set<String>> getRoles(OpBlockChain blockchain) {
-		ObjectInstancesById oid = blockchain.getObjectsByIdMap(OP_ROLE, true);
-		Map<String, Set<String>> rolesMap = (Map<String,  Set<String>>) oid.getCacheObject();
+		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
+		req.requestCache = true;
+		blockchain.fetchObjects(OP_ROLE, req);
+		Map<String, Set<String>> rolesMap = (Map<String,  Set<String>>) req.cacheObject;
 		if(rolesMap == null) {
 			rolesMap = new TreeMap<String, Set<String>>();
-			int cacheVersion = oid.getCacheVersion();
-			List<OpObject> allRoles = new ArrayList<>();
-			oid.fetchAllObjects(allRoles);
-			for(OpObject vld : allRoles) {
+			for(OpObject vld : req.result) {
 				String roleId = vld.getId().get(0);
 				rolesMap.put(roleId, new TreeSet<String>());
 			}
-			for(OpObject vld : allRoles) {
+			for(OpObject vld : req.result) {
 				String roleId = vld.getId().get(0);
 				rolesMap.get(roleId).add(roleId);
 				for(String superRole : vld.getStringList(F_SUPER_ROLES)) {
@@ -349,7 +348,7 @@ public class OpBlockchainRules {
 				}
 			}
 			recalculateFullRolesMap(rolesMap);
-			oid.setCacheObject(rolesMap, cacheVersion);
+			blockchain.setCacheAfterSearch(req, rolesMap);
 		}
 		return rolesMap;
 	}
@@ -383,14 +382,13 @@ public class OpBlockchainRules {
 
 	@SuppressWarnings("unchecked")
 	private Map<String, List<OpObject>> getValidationRules(OpBlockChain blockchain) {
-		ObjectInstancesById oid = blockchain.getObjectsByIdMap(OP_VALIDATE, true);
-		Map<String, List<OpObject>> validationRules = (Map<String,  List<OpObject>>) oid.getCacheObject();
+		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
+		req.requestCache = true;
+		blockchain.fetchObjects(OP_VALIDATE, req);
+		Map<String, List<OpObject>> validationRules = (Map<String,  List<OpObject>>) req.cacheObject;
 		if(validationRules == null) {
 			validationRules = new TreeMap<String, List<OpObject>>();
-			int cacheVersion = oid.getCacheVersion();
-			List<OpObject> allValidations = new ArrayList<>();
-			oid.fetchAllObjects(allValidations);
-			for(OpObject vld : allValidations) {
+			for(OpObject vld : req.result) {
 				for(String type : vld.getStringList(F_TYPE)) {
 					if(!validationRules.containsKey(type)) {
 						validationRules.put(type, new ArrayList<OpObject>());
@@ -398,7 +396,7 @@ public class OpBlockchainRules {
 					validationRules.get(type).add(vld);
 				}
 			}
-			oid.setCacheObject(validationRules, cacheVersion);
+			blockchain.setCacheAfterSearch(req, validationRules);
 		}
 		return validationRules;
 	}

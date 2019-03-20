@@ -1,27 +1,36 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 
 
 public class ObjectInstancesById {
 
 	private final String type;
-	private ObjectInstancesById parentInfo;
 	private Map<ListKey, OpObject> objects = new ConcurrentHashMap<>();
-	private volatile Object cacheObject;
-	private volatile int cacheVersion;
+	private volatile CacheObject cacheObject;
+	private AtomicInteger editVersion = new AtomicInteger(0);
 	
-	public ObjectInstancesById(String type, ObjectInstancesById pi) {
+	static class CacheObject {
+		Object cacheObject;
+		int cacheVersion;
+		public CacheObject(Object cacheObject, int cacheVersion) {
+			this.cacheObject = cacheObject;
+			this.cacheVersion = cacheVersion;
+		}
+	}
+	
+	public ObjectInstancesById(String type) {
 		this.type = type;
-		this.parentInfo = pi;
 	}
 	
 	public OpObject getObjectById(List<String> key) {
@@ -29,84 +38,79 @@ public class ObjectInstancesById {
 		return getByKey(k);
 	}
 	
-	public Collection<OpObject> getObjects() {
-		return objects.values();
-	}
-	
-	
-	public void fetchAllObjects(List<OpObject> lst) {
-		lst.addAll(objects.values());
-		if(parentInfo != null) {
-			parentInfo.fetchAllObjects(lst);
+	@SuppressWarnings("unchecked")
+	public void fetchAllObjects(ObjectsSearchRequest request) {
+		if(request.result.isEmpty()) {
+			request.result.addAll(objects.values());
+			request.internalMapToFilterDuplicates = new HashMap<ListKey, OpObject>(objects); 
+		} else {
+			Map<ListKey, OpObject> mp = (Map<ListKey, OpObject>) request.internalMapToFilterDuplicates;
+			Iterator<Entry<ListKey, OpObject>> it = objects.entrySet().iterator();
+			while(it.hasNext()) {
+				Entry<ListKey, OpObject> k = it.next();
+				if(!mp.containsKey(k.getKey())) {
+					request.result.add(k.getValue());
+					mp.put(k.getKey(), k.getValue());
+				}
+			}
 		}
 	}
-
+	
 	private OpObject getByKey(ListKey k) {
-		OpObject o = objects.get(k);
-		ObjectInstancesById p = parentInfo;
-		while(o == null && p != null) {
-			o = p.objects.get(k);
-			p = p.parentInfo;
-		}
-		return o;
+		return objects.get(k);
 	}
 	
 	public OpObject getObjectById(String primaryKey, String secondaryKey) {
 		return getByKey(new ListKey(primaryKey, secondaryKey)); 
 	}
 	
-	public void mergeWithParent(ObjectInstancesById prev) {
-		if(!OUtils.equals(prev.type, type) ) {
+	void putObjects(ObjectInstancesById prev, boolean overwrite) {
+		if(prev == null) {
+			return;
+		}
+		if(!OUtils.equals(prev.type, type)) {
 			throw new IllegalStateException(String.format("Previous type %s doesn't match current type %s", prev.type, type)); 
 		}
-		if (prev != parentInfo) {
-			throw new IllegalStateException(String.format("Current obj by name map doesn't match parent with merge parent %s",type));
-		}
-		resetCache();
-		this.parentInfo = parentInfo.parentInfo;
 		Iterator<Entry<ListKey, OpObject>> objs = prev.objects.entrySet().iterator();
 		while(objs.hasNext()) {
 			Entry<ListKey, OpObject> e = objs.next();
-			if(!objects.containsKey(e.getKey())) {
+			if(!objects.containsKey(e.getKey()) || overwrite) {
 				objects.put(e.getKey(), e.getValue());
 			}
 		}
+		resetAfterEdit();
 		
 	}
 
-	private void resetCache() {
-		cacheVersion++;
+	void resetAfterEdit() {
+		editVersion.incrementAndGet();
 		cacheObject = null;
 	}
 	
 	public void add(List<String> id, OpObject newObj) {
-		resetCache();
 		if(newObj != null) {
 			objects.put(new ListKey(0, id), newObj);
 		} else {
 			objects.remove(new ListKey(0, id));
 		}
+		resetAfterEdit();
 	}
 	
-	public void setParent(ObjectInstancesById pid) {
-		resetCache();
-		this.parentInfo = pid;
-	}
-	
-	public Object getCacheObject() {
-		if(parentInfo == null) {
+	public CacheObject getCacheObject() {
+		CacheObject c = cacheObject;
+		if(c.cacheVersion == editVersion.intValue()) {
 			return cacheObject;
 		}
-		return objects.isEmpty() ? parentInfo.getCacheObject() : cacheObject;
+		return null;
 	}
 	
-	public int getCacheVersion() {
-		return cacheVersion;
+	public int getEditVersion() {
+		return editVersion.intValue();
 	}
 	
-	public void setCacheObject(Object cacheObject, int cacheVersion) {
-		if(this.cacheVersion == cacheVersion) {
-			this.cacheObject = cacheObject;
+	void setCacheObject(Object cacheObject, int cacheVersion) {
+		if(cacheVersion == editVersion.intValue()) {
+			this.cacheObject = new CacheObject(cacheObject, cacheVersion);
 		}
 	}
 	
@@ -187,7 +191,4 @@ public class ObjectInstancesById {
 		}
 	}
 
-	
-
-	
 }
