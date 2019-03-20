@@ -41,7 +41,8 @@ public class OpBlockChain {
 	
 	
 	public static final int LOCKED_ERROR = -1;
-	public static final int LOCKED_SUCCESS =  1;
+	public static final int LOCKED_SUCCESS = 1;
+	public static final int LOCKED_BY_USER = 2;
 	public static final int UNLOCKED =  0;
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 	private int locked = UNLOCKED; // 0, -1 error, 1 intentional
@@ -79,6 +80,15 @@ public class OpBlockChain {
 		if(parent == null) {
 			throw new IllegalStateException("Parent can not be null, use null object for reference");
 		}
+		atomicSetParent(parent);
+	}
+
+	private void atomicSetParent(OpBlockChain parent) {
+		if(!parent.isNullBlock()) {
+			if(this.rules == parent.rules) {
+				throw new IllegalStateException("Blockchain rules should be consistent trhough whole chain");
+			}
+		}
 		parent.makeImmutable();
 		this.parent = parent;
 	}
@@ -88,9 +98,9 @@ public class OpBlockChain {
 			return;
 		}
 		if(this.locked == UNLOCKED) {
-			this.locked = LOCKED_SUCCESS;
-		} else if(this.locked != LOCKED_SUCCESS) {
-			throw new IllegalStateException("This chain is locked with a broken state");
+			this.locked = LOCKED_BY_USER;
+		} else if(this.locked != LOCKED_BY_USER) {
+			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}
 	}
 	
@@ -98,10 +108,10 @@ public class OpBlockChain {
 		if(nullObject) {
 			return;
 		}
-		if(this.locked == LOCKED_SUCCESS) {
+		if(this.locked == LOCKED_BY_USER) {
 			this.locked = UNLOCKED;
 		} else if(this.locked != UNLOCKED) {
-			throw new IllegalStateException("This chain is locked with a broken state");
+			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}
 	}
 	
@@ -225,7 +235,7 @@ public class OpBlockChain {
 			ObjectInstancesById pid = newParent.getObjectsByIdMap(bid.getType(), true);
 			bid.setParent(pid);
 		}
-		this.parent = newParent;
+		atomicSetParent(newParent);
 		this.blocks.clear();
 		this.blockDepth.clear();
 	}
@@ -282,8 +292,8 @@ public class OpBlockChain {
 				exId.mergeWithParent(e.getValue());
 			}
 		}
-		// 0. change parent
-		parent = newParent;
+		// 6. change parent
+		atomicSetParent(newParent);
 	}
 	
 	private void validateIsUnlocked() {

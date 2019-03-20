@@ -55,7 +55,6 @@ public class DBConsensusManager {
 
 	private Map<String, BlockInfo> blocks = new ConcurrentHashMap<String, BlockInfo>();
 	private Map<String, BlockInfo> orphanedBlocks = new ConcurrentHashMap<String, BlockInfo>();
-	private Map<String, Superblock> superblocks = new ConcurrentHashMap<String, Superblock>();
 	private Superblock mainSavedChain = null;
 	
 	public static class BlockInfo {
@@ -325,9 +324,9 @@ public class DBConsensusManager {
 						// reuse mainchain
 					} else if(OUtils.equals(hsh, psuperblock)){
 						res[0] = new Superblock(superblock, res[0]);
-						superblocks.put(superblock, res[0]);
 					} else {
-						throw new IllegalStateException(String.format("Illegal parent '%s' for superblock '%s'", psuperblock, superblock));
+						throw new IllegalStateException(
+								String.format("Block '%s'. Illegal parent '%s' for superblock '%s'", blockHash, superblock, psuperblock));
 					}
 					res[0].blocks.addLast(blockHash);
 					res[0].blocksSet.add(blockHash);
@@ -414,19 +413,15 @@ public class DBConsensusManager {
 			throw new IllegalStateException("Runtime blockchain doesn't match db blockchain:" + getSuperblockHash(mainSavedChain));
 		} 
 		for(OpBlockChain ns : notSaved) {
-			mainSavedChain = saveSuperblock(ns);
+			mainSavedChain = saveSuperblock(ns, mainSavedChain);
 		}
 	}
 	
-	private Superblock saveSuperblock(OpBlockChain blc) {
+	private Superblock saveSuperblock(OpBlockChain blc, Superblock parent) {
 		String superBlockHash = blc.getSuperBlockHash();
 		LOGGER.info(String.format("Save superblock %s ", superBlockHash));
-		Superblock parent = null;
-		if(!blc.getParent().isNullBlock()) {
-			parent = superblocks.get(blc.getParent().getSuperBlockHash());
-			if(parent == null) {
-				throw new IllegalStateException();
-			}
+		if(blc.getParent().getSuperBlockHash().equals(getSuperblockHash(parent))) {
+			throw new IllegalStateException();
 		}
 		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
@@ -445,7 +440,6 @@ public class DBConsensusManager {
 			sc.blocks.addFirst(blockRawHash);
 			sc.blocksSet.add(blockRawHash);
 		}
-		superblocks.put(superBlockHash, sc);
 		return sc;
 	}
 	
@@ -486,14 +480,12 @@ public class DBConsensusManager {
 				Superblock oldParent = sc.parent;
 				if(runtimeChain.mergeWithParent()) {
 					LOGGER.info(String.format("Compact superblock '%s' into  superblock '%s' ", oldParent.superblockHash, sc.superblockHash));
-					superblocks.remove(oldParent.superblockHash);
-					sc.parent = oldParent.parent;
-					return saveSuperblock(runtimeChain);
+					return saveSuperblock(runtimeChain, oldParent.parent);
 				}
 			}
 			return null;
 		} else {
-			// update parent (parent content didn't change only block sequence changed 
+			// update parent (parent content didn't change only block sequence changed )
 			if(sc.parent != compacted) {
 				sc.parent = compacted;
 			}
