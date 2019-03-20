@@ -421,8 +421,10 @@ public class DBConsensusManager {
 	private Superblock saveSuperblock(OpBlockChain blc, Superblock parent) {
 		String superBlockHash = blc.getSuperBlockHash();
 		LOGGER.info(String.format("Save superblock %s ", superBlockHash));
-		if(blc.getParent().getSuperBlockHash().equals(getSuperblockHash(parent))) {
-			throw new IllegalStateException();
+		if(!blc.getParent().getSuperBlockHash().equals(getSuperblockHash(parent))) {
+			throw new IllegalStateException(
+					String.format("DB-blockchain hash '%s' != '%s' in-memory blockchain",
+							blc.getParent().getSuperBlockHash(), getSuperblockHash(parent)));
 		}
 		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);

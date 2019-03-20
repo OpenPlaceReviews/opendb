@@ -64,45 +64,10 @@ public class BlocksManager {
 		if(blockchain == null) {
 			return false;
 		}
+		op.makeImmutable();
 		boolean added = blockchain.addOperation(op);
 		dataManager.insertOperation(op);
 		return added;
-	}
-	
-	public synchronized void clearQueue() {
-		// there is no proper clear queue on atomc load
-		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-	}
-	
-	public synchronized boolean revertSuperblock() throws FailedVerificationException {
-		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
-			throw new IllegalStateException("Blockchain is not ready to create block");
-		}
-		if(blockchain.getParent() == null) {
-			return false;
-		}
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
-		OpBlockChain pnt = blockchain.getParent();
-		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getOneSuperBlock());
-		Collections.reverse(lst);
-		for(OpBlock bl :  lst) {
-			for (OpOperation u : bl.getOperations()) {
-				if (!blc.addOperation(u)) {
-					return false;
-				}
-			}
-		}
-		for(OpOperation o: blockchain.getOperations()) {
-			if(!blc.addOperation(o)) {
-				return false;
-			}
-		}
-		OpBlockChain p = blockchain;
-		blockchain = blc;
-		String msg = String.format("Revert superblock from '%s:%d' to '%s:%d'", 
-				p.getLastHash(), p.getLastBlockId(), blockchain.getLastHash(), blockchain.getLastBlockId());
-		logSystem.logSuccessBlock(blockchain.getLastBlock(), msg);
-		return true;
 	}
 	
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
@@ -162,12 +127,48 @@ public class BlocksManager {
 		return opBlock;
 	}
 	
+	
+	public synchronized void clearQueue() {
+		// there is no proper clear queue on atomc load
+		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+	}
+	
+	public synchronized boolean revertSuperblock() throws FailedVerificationException {
+		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
+			throw new IllegalStateException("Blockchain is not ready to create block");
+		}
+		if(blockchain.getParent() == null) {
+			return false;
+		}
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
+		OpBlockChain pnt = blockchain.getParent();
+		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getOneSuperBlock());
+		Collections.reverse(lst);
+		for(OpBlock bl :  lst) {
+			for (OpOperation u : bl.getOperations()) {
+				if (!blc.addOperation(u)) {
+					return false;
+				}
+			}
+		}
+		for(OpOperation o: blockchain.getOperations()) {
+			if(!blc.addOperation(o)) {
+				return false;
+			}
+		}
+		OpBlockChain p = blockchain;
+		blockchain = blc;
+		String msg = String.format("Revert superblock from '%s:%d' to '%s:%d'", 
+				p.getLastHash(), p.getLastBlockId(), blockchain.getLastHash(), blockchain.getLastBlockId());
+		logSystem.logSuccessBlock(blockchain.getLastBlock(), msg);
+		return true;
+	}
+	
 	public OpBlockChain getBlockchain() {
 		return blockchain == null ? OpBlockChain.NULL : blockchain;
 	}
 
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
-		LOGGER.info("... Blockchain. Loading blocks...");
 		try {
 			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
 		} catch (FailedVerificationException e) {
