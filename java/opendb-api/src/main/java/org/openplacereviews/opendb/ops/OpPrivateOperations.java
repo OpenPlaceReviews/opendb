@@ -10,37 +10,61 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import org.openplacereviews.opendb.ops.OpBlockChain.SuperblockDbAccessInterface;
+
 class OpPrivateOperations {
 	// operations to be stored like a queue
 	private final Deque<OpOperation> operations = new ConcurrentLinkedDeque<OpOperation>();
 	// stores information about created and deleted objects in this blockchain 
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
+	private final SuperblockDbAccessInterface dbAccess;
 	
-	static class OperationDeleteInfo {
+	public OpPrivateOperations(SuperblockDbAccessInterface dbAccess) {
+		this.dbAccess = dbAccess;
+	}
+	
+	public static class OperationDeleteInfo {
 		OpOperation op;
 		boolean create;
 		boolean[] deletedObjects;
 	}
 
+	
+
 	public Collection<OpOperation> getAllOperations() {
+		if(dbAccess != null) {
+			return dbAccess.getAllOperations();
+		}
 		return operations;
 	}
 
 	public boolean isEmpty() {
+		if(dbAccess != null) {
+			return dbAccess.getOperationsSize() == 0;
+		}
 		return operations.isEmpty();
 	}
 
-	public OperationDeleteInfo getOperationInfo(String hash) {
-		return opsByHash.get(hash);
+	public OperationDeleteInfo getOperationInfo(String rawHash) {
+		if(dbAccess != null) {
+			return dbAccess.getOperationInfo(rawHash);
+		}
+		return opsByHash.get(rawHash);
 	}
 	
 	
 
 	void clearOnlyOperationsList() {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		operations.clear();
 	}
 	
 	void addNewOperation(OpOperation u) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		OperationDeleteInfo infop = new OperationDeleteInfo();
 		infop.op = u;
 		infop.create = true;
@@ -49,6 +73,9 @@ class OpPrivateOperations {
 	}
 	
 	void addDeletedObject(String delHash, int delInd, OpOperation opRef) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		OperationDeleteInfo pi = opsByHash.get(delHash);
 		if(pi == null) {
 			pi = new OperationDeleteInfo();
@@ -62,6 +89,9 @@ class OpPrivateOperations {
 	}
 	
 	void copyAndMerge(OpPrivateOperations copy, OpPrivateOperations parent) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		TreeSet<String> setOfOperations = new TreeSet<String>(parent.opsByHash.keySet());
 		setOfOperations.addAll(copy.opsByHash.keySet());
 		for (String operation : setOfOperations) {
@@ -72,6 +102,9 @@ class OpPrivateOperations {
 	}
 	
 	void removeOperationInfo(OpOperation op) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		// delete operation itself
 		OperationDeleteInfo odi = opsByHash.remove(op.getRawHash());
 		odi.create = false;
@@ -89,6 +122,9 @@ class OpPrivateOperations {
 	}
 	
 	void removeOperations(Set<String> operationsSet) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		Iterator<OpOperation> it = operations.iterator();
 		while(it.hasNext()) {
 			OpOperation o = it.next();

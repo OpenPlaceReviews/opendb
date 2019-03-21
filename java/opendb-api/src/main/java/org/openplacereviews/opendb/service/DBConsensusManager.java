@@ -229,7 +229,7 @@ public class DBConsensusManager {
 		OpBlockChain parent = loadBlockchain(rules, topChain);
 		LOGGER.info(String.format("### Loaded %d blocks ###", parent.getDepth()));
 		
-		OpBlockChain blcQueue = new OpBlockChain(parent, rules);
+		OpBlockChain blcQueue = new OpBlockChain(parent, null, rules);
 		
 		LOGGER.info("... Loading operation queue  ...");
 		int[] ops = new int[1];
@@ -256,7 +256,7 @@ public class DBConsensusManager {
 		if (chain != null) {
 			List<Superblock> allChains = chain.getSuperblocksFromFirst(null);
 			for (Superblock sc : allChains) {
-				parent = new OpBlockChain(parent, rules);
+				parent = new OpBlockChain(parent, null, rules);
 				loadBlocks(sc, parent);
 			}
 		}
@@ -492,7 +492,7 @@ public class DBConsensusManager {
 			compactCondition = compactCondition || (runtimeChain.getSuperblockSize() > runtimeChain.getParent().getSuperblockSize());
 			if(compactCondition) { 
 				Superblock oldParent = sc.parent;
-				OpBlockChain newParentChain = new OpBlockChain(runtimeChain,  runtimeChain.getParent(), runtimeChain.getRules());
+				OpBlockChain newParentChain = new OpBlockChain(runtimeChain,  runtimeChain.getParent(), null, runtimeChain.getRules());
 				LOGGER.info(String.format("Compact superblock '%s' into  superblock '%s' ", oldParent.superblockHash, sc.superblockHash));
 				Superblock ns = saveSuperblock(newParentChain, oldParent.parent);
 				return new CompactPair(ns, newParentChain);

@@ -83,7 +83,7 @@ public class BlocksManager {
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getOperations());
 		
 		int tmAddOps = timer.startExtra();
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), null, blockchain.getRules());
 		for (OpOperation o : candidates) {
 			if(!blc.addOperation(o)) {
 				return null;
@@ -133,7 +133,7 @@ public class BlocksManager {
 	
 	public synchronized void clearQueue() {
 		// there is no proper clear queue on atomc load
-		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		blockchain = new OpBlockChain(blockchain.getParent(), null, blockchain.getRules());
 	}
 	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
@@ -143,7 +143,7 @@ public class BlocksManager {
 		if(blockchain.getParent() == null) {
 			return false;
 		}
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), null, blockchain.getRules());
 		OpBlockChain pnt = blockchain.getParent();
 		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getSuperblockFullBlocks());
 		Collections.reverse(lst);

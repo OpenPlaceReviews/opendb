@@ -6,16 +6,38 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import org.openplacereviews.opendb.ops.OpBlockChain.SuperblockDbAccessInterface;
+
 public class OpPrivateBlocksList {
 
 	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
 	private final Deque<OpBlock> blockHeaders = new ConcurrentLinkedDeque<OpBlock>();
 	private final Map<String, OpBlock> blocksInfo = new ConcurrentHashMap<>();
+	private final SuperblockDbAccessInterface dbAccess;
 	
 	
+	public OpPrivateBlocksList(SuperblockDbAccessInterface dbAccess) {
+		this.dbAccess = dbAccess;
+	}
+
 	public Collection<OpBlock> getAllBlocks() {
-		// this queries db
+		if(dbAccess != null){
+			return dbAccess.getAllBlocks();
+		}
 		return blocks;
+	}
+	
+	public OpBlock getBlockByHash(String rawHash) {
+		if (dbAccess != null) {
+			return dbAccess.getBlockByHash(rawHash);
+		}
+		// it could be optimized cause we could access blockheader quickly
+		for(OpBlock b : blocks) {
+			if(b.getRawHash().equals(rawHash)) {
+				return b;
+			}
+		}
+		return null;
 	}
 	
 	public Collection<OpBlock> getAllBlockHeaders() {
@@ -34,12 +56,12 @@ public class OpPrivateBlocksList {
 		return blockHeaders.size();
 	}
 	
-	public OpBlock getBlockHeader(String rawHash) {
+	public OpBlock getBlockHeaderByHash(String rawHash) {
 		return blocksInfo.get(rawHash);
 	}
 	
 	public String getSuperBlockHash() {
-		if (blocks.size() == 0) {
+		if (blockHeaders.size() == 0) {
 			return "";
 		}
 		OpBlock l = getLastBlockHeader();
@@ -54,6 +76,9 @@ public class OpPrivateBlocksList {
 
 
 	void addBlock(OpBlock block, int superBlockDepth) {
+		if(dbAccess != null){
+			throw new UnsupportedOperationException();
+		}
 		OpBlock blockHeader = new OpBlock(block, false, true).makeImmutable();
 		blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 		blockHeaders.push(blockHeader);
@@ -67,6 +92,9 @@ public class OpPrivateBlocksList {
 
 
 	void copyAndMerge(OpPrivateBlocksList copy, OpPrivateBlocksList parent) {
+		if(dbAccess != null){
+			throw new UnsupportedOperationException();
+		}
 		blocks.addAll(copy.blocks);
 		blocks.addAll(parent.blocks);
 		
@@ -79,6 +107,9 @@ public class OpPrivateBlocksList {
 	}
 
 	void clear() {
+		if(dbAccess != null){
+			throw new UnsupportedOperationException();
+		}
 		blocks.clear();
 		blocksInfo.clear();
 		blockHeaders.clear();

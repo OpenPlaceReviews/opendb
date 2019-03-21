@@ -16,6 +16,7 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
+import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CompoundKey;
 import org.openplacereviews.opendb.ops.OpPrivateOperations.OperationDeleteInfo;
 
 /**
@@ -54,39 +55,52 @@ public class OpBlockChain {
 	private final boolean nullObject;
 	// 0-2 immutable blockchain rules to validate operations
 	private final OpBlockchainRules rules;
+	// 0-3 db access if it exists
+	private final SuperblockDbAccessInterface dbAccess;
 	
 	// 1. parent chain
 	private volatile OpBlockChain parent;
 	
 	// These objects should be stored on disk (DB)
 	// 2. list of blocks, block hash ids link to blocks
-	private final OpPrivateBlocksList blocks = new OpPrivateBlocksList();
+	private final OpPrivateBlocksList blocks ;
 	
 	// 3. stores operation list and information about created and deleted objects in this blockchain
-	private final OpPrivateOperations operations = new OpPrivateOperations();
+	private final OpPrivateOperations operations ;
 	
 	// 4. stores information about last object by name in this blockchain
 	private final Map<String, OpPrivateObjectInstancesById> objByName = new ConcurrentHashMap<>();
+	
 	
 	
 	private OpBlockChain(boolean nullParent) {
 		this.nullObject = true;
 		this.rules = null;
 		locked = LOCKED_STATE;
+		this.dbAccess = null;
+		this.operations = new OpPrivateOperations(null);
+		this.blocks = new OpPrivateBlocksList(null);
 	}
 	
-	public OpBlockChain(OpBlockChain parent, OpBlockchainRules rules) {
+	public OpBlockChain(OpBlockChain parent, SuperblockDbAccessInterface dbAccess, OpBlockchainRules rules) {
 		this.rules = rules;
 		this.nullObject = false;
+		this.dbAccess = dbAccess;
+		this.operations = new OpPrivateOperations(this.dbAccess);
+		this.blocks = new OpPrivateBlocksList(this.dbAccess);
+		
 		if(parent == null) {
 			throw new IllegalStateException("Parent can not be null, use null object for reference");
 		}
 		atomicSetParent(parent);
 	}
 	
-	public OpBlockChain(OpBlockChain copy, OpBlockChain parentToMerge, OpBlockchainRules rules) {
+	public OpBlockChain(OpBlockChain copy, OpBlockChain parentToMerge, SuperblockDbAccessInterface dbAccess, OpBlockchainRules rules) {
 		this.rules = rules;
 		this.nullObject = false;
+		this.operations = new OpPrivateOperations(dbAccess);
+		this.blocks = new OpPrivateBlocksList(dbAccess);
+		this.dbAccess = null;
 		if(parentToMerge == null || parentToMerge.isNullBlock() || copy.parent != parentToMerge) {
 			throw new IllegalStateException("Wrong parameters to create object with merged parents");
 		}
@@ -94,7 +108,8 @@ public class OpBlockChain {
 		parentToMerge.validateLocked();
 		
 		atomicSetParent(parentToMerge.parent);
-		copyAndMergeWithParent(copy);
+		// TODO db access
+		copyAndMergeWithParent(copy, parentToMerge);
 		
 	}
 	
@@ -116,6 +131,10 @@ public class OpBlockChain {
 		if(locked != UNLOCKED) {
 			throw new IllegalStateException("This chain is immutable");
 		}
+	}
+	
+	public boolean isDbAccessed() {
+		return dbAccess != null;
 	}
 	
 	public int getStatus() {
@@ -347,17 +366,14 @@ public class OpBlockChain {
 	}
 	
 	
-	private void copyAndMergeWithParent(OpBlockChain copy) {
-		OpBlockChain parent = copy.parent;
+	private void copyAndMergeWithParent(OpBlockChain copy, OpBlockChain parent ) {
 		// 1. add blocks and their hashes
-		
 		blocks.copyAndMerge(copy.blocks, parent.blocks);
 		
-		
-		// 3. merge operations cache with create delete info
+		// 2. merge operations cache with create delete info
 		operations.copyAndMerge(copy.operations, parent.operations);
 		
-		// 4. merge named objects
+		// 3. merge named objects
 		TreeSet<String> types = new TreeSet<String>(parent.objByName.keySet());
 		types.addAll(copy.objByName.keySet());
 		for(String type : types){
@@ -478,7 +494,7 @@ public class OpBlockChain {
 		if(nullObject) {
 			return -1;
 		}
-		OpBlock n = blocks.getBlockHeader(block.getRawHash());
+		OpBlock n = blocks.getBlockHeaderByHash(block.getRawHash());
 		if(n != null) {
 			return n.getBlockId();
 		}
@@ -490,7 +506,7 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
-		OpBlock n = blocks.getBlockHeader(hash);
+		OpBlock n = blocks.getBlockHeaderByHash(hash);
 		if(n != null) {
 			return n;
 		}
@@ -580,7 +596,7 @@ public class OpBlockChain {
 		}
 		OpPrivateObjectInstancesById oi = objByName.get(type);
 		if(oi == null) {
-			oi = new OpPrivateObjectInstancesById(type);
+			oi = new OpPrivateObjectInstancesById(type, dbAccess);
 			objByName.put(type, oi);
 		}
 		return oi;
@@ -764,7 +780,23 @@ public class OpBlockChain {
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;
 		}
+	}
+	
+	public interface SuperblockDbAccessInterface {
 
+		OpObject getObjectById(String type, CompoundKey k);
+
+		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
+
+		Collection<OpOperation> getAllOperations();
+
+		int getOperationsSize();
+
+		OperationDeleteInfo getOperationInfo(String rawHash);
+
+		Collection<OpBlock> getAllBlocks();
+
+		OpBlock getBlockByHash(String rawHash);
 		
 	}
 	

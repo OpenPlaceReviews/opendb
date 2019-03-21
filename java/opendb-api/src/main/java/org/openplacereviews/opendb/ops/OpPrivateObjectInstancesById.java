@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -10,15 +11,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.ops.OpBlockChain.SuperblockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 
 
 class OpPrivateObjectInstancesById {
 
 	private final String type;
-	private Map<ListKey, OpObject> objects = new ConcurrentHashMap<>();
+	private Map<CompoundKey, OpObject> objects = new ConcurrentHashMap<>();
 	private volatile CacheObject cacheObject;
 	private AtomicInteger editVersion = new AtomicInteger(0);
+	private final SuperblockDbAccessInterface dbAccess;
 	
 	static class CacheObject {
 		Object cacheObject;
@@ -29,30 +32,31 @@ class OpPrivateObjectInstancesById {
 		}
 	}
 	
-	public OpPrivateObjectInstancesById(String type) {
+	public OpPrivateObjectInstancesById(String type, SuperblockDbAccessInterface dbAccess) {
 		this.type = type;
-	}
-	
-	public OpPrivateObjectInstancesById(String type, Object dbAccess) {
-		// TODO db access
-		this.type = type;
+		this.dbAccess = dbAccess;
 	}
 	
 	public OpObject getObjectById(List<String> key) {
-		ListKey k = new ListKey(0, key);
+		CompoundKey k = new CompoundKey(0, key);
 		return getByKey(k);
 	}
 	
 	@SuppressWarnings("unchecked")
 	public void fetchAllObjects(ObjectsSearchRequest request) {
+		
+		Map<CompoundKey, OpObject> allObjects = objects;
+		if(dbAccess != null) {
+			allObjects = dbAccess.getAllObjects(type, request);
+		}
 		if(request.result.isEmpty()) {
-			request.result.addAll(objects.values());
-			request.internalMapToFilterDuplicates = new HashMap<ListKey, OpObject>(objects); 
+			request.result.addAll(allObjects.values());
+			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>(objects); 
 		} else {
-			Map<ListKey, OpObject> mp = (Map<ListKey, OpObject>) request.internalMapToFilterDuplicates;
-			Iterator<Entry<ListKey, OpObject>> it = objects.entrySet().iterator();
+			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
+			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
 			while(it.hasNext()) {
-				Entry<ListKey, OpObject> k = it.next();
+				Entry<CompoundKey, OpObject> k = it.next();
 				if(!mp.containsKey(k.getKey())) {
 					request.result.add(k.getValue());
 					mp.put(k.getKey(), k.getValue());
@@ -61,24 +65,30 @@ class OpPrivateObjectInstancesById {
 		}
 	}
 	
-	private OpObject getByKey(ListKey k) {
+	private OpObject getByKey(CompoundKey k) {
+		if(dbAccess != null) {
+			return dbAccess.getObjectById(type, k);
+		}
 		return objects.get(k);
 	}
 	
 	public OpObject getObjectById(String primaryKey, String secondaryKey) {
-		return getByKey(new ListKey(primaryKey, secondaryKey)); 
+		return getByKey(new CompoundKey(primaryKey, secondaryKey)); 
 	}
 	
 	void putObjects(OpPrivateObjectInstancesById prev, boolean overwrite) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		if(prev == null) {
 			return;
 		}
 		if(!OUtils.equals(prev.type, type)) {
 			throw new IllegalStateException(String.format("Previous type %s doesn't match current type %s", prev.type, type)); 
 		}
-		Iterator<Entry<ListKey, OpObject>> objs = prev.objects.entrySet().iterator();
+		Iterator<Entry<CompoundKey, OpObject>> objs = prev.objects.entrySet().iterator();
 		while(objs.hasNext()) {
-			Entry<ListKey, OpObject> e = objs.next();
+			Entry<CompoundKey, OpObject> e = objs.next();
 			if(!objects.containsKey(e.getKey()) || overwrite) {
 				objects.put(e.getKey(), e.getValue());
 			}
@@ -93,10 +103,13 @@ class OpPrivateObjectInstancesById {
 	}
 	
 	public void add(List<String> id, OpObject newObj) {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		if(newObj != null) {
-			objects.put(new ListKey(0, id), newObj);
+			objects.put(new CompoundKey(0, id), newObj);
 		} else {
-			objects.remove(new ListKey(0, id));
+			objects.remove(new CompoundKey(0, id));
 		}
 		resetAfterEdit();
 	}
@@ -123,14 +136,14 @@ class OpPrivateObjectInstancesById {
 		return type;
 	}
 	
-	private static class ListKey {
+	public static class CompoundKey implements Collection<String> {
 		final String first;
 		final String second;
 		final int hashcode;
 		final List<String> others ;
 		
 		
-		private ListKey(String first, String second) {
+		public CompoundKey(String first, String second) {
 			int result = 1;
 			this.first = first;
 			if(first != null) {
@@ -144,7 +157,7 @@ class OpPrivateObjectInstancesById {
 			this.others = null;
 		}
 		
-		private ListKey(int subInd, List<String> l) {
+		public CompoundKey(int subInd, List<String> l) {
 			int result = 1;
 			String first = null;
 			String second = null;
@@ -179,10 +192,10 @@ class OpPrivateObjectInstancesById {
 		
 		@Override
 		public boolean equals(Object obj) {
-			if(!(obj instanceof ListKey)) {
+			if(!(obj instanceof CompoundKey)) {
 				return false;
 			}
-			ListKey l2 = (ListKey) obj;
+			CompoundKey l2 = (CompoundKey) obj;
 			if(!OUtils.equals(first, l2.first)) {
 				return false;
 			}
@@ -194,6 +207,105 @@ class OpPrivateObjectInstancesById {
 			}
 			return true;
 		}
+		
+		@Override
+		public Iterator<String> iterator() {
+			return new Iterator<String>() {
+				int nextInd = 0;
+
+				private String getByInd(int ind) {
+					if(ind <= 0) {
+						return first;
+					} else if(ind == 1) {
+						return second;
+					} else if(others != null && others.size() > ind - 2){
+						others.get(ind - 2);
+					}
+					return null;
+				}
+				@Override
+				public boolean hasNext() {
+					return getByInd(nextInd) != null;
+				}
+
+				@Override
+				public String next() {
+					return getByInd(nextInd++);
+				}
+				
+			};
+		}
+
+		@Override
+		public int size() {
+			if(first == null) {
+				return 0;
+			}
+			if(second == null) {
+				return 1;
+			}
+			if(others == null) {
+				return 2;
+			}
+			return 2 + others.size();
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return first == null;
+		}
+
+		@Override
+		public boolean contains(Object o) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean containsAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public Object[] toArray() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public <T> T[] toArray(T[] a) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean add(String e) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean addAll(Collection<? extends String> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void clear() {
+			throw new UnsupportedOperationException();			
+		}
+
+		
 	}
 
 }
