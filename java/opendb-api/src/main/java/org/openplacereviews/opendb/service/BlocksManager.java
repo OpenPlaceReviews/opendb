@@ -126,7 +126,7 @@ public class BlocksManager {
 		opBlock.putCacheObject(OpObject.F_VALIDATION, timer.getTimes());
 		logSystem.logSuccessBlock(opBlock, 
 				String.format("New block '%s':%d  is created on top of '%s'. ",
-						opBlock.getHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
+						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		return opBlock;
 	}
 	
@@ -145,7 +145,7 @@ public class BlocksManager {
 		}
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
 		OpBlockChain pnt = blockchain.getParent();
-		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getOneSuperBlock());
+		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getSuperblockFullBlocks());
 		Collections.reverse(lst);
 		for(OpBlock bl :  lst) {
 			for (OpOperation u : bl.getOperations()) {
@@ -162,8 +162,8 @@ public class BlocksManager {
 		OpBlockChain p = blockchain;
 		blockchain = blc;
 		String msg = String.format("Revert superblock from '%s:%d' to '%s:%d'", 
-				p.getLastHash(), p.getLastBlockId(), blockchain.getLastHash(), blockchain.getLastBlockId());
-		logSystem.logSuccessBlock(blockchain.getLastBlock(), msg);
+				p.getLastBlockFullHash(), p.getLastBlockId(), blockchain.getLastBlockFullHash(), blockchain.getLastBlockId());
+		logSystem.logSuccessBlock(blockchain.getLastBlockHeader(), msg);
 		return true;
 	}
 	
@@ -216,11 +216,6 @@ public class BlocksManager {
 	public boolean isBlockchainPaused() {
 		return blockchain.getStatus() != OpBlockChain.UNLOCKED;
 	}
-	
-	public OpBlock getLastBlock() {
-		return blockchain.getLastBlock();
-	}
-
 	
 	public OpOperation generateHashAndSign(OpOperation op, KeyPair... keyPair) throws FailedVerificationException {
 		return blockchain.getRules().generateHashAndSign(op, keyPair);

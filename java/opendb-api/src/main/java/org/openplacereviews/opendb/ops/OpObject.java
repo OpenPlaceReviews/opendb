@@ -47,7 +47,14 @@ public class OpObject {
 	public OpObject() {}
 	
 	public OpObject(OpObject cp) {
+		this(cp, false);
+	}
+	
+	public OpObject(OpObject cp, boolean copyCacheFields) {
 		this.fields.putAll(cp.fields);
+		if(copyCacheFields) {
+			this.cacheFields.putAll(cp.cacheFields);
+		}
 	}
 	
 	public List<String> getId() {
@@ -62,8 +69,9 @@ public class OpObject {
 		return isImmutable;
 	}
 	
-	public void makeImmutable() {
+	public OpObject makeImmutable() {
 		isImmutable = true;
+		return this;
 	}
 	
 	public Object getCacheObject(String f) {

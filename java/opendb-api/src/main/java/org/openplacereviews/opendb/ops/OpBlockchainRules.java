@@ -401,21 +401,21 @@ public class OpBlockchainRules {
 		return validationRules;
 	}
 	
-	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlock, boolean validateSignature) {
-		String blockHash = block.getHash();
+	public boolean validateBlock(OpBlockChain blockChain, OpBlock block, OpBlock prevBlockHeader, boolean validateSignature) {
+		String blockHash = block.getFullHash();
 		int blockId = block.getBlockId();
 		int pid = -1;
-		if (prevBlock != null) {
-			if (!OUtils.equals(prevBlock.getHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
-				return error(block, ErrorType.BLOCK_PREV_HASH, prevBlock.getHash(),
+		if (prevBlockHeader != null) {
+			if (!OUtils.equals(prevBlockHeader.getFullHash(), block.getStringValue(OpBlock.F_PREV_BLOCK_HASH))) {
+				return error(block, ErrorType.BLOCK_PREV_HASH, prevBlockHeader.getFullHash(),
 						block.getStringValue(OpBlock.F_PREV_BLOCK_HASH), blockHash);
 			}
-			pid = prevBlock.getBlockId();
+			pid = prevBlockHeader.getBlockId();
 		}
 		if (pid + 1 != blockId) {
 			return error(block, ErrorType.BLOCK_PREV_ID, pid, block.getBlockId(), blockHash);
 		}
-		int dupBl = blockChain.getBlockDepth(block.getHash());
+		int dupBl = blockChain.getBlockDepth(block);
 		if (dupBl != -1) {
 			return error(block, ErrorType.BLOCK_HASH_IS_DUPLICATED, blockHash, block.getBlockId(), dupBl);
 		}
@@ -430,8 +430,8 @@ public class OpBlockchainRules {
 			return error(block, ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED, blockHash, calculateSigMerkleTreeHash(block),
 					block.getStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH));
 		}
-		if (!OUtils.equals(calculateHash(block), block.getHash())) {
-			return error(block, ErrorType.BLOCK_HASH_FAILED, blockHash, calculateHash(block));
+		if (!OUtils.equals(calculateHash(block), block.getFullHash())) {
+			return error(block, ErrorType.BLOCK_HASH_FAILED, block.getFullHash(), calculateHash(block));
 		}
 		
 		if(!validateSignature) {
@@ -442,7 +442,7 @@ public class OpBlockchainRules {
 		Exception ex = null;
 		try {
 			KeyPair pk = getKeyPairFromObj(keyObj, null);
-			byte[] blHash = SecUtils.getHashBytes(block.getHash());
+			byte[] blHash = SecUtils.getHashBytes(block.getFullHash());
 			if (pk != null && SecUtils.validateSignature(pk, blHash, block.getSignature())) {
 				validateSig = true;
 			} else {
@@ -574,13 +574,13 @@ public class OpBlockchainRules {
 	}
 
 	
-	public OpBlock createAndSignBlock(Collection<OpOperation> ops, OpBlock prevOpBlock, String serverUser, KeyPair serverKeyPair)
+	public OpBlock createAndSignBlock(Collection<OpOperation> ops, OpBlock prevOpBlockHeader, String serverUser, KeyPair serverKeyPair)
 			throws FailedVerificationException {
 		OpBlock block = new OpBlock();
 		block.operations.addAll(ops);
 		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
-		block.putObjectValue(OpBlock.F_BLOCKID, prevOpBlock == null ? 0 : (prevOpBlock.getBlockId() + 1));
-		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlock == null ? "" : prevOpBlock.getHash());
+		block.putObjectValue(OpBlock.F_BLOCKID, prevOpBlockHeader == null ? 0 : (prevOpBlockHeader.getBlockId() + 1));
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, prevOpBlockHeader == null ? "" : prevOpBlockHeader.getFullHash());
 		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, calculateMerkleTreeHash(block));
 		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, calculateSigMerkleTreeHash(block));
 		if (serverUser != null) {
@@ -591,7 +591,7 @@ public class OpBlockchainRules {
 		block.putStringValue(OpBlock.F_DETAILS, BLOCK_CREATION_DETAILS);
 		block.putStringValue(OpBlock.F_HASH, calculateHash(block));
 		if (serverKeyPair != null) {
-			byte[] hashBytes = SecUtils.getHashBytes(block.getHash());
+			byte[] hashBytes = SecUtils.getHashBytes(block.getFullHash());
 			block.putStringValue(OpBlock.F_SIGNATURE,
 					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
 		}
@@ -599,12 +599,8 @@ public class OpBlockchainRules {
 		return block;
 	}
 	
-	public String calculateSuperblockHash(int size, String lastBlockHash) {
-		String sz = Integer.toHexString(size);
-		if(sz.length() % 2 == 1) {
-			sz = "0" + sz;
-		}
-		return sz + lastBlockHash;
+	public static String calculateSuperblockHash(int size, String lastBlockHash) {
+		return String.format("%08x", size) + lastBlockHash;
 	}
 	
 	public String calculateHash(OpBlock block) {

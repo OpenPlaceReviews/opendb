@@ -3,17 +3,14 @@ package org.openplacereviews.opendb.ops;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
@@ -51,24 +48,24 @@ public class OpBlockChain {
 	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user 
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 
+	// 0-0 represents locked or unlocked state for blockchain
 	private volatile int locked = UNLOCKED; 
-	// 0.0 nullable object is always root (in order to perform operations in sync)
+	// 0-1 nullable object is always root (in order to perform operations in sync)
 	private final boolean nullObject;
-	// 0.1 immutable blockchain rules to validate operations
+	// 0-2 immutable blockchain rules to validate operations
 	private final OpBlockchainRules rules;
-	// 0.2 parent chain
+	
+	// 1. parent chain
 	private volatile OpBlockChain parent;
 	
-	// 1. list of blocks
-	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
-	// 2. block hash ids link to blocks
-	private final Map<String, OpBlock> blocksInfo = new ConcurrentHashMap<>();
-	
 	// These objects should be stored on disk (DB)
-	// stores operation list and information about created and deleted objects in this blockchain
+	// 2. list of blocks, block hash ids link to blocks
+	private final OpPrivateBlocksList blocks = new OpPrivateBlocksList();
+	
+	// 3. stores operation list and information about created and deleted objects in this blockchain
 	private final OpPrivateOperations operations = new OpPrivateOperations();
 	
-	// 5. stores information about last object by name in this blockchain
+	// 4. stores information about last object by name in this blockchain
 	private final Map<String, OpPrivateObjectInstancesById> objByName = new ConcurrentHashMap<>();
 	
 	
@@ -149,17 +146,15 @@ public class OpBlockChain {
 	}
 	
 	public synchronized OpBlock createBlock(String user, KeyPair keyPair) throws FailedVerificationException {
-		OpBlock block = rules.createAndSignBlock(operations.getAllOperations(), getLastBlock(), user, keyPair);
+		OpBlock block = rules.createAndSignBlock(operations.getAllOperations(), getLastBlockHeader(), user, keyPair);
 		validateIsUnlocked();
-		boolean valid = rules.validateBlock(this, block, getLastBlock(), true);
+		boolean valid = rules.validateBlock(this, block, getLastBlockHeader(), true);
 		if(!valid) {
 			return null;
 		}
-		String blockHash = block.getHash();
-		int blockId = block.getBlockId();
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
-			atomicCreateBlockFromAllOps(block, blockHash, blockId);
+			atomicCreateBlockFromAllOps(block);
 			locked = UNLOCKED;
 		} finally {
 			if(locked == LOCKED_OP_IN_PROGRESS) {
@@ -176,19 +171,18 @@ public class OpBlockChain {
 			// can't replicate blocks when operations are not empty
 			return null;
 		}
-		OpBlock prev = getLastBlock();
-		boolean valid = rules.validateBlock(this, block, prev, block.getBlockId() != 0);
+		boolean valid = rules.validateBlock(this, block, getLastBlockHeader(), block.getBlockId() != 0);
 		if (!valid) {
 			return null;
 		}
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			for (OpOperation o : block.getOperations()) {
-				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getHash());
+				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash());
 				validateAndPrepareOperation(o, validationCtx);
 				atomicAddOperationAfterPrepare(o, validationCtx);
 			}
-			atomicCreateBlockFromAllOps(block, block.getHash(), block.getBlockId());
+			atomicCreateBlockFromAllOps(block);
 			locked = UNLOCKED;
 		} finally {
 			if (locked == LOCKED_OP_IN_PROGRESS) {
@@ -206,15 +200,15 @@ public class OpBlockChain {
 		}
 		// calculate blocks and ops to be removed, all blocks must be present in new parent
 		// if(blocks.size() > 0) { return false; }
-		for(OpBlock bl : blocks) {
-			int blDept = newParent.getBlockDepth(bl.getHash());
+		for(OpBlock bl : blocks.getAllBlockHeaders()) {
+			int blDept = newParent.getBlockDepth(bl);
 			if(blDept < 0) {
 				return false;
 			}
 		}
 		
-		OpBlock lb = parent.getLastBlock();
-		if(lb != null && newParent.getBlockDepth(lb.getHash()) == -1) {
+		OpBlock lb = parent.getLastBlockHeader();
+		if(lb != null && newParent.getBlockDepth(lb) == -1) {
 			// rebase is not allowed
 			return false;
 		}
@@ -235,7 +229,7 @@ public class OpBlockChain {
 			return false;
 		}
 		newParent.validateLocked();
-		if(!OUtils.equals(newParent.getLastHash(), parent.getLastHash())) {
+		if(!OUtils.equals(newParent.getLastBlockFullHash(), parent.getLastBlockFullHash())) {
 			return false;
 		}
 		// operation doesn't require locking mechanism
@@ -313,20 +307,21 @@ public class OpBlockChain {
 		this.parent = parent;
 	}
 
-	private void atomicCreateBlockFromAllOps(OpBlock block, String blockHash, int blockId) {
+	private void atomicCreateBlockFromAllOps(OpBlock block) {
 		operations.clearOnlyOperationsList();
-		blocksInfo.put(blockHash, block);
-		blocks.push(block);
+		blocks.addBlock(block, getSuperblocksDepth());
+		
 	}
 
 	private void atomicRebaseOperations(OpBlockChain newParent) {
 		// all blocks must be present in new parent
-		for(OpBlock b : blocks) {
+		for(OpBlock b : blocks.getAllBlocks()) {
 			for(OpOperation o : b.getOperations()) {
 				operations.removeOperationInfo(o);
 				atomicRemoveOperationObj(o, null);
 			}
 		}
+		blocks.clear();
 		Set<String> operationsToDelete = new TreeSet<String>();
 		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
 		for(OpOperation o : operations.getAllOperations()) {
@@ -349,19 +344,15 @@ public class OpBlockChain {
 			o.resetAfterEdit();
 		}
 		atomicSetParent(newParent);
-		this.blocks.clear();
-		this.blocksInfo.clear();
 	}
 	
 	
 	private void copyAndMergeWithParent(OpBlockChain copy) {
 		OpBlockChain parent = copy.parent;
-		// 1, 2. add blocks and their hashes
-		blocks.addAll(copy.blocks);
-		blocks.addAll(parent.blocks);
+		// 1. add blocks and their hashes
 		
-		blocksInfo.putAll(copy.blocksInfo);
-		blocksInfo.putAll(parent.blocksInfo);
+		blocks.copyAndMerge(copy.blocks, parent.blocks);
+		
 		
 		// 3. merge operations cache with create delete info
 		operations.copyAndMerge(copy.operations, parent.operations);
@@ -423,23 +414,24 @@ public class OpBlockChain {
 		return rules;
 	}
 	
-	public OpBlock getLastBlock() {
+	public OpBlock getLastBlockHeader() {
 		if(nullObject) {
 			return null;
 		}
-		if(blocks.size() == 0) {
-			return parent.getLastBlock();
+		OpBlock h = blocks.getLastBlockHeader();
+		if(h == null) {
+			return parent.getLastBlockHeader();
 		}
-		return blocks.peekFirst();
+		return h;
 	}
 	
-	public String getLastHash() {
-		OpBlock b = getLastBlock();
-		return b == null ? "" : b.getHash();
+	public String getLastBlockFullHash() {
+		OpBlock b = getLastBlockHeader();
+		return b == null ? "" : b.getFullHash();
 	}
 	
 	public int getLastBlockId() {
-		OpBlock o = getLastBlock();
+		OpBlock o = getLastBlockHeader();
 		return o != null ? o.getBlockId() : -1;
 	}
 	
@@ -459,74 +451,38 @@ public class OpBlockChain {
 		return parent.getSuperblocksDepth() + 1;
 	}
 	
-	public LinkedHashMap<String, List<OpBlock>> getBlocksBySuperBlocks(int depth, LinkedHashMap<String, List<OpBlock>> mp) {
-		if(mp == null) {
-			mp = new LinkedHashMap<String, List<OpBlock>>(); 
-		}
-		if(nullObject) {
-			return mp;
-		}
-		mp.put(getSuperBlockHash(), new ArrayList<OpBlock>(blocks));
-		return parent.getBlocksBySuperBlocks(depth, mp);
+	public Collection<OpBlock> getSuperblockHeaders() {
+		return blocks.getAllBlockHeaders();
 	}
 	
-	public List<OpBlock> getBlocks(int depth) {
+	public Collection<OpBlock> getSuperblockFullBlocks() {
+		return blocks.getAllBlocks();
+	}
+	
+	public List<OpBlock> getBlockHeaders(int depth) {
 		List<OpBlock> lst = new ArrayList<>();
-		fetchBlocks(lst, depth);
+		fetchBlockHeaders(lst, depth);
 		return lst;
 	}
 	
-	
 	public String getSuperBlockHash() {
-		if (blocks.size() == 0) {
-			return "";
-		}
-		String hsh = getLastHash();
-		int i = hsh.lastIndexOf(':');
-		if (i >= 0) {
-			hsh = hsh.substring(i + 1);
-		}
-		return rules.calculateSuperblockHash(blocks.size(), hsh);
-	}
-	
-	public Collection<OpBlock> getOneSuperBlock() {
-		return blocks;
+		return blocks.getSuperBlockHash();
 	}
 	
 	public int getSuperblockSize() {
 		return blocks.size();
 	}
 	
-	public OpBlock getBlockById(int blockId) {
-		if(nullObject) {
-			return null;
-		}
-		int last = getLastBlockId();
-		if(last < blockId) {
-			return null;
-		}
-		int first = last - getSuperblockSize() + 1;
-		if(first <= blockId) {
-			int it = last - blockId; 
-			Iterator<OpBlock> its = blocks.iterator();
-			while(--it > 0) {
-				its.next();
-			}
-			return its.next();
-		}
-		return parent.getBlockById(blockId); 
-	}
-	
 
-	public int getBlockDepth(String hash) {
+	public int getBlockDepth(OpBlock block) {
 		if(nullObject) {
 			return -1;
 		}
-		OpBlock n = blocksInfo.get(hash);
+		OpBlock n = blocks.getBlockHeader(block.getRawHash());
 		if(n != null) {
 			return n.getBlockId();
 		}
-		return parent.getBlockDepth(hash);
+		return parent.getBlockDepth(block);
 	}
 	
 	public OpObject getObjectByName(String type, String key) {
@@ -634,14 +590,15 @@ public class OpBlockChain {
 		return r.substring(0, i);
 	}
 	
-	private void fetchBlocks(List<OpBlock> lst, int depth) {
+	private void fetchBlockHeaders(List<OpBlock> lst, int depth) {
 		if(nullObject) {
 			return;
 		}
-		lst.addAll(blocks);
-		depth -= blocks.size();
+		Collection<OpBlock> blockHeaders = blocks.getAllBlockHeaders();
+		lst.addAll(blockHeaders);
+		depth -= blockHeaders.size();
 		if(depth > 0) {
-			parent.fetchBlocks(lst, depth);
+			parent.fetchBlockHeaders(lst, depth);
 		}
 	}
 	
@@ -811,6 +768,7 @@ public class OpBlockChain {
 		Object internalMapToFilterDuplicates; 
 		OpPrivateObjectInstancesById objToSetCache;
 	}
+
 
 
 }

@@ -35,10 +35,12 @@ public class OpOperation extends OpObject {
 	public OpOperation() {
 	}
 	
-	public OpOperation(OpOperation cp) {
-		super(cp);
+	public OpOperation(OpOperation cp, boolean copyCacheFields) {
+		super(cp, copyCacheFields);
 		this.type = cp.type;
-		this.newObjects.addAll(cp.newObjects);
+		for(OpObject o : cp.newObjects) {
+			this.newObjects.add(new OpObject(o, copyCacheFields));
+		}
 	}
 	
 	public String getOperationType() {
@@ -53,11 +55,12 @@ public class OpOperation extends OpObject {
 		}
 	}
 	
-	public void makeImmutable() {
+	public OpOperation makeImmutable() {
 		isImmutable = true;
 		for(OpObject o : newObjects) {
 			o.makeImmutable();
 		}
+		return this;
 	}
 	
 	public void setSignedBy(String value) {

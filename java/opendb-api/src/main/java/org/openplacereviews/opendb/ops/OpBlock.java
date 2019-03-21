@@ -33,6 +33,7 @@ public class OpBlock extends OpObject {
 	
 	// transient (depends on the chain where block belongs to)
 	public static final String F_SUPERBLOCK_HASH = "superblock_hash";
+	public static final String F_OPERATIONS_SIZE = "operations_size";
 	public static final String F_SUPERBLOCK_ID = "superblock_id";
 	
 	protected List<OpOperation> operations = new ArrayList<OpOperation>();
@@ -40,12 +41,22 @@ public class OpBlock extends OpObject {
 	public OpBlock() {
 	}
 	
-	public void makeImmutable() {
+	public OpBlock(OpBlock cp, boolean copyOperations, boolean copyCacheFields) {
+		super(cp, copyCacheFields);
+		if(copyOperations) {
+			for(OpOperation o : cp.operations) {
+				operations.add(new OpOperation(o, copyCacheFields));
+			}
+		}
+	}
+	
+	public OpBlock makeImmutable() {
 		isImmutable = true;
 		operations = Collections.unmodifiableList(operations);
 		for(OpOperation o : operations) {
 			o.makeImmutable();
 		}
+		return this;
 	}
 	
 	public List<OpOperation> getOperations() {
@@ -65,8 +76,19 @@ public class OpBlock extends OpObject {
 		return getStringValue(F_DATE);
 	}
 	
-	public String getHash() {
+	public String getFullHash() {
 		return getStringValue(F_HASH);
+	}
+	
+	public String getRawHash() {
+		String hs = getFullHash();
+		if(hs != null && hs.length() > 0) {
+			int i = hs.lastIndexOf(':');
+			if(i > 0) {
+				return hs.substring(i + 1);
+			}
+		}
+		return hs;
 	}
 	
 	public String getSignature() {

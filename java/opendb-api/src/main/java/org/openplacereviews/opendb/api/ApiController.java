@@ -1,11 +1,6 @@
 package org.openplacereviews.opendb.api ;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,20 +88,7 @@ public class ApiController {
     @ResponseBody
 	public String blocksList(@RequestParam(required = false, defaultValue="50") int depth) throws FailedVerificationException {
 		BlockchainResult res = new BlockchainResult();
-		LinkedHashMap<String, List<OpBlock>> bls = manager.getBlockchain().getBlocksBySuperBlocks(depth, null);
-		Iterator<Entry<String, List<OpBlock>>> it = bls.entrySet().iterator();
-		res.blockchain = new ArrayList<OpBlock>();
-		int superBlockId = 0;
-		while(it.hasNext()) {
-			Entry<String, List<OpBlock>> e = it.next();
-			for(OpBlock o : e.getValue()) {
-				o.putCacheObject(OpBlock.F_SUPERBLOCK_HASH, e.getKey());
-				o.putCacheObject(OpBlock.F_SUPERBLOCK_ID, superBlockId +"");
-				res.blockchain.add(o);
-			}
-			superBlockId++;
-		}
-		
+		res.blockchain = manager.getBlockchain().getBlockHeaders(depth);
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
 		return formatter.fullObjectToJson(res);

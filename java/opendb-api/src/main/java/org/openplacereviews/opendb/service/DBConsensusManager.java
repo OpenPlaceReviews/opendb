@@ -107,7 +107,7 @@ public class DBConsensusManager {
 			if(blocks.size() == 0) {
 				return "";
 			}
-			return rules.calculateSuperblockHash(blocks.size(), blocks.peekLast());
+			return OpBlockchainRules.calculateSuperblockHash(blocks.size(), blocks.peekLast());
 		}
 
 		public boolean containsBlock(String block) {
@@ -375,7 +375,7 @@ public class DBConsensusManager {
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
-		byte[] blockHash = SecUtils.getHashBytes(opBlock.getHash());
+		byte[] blockHash = SecUtils.getHashBytes(opBlock.getFullHash());
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
 		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
@@ -425,10 +425,10 @@ public class DBConsensusManager {
 		}
 		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
-		Iterator<OpBlock> it = blc.getOneSuperBlock().iterator();
+		Iterator<OpBlock> it = blc.getSuperblockHeaders().iterator();
 		while (it.hasNext()) {
 			OpBlock o = it.next();
-			byte[] blHash = SecUtils.getHashBytes(o.getHash());
+			byte[] blHash = SecUtils.getHashBytes(o.getFullHash());
 			String blockRawHash = SecUtils.hexify(blHash);
 			// assign parent hash only for last block
 			// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
