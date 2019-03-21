@@ -40,6 +40,7 @@ public class DBConsensusManager {
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 0.5;
+	private static final int SUPERBLOCK_SIZE_LIMIT = 5;
 	protected static final int COMPACT_ITERATIONS = 3;
 		
 	@Autowired
@@ -53,6 +54,8 @@ public class DBConsensusManager {
 
 	private Map<String, BlockInfo> blocks = new ConcurrentHashMap<String, BlockInfo>();
 	private Map<String, BlockInfo> orphanedBlocks = new ConcurrentHashMap<String, BlockInfo>();
+	private Map<String, List<BlockInfo>> dbSavedChains = new ConcurrentHashMap<String, List<BlockInfo>>();
+	
 	private Superblock mainSavedChain = null;
 	
 	public static class BlockInfo {
@@ -144,6 +147,7 @@ public class DBConsensusManager {
 
 	// leaf superblock is not stored in db
 	private static final String LEAF_SUPERBLOCK_ID = "";
+
 	
 	// Query / insert values 
 	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';
@@ -314,6 +318,7 @@ public class DBConsensusManager {
 						// reuse mainchain
 					} else if (OUtils.equals(pblockHash, getLastBlockHash(res[0]))){
 						res[0] = new Superblock(superblock, res[0]);
+						
 					} else {
 						throw new IllegalStateException(
 								String.format("Block '%s'. Illegal parent '%s' for superblock '%s'", blockHash, superblock));
@@ -322,8 +327,6 @@ public class DBConsensusManager {
 					res[0].blocksSet.add(blockHash);
 				}
 			}
-
-			
 		});
 		return res[0];
 	}
@@ -394,15 +397,20 @@ public class DBConsensusManager {
 		Deque<OpBlockChain> notSaved = new LinkedList<OpBlockChain>();
 		OpBlockChain p = blc;
 		String lastBlockHash = getSuperblockHash(mainSavedChain);
-		while(p != null && !p.getSuperBlockHash().equals(lastBlockHash)) {
+		while (p != null && !dbSavedChains.containsKey(p.getSuperBlockHash())) {
 			notSaved.addFirst(p);
 			p = p.getParent();
 		}
-		if(p == null) {
+		if (p == null) {
 			printBlockChain(blc);
-			throw new IllegalStateException("Runtime blockchain doesn't match db blockchain:" + getSuperblockHash(mainSavedChain));
-		} 
-		for(OpBlockChain ns : notSaved) {
+			throw new IllegalStateException("Runtime blockchain doesn't match db blockchain:"
+					+ getSuperblockHash(mainSavedChain));
+		}
+
+		for (OpBlockChain ns : notSaved) {
+			if (ns.getSuperblockSize() < SUPERBLOCK_SIZE_LIMIT) {
+				break;
+			}
 			mainSavedChain = saveSuperblock(ns, mainSavedChain);
 		}
 	}
@@ -439,10 +447,9 @@ public class DBConsensusManager {
 			p = p.getParent();
 		}
 		OpBlockChain res = blc;
-		if (p != null) {
+		if (blc != null) {
 			for (int i = 0; i < COMPACT_ITERATIONS; i++) {
-				printBlockChain(blc);
-				CompactPair compacted = compact(p, mainSavedChain);
+				CompactPair compacted = compact(blc, mainSavedChain);
 				if (compacted != null) {
 					mainSavedChain = compacted.s;
 					res = compacted.o;
@@ -471,6 +478,7 @@ public class DBConsensusManager {
 		}
 		if(!runtimeChain.getSuperBlockHash().equals(getSuperblockHash(sc)) || 
 				!runtimeChain.getParent().getSuperBlockHash().equals(getSuperblockHash(sc.parent))) {
+			printBlockChain(runtimeChain);
 			LOGGER.error(String.format("ERROR situation with compacting '%s' = '%s' and '%s' = '%s' ", 
 					runtimeChain.getSuperBlockHash(), getSuperblockHash(sc), 
 					runtimeChain.getParent().getSuperBlockHash(), getSuperblockHash(sc.parent)));

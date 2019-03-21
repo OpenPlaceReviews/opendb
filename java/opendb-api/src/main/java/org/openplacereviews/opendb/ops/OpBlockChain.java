@@ -10,14 +10,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.ops.ObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
+import org.openplacereviews.opendb.ops.OpPrivateOperations.OperationDeleteInfo;
 
 /**
  *  Guidelines of object methods:
@@ -42,13 +44,14 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 public class OpBlockChain {
 	
 	
-	public static final int LOCKED_ERROR = -1;
-	public static final int LOCKED_SUCCESS = 1;
-	public static final int LOCKED_BY_USER = 2;
-	public static final int UNLOCKED =  0;
+	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation  
+	public static final int UNLOCKED =  0; // unlocked and ready for operations
+	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
+	public static final int LOCKED_STATE = 2; // locked successfully and could be used as parent superblock
+	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user 
 	public static final OpBlockChain NULL = new OpBlockChain(true);
-	private volatile int locked = UNLOCKED; // 0, -1 error, 1 intentional
 
+	private volatile int locked = UNLOCKED; 
 	// 0.0 nullable object is always root (in order to perform operations in sync)
 	private final boolean nullObject;
 	// 0.1 immutable blockchain rules to validate operations
@@ -59,21 +62,20 @@ public class OpBlockChain {
 	// 1. list of blocks
 	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
 	// 2. block hash ids link to blocks
-	private final Map<String, Integer> blockDepth = new ConcurrentHashMap<>();
+	private final Map<String, OpBlock> blocksInfo = new ConcurrentHashMap<>();
 	
 	// These objects should be stored on disk (DB)
-	// 3. operations to be stored like a queue 
-	private final Deque<OpOperation> operations = new ConcurrentLinkedDeque<OpOperation>();
-	// 4. stores information about created and deleted objects in this blockchain 
-	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
+	// stores operation list and information about created and deleted objects in this blockchain
+	private final OpPrivateOperations operations = new OpPrivateOperations();
+	
 	// 5. stores information about last object by name in this blockchain
-	private final Map<String, ObjectInstancesById> objByName = new ConcurrentHashMap<>();
+	private final Map<String, OpPrivateObjectInstancesById> objByName = new ConcurrentHashMap<>();
 	
 	
 	private OpBlockChain(boolean nullParent) {
 		this.nullObject = true;
 		this.rules = null;
-		locked = LOCKED_SUCCESS;
+		locked = LOCKED_STATE;
 	}
 	
 	public OpBlockChain(OpBlockChain parent, OpBlockchainRules rules) {
@@ -104,8 +106,8 @@ public class OpBlockChain {
 			return;
 		}
 		if(this.locked == UNLOCKED) {
-			this.locked = LOCKED_SUCCESS;
-		} else if(this.locked != LOCKED_SUCCESS) {
+			this.locked = LOCKED_STATE;
+		} else if(this.locked != LOCKED_STATE) {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}
 	}
@@ -147,7 +149,7 @@ public class OpBlockChain {
 	}
 	
 	public synchronized OpBlock createBlock(String user, KeyPair keyPair) throws FailedVerificationException {
-		OpBlock block = rules.createAndSignBlock(operations, getLastBlock(), user, keyPair);
+		OpBlock block = rules.createAndSignBlock(operations.getAllOperations(), getLastBlock(), user, keyPair);
 		validateIsUnlocked();
 		boolean valid = rules.validateBlock(this, block, getLastBlock(), true);
 		if(!valid) {
@@ -155,12 +157,12 @@ public class OpBlockChain {
 		}
 		String blockHash = block.getHash();
 		int blockId = block.getBlockId();
-		locked = LOCKED_SUCCESS;
+		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			atomicCreateBlockFromAllOps(block, blockHash, blockId);
 			locked = UNLOCKED;
 		} finally {
-			if(locked == LOCKED_SUCCESS) {
+			if(locked == LOCKED_OP_IN_PROGRESS) {
 				locked = LOCKED_ERROR;
 			}
 		}
@@ -179,7 +181,7 @@ public class OpBlockChain {
 		if (!valid) {
 			return null;
 		}
-		locked = LOCKED_SUCCESS;
+		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			for (OpOperation o : block.getOperations()) {
 				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getHash());
@@ -189,7 +191,7 @@ public class OpBlockChain {
 			atomicCreateBlockFromAllOps(block, block.getHash(), block.getBlockId());
 			locked = UNLOCKED;
 		} finally {
-			if (locked == LOCKED_SUCCESS) {
+			if (locked == LOCKED_OP_IN_PROGRESS) {
 				locked = LOCKED_ERROR;
 			}
 		}
@@ -216,12 +218,12 @@ public class OpBlockChain {
 			// rebase is not allowed
 			return false;
 		}
-		locked = LOCKED_SUCCESS;
+		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			atomicRebaseOperations(newParent);
 			locked = UNLOCKED;
 		} finally {
-			if(locked == LOCKED_SUCCESS) {
+			if(locked == LOCKED_OP_IN_PROGRESS) {
 				locked = LOCKED_ERROR;
 			}
 		}
@@ -238,10 +240,10 @@ public class OpBlockChain {
 		}
 		// operation doesn't require locking mechanism
 		int status = locked;
-		if(status != LOCKED_SUCCESS && status != UNLOCKED) {
+		if(status != LOCKED_STATE && status != UNLOCKED) {
 			return false;
 		}
-		locked = LOCKED_SUCCESS;
+		locked = LOCKED_STATE;
 		try {
 			atomicSetParent(newParent);
 			locked = status;
@@ -265,12 +267,12 @@ public class OpBlockChain {
 		if(!valid) {
 			return valid;
 		}
-		locked = LOCKED_SUCCESS;
+		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			atomicAddOperationAfterPrepare(op, validationCtx);
 			locked = UNLOCKED;
 		} finally {
-			if(locked == LOCKED_SUCCESS) {
+			if(locked == LOCKED_OP_IN_PROGRESS) {
 				locked = LOCKED_ERROR;
 			}
 		}
@@ -282,7 +284,7 @@ public class OpBlockChain {
 			List<String> id = newObj.getId();
 			if (id != null && id.size() > 0) {
 				String objType = u.getType();
-				ObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
+				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 				oinf.add(id, newObj);
 			}
 		}
@@ -291,23 +293,11 @@ public class OpBlockChain {
 			String delRef = deletedRefs.get(i);
 			String delHash = getHashFromAbsRef(delRef);
 			int delInd = getIndexFromAbsRef(delRef);
-			OperationDeleteInfo pi = opsByHash.get(delHash);
-			if(pi == null) {
-				pi = new OperationDeleteInfo();
-				pi.op = validationCtx.deletedOpsCache.get(i);
-				opsByHash.put(delHash, pi);
-			}
-			if(pi.deletedObjects == null) {
-				pi.deletedObjects = new boolean[pi.op.getNew().size()];
-			}
-			pi.deletedObjects[delInd] = true;
+			operations.addDeletedObject(delHash, delInd, validationCtx.deletedOpsCache.get(i));
+			
 		}
-		OperationDeleteInfo infop = new OperationDeleteInfo();
-		infop.op = u;
-		infop.create = true;
-		opsByHash.put(u.getRawHash(), infop);
+		operations.addNewOperation(u);
 		
-		operations.add(u);
 	}
 	
 	private void atomicSetParent(OpBlockChain parent) {
@@ -324,8 +314,8 @@ public class OpBlockChain {
 	}
 
 	private void atomicCreateBlockFromAllOps(OpBlock block, String blockHash, int blockId) {
-		operations.clear();
-		blockDepth.put(blockHash, blockId);
+		operations.clearOnlyOperationsList();
+		blocksInfo.put(blockHash, block);
 		blocks.push(block);
 	}
 
@@ -333,18 +323,18 @@ public class OpBlockChain {
 		// all blocks must be present in new parent
 		for(OpBlock b : blocks) {
 			for(OpOperation o : b.getOperations()) {
-				atomicRemoveOperation(o, null);
+				operations.removeOperationInfo(o);
+				atomicRemoveOperationObj(o, null);
 			}
 		}
+		Set<String> operationsToDelete = new TreeSet<String>();
 		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
-		Iterator<OpOperation> it = operations.iterator();
-		while(it.hasNext()) {
-			OpOperation o = it.next();
+		for(OpOperation o : operations.getAllOperations()) {
 			OperationDeleteInfo odi = newParent.getOperationInfo(o.getRawHash());
 			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
 			if(odi != null && odi.create) {
-				it.remove();
-				atomicRemoveOperation(o, nonDeletedOpsByTypes.get(o.getType()));
+				operationsToDelete.add(o.getRawHash());
+				atomicRemoveOperationObj(o, nonDeletedOpsByTypes.get(o.getType()));
 			} else {
 				if(prevByType == null) {
 					prevByType = new ArrayList<OpOperation>();
@@ -353,9 +343,14 @@ public class OpBlockChain {
 				prevByType.add(o);
 			}
 		}
+		operations.removeOperations(operationsToDelete);
+		
+		for(OpPrivateObjectInstancesById o : objByName.values()) {
+			o.resetAfterEdit();
+		}
 		atomicSetParent(newParent);
 		this.blocks.clear();
-		this.blockDepth.clear();
+		this.blocksInfo.clear();
 	}
 	
 	
@@ -365,52 +360,32 @@ public class OpBlockChain {
 		blocks.addAll(copy.blocks);
 		blocks.addAll(parent.blocks);
 		
-		blockDepth.putAll(copy.blockDepth);
-		blockDepth.putAll(parent.blockDepth);
+		blocksInfo.putAll(copy.blocksInfo);
+		blocksInfo.putAll(parent.blocksInfo);
 		
 		// 3. merge operations cache with create delete info
-		TreeSet<String> setOfOperations = new TreeSet<String>(parent.opsByHash.keySet());
-		setOfOperations.addAll(copy.opsByHash.keySet());
-		for (String operation : setOfOperations) {
-			OperationDeleteInfo cp = copy.opsByHash.get(operation);
-			OperationDeleteInfo pp = parent.opsByHash.get(operation);
-			this.opsByHash.put(operation, mergeDeleteInfo(cp, pp));
-		}
+		operations.copyAndMerge(copy.operations, parent.operations);
+		
 		// 4. merge named objects
 		TreeSet<String> types = new TreeSet<String>(parent.objByName.keySet());
 		types.addAll(copy.objByName.keySet());
 		for(String type : types){
-			ObjectInstancesById nid = getOrCreateObjectsByIdMap(type);
-			ObjectInstancesById cid = copy.objByName.get(type);
-			ObjectInstancesById pid = parent.objByName.get(type);
+			OpPrivateObjectInstancesById nid = getOrCreateObjectsByIdMap(type);
+			OpPrivateObjectInstancesById cid = copy.objByName.get(type);
+			OpPrivateObjectInstancesById pid = parent.objByName.get(type);
 			nid.putObjects(pid, true);
 			nid.putObjects(cid, true);
 			
 		}
 	}
 	
-	private void atomicRemoveOperation(OpOperation op, List<OpOperation> prevOperationsSameType) {
-		// delete operation itself
-		OperationDeleteInfo odi = opsByHash.remove(op.getRawHash());
-		odi.create = false;
-		// delete deleted objects by name
-		List<String> deletedRefs = op.getOld();
-		for (int i = 0; i < deletedRefs.size(); i++) {
-			String delRef = deletedRefs.get(i);
-			String delHash = getHashFromAbsRef(delRef);
-			int delInd = getIndexFromAbsRef(delRef);
-			OperationDeleteInfo pi = opsByHash.get(delHash);
-			if (pi != null && pi.deletedObjects.length > delInd) {
-				pi.deletedObjects[delInd] = false;
-			}
-		}
-
+	private void atomicRemoveOperationObj(OpOperation op, List<OpOperation> prevOperationsSameType) {
 		// delete new objects by name
 		for (OpObject ok : op.getNew()) {
 			List<String> id = ok.getId();
 			if (id != null && id.size() > 0) {
 				String objType = op.getType();
-				ObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
+				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 				OpObject currentObj = oinf.getObjectById(id);
 				if (ok.equals(currentObj)) {
 					OpObject p = null;
@@ -437,7 +412,7 @@ public class OpBlockChain {
 
 	
 	public Collection<OpOperation> getOperations() {
-		return operations;
+		return operations.getAllOperations();
 	}
 	
 	public OpBlockChain getParent() {
@@ -547,9 +522,9 @@ public class OpBlockChain {
 		if(nullObject) {
 			return -1;
 		}
-		Integer n = blockDepth.get(hash);
+		OpBlock n = blocksInfo.get(hash);
 		if(n != null) {
-			return n;
+			return n.getBlockId();
 		}
 		return parent.getBlockDepth(hash);
 	}
@@ -562,7 +537,7 @@ public class OpBlockChain {
 		if (isNullBlock()) {
 			return null;
 		}
-		ObjectInstancesById ot = objByName.get(type);
+		OpPrivateObjectInstancesById ot = objByName.get(type);
 		if (ot != null) {
 			OpObject obj = ot.getObjectById(key, secondary);
 			if (obj != null) {
@@ -576,7 +551,7 @@ public class OpBlockChain {
 		if (isNullBlock()) {
 			return null;
 		}
-		ObjectInstancesById ot = objByName.get(type);
+		OpPrivateObjectInstancesById ot = objByName.get(type);
 		if (ot != null) {
 			OpObject obj = ot.getObjectById(o);
 			if (obj != null) {
@@ -597,7 +572,7 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return;
 		}
-		ObjectInstancesById oi = objByName.get(type);
+		OpPrivateObjectInstancesById oi = objByName.get(type);
 		if(oi == null) {
 			parent.fetchObjects(type, request);
 		} else {
@@ -620,7 +595,7 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return;
 		}
-		ObjectInstancesById o = objByName.get(type);
+		OpPrivateObjectInstancesById o = objByName.get(type);
 		if(o != null) {
 			o.fetchAllObjects(request);
 		}
@@ -630,20 +605,28 @@ public class OpBlockChain {
 	}
 	
 	
-	private ObjectInstancesById getOrCreateObjectsByIdMap(String type) {
+	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMap(String type) {
 		// create is allowed only when status is not locked
 		if(nullObject) {
 			return null;
 		}
-		ObjectInstancesById oi = objByName.get(type);
+		OpPrivateObjectInstancesById oi = objByName.get(type);
 		if(oi == null) {
-			oi = new ObjectInstancesById(type);
+			oi = new OpPrivateObjectInstancesById(type);
 			objByName.put(type, oi);
 		}
 		return oi;
 	}
+		
+	static int getIndexFromAbsRef(String r) {
+		int i = r.indexOf(':');
+		if (i == -1) {
+			return 0;
+		}
+		return Integer.parseInt(r.substring(i + 1));
+	}
 	
-	private String getHashFromAbsRef(String r) {
+	static String getHashFromAbsRef(String r) {
 		int i = r.indexOf(':');
 		if(i == -1) {
 			return r;
@@ -662,56 +645,25 @@ public class OpBlockChain {
 		}
 	}
 	
-	private int getIndexFromAbsRef(String r) {
-		int i = r.indexOf(':');
-		if (i == -1) {
-			return 0;
-		}
-		return Integer.parseInt(r.substring(i + 1));
-	}
+	
 	
 	private OperationDeleteInfo getOperationInfo(String hash) {
 		if(nullObject) {
 			return null;
 		}
-		OperationDeleteInfo cdi = opsByHash.get(hash);
+		OperationDeleteInfo cdi = operations.getOperationInfo(hash);
 		if(cdi != null && cdi.create) {
 			return cdi;
 		}
 		OperationDeleteInfo pdi = parent.getOperationInfo(hash);
 		if(cdi != null && pdi != null) {
-			return mergeDeleteInfo(cdi, pdi);
+			return OpPrivateOperations.mergeDeleteInfo(cdi, pdi);
 		} else if(cdi != null) {
 			return cdi;
 		} 
 		return pdi;
 	}
 
-	private OperationDeleteInfo mergeDeleteInfo(OperationDeleteInfo cdi, OperationDeleteInfo pdi) {
-		OperationDeleteInfo ndi = new OperationDeleteInfo();
-		ndi.create = (pdi != null && pdi.create) || (cdi != null && cdi.create);
-		if((pdi != null && pdi.create) && (cdi != null && cdi.create)) {
-			// assert
-			throw new IllegalArgumentException("Operation was created twice");
-		}
-		int psz = (pdi == null || pdi.deletedObjects == null) ? 0 : pdi.deletedObjects.length;
-		int sz = (cdi == null || cdi.deletedObjects == null) ? 0 : cdi.deletedObjects.length;
-		int length = Math.max(sz, psz);
-		ndi.deletedObjects = new boolean[length];
-		for(int i = 0; i < length; i++) {
-			if(pdi != null && pdi.deletedObjects != null && i < pdi.deletedObjects.length && pdi.deletedObjects[i]) {
-				ndi.deletedObjects[i] = true;
-			}
-			if(cdi != null && cdi.deletedObjects != null && i < cdi.deletedObjects.length && cdi.deletedObjects[i]) {
-				if(ndi.deletedObjects[i]) {
-					// assert
-					throw new IllegalArgumentException("Object was deleted twice");
-				}
-				ndi.deletedObjects[i] = true;
-			}
-		}
-		return ndi;
-	}
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
 		ValidationTimer vld = new ValidationTimer().start();
@@ -857,16 +809,8 @@ public class OpBlockChain {
 		public Object cacheObject;
 		
 		Object internalMapToFilterDuplicates; 
-		ObjectInstancesById objToSetCache;
+		OpPrivateObjectInstancesById objToSetCache;
 	}
-
-	private static class OperationDeleteInfo {
-		private OpOperation op;
-		private boolean create;
-		private boolean[] deletedObjects;
-	}
-
-
 
 
 }

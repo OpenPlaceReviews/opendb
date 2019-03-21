@@ -187,7 +187,7 @@ public class BlocksManager {
 	
 	
 	public synchronized boolean resumeBlockCreation() {
-		if(blockchain.getStatus() == OpBlockChain.LOCKED_SUCCESS) {
+		if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
 			blockchain.unlockByUser();
 			return true;
 		}
@@ -205,8 +205,10 @@ public class BlocksManager {
 	public String getCurrentState() {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
 			return "READY";
-		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_SUCCESS) {
+		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_STATE) {
 			return "LOCKED";
+		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_OP_IN_PROGRESS) {
+			return "OP_IN_PROGRESS";
 		}
 		return "ERROR";
 	}

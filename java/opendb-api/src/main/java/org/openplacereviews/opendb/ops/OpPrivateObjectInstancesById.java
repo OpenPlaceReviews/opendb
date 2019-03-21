@@ -13,7 +13,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 
 
-public class ObjectInstancesById {
+class OpPrivateObjectInstancesById {
 
 	private final String type;
 	private Map<ListKey, OpObject> objects = new ConcurrentHashMap<>();
@@ -29,7 +29,12 @@ public class ObjectInstancesById {
 		}
 	}
 	
-	public ObjectInstancesById(String type) {
+	public OpPrivateObjectInstancesById(String type) {
+		this.type = type;
+	}
+	
+	public OpPrivateObjectInstancesById(String type, Object dbAccess) {
+		// TODO db access
 		this.type = type;
 	}
 	
@@ -64,7 +69,7 @@ public class ObjectInstancesById {
 		return getByKey(new ListKey(primaryKey, secondaryKey)); 
 	}
 	
-	void putObjects(ObjectInstancesById prev, boolean overwrite) {
+	void putObjects(OpPrivateObjectInstancesById prev, boolean overwrite) {
 		if(prev == null) {
 			return;
 		}
