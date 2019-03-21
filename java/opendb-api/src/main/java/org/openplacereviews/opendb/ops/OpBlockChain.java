@@ -485,6 +485,18 @@ public class OpBlockChain {
 		return parent.getBlockDepth(block);
 	}
 	
+	
+	public OpBlock getBlockHeaderByRawHash(String hash) {
+		if(nullObject) {
+			return null;
+		}
+		OpBlock n = blocks.getBlockHeader(hash);
+		if(n != null) {
+			return n;
+		}
+		return parent.getBlockHeaderByRawHash(hash);
+	}
+	
 	public OpObject getObjectByName(String type, String key) {
 		return getObjectByName(type, key, null);
 	}

@@ -81,14 +81,7 @@ public class OpBlock extends OpObject {
 	}
 	
 	public String getRawHash() {
-		String hs = getFullHash();
-		if(hs != null && hs.length() > 0) {
-			int i = hs.lastIndexOf(':');
-			if(i > 0) {
-				return hs.substring(i + 1);
-			}
-		}
-		return hs;
+		return OpBlockchainRules.getRawHash(getFullHash());
 	}
 	
 	public String getSignature() {

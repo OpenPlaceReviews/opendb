@@ -143,6 +143,16 @@ public class OpBlockchainRules {
 		return true;
 	}
 
+	public static String getRawHash(String hs) {
+		if(hs != null && hs.length() > 0) {
+			int i = hs.lastIndexOf(':');
+			if(i > 0) {
+				return hs.substring(i + 1);
+			}
+		}
+		return "";
+	}
+	
 	public static String getSiteFromUser(String name) {
 		int i = name.indexOf(USER_LOGIN_CHAR);
 		return i >= 0 ? name.substring(i + 1) : "";
@@ -686,8 +696,5 @@ public class OpBlockchainRules {
 		
 	}
 
-	
-
-	
 	
 }

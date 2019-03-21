@@ -9,6 +9,7 @@ import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
@@ -93,6 +94,14 @@ public class ApiController {
 		res.status = manager.getCurrentState();
 		return formatter.fullObjectToJson(res);
 	}
+    
+    @GetMapping(path = "/block-by-hash", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public String getBlockByHash(@RequestParam(required = true) String hash) {
+    	OpBlock blockHeader = manager.getBlockchain().getBlockHeaderByRawHash(OpBlockchainRules.getRawHash(hash));
+    	return formatter.fullObjectToJson(blockHeader);
+    }
+    
     
     
     
