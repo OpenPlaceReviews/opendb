@@ -41,7 +41,7 @@ public class DBConsensusManager {
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 0.5;
-	private static final int SUPERBLOCK_SIZE_LIMIT = 5;
+	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 5;
 	protected static final int COMPACT_ITERATIONS = 3;
 		
 	@Autowired
@@ -178,7 +178,7 @@ public class DBConsensusManager {
 			LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash ));
 			return null;
 		}
-		// TODO Load full block
+		// TODO Load full block header !!!!!
 		OpBlock block = new OpBlock();
 		block.putStringValue(OpBlock.F_HASH, blockHash); // ! not raw hash
 		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, pblockHash);
@@ -189,7 +189,7 @@ public class DBConsensusManager {
 	}
 	
 	protected BlockDbAccessInterface createDbAccess(String superblock, List<OpBlock> blockHeaders) {
-		// TODO Auto-generated method stub
+		// TODO !!!! DB ACCESS OR LOAD EVERYTHING !!!
 		return null;
 	}
 
@@ -232,8 +232,6 @@ public class DBConsensusManager {
 		});
 		return res[0];
 	}
-
-
 
 
 	private List<OpBlock> selectTopBlockFromOrphanedBlocks(OpBlockChain prev) {
@@ -288,29 +286,27 @@ public class DBConsensusManager {
 	}
 	
 	
-	public synchronized void saveMainBlockchain(OpBlockChain blc) {
-		// find saved part of chain
-		Deque<OpBlockChain> notSaved = new LinkedList<OpBlockChain>();
-		OpBlockChain p = blc;
-		while (p != null && !dbSavedChains.containsKey(p.getSuperBlockHash())) {
-			notSaved.addFirst(p);
-			p = p.getParent();
+	public synchronized OpBlockChain saveMainBlockchain(OpBlockChain blc) {
+		// find and saved last not saved part of the chain
+		OpBlockChain lastNotSaved = null;
+		OpBlockChain beforeLast = null;
+		while(!blc.isNullBlock() && !blc.isDbAccessed()) {
+			beforeLast = lastNotSaved;
+			lastNotSaved = blc;
+			blc = blc.getParent();
 		}
-		if (p == null) {
-			printBlockChain(blc);
-			throw new IllegalStateException("Runtime blockchain doesn't match db blockchain:"
-					+ getSuperblockHash(mainSavedChain));
-		}
-
-		for (OpBlockChain ns : notSaved) {
-			if (ns.getSuperblockSize() < SUPERBLOCK_SIZE_LIMIT) {
-				break;
+		if(lastNotSaved != null && lastNotSaved.getSuperblockSize() >= SUPERBLOCK_SIZE_LIMIT_DB) {
+			OpBlockChain saved = saveSuperblock(lastNotSaved);
+			if(beforeLast != null) {
+				beforeLast.changeToEqualParent(saved);
+			} else {
+				return saved;
 			}
-			mainSavedChain = saveSuperblock(ns, mainSavedChain);
 		}
+		return blc;
 	}
 	
-	private Superblock saveSuperblock(OpBlockChain blc, Superblock parent) {
+	private OpBlockChain saveSuperblock(OpBlockChain blc) {
 		String superBlockHash = blc.getSuperBlockHash();
 		LOGGER.info(String.format("Save superblock %s ", superBlockHash));
 		if(!blc.getParent().getSuperBlockHash().equals(getSuperblockHash(parent))) {
@@ -318,7 +314,6 @@ public class DBConsensusManager {
 					String.format("DB-blockchain hash '%s' != '%s' in-memory blockchain",
 							blc.getParent().getSuperBlockHash(), getSuperblockHash(parent)));
 		}
-		Superblock sc = new Superblock(superBlockHash, parent);
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
 		Iterator<OpBlock> it = blc.getSuperblockHeaders().iterator();
 		while (it.hasNext()) {
@@ -335,78 +330,39 @@ public class DBConsensusManager {
 		return sc;
 	}
 	
-	public synchronized OpBlockChain compact(OpBlockChain blc) {
-		OpBlockChain p = blc;
-		String lastBlockHash = getSuperblockHash(mainSavedChain);
-		while(p != null && !p.getSuperBlockHash().equals(lastBlockHash)) {
-			p = p.getParent();
+	public synchronized OpBlockChain compact(int prevSize, OpBlockChain blc, boolean db) {
+		if(blc == null || blc.isNullBlock() || blc.getParent().isNullBlock()) {
+			return blc;
 		}
-		OpBlockChain res = blc;
-		if (blc != null) {
-			for (int i = 0; i < COMPACT_ITERATIONS; i++) {
-				CompactPair compacted = compact(blc, mainSavedChain);
-				if (compacted != null) {
-					mainSavedChain = compacted.s;
-					res = compacted.o;
+		OpBlockChain compactedParent = null;
+		if(blc.isDbAccessed() == blc.getParent().isDbAccessed()) {
+			compactedParent = compact(blc.getSuperblockSize(), blc.getParent(), db);
+			// only 1 compact at a time
+			boolean compact = compactedParent == blc.getParent();
+			compact = compact && ((double) blc.getSuperblockSize() + COMPACT_COEF * prevSize) > ((double)blc.getParent().getSuperblockSize()) ;
+			if(compact) {
+				// TODO rewrite simulation
+				if(blc.isDbAccessed() && db) {
+					LOGGER.info(String.format("Compact db superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
+					// TODO db compact
+					return blc;
 				} else {
-					break;
+					LOGGER.info(String.format("Compact runtime superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
+					blc = new OpBlockChain(blc,  blc.getParent(), blc.getRules());
+					printBlockChain(blc);
+					return blc;
 				}
 			}
-			printBlockChain(blc);
+		} else {
+			// redirect compact to parent 
+			compactedParent = compact(0, blc.getParent(), db);
 		}
-		return res;
+		if(blc.getParent() != compactedParent) {
+			blc.changeToEqualParent(compactedParent);
+		}
+		return blc;
 	}
 	
-	private static class CompactPair {
-		Superblock s;
-		OpBlockChain o;
-		public CompactPair(Superblock s, OpBlockChain o) {
-			this.s = s;
-			this.o = o;
-		}
-	}
-
-	private CompactPair compact(OpBlockChain runtimeChain, Superblock sc) {
-		// nothing to compact
-		if (runtimeChain == null || runtimeChain.isNullBlock() || runtimeChain.getParent().isNullBlock()) {
-			return null;
-		}
-		if(!runtimeChain.getSuperBlockHash().equals(getSuperblockHash(sc)) || 
-				!runtimeChain.getParent().getSuperBlockHash().equals(getSuperblockHash(sc.parent))) {
-			printBlockChain(runtimeChain);
-			LOGGER.error(String.format("ERROR situation with compacting '%s' = '%s' and '%s' = '%s' ", 
-					runtimeChain.getSuperBlockHash(), getSuperblockHash(sc), 
-					runtimeChain.getParent().getSuperBlockHash(), getSuperblockHash(sc.parent)));
-			return null;
-		}
-		boolean lastTwoBlocks = runtimeChain.getParent().getParent().isNullBlock();
-		CompactPair compacted = compact(runtimeChain.getParent(), sc.parent);
-		if(compacted == null) {
-			boolean compactCondition = !lastTwoBlocks && COMPACT_COEF * (runtimeChain.getSuperblockSize()  + runtimeChain.getParent().getSuperblockSize()) >= 
-					runtimeChain.getParent().getParent().getSuperblockSize();
-			compactCondition = compactCondition || (runtimeChain.getSuperblockSize() > runtimeChain.getParent().getSuperblockSize());
-			if(compactCondition) { 
-				Superblock oldParent = sc.parent;
-				OpBlockChain newParentChain = new OpBlockChain(runtimeChain,  runtimeChain.getParent(), null, runtimeChain.getRules());
-				LOGGER.info(String.format("Compact superblock '%s' into  superblock '%s' ", oldParent.superblockHash, sc.superblockHash));
-				Superblock ns = saveSuperblock(newParentChain, oldParent.parent);
-				return new CompactPair(ns, newParentChain);
-			}
-			return null;
-		} else {
-			// update parent (parent content didn't change only block sequence changed )
-			if(sc.parent != compacted.s) {
-				boolean changeParent = runtimeChain.changeToEqualParent(compacted.o);
-				if(changeParent) {
-					throw new IllegalStateException();
-				}
-				sc.parent = compacted.s;
-			}
-			return new CompactPair(sc, runtimeChain);
-		}
-	}
-
-
 
 	private void printBlockChain(OpBlockChain blc) {
 		List<String> superBlocksChain = new ArrayList<String>();
@@ -419,17 +375,6 @@ public class DBConsensusManager {
 			p = p.getParent();
 		}
 		LOGGER.info(String.format("Runtime chain %s", superBlocksChain));
-		
-		superBlocksChain.clear();
-		Superblock s = mainSavedChain;
-		while(s != null) {
-			String sh = s.superblockHash;
-			if(sh.length() > 10) {
-				superBlocksChain.add(sh.substring(0, 10));
-			}
-			s = s.parent;
-		}
-		LOGGER.info(String.format("DB chain %s", superBlocksChain));
 	}
 		
 		
@@ -446,30 +391,5 @@ public class DBConsensusManager {
 				SecUtils.getHashBytes(op.getHash()), pGobject);
 	}
 	
-
-	protected boolean createTable(OpOperation definition) {
-		String tableName = definition.getStringValue(FIELD_NAME);
-		Map<String, String> tableColumns = new TreeMap<String, String>();
-		StringBuilder sql = new StringBuilder("create table " + tableName);
-		StringBuilder columnsDef = new StringBuilder();
-		for(Entry<String, String> e : tableColumns.entrySet()) {
-			if(columnsDef.length() > 0) {
-				columnsDef.append(", ");
-			}
-			columnsDef.append(e.getKey()).append(" ").append(e.getValue());
-		}
-		sql.append("(").append(columnsDef).append(")");
-		try {
-			LOGGER.info("DDL executed: " + sql);
-			jdbcTemplate.execute(sql.toString());
-		} catch(RuntimeException e) {
-			LOGGER.warn("DDL failed: " + e.getMessage(), e);
-			throw e;
-		}
-		return true;
-	}
-
-
-
 
 }

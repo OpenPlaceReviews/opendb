@@ -109,8 +109,7 @@ public class OpBlockChain {
 		atomicSetParent(parent);
 	}
 	
-	public OpBlockChain(OpBlockChain copy, OpBlockChain parentToMerge, BlockDbAccessInterface dbAccess, OpBlockchainRules rules) {
-		// TODO db access !!! 
+	public OpBlockChain(OpBlockChain copy, OpBlockChain parentToMerge, OpBlockchainRules rules) {
 		this.rules = rules;
 		this.nullObject = false;
 		this.operations = new OpPrivateOperations(null);

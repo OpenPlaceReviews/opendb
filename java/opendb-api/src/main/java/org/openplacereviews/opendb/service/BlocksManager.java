@@ -83,7 +83,7 @@ public class BlocksManager {
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getOperations());
 		
 		int tmAddOps = timer.startExtra();
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), null, blockchain.getRules());
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		for (OpOperation o : candidates) {
 			if(!blc.addOperation(o)) {
 				return null;
@@ -111,12 +111,15 @@ public class BlocksManager {
 		timer.measure(tmRebase, ValidationTimer.BLC_REBASE);
 		
 		int tmSDbSave = timer.startExtra();
-		dataManager.saveMainBlockchain(blockchain.getParent());
+		OpBlockChain savedParent = dataManager.saveMainBlockchain(blockchain.getParent());
+		if(blockchain.getParent() != savedParent) {
+			blockchain.changeToEqualParent(savedParent);
+		}
 		timer.measure(tmSDbSave, ValidationTimer.BLC_SAVE);
 		
 		
 		int tmCompact = timer.startExtra();
-		OpBlockChain newParent = dataManager.compact(blockchain.getParent());
+		OpBlockChain newParent = dataManager.compact(0, blockchain.getParent(), true);
 		if(newParent != blockchain.getParent()) {
 			blockchain.changeToEqualParent(newParent);
 		}
@@ -133,7 +136,7 @@ public class BlocksManager {
 	
 	public synchronized void clearQueue() {
 		// there is no proper clear queue on atomc load
-		blockchain = new OpBlockChain(blockchain.getParent(), null, blockchain.getRules());
+		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 	}
 	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
@@ -143,7 +146,7 @@ public class BlocksManager {
 		if(blockchain.getParent() == null) {
 			return false;
 		}
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), null, blockchain.getRules());
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
 		OpBlockChain pnt = blockchain.getParent();
 		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getSuperblockFullBlocks());
 		Collections.reverse(lst);
