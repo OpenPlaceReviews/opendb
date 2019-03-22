@@ -2,7 +2,6 @@ package org.openplacereviews.opendb.ops;
 
 import java.util.Collection;
 import java.util.Deque;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -20,7 +19,7 @@ public class OpPrivateBlocksList {
 		this.dbAccess = null;
 	}
 	
-	public OpPrivateBlocksList(List<OpBlock> headers, int superBlockDepth, BlockDbAccessInterface dbAccess) {
+	public OpPrivateBlocksList(Collection<OpBlock> headers, int superBlockDepth, BlockDbAccessInterface dbAccess) {
 		if(headers != null) {
 			for(OpBlock o : headers) {
 				addBlockHeader(o, superBlockDepth);

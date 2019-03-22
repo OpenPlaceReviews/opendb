@@ -3,16 +3,12 @@ package org.openplacereviews.opendb.service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Deque;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,8 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
-
-import wiremock.org.eclipse.jetty.util.ConcurrentHashSet;
 
 @Service
 public class DBConsensusManager {
@@ -188,7 +182,7 @@ public class DBConsensusManager {
 		return block;
 	}
 	
-	protected BlockDbAccessInterface createDbAccess(String superblock, List<OpBlock> blockHeaders) {
+	protected BlockDbAccessInterface createDbAccess(String superblock, Collection<OpBlock> blockHeaders) {
 		// TODO !!!! DB ACCESS OR LOAD EVERYTHING !!!
 		return null;
 	}
@@ -307,27 +301,24 @@ public class DBConsensusManager {
 	}
 	
 	private OpBlockChain saveSuperblock(OpBlockChain blc) {
+		blc.validateLocked();
 		String superBlockHash = blc.getSuperBlockHash();
 		LOGGER.info(String.format("Save superblock %s ", superBlockHash));
-		if(!blc.getParent().getSuperBlockHash().equals(getSuperblockHash(parent))) {
-			throw new IllegalStateException(
-					String.format("DB-blockchain hash '%s' != '%s' in-memory blockchain",
-							blc.getParent().getSuperBlockHash(), getSuperblockHash(parent)));
-		}
 		byte[] shash = SecUtils.getHashBytes(superBlockHash);
-		Iterator<OpBlock> it = blc.getSuperblockHeaders().iterator();
+		Collection<OpBlock> blockHeaders = blc.getSuperblockHeaders();
+		Iterator<OpBlock> it = blockHeaders.iterator();
 		while (it.hasNext()) {
 			OpBlock o = it.next();
 			byte[] blHash = SecUtils.getHashBytes(o.getFullHash());
-			String blockRawHash = SecUtils.hexify(blHash);
 			// assign parent hash only for last block
+			// String blockRawHash = SecUtils.hexify(blHash);
 			// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
-			jdbcTemplate.update("UPDATE blocks set superblock = ?where hash = ?",
+			jdbcTemplate.update("UPDATE blocks set superblock = ? where hash = ?",
 							shash, blHash);
-			sc.blocks.addFirst(blockRawHash);
-			sc.blocksSet.add(blockRawHash);
 		}
-		return sc;
+		OpBlockChain dbchain = new OpBlockChain(blc.getParent(), blockHeaders, 
+				createDbAccess(superBlockHash, blockHeaders), blc.getRules());
+		return dbchain;
 	}
 	
 	public synchronized OpBlockChain compact(int prevSize, OpBlockChain blc, boolean db) {

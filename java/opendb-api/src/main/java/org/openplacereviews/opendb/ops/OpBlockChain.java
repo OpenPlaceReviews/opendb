@@ -94,7 +94,7 @@ public class OpBlockChain {
 		atomicSetParent(parent);
 	}
 	
-	public OpBlockChain(OpBlockChain parent, List<OpBlock> headers, BlockDbAccessInterface dbAccess, OpBlockchainRules rules) {
+	public OpBlockChain(OpBlockChain parent, Collection<OpBlock> headers, BlockDbAccessInterface dbAccess, OpBlockchainRules rules) {
 		if(parent == null) {
 			throw new IllegalStateException("Parent can not be null, use null object for reference");
 		}
@@ -122,12 +122,10 @@ public class OpBlockChain {
 		parentToMerge.validateLocked();
 		
 		atomicSetParent(parentToMerge.parent);
-
 		copyAndMergeWithParent(copy, parentToMerge);
-		
 	}
 	
-	private synchronized void validateLocked() {
+	public synchronized void validateLocked() {
 		if(nullObject) {
 			return;
 		}
