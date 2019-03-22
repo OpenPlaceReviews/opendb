@@ -80,7 +80,7 @@ public class BlocksManager {
 		ValidationTimer timer = new ValidationTimer();
 		timer.start();
 		
-		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getOperations());
+		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getQueueOperations());
 		
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
@@ -157,7 +157,7 @@ public class BlocksManager {
 				}
 			}
 		}
-		for(OpOperation o: blockchain.getOperations()) {
+		for(OpOperation o: blockchain.getQueueOperations()) {
 			if(!blc.addOperation(o)) {
 				return false;
 			}

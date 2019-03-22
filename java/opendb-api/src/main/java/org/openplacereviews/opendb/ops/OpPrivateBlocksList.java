@@ -30,7 +30,7 @@ public class OpPrivateBlocksList {
 
 	public Collection<OpBlock> getAllBlocks() {
 		if(dbAccess != null){
-			return dbAccess.getAllBlocks();
+			return dbAccess.getAllBlocks(blockHeaders);
 		}
 		return blocks;
 	}

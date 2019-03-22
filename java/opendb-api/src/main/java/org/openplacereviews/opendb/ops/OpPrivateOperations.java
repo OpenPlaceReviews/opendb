@@ -11,10 +11,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 
 class OpPrivateOperations {
 	// operations to be stored like a queue
-	private final Deque<OpOperation> operations = new ConcurrentLinkedDeque<OpOperation>();
+	private final Deque<OpOperation> queueOperations = new ConcurrentLinkedDeque<OpOperation>();
 	// stores information about created and deleted objects in this blockchain 
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
 	private final BlockDbAccessInterface dbAccess;
@@ -22,27 +23,21 @@ class OpPrivateOperations {
 	public OpPrivateOperations(BlockDbAccessInterface dbAccess) {
 		this.dbAccess = dbAccess;
 	}
-	
-	public static class OperationDeleteInfo {
-		OpOperation op;
-		boolean create;
-		boolean[] deletedObjects;
+
+	public Collection<OpOperation> getQueueOperations() {
+		if(dbAccess != null) {
+			// in that case it could just return  empty list
+			// throw new UnsupportedOperationException("Queue is not supported by db access");
+		}
+		return queueOperations;
 	}
 
-	
-
-	public Collection<OpOperation> getAllOperations() {
-		if(dbAccess != null) {
-			return dbAccess.getAllOperations();
-		}
-		return operations;
-	}
-
-	public boolean isEmpty() {
-		if(dbAccess != null) {
-			return dbAccess.getOperationsSize() == 0;
-		}
-		return operations.isEmpty();
+	public boolean isQueueEmpty() {
+//		if(dbAccess != null) {
+			// in that case it could just return  empty
+			// return true;
+//		}
+		return queueOperations.isEmpty();
 	}
 
 	public OperationDeleteInfo getOperationInfo(String rawHash) {
@@ -54,11 +49,11 @@ class OpPrivateOperations {
 	
 	
 
-	void clearOnlyOperationsList() {
+	void clearQueueOperations() {
 		if(dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
-		operations.clear();
+		queueOperations.clear();
 	}
 	
 	void addNewOperation(OpOperation u) {
@@ -69,7 +64,7 @@ class OpPrivateOperations {
 		infop.op = u;
 		infop.create = true;
 		opsByHash.put(u.getRawHash(), infop);
-		operations.add(u);		
+		queueOperations.add(u);		
 	}
 	
 	void addDeletedObject(String delHash, int delInd, OpOperation opRef) {
@@ -125,7 +120,7 @@ class OpPrivateOperations {
 		if(dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
-		Iterator<OpOperation> it = operations.iterator();
+		Iterator<OpOperation> it = queueOperations.iterator();
 		while(it.hasNext()) {
 			OpOperation o = it.next();
 			if(operationsSet.contains(o.getRawHash())) {

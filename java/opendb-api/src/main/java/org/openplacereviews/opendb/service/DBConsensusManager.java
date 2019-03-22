@@ -4,11 +4,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -18,13 +21,18 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -50,7 +58,7 @@ public class DBConsensusManager {
 	private OpBlockChain mainSavedChain = null;
 	
 	//////////// SYSTEM TABLES DDL ////////////
-	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, details jsonb)";
+	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, header jsonb, fullblock jsonb)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_HASH = "create index blocks_hash_ind on blocks(hash)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_PHASH = "create index blocks_phash_ind on blocks(phash)";
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_SUPERBLOCK = "create index blocks_superblock_ind on blocks(superblock)";
@@ -144,51 +152,119 @@ public class DBConsensusManager {
 			return newParent;
 		}
 		OpBlockChain blc = new OpBlockChain(newParent, newParent.getRules());
-		for(OpBlock b : topBlockInfo) {
+		for (OpBlock b : topBlockInfo) {
 			String blockHash = b.getRawHash();
-			jdbcTemplate.query("SELECT details from blocks where hash = ? ",
-					new Object[] { SecUtils.getHashBytes(blockHash) }, new RowCallbackHandler() {
-
-						@Override
-						public void processRow(ResultSet rs) throws SQLException {
-							OpBlock rawBlock = formatter.parseBlock(rs.getString(1));
-							rawBlock.makeImmutable();
-							OpBlock replicateBlock = blc.replicateBlock(rawBlock);
-							if (replicateBlock == null) {
-								throw new IllegalStateException("Could not replicate block: "
-										+ formatter.toJson(rawBlock));
-							}
-						}
-					});
+			OpBlock rawBlock = loadBlock(blockHash);
+			OpBlock replicateBlock = blc.replicateBlock(rawBlock);
+			if (replicateBlock == null) {
+				throw new IllegalStateException("Could not replicate block " + blockHash + " "
+						+ formatter.toJson(rawBlock));
+			}
 		}
 		return blc;
 	}
 
-	private OpBlock createBlockInfo(String blockHash, String pblockHash, int blockid) {
-		OpBlock parent = blocks.get(pblockHash);
-		if(!OUtils.isEmpty(pblockHash) && parent == null) {
-			LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash ));
+
+	private OpBlock loadBlock(String blockHash) {
+		List<OpBlock> blocks = jdbcTemplate.query("SELECT details from blocks where hash = ? ",
+				new Object[] { SecUtils.getHashBytes(blockHash) }, new RowMapper<OpBlock>() {
+
+					@Override
+					public OpBlock mapRow(ResultSet rs, int rowNum) throws SQLException {
+						OpBlock rawBlock = formatter.parseBlock(rs.getString(1));
+						rawBlock.makeImmutable();
+						return rawBlock;
+					}
+
+				});
+		if(blocks.size() > 1) {
+			throw new UnsupportedOperationException("Duplicated blocks for the same hash: " + blockHash);
+		}
+		OpBlock rawBlock = blocks.size() == 0 ? null : blocks.get(0);
+		return rawBlock;
+	}
+
+	
+	protected class SuperblockDbAccess implements BlockDbAccessInterface {
+
+		private final String superBlockHash;
+		private final List<OpBlock> blockHeaders;
+		private final JdbcTemplate jdbcTemplate;
+		private final ReentrantReadWriteLock readWriteLock;
+		private final ReadLock readLock;
+
+		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders, JdbcTemplate jdbcTemplate) {
+			this.superBlockHash = superBlockHash;
+			this.jdbcTemplate = jdbcTemplate;
+			this.blockHeaders = new ArrayList<OpBlock>(blockHeaders);
+			this.readWriteLock = new ReentrantReadWriteLock();
+			readLock = this.readWriteLock.readLock();
+		}
+
+		@Override
+		public OpObject getObjectById(String type, CompoundKey k) {
+			
+			// TODO Auto-generated method stub
 			return null;
 		}
-		// TODO Load full block header !!!!!
-		OpBlock block = new OpBlock();
-		block.putStringValue(OpBlock.F_HASH, blockHash); // ! not raw hash
-		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, pblockHash);
-		block.putObjectValue(OpBlock.F_BLOCKID, blockid);
-		block.makeImmutable();
-		blocks.put(blockHash, block);
-		return block;
+
+		@Override
+		public Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request) {
+			int limit = request.limit - request.result.size();
+			if(limit <= 0 && request.limit >= 0) {
+				return Collections.emptyMap();
+			}
+			readLock.lock();
+			try {
+				
+			} finally {
+				readLock.unlock();
+			}
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public OperationDeleteInfo getOperationInfo(String rawHash) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Collection<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) {
+			readLock.lock();
+			try {
+				// TODO faster to load by superblock reference
+				List<OpBlock> blocks = new ArrayList<OpBlock>();
+				for (OpBlock b : blockHeaders) {
+					OpBlock lb = loadBlock(b.getRawHash());
+					if (lb == null) {
+						throw new IllegalStateException(String.format("Couldn't load '%s' block from db",
+								b.getRawHash()));
+					}
+					blocks.add(lb);
+				}
+				return blocks;
+			} finally {
+				readLock.unlock();
+			}
+		}
+
+		@Override
+		public OpBlock getBlockByHash(String rawHash) {
+			return loadBlock(rawHash);
+		}
+		
 	}
 	
 	protected BlockDbAccessInterface createDbAccess(String superblock, Collection<OpBlock> blockHeaders) {
-		// TODO !!!! DB ACCESS OR LOAD EVERYTHING !!!
-		return null;
+		return new SuperblockDbAccess(superblock, blockHeaders, jdbcTemplate);
 	}
 
 	private OpBlockChain loadBlockHeadersAndBuildMainChain(final OpBlockchainRules rules) {
 		OpBlockChain[] res = new OpBlockChain[] { OpBlockChain.NULL };
 		boolean[] lastSuccess = new boolean[] { false };
-		jdbcTemplate.query("SELECT hash, phash, blockid, superblock from blocks order by blockId asc", new RowCallbackHandler() {
+		jdbcTemplate.query("SELECT hash, phash, blockid, superblock, header from blocks order by blockId asc", new RowCallbackHandler() {
 			
 			List<OpBlock> blockHeaders = new LinkedList<OpBlock>();
 			String psuperblock;
@@ -198,7 +274,13 @@ public class DBConsensusManager {
 				String blockHash = SecUtils.hexify(rs.getBytes(1));
 				String pblockHash = SecUtils.hexify(rs.getBytes(2));
 				String superblock = SecUtils.hexify(rs.getBytes(4));
-				OpBlock blockHeader = createBlockInfo(blockHash, pblockHash, rs.getInt(3));
+				OpBlock parentBlockHeader = blocks.get(pblockHash);
+				if(!OUtils.isEmpty(pblockHash) && parentBlockHeader == null) {
+					LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash));
+					return;
+				}
+				OpBlock blockHeader = formatter.parseBlock(rs.getString(5));
+				blocks.put(blockHash, blockHeader);
 				if(OUtils.isEmpty(superblock)) {
 					orphanedBlocks.put(blockHash, blockHeader);
 				} else {
@@ -254,27 +336,31 @@ public class DBConsensusManager {
 
 
 	public void insertBlock(OpBlock opBlock) {
-		PGobject pGobject = new PGobject();
-		pGobject.setType("jsonb");
+		OpBlock blockheader = new OpBlock(opBlock, false, true);
+		PGobject blockObj = new PGobject();
+		blockObj.setType("jsonb");
+		PGobject blockHeaderObj = new PGobject();
+		blockHeaderObj.setType("jsonb");
 		try {
-			pGobject.setValue(formatter.toJson(opBlock));
+			blockObj.setValue(formatter.toJson(opBlock));
+			blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
+		
+		
 		byte[] blockHash = SecUtils.getHashBytes(opBlock.getFullHash());
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
-		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
-		jdbcTemplate.update("INSERT INTO blocks(hash, phash, blockid, details) VALUES (?, ?, ?, ?)" , 
-				blockHash, prevBlockHash, opBlock.getBlockId(), pGobject);
+//		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
+		jdbcTemplate.update("INSERT INTO blocks(hash, phash, blockid, header, fullblock ) VALUES (?, ?, ?, ?, ?)" , 
+				blockHash, prevBlockHash, opBlock.getBlockId(), blockHeaderObj, blockObj);
 		for(OpOperation o : opBlock.getOperations()) {
 			jdbcTemplate.update("UPDATE operations set blocks = blocks || ? where hash = ?" , 
 					blockHash, SecUtils.getHashBytes(o.getHash()));	
 		}
-		OpBlock bi = createBlockInfo(rawHash, rawPrevBlockHash, opBlock.getBlockId());
-		if(bi != null) {
-			orphanedBlocks.put(rawHash, bi);
-		}
+		blocks.put(rawHash, blockheader);
+		orphanedBlocks.put(rawHash, blockheader);
 	}
 	
 	
@@ -282,9 +368,19 @@ public class DBConsensusManager {
 		// find and saved last not saved part of the chain
 		OpBlockChain lastNotSaved = null;
 		OpBlockChain beforeLast = null;
+		boolean parentInOrphanedList = true;
 		while(!blc.isNullBlock() && !blc.isDbAccessed()) {
 			beforeLast = lastNotSaved;
 			lastNotSaved = blc;
+			if(parentInOrphanedList) {
+				for(OpBlock header : blc.getSuperblockHeaders()) {
+					OpBlock existing = orphanedBlocks.remove(header.getRawHash());
+					if(existing == null) {
+						parentInOrphanedList = false;
+						break;
+					}
+				}
+			}
 			blc = blc.getParent();
 		}
 		if(lastNotSaved != null && lastNotSaved.getSuperblockSize() >= SUPERBLOCK_SIZE_LIMIT_DB) {
@@ -332,9 +428,9 @@ public class DBConsensusManager {
 			if(compact) {
 				// See @SimulateSuperblockCompactSequences
 				if(blc.isDbAccessed() && db) {
-					LOGGER.info(String.format("Compact db superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
-					// TODO db compact
 					// here we need to lock all db access of 2 blocks and run update in 1 transaction
+					LOGGER.info(String.format("Compacting db superblock '%s' into  superblock '%s' - to be implemented ", 
+							blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
 					return blc;
 				} else {
 					LOGGER.info(String.format("Compact runtime superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));

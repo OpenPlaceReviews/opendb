@@ -16,8 +16,8 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
-import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CompoundKey;
-import org.openplacereviews.opendb.ops.OpPrivateOperations.OperationDeleteInfo;
+import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 
 /**
  *  Guidelines of object methods:
@@ -177,7 +177,7 @@ public class OpBlockChain {
 	}
 	
 	public synchronized OpBlock createBlock(String user, KeyPair keyPair) throws FailedVerificationException {
-		OpBlock block = rules.createAndSignBlock(operations.getAllOperations(), getLastBlockHeader(), user, keyPair);
+		OpBlock block = rules.createAndSignBlock(operations.getQueueOperations(), getLastBlockHeader(), user, keyPair);
 		validateIsUnlocked();
 		boolean valid = rules.validateBlock(this, block, getLastBlockHeader(), true);
 		if(!valid) {
@@ -198,7 +198,7 @@ public class OpBlockChain {
 	public synchronized OpBlock replicateBlock(OpBlock block) {
 		block.checkImmutable();
 		validateIsUnlocked();
-		if (!operations.isEmpty()) {
+		if (!operations.isQueueEmpty()) {
 			// can't replicate blocks when operations are not empty
 			return null;
 		}
@@ -226,7 +226,7 @@ public class OpBlockChain {
 	public synchronized boolean rebaseOperations(OpBlockChain newParent) {
 		validateIsUnlocked();
 		newParent.validateLocked();
-		if(!newParent.operations.isEmpty()) {
+		if(!newParent.operations.isQueueEmpty()) {
 			return false;
 		}
 		// calculate blocks and ops to be removed, all blocks must be present in new parent
@@ -332,14 +332,14 @@ public class OpBlockChain {
 			}
 		}
 		parent.validateLocked();
-		if(!parent.operations.isEmpty()) {
+		if(!parent.operations.isQueueEmpty()) {
 			throw new IllegalStateException("Parent chain doesn't allow to have operations");
 		}
 		this.parent = parent;
 	}
 
 	private void atomicCreateBlockFromAllOps(OpBlock block) {
-		operations.clearOnlyOperationsList();
+		operations.clearQueueOperations();
 		blocks.addBlock(block, getSuperblocksDepth());
 		
 	}
@@ -355,7 +355,7 @@ public class OpBlockChain {
 		blocks.clear();
 		Set<String> operationsToDelete = new TreeSet<String>();
 		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
-		for(OpOperation o : operations.getAllOperations()) {
+		for(OpOperation o : operations.getQueueOperations()) {
 			OperationDeleteInfo odi = newParent.getOperationInfo(o.getRawHash());
 			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
 			if(odi != null && odi.create) {
@@ -430,8 +430,8 @@ public class OpBlockChain {
 	}
 
 	
-	public Collection<OpOperation> getOperations() {
-		return operations.getAllOperations();
+	public Collection<OpOperation> getQueueOperations() {
+		return operations.getQueueOperations();
 	}
 	
 	public OpBlockChain getParent() {
@@ -569,13 +569,13 @@ public class OpBlockChain {
 		}
 	}
 
-	public void fetchObjects(String type, ObjectsSearchRequest request) {
+	public void getObjects(String type, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;
 		}
 		OpPrivateObjectInstancesById oi = objByName.get(type);
 		if(oi == null) {
-			parent.fetchObjects(type, request);
+			parent.getObjects(type, request);
 		} else {
 			request.editVersion = oi.getEditVersion();
 			request.objToSetCache = oi;
@@ -588,7 +588,6 @@ public class OpBlockChain {
 				}
 			}
 			fetchAllObjects(type, request);
-			
 		}
 	}
 	
@@ -805,13 +804,9 @@ public class OpBlockChain {
 
 		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
 
-		Collection<OpOperation> getAllOperations();
-
-		int getOperationsSize();
-
 		OperationDeleteInfo getOperationInfo(String rawHash);
 
-		Collection<OpBlock> getAllBlocks();
+		Collection<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
 
 		OpBlock getBlockByHash(String rawHash);
 		

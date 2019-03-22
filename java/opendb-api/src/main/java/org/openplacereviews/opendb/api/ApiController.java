@@ -56,7 +56,7 @@ public class ApiController {
     @ResponseBody
 	public String queueList() throws FailedVerificationException {
 		OpBlock bl = new OpBlock();
-		for (OpOperation ob : manager.getBlockchain().getOperations()) {
+		for (OpOperation ob : manager.getBlockchain().getQueueOperations()) {
 			bl.addOperation(ob);
 		}
 		return formatter.fullObjectToJson(bl);
@@ -113,7 +113,7 @@ public class ApiController {
     	ObjectsResult res = new ObjectsResult();
     	ObjectsSearchRequest r = new ObjectsSearchRequest();
     	r.limit = limit;
-    	blc.fetchObjects(type, r);
+    	blc.getObjects(type, r);
     	res.objects = r.result;
 		return formatter.fullObjectToJson(res);
 	}

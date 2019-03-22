@@ -339,7 +339,7 @@ public class OpBlockchainRules {
 	public Map<String, Set<String>> getRoles(OpBlockChain blockchain) {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
 		req.requestCache = true;
-		blockchain.fetchObjects(OP_ROLE, req);
+		blockchain.getObjects(OP_ROLE, req);
 		Map<String, Set<String>> rolesMap = (Map<String,  Set<String>>) req.cacheObject;
 		if(rolesMap == null) {
 			rolesMap = new TreeMap<String, Set<String>>();
@@ -394,7 +394,7 @@ public class OpBlockchainRules {
 	private Map<String, List<OpObject>> getValidationRules(OpBlockChain blockchain) {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
 		req.requestCache = true;
-		blockchain.fetchObjects(OP_VALIDATE, req);
+		blockchain.getObjects(OP_VALIDATE, req);
 		Map<String, List<OpObject>> validationRules = (Map<String,  List<OpObject>>) req.cacheObject;
 		if(validationRules == null) {
 			validationRules = new TreeMap<String, List<OpObject>>();
