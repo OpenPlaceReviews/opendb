@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.ops.OpBlockChain.SuperblockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 
 
@@ -21,7 +21,7 @@ class OpPrivateObjectInstancesById {
 	private Map<CompoundKey, OpObject> objects = new ConcurrentHashMap<>();
 	private volatile CacheObject cacheObject;
 	private AtomicInteger editVersion = new AtomicInteger(0);
-	private final SuperblockDbAccessInterface dbAccess;
+	private final BlockDbAccessInterface dbAccess;
 	
 	static class CacheObject {
 		Object cacheObject;
@@ -32,7 +32,7 @@ class OpPrivateObjectInstancesById {
 		}
 	}
 	
-	public OpPrivateObjectInstancesById(String type, SuperblockDbAccessInterface dbAccess) {
+	public OpPrivateObjectInstancesById(String type, BlockDbAccessInterface dbAccess) {
 		this.type = type;
 		this.dbAccess = dbAccess;
 	}

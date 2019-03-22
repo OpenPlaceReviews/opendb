@@ -10,16 +10,16 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import org.openplacereviews.opendb.ops.OpBlockChain.SuperblockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 
 class OpPrivateOperations {
 	// operations to be stored like a queue
 	private final Deque<OpOperation> operations = new ConcurrentLinkedDeque<OpOperation>();
 	// stores information about created and deleted objects in this blockchain 
 	private final Map<String, OperationDeleteInfo> opsByHash = new ConcurrentHashMap<>();
-	private final SuperblockDbAccessInterface dbAccess;
+	private final BlockDbAccessInterface dbAccess;
 	
-	public OpPrivateOperations(SuperblockDbAccessInterface dbAccess) {
+	public OpPrivateOperations(BlockDbAccessInterface dbAccess) {
 		this.dbAccess = dbAccess;
 	}
 	

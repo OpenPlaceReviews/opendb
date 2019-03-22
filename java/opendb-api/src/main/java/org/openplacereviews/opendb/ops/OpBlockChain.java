@@ -56,7 +56,7 @@ public class OpBlockChain {
 	// 0-2 immutable blockchain rules to validate operations
 	private final OpBlockchainRules rules;
 	// 0-3 db access if it exists
-	private final SuperblockDbAccessInterface dbAccess;
+	private final BlockDbAccessInterface dbAccess;
 	
 	// 1. parent chain
 	private volatile OpBlockChain parent;
@@ -79,27 +79,42 @@ public class OpBlockChain {
 		locked = LOCKED_STATE;
 		this.dbAccess = null;
 		this.operations = new OpPrivateOperations(null);
-		this.blocks = new OpPrivateBlocksList(null);
+		this.blocks = new OpPrivateBlocksList();
 	}
 	
-	public OpBlockChain(OpBlockChain parent, SuperblockDbAccessInterface dbAccess, OpBlockchainRules rules) {
+	public OpBlockChain(OpBlockChain parent, OpBlockchainRules rules) {
+		if(parent == null) {
+			throw new IllegalStateException("Parent can not be null, use null object for reference");
+		}
+		this.rules = rules;
+		this.nullObject = false;
+		this.dbAccess = null;
+		this.operations = new OpPrivateOperations(null);
+		this.blocks = new OpPrivateBlocksList();
+		atomicSetParent(parent);
+	}
+	
+	public OpBlockChain(OpBlockChain parent, List<OpBlock> headers, BlockDbAccessInterface dbAccess, OpBlockchainRules rules) {
+		if(parent == null) {
+			throw new IllegalStateException("Parent can not be null, use null object for reference");
+		}
+		if(dbAccess == null) {
+			throw new IllegalStateException("This constructor for db access superblocks");
+		}
 		this.rules = rules;
 		this.nullObject = false;
 		this.dbAccess = dbAccess;
 		this.operations = new OpPrivateOperations(this.dbAccess);
-		this.blocks = new OpPrivateBlocksList(this.dbAccess);
-		
-		if(parent == null) {
-			throw new IllegalStateException("Parent can not be null, use null object for reference");
-		}
+		this.blocks = new OpPrivateBlocksList(headers, parent.getSuperblocksDepth() + 1, this.dbAccess);
 		atomicSetParent(parent);
 	}
 	
-	public OpBlockChain(OpBlockChain copy, OpBlockChain parentToMerge, SuperblockDbAccessInterface dbAccess, OpBlockchainRules rules) {
+	public OpBlockChain(OpBlockChain copy, OpBlockChain parentToMerge, BlockDbAccessInterface dbAccess, OpBlockchainRules rules) {
+		// TODO db access !!! 
 		this.rules = rules;
 		this.nullObject = false;
-		this.operations = new OpPrivateOperations(dbAccess);
-		this.blocks = new OpPrivateBlocksList(dbAccess);
+		this.operations = new OpPrivateOperations(null);
+		this.blocks = new OpPrivateBlocksList();
 		this.dbAccess = null;
 		if(parentToMerge == null || parentToMerge.isNullBlock() || copy.parent != parentToMerge) {
 			throw new IllegalStateException("Wrong parameters to create object with merged parents");
@@ -108,7 +123,7 @@ public class OpBlockChain {
 		parentToMerge.validateLocked();
 		
 		atomicSetParent(parentToMerge.parent);
-		// TODO db access
+
 		copyAndMergeWithParent(copy, parentToMerge);
 		
 	}
@@ -444,6 +459,11 @@ public class OpBlockChain {
 	public String getLastBlockFullHash() {
 		OpBlock b = getLastBlockHeader();
 		return b == null ? "" : b.getFullHash();
+	}
+	
+	public String getLastBlockRawHash() {
+		OpBlock b = getLastBlockHeader();
+		return b == null ? "" : b.getRawHash();
 	}
 	
 	public int getLastBlockId() {
@@ -782,7 +802,7 @@ public class OpBlockChain {
 		}
 	}
 	
-	public interface SuperblockDbAccessInterface {
+	public interface BlockDbAccessInterface {
 
 		OpObject getObjectById(String type, CompoundKey k);
 

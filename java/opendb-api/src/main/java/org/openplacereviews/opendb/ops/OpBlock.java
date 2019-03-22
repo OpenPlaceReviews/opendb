@@ -80,8 +80,16 @@ public class OpBlock extends OpObject {
 		return getStringValue(F_HASH);
 	}
 	
+	public String getPrevFullHash() {
+		return getStringValue(F_PREV_BLOCK_HASH);
+	}
+	
 	public String getRawHash() {
 		return OpBlockchainRules.getRawHash(getFullHash());
+	}
+	
+	public String getPrevRawHash() {
+		return OpBlockchainRules.getRawHash(getPrevFullHash());
 	}
 	
 	public String getSignature() {

@@ -21,6 +21,7 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -52,87 +53,9 @@ public class DBConsensusManager {
 	@Autowired
 	private LogOperationService logSystem;
 
-	private Map<String, BlockInfo> blocks = new ConcurrentHashMap<String, BlockInfo>();
-	private Map<String, BlockInfo> orphanedBlocks = new ConcurrentHashMap<String, BlockInfo>();
-	private Map<String, List<BlockInfo>> dbSavedChains = new ConcurrentHashMap<String, List<BlockInfo>>();
-	
-	private Superblock mainSavedChain = null;
-	
-	public static class BlockInfo {
-		public final String hash;
-		public final BlockInfo parent;
-		public final int depth;
-		public final Deque<BlockInfo> children = new ConcurrentLinkedDeque<BlockInfo>();
-		public BlockInfo(String hash, BlockInfo parent, int depth) {
-			this.hash = hash;
-			this.parent = parent;
-			this.depth = depth;
-		}
-		public boolean containsBlock(String block) {
-			if(hash.equals(block)) {
-				return true;
-			} else if(parent != null) {
-				return parent.containsBlock(block);
-			}
-			return false;
-		}
-		
-	}
-	
-	public static class Superblock {
-		public Superblock parent;
-		public final String superblockHash;
-		
-		final Set<String> blocksSet = new ConcurrentHashSet<String>();
-		final Deque<String> blocks = new ConcurrentLinkedDeque<String>();
-		
-		public Superblock(String superBlockHash, Superblock parent) {
-			this.parent = parent;
-			this.superblockHash = superBlockHash;
-		}
-		
-		public boolean isLeaf() {
-			return blocks.size() > 0 && superblockHash.isEmpty();
-		}
-		
-		public int getDepth() {
-			int d = blocks.size();
-			if(parent != null) {
-				d += parent.getDepth();
-			}
-			return d;
-		}
-		
-		public String calculateRawSuperBlockHash(OpBlockchainRules rules) {
-			if(blocks.size() == 0) {
-				return "";
-			}
-			return OpBlockchainRules.calculateSuperblockHash(blocks.size(), blocks.peekLast());
-		}
-
-		public boolean containsBlock(String block) {
-			if(blocksSet.contains(block)) {
-				return true;
-			}
-			if(parent != null) {
-				return parent.containsBlock(block);
-			}
-			return false;
-		}
-
-		public List<Superblock> getSuperblocksFromFirst(List<Superblock> l) {
-			if (parent == null) {
-				if (l == null) {
-					l = new ArrayList<Superblock>();
-				}
-			} else {
-				l = parent.getSuperblocksFromFirst(l);
-			}
-			l.add(this);
-			return l;
-		}
-	}
-	
+	private Map<String, OpBlock> blocks = new ConcurrentHashMap<String, OpBlock>();
+	private Map<String, OpBlock> orphanedBlocks = new ConcurrentHashMap<String, OpBlock>();
+	private OpBlockChain mainSavedChain = null;
 	
 	//////////// SYSTEM TABLES DDL ////////////
 	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, details jsonb)";
@@ -144,9 +67,6 @@ public class DBConsensusManager {
 	
 	protected static final String DDL_CREATE_TABLE_OPS = "create table operations (dbid serial not null, hash bytea PRIMARY KEY, blocks bytea[], details jsonb)";
 	protected static final String DDL_CREATE_TABLE_OPS_INDEX_HASH = "create index operations_hash_ind on operations(hash)";
-
-	// leaf superblock is not stored in db
-	private static final String LEAF_SUPERBLOCK_ID = "";
 
 	
 	// Query / insert values 
@@ -166,7 +86,7 @@ public class DBConsensusManager {
 	}
 	
 	
-	public Map<String, BlockInfo> getOrphanedBlocks() {
+	public Map<String, OpBlock> getOrphanedBlocks() {
 		return orphanedBlocks;
 	}
 
@@ -182,54 +102,30 @@ public class DBConsensusManager {
 	}
 	
 	public String getSuperblockHash() {
-		Superblock s = mainSavedChain;
-		return getSuperblockHash(s);
+		return mainSavedChain.getSuperBlockHash();
 	}
 
-
-	private String getSuperblockHash(Superblock s) {
-		return s == null ? "" : s.superblockHash;
-	}
-	
-	public String getLastBlockHash() {
-		Superblock s = mainSavedChain;
-		return getLastBlockHash(s);
-	}
-
-
-	private String getLastBlockHash(Superblock s) {
-		return s == null ? "" : s.blocks.peekLast();
-	}
-	
-	public int getDepth() {
-		Superblock s = mainSavedChain;
-		return getDepth(s);
-	}
-
-
-	private int getDepth(Superblock s) {
-		return s == null ? 0 : s.getDepth();
-	}
-	
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");
-		mainSavedChain = loadBlockHeadersAndBuildMainChain();
+		mainSavedChain = loadBlockHeadersAndBuildMainChain(rules);
 		
 		LOGGER.info(String.format("+++ Loaded %d block headers +++", blocks.size()));
 		
-		BlockInfo topBlockInfo = selectTopBlockFromOrphanedBlcoks();
-		Superblock topChain = putBlocksOnTopOfchain(topBlockInfo, mainSavedChain);
-		
-		LOGGER.info(String.format("### Selected main blockchain with '%s' and %d depth. Orphaned blocks %d. ###", 
-				getLastBlockHash(topChain), getDepth(topChain), orphanedBlocks.size()));
+		List<OpBlock> topBlockInfo = selectTopBlockFromOrphanedBlocks(mainSavedChain);
+		if(!topBlockInfo.isEmpty()) {
+			LOGGER.info(String.format("### Selected main blockchain with '%s' and %d id. Orphaned blocks %d. ###", 
+					topBlockInfo.get(0).getRawHash(), topBlockInfo.get(0).getBlockId(), orphanedBlocks.size()));
+		} else {
+			LOGGER.info(String.format("### Selected main blockchain with '%s' and %d id. Orphaned blocks %d. ###", 
+					mainSavedChain.getLastBlockRawHash(), mainSavedChain.getLastBlockId(), orphanedBlocks.size()));
+		}
 		LOGGER.info("... Loading blocks from database ...");
+		OpBlockChain topChain = loadBlocks(topBlockInfo, mainSavedChain);
+		LOGGER.info(String.format("### Loaded %d blocks ###", topChain.getSuperblockSize()));
 		
-		OpBlockChain parent = loadBlockchain(rules, topChain);
-		LOGGER.info(String.format("### Loaded %d blocks ###", parent.getDepth()));
-		
-		OpBlockChain blcQueue = new OpBlockChain(parent, null, rules);
+		OpBlockChain blcQueue = new OpBlockChain(topChain, rules);
 		
 		LOGGER.info("... Loading operation queue  ...");
 		int[] ops = new int[1];
@@ -251,22 +147,13 @@ public class DBConsensusManager {
 
 
 
-	private OpBlockChain loadBlockchain(final OpBlockchainRules rules, Superblock chain) {
-		OpBlockChain parent = OpBlockChain.NULL;
-		if (chain != null) {
-			List<Superblock> allChains = chain.getSuperblocksFromFirst(null);
-			for (Superblock sc : allChains) {
-				parent = new OpBlockChain(parent, null, rules);
-				loadBlocks(sc, parent);
-			}
+	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent) {
+		if(topBlockInfo.size() == 0) {
+			return newParent;
 		}
-		return parent;
-	}
-	
-	private void loadBlocks(Superblock sc, final OpBlockChain newParent) {
-		Iterator<String> ds = sc.blocks.iterator();
-		while (ds.hasNext()) {
-			String blockHash = ds.next();
+		OpBlockChain blc = new OpBlockChain(newParent, newParent.getRules());
+		for(OpBlock b : topBlockInfo) {
+			String blockHash = b.getRawHash();
 			jdbcTemplate.query("SELECT details from blocks where hash = ? ",
 					new Object[] { SecUtils.getHashBytes(blockHash) }, new RowCallbackHandler() {
 
@@ -274,7 +161,7 @@ public class DBConsensusManager {
 						public void processRow(ResultSet rs) throws SQLException {
 							OpBlock rawBlock = formatter.parseBlock(rs.getString(1));
 							rawBlock.makeImmutable();
-							OpBlock replicateBlock = newParent.replicateBlock(rawBlock);
+							OpBlock replicateBlock = blc.replicateBlock(rawBlock);
 							if (replicateBlock == null) {
 								throw new IllegalStateException("Could not replicate block: "
 										+ formatter.toJson(rawBlock));
@@ -282,49 +169,64 @@ public class DBConsensusManager {
 						}
 					});
 		}
+		return blc;
 	}
 
-	private BlockInfo createBlockInfo(String blockHash, String pblockHash, int blockid) {
-		BlockInfo parent = blocks.get(pblockHash);
+	private OpBlock createBlockInfo(String blockHash, String pblockHash, int blockid) {
+		OpBlock parent = blocks.get(pblockHash);
 		if(!OUtils.isEmpty(pblockHash) && parent == null) {
 			LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash ));
 			return null;
 		}
-		BlockInfo blockInfo = new BlockInfo(blockHash, parent, blockid);
-		if(parent != null) {
-			parent.children.addLast(blockInfo);
-		}
-		blocks.put(blockHash, blockInfo);
-		return blockInfo;
+		// TODO Load full block
+		OpBlock block = new OpBlock();
+		block.putStringValue(OpBlock.F_HASH, blockHash); // ! not raw hash
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, pblockHash);
+		block.putObjectValue(OpBlock.F_BLOCKID, blockid);
+		block.makeImmutable();
+		blocks.put(blockHash, block);
+		return block;
+	}
+	
+	protected BlockDbAccessInterface createDbAccess(String superblock, List<OpBlock> blockHeaders) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
-	private Superblock loadBlockHeadersAndBuildMainChain() {
-		Superblock[] res = new Superblock[1];
+	private OpBlockChain loadBlockHeadersAndBuildMainChain(final OpBlockchainRules rules) {
+		OpBlockChain[] res = new OpBlockChain[] { OpBlockChain.NULL };
+		boolean[] lastSuccess = new boolean[] { false };
 		jdbcTemplate.query("SELECT hash, phash, blockid, superblock from blocks order by blockId asc", new RowCallbackHandler() {
+			
+			List<OpBlock> blockHeaders = new LinkedList<OpBlock>();
+			String psuperblock;
+			
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
 				String blockHash = SecUtils.hexify(rs.getBytes(1));
 				String pblockHash = SecUtils.hexify(rs.getBytes(2));
 				String superblock = SecUtils.hexify(rs.getBytes(4));
-				BlockInfo blockInfo = createBlockInfo(blockHash, pblockHash, rs.getInt(3));
-				if(blockInfo == null) {
-					return;
-				}
+				OpBlock blockHeader = createBlockInfo(blockHash, pblockHash, rs.getInt(3));
 				if(OUtils.isEmpty(superblock)) {
-					orphanedBlocks.put(blockHash, blockInfo);
+					orphanedBlocks.put(blockHash, blockHeader);
 				} else {
-					String hsh = getSuperblockHash(res[0]);
-					if(OUtils.equals(hsh, superblock)) {
-						// reuse mainchain
-					} else if (OUtils.equals(pblockHash, getLastBlockHash(res[0]))){
-						res[0] = new Superblock(superblock, res[0]);
-						
+					lastSuccess[0] = false;
+					blockHeaders.add(blockHeader);
+					if(OUtils.equals(psuperblock, superblock)) {
+						// add to current chain
+						if(OUtils.equals(superblock, OpBlockchainRules.calculateSuperblockHash(blockHeaders.size(), blockHeader.getRawHash()))) { 
+							OpBlockChain parent = res[0];
+							res[0] = new OpBlockChain(parent, blockHeaders, createDbAccess(superblock, blockHeaders), rules);
+							blockHeaders.clear();
+							lastSuccess[0] = true;
+						}
 					} else {
-						throw new IllegalStateException(
-								String.format("Block '%s'. Illegal parent '%s' for superblock '%s'", blockHash, superblock));
+						if (!OUtils.equals(pblockHash, res[0].getLastBlockRawHash())) {
+							throw new IllegalStateException(
+								String.format("Block '%s'. Illegal parent '%s' != '%s' for superblock '%s'", blockHash, pblockHash,  
+										res[0].getLastBlockRawHash(), superblock));
+						}
 					}
-					res[0].blocks.addLast(blockHash);
-					res[0].blocksSet.add(blockHash);
 				}
 			}
 		});
@@ -333,38 +235,32 @@ public class DBConsensusManager {
 
 
 
-	private BlockInfo selectTopBlockFromOrphanedBlcoks() {
-		BlockInfo topBlockInfo = null;
-		for(BlockInfo bi : orphanedBlocks.values()) {
-			if(topBlockInfo == null || topBlockInfo.depth < bi.depth ||
-					(topBlockInfo.depth == bi.depth && topBlockInfo.hash.compareTo(bi.hash) > 0)){
+
+	private List<OpBlock> selectTopBlockFromOrphanedBlocks(OpBlockChain prev) {
+		OpBlock topBlockInfo = null;
+		for(OpBlock bi : orphanedBlocks.values()) {
+			if(topBlockInfo == null || topBlockInfo.getBlockId() < bi.getBlockId() ||
+					(topBlockInfo.getBlockId() == bi.getBlockId() && topBlockInfo.getRawHash().compareTo(bi.getRawHash()) > 0)){
 				topBlockInfo = bi;
 			}
 		}
-		return topBlockInfo;
-	}
-
-
-
-	private Superblock putBlocksOnTopOfchain(BlockInfo topBlockInfo, Superblock chain) {
-		String lastBlockOfMainChain = chain == null ? "" : chain.blocks.peekLast();
-		if(topBlockInfo != null && chain != null && !topBlockInfo.containsBlock(lastBlockOfMainChain)) {
-			throw new IllegalStateException(String.format("Top selected block '%s' doesn't contain last block '%s' from superblock", topBlockInfo.hash, lastBlockOfMainChain));
-		}
-		Superblock res = chain;
-		if(topBlockInfo != null && !OUtils.equals(topBlockInfo.hash, lastBlockOfMainChain)) {
-			BlockInfo bi = topBlockInfo;
-			res = new Superblock(LEAF_SUPERBLOCK_ID, chain);
-			while(!lastBlockOfMainChain.equals(bi == null ? "": bi.hash)) {
-				res.blocks.addFirst(bi.hash);
-				res.blocksSet.add(bi.hash);
-				orphanedBlocks.remove(bi.hash);
-				bi = bi.parent; 
-				// bi couldn't be null;
+		LinkedList<OpBlock> blockList = new LinkedList<OpBlock>();
+		if(topBlockInfo != null && topBlockInfo.getBlockId() > prev.getLastBlockId()) {
+			OpBlock blockInfo = topBlockInfo;
+			while(blockInfo != null) {
+				if(OUtils.equals(blockInfo.getRawHash(), prev.getLastBlockRawHash())) {
+					return blockList;
+				}
+				orphanedBlocks.remove(blockInfo.getRawHash());
+				blockList.addFirst(blockInfo);
+				topBlockInfo = this.blocks.get(blockInfo.getPrevRawHash());
 			}
+			throw new IllegalStateException(String.format("Top selected block '%s' is not connected to superblock '%s'", 
+					topBlockInfo.getRawHash(), prev.getLastBlockRawHash()));
 		}
-		return res;
+		return blockList;
 	}
+
 
 
 	public void insertBlock(OpBlock opBlock) {
@@ -385,7 +281,7 @@ public class DBConsensusManager {
 			jdbcTemplate.update("UPDATE operations set blocks = blocks || ? where hash = ?" , 
 					blockHash, SecUtils.getHashBytes(o.getHash()));	
 		}
-		BlockInfo bi = createBlockInfo(rawHash, rawPrevBlockHash, opBlock.getBlockId());
+		OpBlock bi = createBlockInfo(rawHash, rawPrevBlockHash, opBlock.getBlockId());
 		if(bi != null) {
 			orphanedBlocks.put(rawHash, bi);
 		}
@@ -396,7 +292,6 @@ public class DBConsensusManager {
 		// find saved part of chain
 		Deque<OpBlockChain> notSaved = new LinkedList<OpBlockChain>();
 		OpBlockChain p = blc;
-		String lastBlockHash = getSuperblockHash(mainSavedChain);
 		while (p != null && !dbSavedChains.containsKey(p.getSuperBlockHash())) {
 			notSaved.addFirst(p);
 			p = p.getParent();

@@ -2,21 +2,30 @@ package org.openplacereviews.opendb.ops;
 
 import java.util.Collection;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import org.openplacereviews.opendb.ops.OpBlockChain.SuperblockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 
 public class OpPrivateBlocksList {
 
 	private final Deque<OpBlock> blocks = new ConcurrentLinkedDeque<OpBlock>();
 	private final Deque<OpBlock> blockHeaders = new ConcurrentLinkedDeque<OpBlock>();
 	private final Map<String, OpBlock> blocksInfo = new ConcurrentHashMap<>();
-	private final SuperblockDbAccessInterface dbAccess;
+	private final BlockDbAccessInterface dbAccess;
 	
+	public OpPrivateBlocksList() {
+		this.dbAccess = null;
+	}
 	
-	public OpPrivateBlocksList(SuperblockDbAccessInterface dbAccess) {
+	public OpPrivateBlocksList(List<OpBlock> headers, int superBlockDepth, BlockDbAccessInterface dbAccess) {
+		if(headers != null) {
+			for(OpBlock o : headers) {
+				addBlockHeader(o, superBlockDepth);
+			}
+		}
 		this.dbAccess = dbAccess;
 	}
 
@@ -79,10 +88,14 @@ public class OpPrivateBlocksList {
 		if(dbAccess != null){
 			throw new UnsupportedOperationException();
 		}
+		blocks.push(block);
+		addBlockHeader(block, superBlockDepth);
+	}
+
+	private void addBlockHeader(OpBlock block, int superBlockDepth) {
 		OpBlock blockHeader = new OpBlock(block, false, true).makeImmutable();
 		blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 		blockHeaders.push(blockHeader);
-		blocks.push(block);
 		String sb = getSuperBlockHash();
 		for(OpBlock blHeader : blockHeaders) {
 			blHeader.putCacheObject(OpBlock.F_SUPERBLOCK_HASH, sb);
