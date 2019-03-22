@@ -31,11 +31,9 @@ import org.springframework.stereotype.Service;
 public class DBConsensusManager {
 	protected static final Log LOGGER = LogFactory.getLog(DBConsensusManager.class);
 	
-	private static final String FIELD_NAME = "name";
-	
 	// check SimulateSuperblockCompactSequences to verify numbers
-	private static final double COMPACT_COEF = 0.5;
-	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 5;
+	private static final double COMPACT_COEF = 1;
+	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 32;
 	protected static final int COMPACT_ITERATIONS = 3;
 		
 	@Autowired
@@ -332,10 +330,11 @@ public class DBConsensusManager {
 			boolean compact = compactedParent == blc.getParent();
 			compact = compact && ((double) blc.getSuperblockSize() + COMPACT_COEF * prevSize) > ((double)blc.getParent().getSuperblockSize()) ;
 			if(compact) {
-				// TODO rewrite simulation
+				// See @SimulateSuperblockCompactSequences
 				if(blc.isDbAccessed() && db) {
 					LOGGER.info(String.format("Compact db superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
 					// TODO db compact
+					// here we need to lock all db access of 2 blocks and run update in 1 transaction
 					return blc;
 				} else {
 					LOGGER.info(String.format("Compact runtime superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
