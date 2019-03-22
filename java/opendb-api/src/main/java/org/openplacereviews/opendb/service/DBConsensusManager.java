@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,6 +51,9 @@ public class DBConsensusManager {
 	private JdbcTemplate jdbcTemplate;
 	
 	@Autowired
+    private DataSource dataSource;
+	
+	@Autowired
 	private JsonFormatter formatter;
 	
 	@Autowired
@@ -55,7 +61,8 @@ public class DBConsensusManager {
 
 	private Map<String, OpBlock> blocks = new ConcurrentHashMap<String, OpBlock>();
 	private Map<String, OpBlock> orphanedBlocks = new ConcurrentHashMap<String, OpBlock>();
-	private OpBlockChain mainSavedChain = null;
+	private Map<String, SuperblockDbAccess> dbSuperBlocks = new ConcurrentHashMap<>();
+	private OpBlockChain dbManagedChain = null;
 	
 	//////////// SYSTEM TABLES DDL ////////////
 	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, header jsonb, fullblock jsonb)";
@@ -65,8 +72,12 @@ public class DBConsensusManager {
 	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_BLOCKID = "create index blocks_blockid_ind on blocks(blockid)";
 	
 	
-	protected static final String DDL_CREATE_TABLE_OPS = "create table operations (dbid serial not null, hash bytea PRIMARY KEY, blocks bytea[], details jsonb)";
+	protected static final String DDL_CREATE_TABLE_OPS = "create table operations (dbid serial not null, hash bytea PRIMARY KEY, "
+			+ " superblock bytea, sdepth int, sorder int, blocks bytea[], details jsonb)";
 	protected static final String DDL_CREATE_TABLE_OPS_INDEX_HASH = "create index operations_hash_ind on operations(hash)";
+	
+	protected static final String DDL_CREATE_TABLE_OPS_DELETED = "create table op_deleted (dbid serial not null, hash bytea PRIMARY KEY, "
+			+ " superblock bytea, sdepth int, sorder int)";
 
 	
 	// Query / insert values 
@@ -102,27 +113,27 @@ public class DBConsensusManager {
 	}
 	
 	public String getSuperblockHash() {
-		return mainSavedChain.getSuperBlockHash();
+		return dbManagedChain.getSuperBlockHash();
 	}
 
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");
-		mainSavedChain = loadBlockHeadersAndBuildMainChain(rules);
+		dbManagedChain = loadBlockHeadersAndBuildMainChain(rules);
 		
 		LOGGER.info(String.format("+++ Loaded %d block headers +++", blocks.size()));
 		
-		List<OpBlock> topBlockInfo = selectTopBlockFromOrphanedBlocks(mainSavedChain);
+		List<OpBlock> topBlockInfo = selectTopBlockFromOrphanedBlocks(dbManagedChain);
 		if(!topBlockInfo.isEmpty()) {
 			LOGGER.info(String.format("### Selected main blockchain with '%s' and %d id. Orphaned blocks %d. ###", 
 					topBlockInfo.get(0).getRawHash(), topBlockInfo.get(0).getBlockId(), orphanedBlocks.size()));
 		} else {
 			LOGGER.info(String.format("### Selected main blockchain with '%s' and %d id. Orphaned blocks %d. ###", 
-					mainSavedChain.getLastBlockRawHash(), mainSavedChain.getLastBlockId(), orphanedBlocks.size()));
+					dbManagedChain.getLastBlockRawHash(), dbManagedChain.getLastBlockId(), orphanedBlocks.size()));
 		}
 		LOGGER.info("... Loading blocks from database ...");
-		OpBlockChain topChain = loadBlocks(topBlockInfo, mainSavedChain);
+		OpBlockChain topChain = loadBlocks(topBlockInfo, dbManagedChain);
 		LOGGER.info(String.format("### Loaded %d blocks ###", topChain.getSuperblockSize()));
 		
 		OpBlockChain blcQueue = new OpBlockChain(topChain, rules);
@@ -184,28 +195,70 @@ public class DBConsensusManager {
 		return rawBlock;
 	}
 
+	private OpBlockChain compactTwoDBAccessed(OpBlockChain blc) {
+		LOGGER.info(String.format("Compacting db superblock '%s' into  superblock '%s' - to be implemented ", 
+				blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
+		SuperblockDbAccess dbSB = dbSuperBlocks.get(blc.getSuperBlockHash());
+		SuperblockDbAccess dbPSB = dbSuperBlocks.get(blc.getParent().getSuperBlockHash());
+		OpBlockChain res = blc;
+		try {
+			dbSB.markAsStale(true);
+			dbPSB.markAsStale(true);
+			List<OpBlock> blockHeaders = new ArrayList<OpBlock>();
+			blockHeaders.addAll(blc.getSuperblockHeaders());
+			blockHeaders.addAll(blc.getParent().getSuperblockHeaders());
+			String newSuperblockHash = OpBlockchainRules.calculateSuperblockHash(blockHeaders.size(), blc.getLastBlockRawHash());
+			
+			// Connection conn = dataSource.getConnection();
+			// TODO prepare run & transaction update!
+			res = new OpBlockChain(blc.getParent().getParent(), 
+					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
+		} finally {
+			if(blc == res) {
+				// revert
+				dbSB.markAsStale(false);
+				dbPSB.markAsStale(false);	
+			}
+		}
+		return blc;
+	}
 	
 	protected class SuperblockDbAccess implements BlockDbAccessInterface {
 
-		private final String superBlockHash;
-		private final List<OpBlock> blockHeaders;
-		private final JdbcTemplate jdbcTemplate;
+		protected final String superBlockHash;
+		protected final List<OpBlock> blockHeaders;
 		private final ReentrantReadWriteLock readWriteLock;
 		private final ReadLock readLock;
-
-		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders, JdbcTemplate jdbcTemplate) {
+		private volatile boolean staleAccess;
+		
+		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders) {
 			this.superBlockHash = superBlockHash;
-			this.jdbcTemplate = jdbcTemplate;
 			this.blockHeaders = new ArrayList<OpBlock>(blockHeaders);
 			this.readWriteLock = new ReentrantReadWriteLock();
 			readLock = this.readWriteLock.readLock();
+			dbSuperBlocks.put(superBlockHash, this);
+		}
+		
+		public boolean markAsStale(boolean stale) {
+			WriteLock lock = readWriteLock.writeLock();
+			lock.lock();
+			try {
+				staleAccess = stale;
+				return true;
+			} finally {
+				lock.unlock();
+			}
 		}
 
 		@Override
 		public OpObject getObjectById(String type, CompoundKey k) {
-			
-			// TODO Auto-generated method stub
-			return null;
+			readLock.lock();
+			try {
+				// TODO Auto-generated method stub
+				return null;
+			} finally {
+				readLock.unlock();
+			}
 		}
 
 		@Override
@@ -216,38 +269,45 @@ public class DBConsensusManager {
 			}
 			readLock.lock();
 			try {
-				
+				// TODO Auto-generated method stub
+				return null;
 			} finally {
 				readLock.unlock();
 			}
-			// TODO Auto-generated method stub
-			return null;
 		}
 
 		@Override
 		public OperationDeleteInfo getOperationInfo(String rawHash) {
-			// TODO Auto-generated method stub
-			return null;
+			readLock.lock();
+			try {
+				// TODO Auto-generated method stub
+				return null;
+			} finally {
+				readLock.unlock();
+			}
 		}
 
 		@Override
 		public Collection<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) {
+			boolean isSuperblockReferenceActive = false;
 			readLock.lock();
 			try {
-				// TODO faster to load by superblock reference
-				List<OpBlock> blocks = new ArrayList<OpBlock>();
-				for (OpBlock b : blockHeaders) {
-					OpBlock lb = loadBlock(b.getRawHash());
-					if (lb == null) {
-						throw new IllegalStateException(String.format("Couldn't load '%s' block from db",
-								b.getRawHash()));
-					}
-					blocks.add(lb);
-				}
-				return blocks;
+				isSuperblockReferenceActive = !staleAccess;
 			} finally {
 				readLock.unlock();
 			}
+			if (isSuperblockReferenceActive) {
+				// to do faster to load by superblock reference, so it could be 1 sql
+			}
+			List<OpBlock> blocks = new ArrayList<OpBlock>();
+			for (OpBlock b : blockHeaders) {
+				OpBlock lb = loadBlock(b.getRawHash());
+				if (lb == null) {
+					throw new IllegalStateException(String.format("Couldn't load '%s' block from db", b.getRawHash()));
+				}
+				blocks.add(lb);
+			}
+			return blocks;
 		}
 
 		@Override
@@ -258,7 +318,7 @@ public class DBConsensusManager {
 	}
 	
 	protected BlockDbAccessInterface createDbAccess(String superblock, Collection<OpBlock> blockHeaders) {
-		return new SuperblockDbAccess(superblock, blockHeaders, jdbcTemplate);
+		return new SuperblockDbAccess(superblock, blockHeaders);
 	}
 
 	private OpBlockChain loadBlockHeadersAndBuildMainChain(final OpBlockchainRules rules) {
@@ -426,18 +486,17 @@ public class DBConsensusManager {
 			boolean compact = compactedParent == blc.getParent();
 			compact = compact && ((double) blc.getSuperblockSize() + COMPACT_COEF * prevSize) > ((double)blc.getParent().getSuperblockSize()) ;
 			if(compact) {
+				printBlockChain(blc);
 				// See @SimulateSuperblockCompactSequences
 				if(blc.isDbAccessed() && db) {
 					// here we need to lock all db access of 2 blocks and run update in 1 transaction
-					LOGGER.info(String.format("Compacting db superblock '%s' into  superblock '%s' - to be implemented ", 
-							blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
-					return blc;
+					return compactTwoDBAccessed(blc);
 				} else {
 					LOGGER.info(String.format("Compact runtime superblock '%s' into  superblock '%s' ", blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
 					blc = new OpBlockChain(blc,  blc.getParent(), blc.getRules());
-					printBlockChain(blc);
 					return blc;
 				}
+				
 			}
 		} else {
 			// redirect compact to parent 
@@ -456,8 +515,12 @@ public class DBConsensusManager {
 		while(p != null) {
 			String sh = p.getSuperBlockHash();
 			if(sh.length() > 10) {
-				superBlocksChain.add(sh.substring(0, 10));
+				sh = sh.substring(0, 10);
 			}
+			if(p.isDbAccessed()) {
+				sh = "db-"+sh;
+			}
+			superBlocksChain.add(sh);
 			p = p.getParent();
 		}
 		LOGGER.info(String.format("Runtime chain %s", superBlocksChain));
