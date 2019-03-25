@@ -182,6 +182,7 @@ public class DBConsensusManager {
 		SuperblockDbAccess dbSB = dbSuperBlocks.get(blc.getSuperBlockHash());
 		SuperblockDbAccess dbPSB = dbSuperBlocks.get(blc.getParent().getSuperBlockHash());
 		OpBlockChain res = blc;
+		boolean txOpen = false;
 		try {
 			dbSB.markAsStale(true);
 			dbPSB.markAsStale(true);
@@ -189,19 +190,59 @@ public class DBConsensusManager {
 			blockHeaders.addAll(blc.getSuperblockHeaders());
 			blockHeaders.addAll(blc.getParent().getSuperblockHeaders());
 			String newSuperblockHash = OpBlockchainRules.calculateSuperblockHash(blockHeaders.size(), blc.getLastBlockRawHash());
+			byte[] sbHashCurrent = SecUtils.getHashBytes(blc.getSuperBlockHash());
+			byte[] sbHashParent = SecUtils.getHashBytes(blc.getParent().getSuperBlockHash());
+			byte[] sbHashNew = SecUtils.getHashBytes(newSuperblockHash);
 			
 			// Connection conn = dataSource.getConnection();
-			// TODO prepare run & transaction update!
-			// 1. START TRANSACTION
-			// 2. BLOCKS_TABLE, superblock -> 
-			// 3. OPERATIONS_TABLE, superblock -> , mask, sdepth, sorder 
-			// 4. OP_DELETED_TABLE, superblock -> , mask, sdepth[], sorder[] (merge)
-			// 5. OBJS_TABLE, superblock -> (merge, p1-p5)
-			// 6. commit
+			// TODO test how it works
+			jdbcTemplate.execute("BEGIN");
+			txOpen = true;
+			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
+			
+			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
+			
+			jdbcTemplate.update("INSERT into " + OP_DELETED_TABLE + "(hash, superblock, sdepth, sorder, mask) "
+					+" SELECT isnull(r1.hash, r2.hash), ?, r1.sdepth || r2.sdepth, r1.sorder|| r2.sorder, r1.mask | r2.mask " 
+					+ " FROM " + OP_DELETED_TABLE + " r1 FULL OUTER JOIN " + OP_DELETED_TABLE + " r2 "
+					+ " ON r1.hash = r2.hash WHERE r1.superblock = ? and r2.superblock = ?", sbHashNew, sbHashCurrent, sbHashParent);
+			jdbcTemplate.update("DELETE " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashParent);
+			jdbcTemplate.update("DELETE " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashCurrent);
+			
+			
+			registerColumn(OBJS_TABLE, "type", "text", true);
+			registerColumn(OBJS_TABLE, "p1", "text", true);
+			registerColumn(OBJS_TABLE, "p2", "text", true);
+			registerColumn(OBJS_TABLE, "p3", "text", true);
+			registerColumn(OBJS_TABLE, "p4", "text", true);
+			registerColumn(OBJS_TABLE, "p5", "text", true);
+			registerColumn(OBJS_TABLE, "ophash", "bytea", true);
+			registerColumn(OBJS_TABLE, "superblock", "bytea", true);
+			registerColumn(OBJS_TABLE, "sdepth", "int", true);
+			registerColumn(OBJS_TABLE, "sorder", "int", true);
+			registerColumn(OBJS_TABLE, "content", "jsonb", false);
+			
+			jdbcTemplate.update("INSERT into " + OBJS_TABLE + "(type, p1, p2, p3, p4, p5, ophash, superblock, sdepth, sorder, content) "
+					+ " SELECT isnull(r1.type, r2.type), isnull(r1.p1, r2.p1), isnull(r1.p2, r2.p2), isnull(r1.p3, r2.p3), isnull(r1.p4, r2.p4), isnull(r1.p5, r2.p5),"
+					+ "     isnull(r1.ophash, r2.ophash), ?, isnull(r1.sdepth, r2.sdepth), isnull(r1.sorder, r2.sorder), isnull(r1.content, r2.content) " 
+					+ " FROM " + OBJS_TABLE + " r1 FULL OUTER JOIN " + OP_DELETED_TABLE + " r2 "
+					+ " ON r1.type = r2.type and r1.p1 = r2.p1 and r1.p2 is not distinct from r2.p2 "
+					+ "    and r1.p3 is not distinct from r2.p3 and r1.p4 is not distinct from r2.p4 and r1.p5 is not distinct from r2.p5  " 
+					+ " WHERE r1.superblock = ? and r2.superblock = ?", sbHashNew, sbHashCurrent, sbHashParent);
+			jdbcTemplate.update("DELETE " + OBJS_TABLE + " WHERE superblock = ? ", sbHashParent);
+			jdbcTemplate.update("DELETE " + OBJS_TABLE + " WHERE superblock = ? ", sbHashCurrent);
+
+			jdbcTemplate.execute("commit");
+			txOpen = false;
 			res = new OpBlockChain(blc.getParent().getParent(), 
 					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
 		} finally {
 			if(blc == res) {
+				if (txOpen) {
+					jdbcTemplate.execute("rollback");
+				}
 				// revert
 				dbSB.markAsStale(false);
 				dbPSB.markAsStale(false);	
@@ -474,7 +515,6 @@ public class DBConsensusManager {
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
 //		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
-		// TODO check insert content
 		jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
 				+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", 
 				blockHash, prevBlockHash, opBlock.getBlockId(), blockHeaderObj, blockObj);
