@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
@@ -86,6 +87,12 @@ class OpPrivateOperations {
 		if(pi.deletedObjects == null) {
 			pi.deletedObjects = new boolean[opRef.getNew().size()];
 		}
+		if(pi.deletedOpHashes == null) {
+			pi.deletedOpHashes = new ArrayList<String>();
+		} else { 
+			pi.deletedOpHashes = new ArrayList<String>(pi.deletedOpHashes);
+		}
+		pi.deletedOpHashes.add(opRef.getRawHash());
 		pi.deletedObjects[delInd] = true;
 	}
 	
@@ -111,6 +118,7 @@ class OpPrivateOperations {
 		odi.create = false;
 		// delete deleted objects by name
 		List<String> deletedRefs = op.getOld();
+		String rawHash = op.getRawHash();
 		for (int i = 0; i < deletedRefs.size(); i++) {
 			String delRef = deletedRefs.get(i);
 			String delHash = OpBlockChain.getHashFromAbsRef(delRef);
@@ -118,6 +126,9 @@ class OpPrivateOperations {
 			OperationDeleteInfo pi = opsByHash.get(delHash);
 			if (pi != null && pi.deletedObjects.length > delInd) {
 				pi.deletedObjects[delInd] = false;
+			}
+			if(pi != null && pi.deletedOpHashes != null) {
+				pi.deletedOpHashes.remove(rawHash);
 			}
 		}
 	}
@@ -147,6 +158,13 @@ class OpPrivateOperations {
 		int sz = (cdi == null || cdi.deletedObjects == null) ? 0 : cdi.deletedObjects.length;
 		int length = Math.max(sz, psz);
 		ndi.deletedObjects = new boolean[length];
+		ndi.deletedOpHashes = new ArrayList<String>();
+		if(pdi.deletedOpHashes != null) {
+			ndi.deletedOpHashes.addAll(pdi.deletedOpHashes);
+		}
+		if(cdi.deletedOpHashes != null) {
+			ndi.deletedOpHashes.addAll(cdi.deletedOpHashes);
+		}
 		for(int i = 0; i < length; i++) {
 			if(pdi != null && pdi.deletedObjects != null && i < pdi.deletedObjects.length && pdi.deletedObjects[i]) {
 				ndi.deletedObjects[i] = true;

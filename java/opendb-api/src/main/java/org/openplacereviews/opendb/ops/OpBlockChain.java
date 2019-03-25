@@ -319,7 +319,7 @@ public class OpBlockChain {
 			String delRef = deletedRefs.get(i);
 			String delHash = getHashFromAbsRef(delRef);
 			int delInd = getIndexFromAbsRef(delRef);
-			operations.addDeletedObject(delHash, delInd, validationCtx.deletedOpsCache.get(i));
+			operations.addDeletedObject(delHash, delInd, u);
 			
 		}
 		operations.addNewOperation(u);
