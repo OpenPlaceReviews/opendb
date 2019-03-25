@@ -138,7 +138,31 @@ public class CompoundKey implements Collection<String> {
 
 	@Override
 	public Object[] toArray() {
-		throw new UnsupportedOperationException();
+		Object[] t = new Object[size()];
+		if(t.length > 0) {
+			t[0] = first;
+		}
+		if(t.length > 1) {
+			t[1] = second;
+		}
+		for(int i = 2; i < t.length; i++) {
+			t[i] = others.get(i - 2);
+		}
+		return t;
+	}
+	
+	public Object[] toArray(Object[] t, int shift) {
+		int s = size();
+		if(s > 0) {
+			t[shift] = first;
+		}
+		if(s > 1) {
+			t[1 + shift] = second;
+		}
+		for(int i = 2; i < s; i++) {
+			t[i + shift] = others.get(i - 2);
+		}
+		return t;
 	}
 
 	@Override

@@ -120,6 +120,10 @@ public class JsonFormatter {
 		return gson.fromJson(opJson, OpOperation.class);
 	}
 	
+	public OpObject parseObject(String opJson) {
+		return gson.fromJson(opJson, OpObject.class);
+	}
+	
 	public OpBlock parseBlock(String opJson) {
 		return gson.fromJson(opJson, OpBlock.class);
 	}

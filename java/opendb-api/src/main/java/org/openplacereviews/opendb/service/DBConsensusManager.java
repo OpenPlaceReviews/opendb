@@ -3,9 +3,12 @@ package org.openplacereviews.opendb.service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +36,9 @@ import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
@@ -65,37 +70,12 @@ public class DBConsensusManager {
 	private OpBlockChain dbManagedChain = null;
 	
 	//////////// SYSTEM TABLES DDL ////////////
-	protected static final String DDL_CREATE_TABLE_BLOCKS = "create table blocks (hash bytea PRIMARY KEY, phash bytea, blockid int, superblock bytea, header jsonb, fullblock jsonb)";
-	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_HASH = "create index blocks_hash_ind on blocks(hash)";
-	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_PHASH = "create index blocks_phash_ind on blocks(phash)";
-	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_SUPERBLOCK = "create index blocks_superblock_ind on blocks(superblock)";
-	protected static final String DDL_CREATE_TABLE_BLOCK_INDEX_BLOCKID = "create index blocks_blockid_ind on blocks(blockid)";
+	private static String BLOCKS_TABLE = "blocks";
+	private static String OPERATIONS_TABLE = "operations";
+	private static String OP_DELETED_TABLE = "op_deleted";
+	private static String OBJS_TABLE = "objs";
 	
-	
-	protected static final String DDL_CREATE_TABLE_OPS = "create table operations (dbid serial not null, hash bytea PRIMARY KEY, "
-			+ " superblock bytea, sdepth int, sorder int, blocks bytea[], details jsonb)";
-	protected static final String DDL_CREATE_TABLE_OPS_INDEX_HASH = "create index operations_hash_ind on operations(hash)";
-	
-	protected static final String DDL_CREATE_TABLE_OPS_DELETED = "create table op_deleted (dbid serial not null, hash bytea PRIMARY KEY, "
-			+ " superblock bytea, sdepth int, sorder int)";
-
-	
-	// Query / insert values 
-	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';
-	// insert into test(b) values (decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
-	// UPDATE blocks SET superblocks = array_remove(superblocks, decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
-
-	public static void main(String[] args) {
-		System.out.println(DDL_CREATE_TABLE_BLOCKS + ';');
-		System.out.println(DDL_CREATE_TABLE_BLOCK_INDEX_HASH + ';');
-		System.out.println(DDL_CREATE_TABLE_BLOCK_INDEX_PHASH + ';');
-		System.out.println(DDL_CREATE_TABLE_BLOCK_INDEX_SUPERBLOCK + ';');
-		System.out.println(DDL_CREATE_TABLE_BLOCK_INDEX_BLOCKID + ';');
-		
-		System.out.println(DDL_CREATE_TABLE_OPS + ';');
-		System.out.println(DDL_CREATE_TABLE_OPS_INDEX_HASH + ';');
-	}
-	
+	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	
 	public Map<String, OpBlock> getOrphanedBlocks() {
 		return orphanedBlocks;
@@ -140,7 +120,8 @@ public class DBConsensusManager {
 		
 		LOGGER.info("... Loading operation queue  ...");
 		int[] ops = new int[1];
-		jdbcTemplate.query("SELECT details from operations where blocks is null order by dbid asc ", new RowCallbackHandler(){
+		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where blocks is null order by dbid asc ",
+				new RowCallbackHandler() {
 
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
@@ -177,7 +158,7 @@ public class DBConsensusManager {
 
 
 	private OpBlock loadBlock(String blockHash) {
-		List<OpBlock> blocks = jdbcTemplate.query("SELECT details from blocks where hash = ? ",
+		List<OpBlock> blocks = jdbcTemplate.query("SELECT content from " + BLOCKS_TABLE + "where hash = ? ",
 				new Object[] { SecUtils.getHashBytes(blockHash) }, new RowMapper<OpBlock>() {
 
 					@Override
@@ -211,6 +192,12 @@ public class DBConsensusManager {
 			
 			// Connection conn = dataSource.getConnection();
 			// TODO prepare run & transaction update!
+			// 1. START TRANSACTION
+			// 2. BLOCKS_TABLE, superblock -> 
+			// 3. OPERATIONS_TABLE, superblock -> , mask, sdepth, sorder 
+			// 4. OP_DELETED_TABLE, superblock -> , mask, sdepth[], sorder[] (merge)
+			// 5. OBJS_TABLE, superblock -> (merge, p1-p5)
+			// 6. commit
 			res = new OpBlockChain(blc.getParent().getParent(), 
 					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
 		} finally {
@@ -230,9 +217,11 @@ public class DBConsensusManager {
 		private final ReentrantReadWriteLock readWriteLock;
 		private final ReadLock readLock;
 		private volatile boolean staleAccess;
+		private final byte[] sbhash;
 		
 		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders) {
 			this.superBlockHash = superBlockHash;
+			sbhash = SecUtils.getHashBytes(superBlockHash);
 			this.blockHeaders = new ArrayList<OpBlock>(blockHeaders);
 			this.readWriteLock = new ReentrantReadWriteLock();
 			readLock = this.readWriteLock.readLock();
@@ -254,11 +243,35 @@ public class DBConsensusManager {
 		public OpObject getObjectById(String type, CompoundKey k) {
 			readLock.lock();
 			try {
-				// TODO Auto-generated method stub
-				return null;
+				if(staleAccess) {
+					throw new UnsupportedOperationException();
+				}
+				int sz = k.size();
+				Object[] o = new Object[sz + 2];
+				o[0] = sbhash;
+				o[1] = type;
+				k.toArray(o, 2);
+				return jdbcTemplate.query(getQuery(sz), o, new ResultSetExtractor<OpObject>() {
+
+					@Override
+					public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
+						return formatter.parseObject(rs.getString(1));
+					}
+				});
 			} finally {
 				readLock.unlock();
 			}
+		}
+
+		private String getQuery(int sz) {
+			String s = "select content from " + OBJS_TABLE +  " where superblock = ? and type = ? and p1 = ?";
+			if (sz > 5) {
+				throw new UnsupportedOperationException();
+			}
+			for (int t = 2; t <= sz; t++) {
+				s += " and p" + t + " = ?";
+			}
+			return s;
 		}
 
 		@Override
@@ -269,8 +282,32 @@ public class DBConsensusManager {
 			}
 			readLock.lock();
 			try {
-				// TODO Auto-generated method stub
-				return null;
+				if(staleAccess) {
+					throw new UnsupportedOperationException();
+				}
+				Object[] o = new Object[2];
+				o[0] = sbhash;
+				o[1] = type;
+				String sql = "select content, p1, p2, p3, p4, p5 from " + OBJS_TABLE + " where superblock = ? and type = ? ";
+				if(limit > 0) {
+					sql = sql + " limit " + limit;
+				}
+				Map<CompoundKey, OpObject> res = new LinkedHashMap<CompoundKey, OpObject>();
+				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
+					List<String> ls = new ArrayList<String>(5);
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						ls.clear();
+						ls.add(rs.getString(2));
+						ls.add(rs.getString(3));
+						ls.add(rs.getString(4));
+						ls.add(rs.getString(5));
+						ls.add(rs.getString(6));
+						CompoundKey k = new CompoundKey(0, ls);
+						res.put(k, formatter.parseObject(rs.getString(1)));
+					}
+				});
+				return res;
 			} finally {
 				readLock.unlock();
 			}
@@ -280,8 +317,32 @@ public class DBConsensusManager {
 		public OperationDeleteInfo getOperationInfo(String rawHash) {
 			readLock.lock();
 			try {
-				// TODO Auto-generated method stub
-				return null;
+				if(staleAccess) {
+					throw new UnsupportedOperationException();
+				}
+				Object[] o = new Object[2];
+				o[0] = sbhash;
+				o[1] = SecUtils.getHashBytes(rawHash);
+				String sql = "select mask from " + OP_DELETED_TABLE + " where superblock = ? and hash = ? ";
+				final OperationDeleteInfo od = new OperationDeleteInfo();
+				od.op = null; //rawHash; // TODO
+				jdbcTemplate.query(sql, o, new RowCallbackHandler(){
+
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						long bigInt = rs.getLong(1);
+						BitSet bs = new BitSet();
+						od.create = bigInt % 2 == 0;
+						od.deletedObjects = new boolean[bs.length()];
+						for(int i = 0; i < od.deletedObjects.length; i++) {
+							od.deletedObjects[i] = bs.get(i);
+						}
+					}
+				});
+				if(od.op == null) {
+					return null;
+				}
+				return od;
 			} finally {
 				readLock.unlock();
 			}
@@ -324,7 +385,7 @@ public class DBConsensusManager {
 	private OpBlockChain loadBlockHeadersAndBuildMainChain(final OpBlockchainRules rules) {
 		OpBlockChain[] res = new OpBlockChain[] { OpBlockChain.NULL };
 		boolean[] lastSuccess = new boolean[] { false };
-		jdbcTemplate.query("SELECT hash, phash, blockid, superblock, header from blocks order by blockId asc", new RowCallbackHandler() {
+		jdbcTemplate.query("SELECT hash, phash, blockid, superblock, header from " + BLOCKS_TABLE + " order by blockId asc", new RowCallbackHandler() {
 			
 			List<OpBlock> blockHeaders = new LinkedList<OpBlock>();
 			String psuperblock;
@@ -413,10 +474,12 @@ public class DBConsensusManager {
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
 //		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
-		jdbcTemplate.update("INSERT INTO blocks(hash, phash, blockid, header, fullblock ) VALUES (?, ?, ?, ?, ?)" , 
+		// TODO check insert content
+		jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
+				+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", 
 				blockHash, prevBlockHash, opBlock.getBlockId(), blockHeaderObj, blockObj);
 		for(OpOperation o : opBlock.getOperations()) {
-			jdbcTemplate.update("UPDATE operations set blocks = blocks || ? where hash = ?" , 
+			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set blocks = blocks || ? where hash = ?" , 
 					blockHash, SecUtils.getHashBytes(o.getHash()));	
 		}
 		blocks.put(rawHash, blockheader);
@@ -467,8 +530,11 @@ public class DBConsensusManager {
 			// assign parent hash only for last block
 			// String blockRawHash = SecUtils.hexify(blHash);
 			// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
-			jdbcTemplate.update("UPDATE blocks set superblock = ? where hash = ?",
-							shash, blHash);
+			
+			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? where hash = ?", shash, blHash);
+			// TODO insert OBJS_TABLE (p1-p5, ophash, superblock, sdepth, sorder, content)
+			// TODO insert OPERATIONS_TABLE (superblock, sdepth, sorder) 
+			// TODO insert OP_DELETED_TABLE (superblock, mask, sdepth[], sorder[])
 		}
 		OpBlockChain dbchain = new OpBlockChain(blc.getParent(), blockHeaders, 
 				createDbAccess(superBlockHash, blockHeaders), blc.getRules());
@@ -536,9 +602,95 @@ public class DBConsensusManager {
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
-		jdbcTemplate.update("INSERT INTO operations(hash, details) VALUES (?, ?)" , 
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", 
 				SecUtils.getHashBytes(op.getHash()), pGobject);
 	}
+	
+	
+	// SCHEMA DEFINITION
+	private static class ColumnDef {
+		String tableName; 
+		String colName; 
+		String colType;
+		boolean index;
+	}
+	
+	private static void registerColumn(String tableName, String colName, String colType, boolean index) {
+		List<ColumnDef> lst = schema.get(tableName);
+		if(lst == null) {
+			lst = new ArrayList<DBConsensusManager.ColumnDef>();
+			schema.put(tableName, lst);
+		}
+		ColumnDef cd = new ColumnDef();
+		cd.tableName = tableName;
+		cd.colName = colName;
+		cd.colType = colType;
+		cd.index = index;
+		lst.add(cd);
+	}
+	
+	static {
+		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", true);
+		registerColumn(BLOCKS_TABLE, "phash", "bytea", false);
+		registerColumn(BLOCKS_TABLE, "blockid", "int", true);
+		registerColumn(BLOCKS_TABLE, "superblock", "bytea", true);
+		registerColumn(BLOCKS_TABLE, "header", "jsonb", false);
+		registerColumn(BLOCKS_TABLE, "content", "jsonb", false);
+		
+		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
+		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
+		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", true);
+		registerColumn(OPERATIONS_TABLE, "sdepth", "int", true);
+		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
+		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
+		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
+		
+		registerColumn(OP_DELETED_TABLE, "hash", "bytea", true);
+		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", true);
+		registerColumn(OP_DELETED_TABLE, "sdepth", "int[]", false);
+		registerColumn(OP_DELETED_TABLE, "sorder", "int[]", false);
+		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
+		
+		registerColumn(OBJS_TABLE, "type", "text", true);
+		registerColumn(OBJS_TABLE, "p1", "text", true);
+		registerColumn(OBJS_TABLE, "p2", "text", true);
+		registerColumn(OBJS_TABLE, "p3", "text", true);
+		registerColumn(OBJS_TABLE, "p4", "text", true);
+		registerColumn(OBJS_TABLE, "p5", "text", true);
+		registerColumn(OBJS_TABLE, "ophash", "bytea", true);
+		registerColumn(OBJS_TABLE, "superblock", "bytea", true);
+		registerColumn(OBJS_TABLE, "sdepth", "int", true);
+		registerColumn(OBJS_TABLE, "sorder", "int", true);
+		registerColumn(OBJS_TABLE, "content", "jsonb", false);
+		
+	}
+	
+	// Query / insert values 
+	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';
+	// insert into test(b) values (decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
+	// UPDATE blocks SET superblocks = array_remove(superblocks, decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
+
+	public static void main(String[] args) {
+		
+		for(String tableName : schema.keySet()) {
+			List<ColumnDef> cls = schema.get(tableName);
+			StringBuilder clb = new StringBuilder();
+			StringBuilder indx = new StringBuilder();
+			for(ColumnDef c : cls) {
+				if(clb.length() > 0) {
+					clb.append(", ");
+				}
+				clb.append(c.colName).append(" ").append(c.colType);
+				if(c.index) {
+					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName, c.tableName, c.colName));
+				}
+			}
+			System.out.println(String.format("create table %s (%s);",tableName, clb.toString()));
+			System.out.println(indx.toString());
+		}
+		
+	}
+	
 	
 
 }
