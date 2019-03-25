@@ -6,4 +6,5 @@ public class OperationDeleteInfo {
 	public OpOperation op;
 	public boolean create;
 	public boolean[] deletedObjects;
+	public String[] deletedOpHashes;
 }

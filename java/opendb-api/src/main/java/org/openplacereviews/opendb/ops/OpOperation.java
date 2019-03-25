@@ -31,6 +31,7 @@ public class OpOperation extends OpObject {
 	public static final String F_COMMENT = "comment";
 	
 	private List<OpObject> newObjects = new LinkedList<OpObject>();
+	protected String type;
 	
 	public OpOperation() {
 	}
@@ -50,9 +51,17 @@ public class OpOperation extends OpObject {
 	public void setType(String name) {
 		checkNotImmutable();
 		type = name;
+		updateObjectsRef();
+	}
+
+	protected void updateObjectsRef() {
 		for(OpObject o : newObjects) {
-			o.setType(type);
+			o.setParentOp(this);
 		}
+	}
+	
+	public String getType() {
+		return type;
 	}
 	
 	public OpOperation makeImmutable() {
@@ -108,7 +117,7 @@ public class OpOperation extends OpObject {
 		checkNotImmutable();
 		newObjects.add(o);
 		if(type != null) {
-			o.setType(type);
+			o.setParentOp(this);
 		}
 	}
 	

@@ -46,7 +46,13 @@ class OpPrivateOperations {
 		}
 		return opsByHash.get(rawHash);
 	}
-	
+
+	public Collection<OperationDeleteInfo> getOperationInfos() {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
+		return opsByHash.values();
+	}
 	
 
 	void clearQueueOperations() {

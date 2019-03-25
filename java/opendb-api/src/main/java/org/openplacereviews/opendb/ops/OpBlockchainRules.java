@@ -297,11 +297,11 @@ public class OpBlockchainRules {
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
 		JsonArray deletedArray = (JsonArray) formatter.toJsonElement(deletedObjsCache);
 		for(int i = 0; i < deletedArray.size(); i++) {
-			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getType());
+			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getParentType());
 		}
 		JsonObject refsMap = formatter.toJsonElement(refObjsCache).getAsJsonObject();
 		for(String key : refObjsCache.keySet()) {
-			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getType());
+			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
 		}
 		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonElement(o).getAsJsonObject(),
 				deletedArray, refsMap);

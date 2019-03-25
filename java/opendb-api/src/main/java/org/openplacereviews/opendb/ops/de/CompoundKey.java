@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops.de;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -149,6 +150,11 @@ public class CompoundKey implements Collection<String> {
 			t[i] = others.get(i - 2);
 		}
 		return t;
+	}
+	
+	@Override
+	public String toString() {
+		return Arrays.toString(toArray());
 	}
 	
 	public Object[] toArray(Object[] t, int shift) {

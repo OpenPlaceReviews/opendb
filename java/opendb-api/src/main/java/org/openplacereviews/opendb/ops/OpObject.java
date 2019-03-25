@@ -42,7 +42,9 @@ public class OpObject {
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected transient Map<String, Object> cacheFields;
 	protected boolean isImmutable;
-	protected String type;
+	
+	protected transient String parentType;
+	protected transient String parentHash;
 	
 	public OpObject() {}
 	
@@ -55,6 +57,23 @@ public class OpObject {
 		if(copyCacheFields) {
 			this.cacheFields.putAll(cp.cacheFields);
 		}
+	}
+	
+	public void setParentOp(OpOperation op) {
+		setParentOp(op.type, op.getRawHash());
+	}
+	
+	public void setParentOp(String parentType, String parentHash) {
+		this.parentType = parentType;
+		this.parentHash = parentHash;
+	}
+	
+	public String getParentHash() {
+		return parentHash;
+	}
+	
+	public String getParentType() {
+		return parentType;
 	}
 	
 	public List<String> getId() {
@@ -99,18 +118,6 @@ public class OpObject {
 	
 	public String getName() {
 		return getStringValue(F_NAME);
-	}
-	
-	public String getType() {
-		return type;
-	}
-	
-	public void setType(String name) {
-		if(OUtils.equals(name, type)) {
-			return;
-		}
-		checkNotImmutable();
-		type = name;
 	}
 	
 	public String getComment() {

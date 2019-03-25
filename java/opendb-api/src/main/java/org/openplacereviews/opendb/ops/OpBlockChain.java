@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -492,6 +493,20 @@ public class OpBlockChain {
 		return blocks.getAllBlocks();
 	}
 	
+	public Collection<OperationDeleteInfo> getSuperblockDeleteInfo() {
+		return operations.getOperationInfos();
+	}
+	
+	public Map<String, Map<CompoundKey, OpObject>> getSuperblockObjects() {
+		Map<String, Map<CompoundKey, OpObject>> mp = new TreeMap<String, Map<CompoundKey, OpObject>>(); 
+		for(String type : objByName.keySet()) {
+			OpPrivateObjectInstancesById bid = objByName.get(type);
+			Map<CompoundKey, OpObject> allObjects = bid.getAllObjects();
+			mp.put(type, allObjects);
+		}
+		return mp;
+	}
+	
 	public List<OpBlock> getBlockHeaders(int depth) {
 		List<OpBlock> lst = new ArrayList<>();
 		fetchBlockHeaders(lst, depth);
@@ -675,6 +690,7 @@ public class OpBlockChain {
 		if(oin != null) {
 			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
+		u.updateObjectsRef();
 		boolean valid = true;
 		valid = prepareDeletedObjects(u, ctx);
 		if(!valid) {

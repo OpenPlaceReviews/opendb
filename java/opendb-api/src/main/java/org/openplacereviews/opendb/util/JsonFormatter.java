@@ -154,6 +154,10 @@ public class JsonFormatter {
 	public String opToJson(OpOperation op) {
 		return gson.toJson(op);
 	}
+	
+	public String objToJson(OpObject op) {
+		return gson.toJson(op);
+	}
 
 	
 }

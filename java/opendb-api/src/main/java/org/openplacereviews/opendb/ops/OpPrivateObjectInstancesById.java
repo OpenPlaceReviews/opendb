@@ -41,6 +41,14 @@ class OpPrivateObjectInstancesById {
 		return getByKey(k);
 	}
 	
+	
+	public Map<CompoundKey, OpObject> getAllObjects() {
+		if(dbAccess != null){
+			throw new UnsupportedOperationException();
+		}
+		return objects;
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void fetchAllObjects(ObjectsSearchRequest request) {
 		
