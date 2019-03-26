@@ -93,8 +93,13 @@ public class OpPrivateBlocksList {
 
 	private void addBlockHeader(OpBlock block, int superBlockDepth) {
 		OpBlock blockHeader = new OpBlock(block, false, true).makeImmutable();
+		blockHeader.putCacheObject(OpBlock.F_OPERATIONS_SIZE, block.getOperations().size());
 		blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 		blockHeaders.push(blockHeader);
+		updateHeaders(superBlockDepth);
+	}
+
+	private void updateHeaders(int superBlockDepth) {
 		String sb = getSuperBlockHash();
 		for(OpBlock blHeader : blockHeaders) {
 			blHeader.putCacheObject(OpBlock.F_SUPERBLOCK_HASH, sb);
@@ -103,7 +108,7 @@ public class OpPrivateBlocksList {
 	}
 
 
-	void copyAndMerge(OpPrivateBlocksList copy, OpPrivateBlocksList parent) {
+	void copyAndMerge(OpPrivateBlocksList copy, OpPrivateBlocksList parent, int superBlockDepth) {
 		if(dbAccess != null){
 			throw new UnsupportedOperationException();
 		}
@@ -115,6 +120,7 @@ public class OpPrivateBlocksList {
 		
 		blocksInfo.putAll(copy.blocksInfo);
 		blocksInfo.putAll(parent.blocksInfo);
+		updateHeaders(superBlockDepth);
 		
 	}
 

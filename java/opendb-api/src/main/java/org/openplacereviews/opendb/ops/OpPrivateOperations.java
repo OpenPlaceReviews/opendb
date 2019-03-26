@@ -159,10 +159,10 @@ class OpPrivateOperations {
 		int length = Math.max(sz, psz);
 		ndi.deletedObjects = new boolean[length];
 		ndi.deletedOpHashes = new ArrayList<String>();
-		if(pdi.deletedOpHashes != null) {
+		if(pdi != null && pdi.deletedOpHashes != null) {
 			ndi.deletedOpHashes.addAll(pdi.deletedOpHashes);
 		}
-		if(cdi.deletedOpHashes != null) {
+		if(cdi != null && cdi.deletedOpHashes != null) {
 			ndi.deletedOpHashes.addAll(cdi.deletedOpHashes);
 		}
 		for(int i = 0; i < length; i++) {

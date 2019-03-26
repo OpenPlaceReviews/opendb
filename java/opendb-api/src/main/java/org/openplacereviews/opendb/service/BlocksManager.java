@@ -135,7 +135,7 @@ public class BlocksManager {
 	
 	
 	public synchronized void clearQueue() {
-		// there is no proper clear queue on atomc load
+		// there is no proper clear queue on atomic load
 		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 	}
 	

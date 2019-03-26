@@ -573,7 +573,6 @@ public class DBConsensusManager {
 	}
 	
 	
-	
 	private OpBlockChain saveSuperblock(OpBlockChain blc) {
 		blc.validateLocked();
 		String superBlockHashStr = blc.getSuperBlockHash();
@@ -717,7 +716,7 @@ public class DBConsensusManager {
 	private void printBlockChain(OpBlockChain blc) {
 		List<String> superBlocksChain = new ArrayList<String>();
 		OpBlockChain p = blc;
-		while(p != null) {
+		while(p != null && !p.isNullBlock()) {
 			String sh = p.getSuperBlockHash();
 			if(sh.length() > 10) {
 				sh = sh.substring(0, 10);
@@ -736,13 +735,28 @@ public class DBConsensusManager {
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
+		String js = formatter.opToJson(op);
 		try {
-			pGobject.setValue(formatter.opToJson(op));
+			pGobject.setValue(js);
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", 
-				SecUtils.getHashBytes(op.getHash()), pGobject);
+		byte[] bhash = SecUtils.getHashBytes(op.getHash());
+		String[] exContent = new String[1];
+		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where hash = ?" , new Object[] {bhash} , new RowCallbackHandler() {
+
+			@Override
+			public void processRow(ResultSet rs) throws SQLException {
+				exContent[0] = rs.getString(1);
+			}
+		});
+		if(exContent[0] == null) {
+			jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", 
+				bhash, pGobject);
+		} else if(!exContent[0].equals(js)) {
+			throw new IllegalArgumentException(String.format("Operation is duplicated with '%s' hash but different content: \n %s \n %s", 
+					op.getHash(), exContent[0], js));
+		} 
 	}
 	
 	
@@ -828,7 +842,6 @@ public class DBConsensusManager {
 		}
 		
 	}
-	
-	
+
 
 }

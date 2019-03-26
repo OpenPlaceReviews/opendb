@@ -381,7 +381,7 @@ public class OpBlockChain {
 	
 	private void copyAndMergeWithParent(OpBlockChain copy, OpBlockChain parent ) {
 		// 1. add blocks and their hashes
-		blocks.copyAndMerge(copy.blocks, parent.blocks);
+		blocks.copyAndMerge(copy.blocks, parent.blocks, parent.getSuperblocksDepth());
 		
 		// 2. merge operations cache with create delete info
 		operations.copyAndMerge(copy.operations, parent.operations);

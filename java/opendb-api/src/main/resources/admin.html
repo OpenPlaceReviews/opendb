@@ -253,9 +253,11 @@ function loadBlocksData() {
       for(var i = 0; i < data.blockchain.length; i++)  {
         let op = data.blockchain[i];
         items += "<br><li><b>Block id</b>: " + op.block_id;
-        items += "<br><b>Operations count</b>: " + op.ops.length;
         items += "<br><b>Hash</b>: " + op.hash;
-        items += "<br><b>Superblock</b>: " + op.superblock_id + ". " + op.superblock_hash;
+        if(op.eval) {
+          items += "<br><b>Operations count</b>: " + op.eval.operations_size;
+          items += "<br><b>Superblock</b>: " + op.eval.superblock_id + ". " + op.eval.superblock_hash;
+        }
         items += "<br><b>Signed by</b>: " + op.signed_by;
         items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
         items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
@@ -280,6 +282,7 @@ function loadQueueData() {
         delete clone.signature;
         delete clone.signature_hash;
         delete clone.validation;
+        delete clone.eval;
         sha256(JSON.stringify(clone)).then(digestValue => {
           if(("json:sha256:" + digestValue) != op.hash) {
             alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");

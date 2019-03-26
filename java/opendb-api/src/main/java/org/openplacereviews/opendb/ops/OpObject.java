@@ -32,6 +32,7 @@ public class OpObject {
 	public static final String TYPE_BLOCK = "sys.block";
 	public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 	// transient info about validation timing etc
+	public static final String F_EVAL = "eval";
 	public static final String F_VALIDATION = "validation";
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
@@ -54,7 +55,7 @@ public class OpObject {
 	
 	public OpObject(OpObject cp, boolean copyCacheFields) {
 		this.fields.putAll(cp.fields);
-		if(copyCacheFields) {
+		if(copyCacheFields && cp.cacheFields != null) {
 			this.cacheFields.putAll(cp.cacheFields);
 		}
 	}
@@ -262,12 +263,17 @@ public class OpObject {
 	public Map<String, Object> getMixedFieldsAndCacheMap() {
 		TreeMap<String, Object> mp = new TreeMap<>(fields);
 		if(cacheFields != null) {
+			TreeMap<String, Object> eval = new TreeMap<String, Object>();
 			Iterator<Entry<String, Object>> it = cacheFields.entrySet().iterator();
 			while(it.hasNext()) {
 				Entry<String, Object> e = it.next();
-				if(!mp.containsKey(e.getKey())) {
-					mp.put(e.getKey(), e.getValue());
+				Object v = e.getValue();
+				if(v instanceof Map || v instanceof String || v instanceof Number) {
+					eval.put(e.getKey(), v);
 				}
+			}
+			if(eval.size() > 0) {
+				mp.put(F_EVAL, eval);
 			}
 		}
 		return mp;
@@ -311,7 +317,9 @@ public class OpObject {
 		public OpObject deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
 			OpObject bn = new OpObject();
-			bn.fields = context.deserialize(json, TreeMap.class); 
+			bn.fields = context.deserialize(json, TreeMap.class);
+			// remove cache
+			bn.fields.remove(F_EVAL);
 			return bn;
 		}
 

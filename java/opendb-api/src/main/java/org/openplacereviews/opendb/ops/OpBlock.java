@@ -137,6 +137,7 @@ public class OpBlock extends OpObject {
 			OpBlock op = new OpBlock();
 			JsonElement operations = jsonObj.remove(F_OPERATIONS);
 			op.fields = context.deserialize(jsonObj, TreeMap.class);
+			op.fields.remove(F_EVAL);
 			if (operations != null && operations.isJsonArray()) {
 				JsonArray ar = operations.getAsJsonArray();
 				for(int i = 0; i < ar.size(); i++) {
