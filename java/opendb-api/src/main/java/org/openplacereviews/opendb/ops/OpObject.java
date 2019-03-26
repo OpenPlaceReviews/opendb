@@ -56,6 +56,7 @@ public class OpObject {
 	public OpObject(OpObject cp, boolean copyCacheFields) {
 		this.fields.putAll(cp.fields);
 		if(copyCacheFields && cp.cacheFields != null) {
+			this.cacheFields = new ConcurrentHashMap<String, Object>();
 			this.cacheFields.putAll(cp.cacheFields);
 		}
 	}
@@ -285,6 +286,11 @@ public class OpObject {
 		int result = 1;
 		result = prime * result + ((fields == null) ? 0 : fields.hashCode());
 		return result;
+	}
+	
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "[" + fields + "]";
 	}
 
 	@Override

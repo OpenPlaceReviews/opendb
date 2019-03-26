@@ -33,9 +33,15 @@ public class CompoundKey implements Collection<String> {
 		String first = null;
 		String second = null;
 		List<String> others = null;
+		boolean nulls = false;
 		for (int i = subInd; i < l.size(); i++) {
 			String element = l.get(i);
 			if (element == null) {
+				// allow to trim nulls in the end
+				nulls = true;
+				continue;
+			}
+			if(nulls) {
 				throw new IllegalArgumentException("Primary key coudln't be null: " + l);
 			}
 			if (i == subInd) {

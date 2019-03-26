@@ -381,6 +381,9 @@ public class OpBlockChain {
 	
 	
 	private void copyAndMergeWithParent(OpBlockChain copy, OpBlockChain parent ) {
+		if(copy.isDbAccessed() || parent.isDbAccessed()) {
+			throw new UnsupportedOperationException();
+		}
 		// 1. add blocks and their hashes
 		blocks.copyAndMerge(copy.blocks, parent.blocks, parent.getSuperblocksDepth());
 		
@@ -499,6 +502,9 @@ public class OpBlockChain {
 	}
 	
 	public Map<String, Map<CompoundKey, OpObject>> getSuperblockObjects() {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		Map<String, Map<CompoundKey, OpObject>> mp = new TreeMap<String, Map<CompoundKey, OpObject>>(); 
 		for(String type : objByName.keySet()) {
 			OpPrivateObjectInstancesById bid = objByName.get(type);
@@ -554,7 +560,7 @@ public class OpBlockChain {
 		if (isNullBlock()) {
 			return null;
 		}
-		OpPrivateObjectInstancesById ot = objByName.get(type);
+		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
 		if (ot != null) {
 			OpObject obj = ot.getObjectById(key, secondary);
 			if (obj != null) {
@@ -568,7 +574,7 @@ public class OpBlockChain {
 		if (isNullBlock()) {
 			return null;
 		}
-		OpPrivateObjectInstancesById ot = objByName.get(type);
+		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
 		if (ot != null) {
 			OpObject obj = ot.getObjectById(o);
 			if (obj != null) {
@@ -589,7 +595,7 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return;
 		}
-		OpPrivateObjectInstancesById oi = objByName.get(type);
+		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 		if(oi == null) {
 			parent.getObjects(type, request);
 		} else {
@@ -611,7 +617,7 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return;
 		}
-		OpPrivateObjectInstancesById o = objByName.get(type);
+		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
 		if(o != null) {
 			o.fetchAllObjects(request);
 		}

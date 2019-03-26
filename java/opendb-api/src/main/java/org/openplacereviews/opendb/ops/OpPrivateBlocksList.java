@@ -21,9 +21,12 @@ public class OpPrivateBlocksList {
 	
 	public OpPrivateBlocksList(Collection<OpBlock> headers, int superBlockDepth, BlockDbAccessInterface dbAccess) {
 		if (headers != null) {
-			for (OpBlock o : headers) {
-				addBlockHeader(o, superBlockDepth);
+			for (OpBlock b : headers) {
+				OpBlock blockHeader = new OpBlock(b, false, true).makeImmutable();
+				blocksInfo.put(blockHeader.getRawHash(), blockHeader);
+				blockHeaders.addLast(blockHeader);
 			}
+			updateHeaders(superBlockDepth);
 		}
 		this.dbAccess = dbAccess;
 	}
