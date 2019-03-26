@@ -203,7 +203,8 @@ public class OpBlockChain {
 			// can't replicate blocks when operations are not empty
 			return null;
 		}
-		boolean valid = rules.validateBlock(this, block, getLastBlockHeader(), block.getBlockId() != 0);
+		boolean valid = rules.validateBlock(this, 
+				block, getLastBlockHeader(), block.getBlockId() != 0);
 		if (!valid) {
 			return null;
 		}

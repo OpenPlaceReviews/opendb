@@ -1,6 +1,8 @@
 package org.openplacereviews.opendb.service;
 
 import java.sql.Array;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -40,6 +42,7 @@ import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
@@ -51,7 +54,7 @@ public class DBConsensusManager {
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 1;
-	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 32;
+	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 4; //32
 	protected static final int COMPACT_ITERATIONS = 3;
 		
 	@Autowired
@@ -115,7 +118,7 @@ public class DBConsensusManager {
 					dbManagedChain.getLastBlockRawHash(), dbManagedChain.getLastBlockId(), orphanedBlocks.size()));
 		}
 		LOGGER.info("... Loading blocks from database ...");
-		OpBlockChain topChain = loadBlocks(topBlockInfo, dbManagedChain);
+		OpBlockChain topChain = loadBlocks(topBlockInfo, dbManagedChain, rules);
 		LOGGER.info(String.format("### Loaded %d blocks ###", topChain.getSuperblockSize()));
 		
 		OpBlockChain blcQueue = new OpBlockChain(topChain, rules);
@@ -141,11 +144,12 @@ public class DBConsensusManager {
 
 
 
-	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent) {
+	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent, 
+			final OpBlockchainRules rules) {
 		if(topBlockInfo.size() == 0) {
 			return newParent;
 		}
-		OpBlockChain blc = new OpBlockChain(newParent, newParent.getRules());
+		OpBlockChain blc = new OpBlockChain(newParent, rules);
 		for (OpBlock b : topBlockInfo) {
 			String blockHash = b.getRawHash();
 			OpBlock rawBlock = loadBlock(blockHash);
@@ -160,7 +164,7 @@ public class DBConsensusManager {
 
 
 	private OpBlock loadBlock(String blockHash) {
-		List<OpBlock> blocks = jdbcTemplate.query("SELECT content from " + BLOCKS_TABLE + "where hash = ? ",
+		List<OpBlock> blocks = jdbcTemplate.query("SELECT content from " + BLOCKS_TABLE + " where hash = ? ",
 				new Object[] { SecUtils.getHashBytes(blockHash) }, new RowMapper<OpBlock>() {
 
 					@Override
@@ -225,7 +229,7 @@ public class DBConsensusManager {
 			registerColumn(OBJS_TABLE, "sorder", "int", true);
 			registerColumn(OBJS_TABLE, "content", "jsonb", false);
 			
-			jdbcTemplate.update("INSERT into " + OBJS_TABLE + "(type, p1, p2, p3, p4, p5, ophash, superblock, sblockid, sorder, content) "
+			jdbcTemplate.update("INSERT INTO " + OBJS_TABLE + "(type, p1, p2, p3, p4, p5, ophash, superblock, sblockid, sorder, content) "
 					+ " SELECT isnull(r1.type, r2.type), isnull(r1.p1, r2.p1), isnull(r1.p2, r2.p2), isnull(r1.p3, r2.p3), isnull(r1.p4, r2.p4), isnull(r1.p5, r2.p5),"
 					+ "     isnull(r1.ophash, r2.ophash), ?, isnull(r1.sblockid, r2.sblockid), isnull(r1.sorder, r2.sorder), isnull(r1.content, r2.content) " 
 					+ " FROM " + OBJS_TABLE + " r1 FULL OUTER JOIN " + OP_DELETED_TABLE + " r2 "
@@ -496,16 +500,21 @@ public class DBConsensusManager {
 		LinkedList<OpBlock> blockList = new LinkedList<OpBlock>();
 		if(topBlockInfo != null && topBlockInfo.getBlockId() > prev.getLastBlockId()) {
 			OpBlock blockInfo = topBlockInfo;
+			LinkedList<String> blocksInfoLst = new LinkedList<String>();
 			while(blockInfo != null) {
 				if(OUtils.equals(blockInfo.getRawHash(), prev.getLastBlockRawHash())) {
 					return blockList;
 				}
 				orphanedBlocks.remove(blockInfo.getRawHash());
 				blockList.addFirst(blockInfo);
-				topBlockInfo = this.blocks.get(blockInfo.getPrevRawHash());
+				blocksInfoLst.addFirst(blockInfo.getRawHash());
+				blockInfo = this.blocks.get(blockInfo.getPrevRawHash());
+			}
+			if(OUtils.isEmpty(prev.getLastBlockRawHash())) {
+				return blockList;
 			}
 			throw new IllegalStateException(String.format("Top selected block '%s' is not connected to superblock '%s'", 
-					topBlockInfo.getRawHash(), prev.getLastBlockRawHash()));
+					blocksInfoLst.toString(), prev.getLastBlockRawHash()));
 		}
 		return blockList;
 	}
@@ -617,22 +626,25 @@ public class DBConsensusManager {
 						}
 					}
 				}
-				long[] ls = bs.toLongArray();
-				Object[] sobjs = new Object[oi.deletedOpHashes == null? 0 : oi.deletedOpHashes.size()];
-//				try {
-					for (int i = 0; i < sobjs.length; i++) {
-						if (oi.deletedOpHashes.get(i) != null) {
-//							PGobject pGobject = new PGobject();
-//							pGobject.setType("bytea");
-//							pGobject.setValue(SecUtils.getHashBytes(oi.deletedOpHashes[i]));
-							sobjs[i] = SecUtils.getHashBytes(oi.deletedOpHashes.get(i));
-						}
+				final long[] ls = bs.toLongArray();
+				final Object[] sobjs = new Object[oi.deletedOpHashes == null? 0 : oi.deletedOpHashes.size()];
+				for (int i = 0; i < sobjs.length; i++) {
+						sobjs[i] = SecUtils.getHashBytes(oi.deletedOpHashes.get(i));
+				}
+				jdbcTemplate.update(new PreparedStatementCreator() {
+					
+					@Override
+					public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+						Array refs = con.createArrayOf("bytea", sobjs);
+						PreparedStatement pt = con.prepareStatement("INSERT INTO " + OP_DELETED_TABLE + "(hash,superblock,shash,mask)"
+											+ " VALUES(?,?,?,?)");
+						pt.setBytes(1, opHash);
+						pt.setBytes(2, superBlockHash);
+						pt.setArray(3, refs);
+						pt.setLong(4, ls[0]);
+						return pt;
 					}
-//				} catch (SQLException e) {
-//					throw new IllegalArgumentException(e);
-//				}
-				jdbcTemplate.update("INSERT " + OP_DELETED_TABLE + "(hash,superblock,shash,mask)"
-						+ " values(?,?,?,?)", opHash, superBlockHash, sobjs, ls[0]);	
+				});
 			}
 			
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
@@ -655,18 +667,24 @@ public class DBConsensusManager {
 					long l = opsId.get(ophash);
 					args[8] = OUtils.first(l);
 					args[9] = OUtils.second(l);
-					args[10] = formatter.objToJson(obj);
+					PGobject contentObj = new PGobject();
+					contentObj.setType("jsonb");
+					try {
+						contentObj.setValue(formatter.objToJson(obj));
+					} catch (SQLException es) {
+						throw new IllegalArgumentException(es);
+					}
+					args[10] = contentObj;
 					
-					jdbcTemplate.update("INSERT " + OBJS_TABLE + "(type,p1,p2,p3,p4,p5,ophash,superblock,sblockid,sorder,content) "
+					jdbcTemplate.update("INSERT INTO " + OBJS_TABLE + "(type,p1,p2,p3,p4,p5,ophash,superblock,sblockid,sorder,content) "
 							+ " values(?,?,?,?,?,?,?,?,?,?,?)", args);
 					
 				}
 				
 			}
-
-			jdbcTemplate.execute("COMMIT");
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 					blc.getRules());
+			jdbcTemplate.execute("COMMIT");
 		} finally {
 			if (dbchain == null) {
 				try {
@@ -718,6 +736,12 @@ public class DBConsensusManager {
 		OpBlockChain p = blc;
 		while(p != null && !p.isNullBlock()) {
 			String sh = p.getSuperBlockHash();
+			if (sh.startsWith("00")) {
+				while (sh.startsWith("00")) {
+					sh = sh.substring(2);
+				}
+				sh = "0*" + sh;
+			}
 			if(sh.length() > 10) {
 				sh = sh.substring(0, 10);
 			}
@@ -800,7 +824,7 @@ public class DBConsensusManager {
 		
 		registerColumn(OP_DELETED_TABLE, "hash", "bytea", true);
 		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", true);
-		registerColumn(OP_DELETED_TABLE, "shash", "int[]", false);
+		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
 		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
 		
 		registerColumn(OBJS_TABLE, "type", "text", true);

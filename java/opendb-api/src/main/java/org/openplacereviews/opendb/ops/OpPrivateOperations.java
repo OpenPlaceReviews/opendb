@@ -149,6 +149,7 @@ class OpPrivateOperations {
 	
 	static OperationDeleteInfo mergeDeleteInfo(OperationDeleteInfo cdi, OperationDeleteInfo pdi) {
 		OperationDeleteInfo ndi = new OperationDeleteInfo();
+		ndi.op = pdi != null ? pdi.op : cdi.op;
 		ndi.create = (pdi != null && pdi.create) || (cdi != null && cdi.create);
 		if((pdi != null && pdi.create) && (cdi != null && cdi.create)) {
 			// assert

@@ -20,8 +20,8 @@ public class OpPrivateBlocksList {
 	}
 	
 	public OpPrivateBlocksList(Collection<OpBlock> headers, int superBlockDepth, BlockDbAccessInterface dbAccess) {
-		if(headers != null) {
-			for(OpBlock o : headers) {
+		if (headers != null) {
+			for (OpBlock o : headers) {
 				addBlockHeader(o, superBlockDepth);
 			}
 		}
