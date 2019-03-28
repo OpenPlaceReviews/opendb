@@ -109,7 +109,9 @@
           2c. OAuth provider: <input type="text" id="login-oauth-p"/>  
           OAuth Id: <input type="text" id="login-oauth-id"/> 
         <br>
-        3. Public key (optional): <input type="text" id="login-public-key"/>  
+          3. Public key (optional): <input type="text" id="login-public-key"/>  
+        <br>
+          4. User details (raw json): <input type="text" id="login-details"/>  
         <br>
         <input type="submit" value="Login" id="login-btn"/>
       </div>
@@ -414,11 +416,13 @@ $( document ).ready(function() {
       var obj = {
         "name":$("#login-name").val(),
         "pwd":$("#login-pwd").val(),
+        "edit":"true",
         "signupPrivateKey":$("#login-signup-key").val(),
         "oauthProvider":$("#login-oauth-p").val(),
         "oauthId":$("#login-oauth-id").val(),
         "loginPubKey":$("#login-public-key").val(),
-        "loginAlgo":"EC"
+        "loginAlgo":"EC",
+        "userDetails": $("#login-details").val()
       };
       $.post("/api/auth/login", obj)
           .done(function(data){  $("#result").html(data); loadData();})
