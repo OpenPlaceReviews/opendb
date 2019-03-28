@@ -117,12 +117,8 @@ public class BlocksManager {
 		}
 		timer.measure(tmSDbSave, ValidationTimer.BLC_SAVE);
 		
-		
 		int tmCompact = timer.startExtra();
-		OpBlockChain newParent = dataManager.compact(0, blockchain.getParent(), true);
-		if(newParent != blockchain.getParent()) {
-			blockchain.changeToEqualParent(newParent);
-		}
+		compact();
 		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
 		
 		
@@ -132,41 +128,64 @@ public class BlocksManager {
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		return opBlock;
 	}
+
+	public synchronized boolean compact() {
+		OpBlockChain newParent = dataManager.compact(0, blockchain.getParent(), true);
+		if(newParent != blockchain.getParent()) {
+			blockchain.changeToEqualParent(newParent);
+		}
+		return true;
+	}
 	
 	
 	public synchronized void clearQueue() {
 		// there is no proper clear queue on atomic load
-		blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		java.util.Deque<OpOperation> ls = blockchain.getQueueOperations();
+		while(!ls.isEmpty()) {
+			OpOperation o = ls.getLast();
+			blockchain.removeQueueOperation(o);
+			// remove from db to not add after restart
+			dataManager.removeOperation(o);
+		}
+		// blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 	}
 	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
+		
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
 		if(blockchain.getParent() == null) {
 			return false;
 		}
-		OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
-		OpBlockChain pnt = blockchain.getParent();
-		List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getSuperblockFullBlocks());
-		Collections.reverse(lst);
-		for(OpBlock bl :  lst) {
-			for (OpOperation u : bl.getOperations()) {
-				if (!blc.addOperation(u)) {
+		
+		OpBlockChain parent = blockchain.getParent();
+		if(parent.isDbAccessed()) {
+			OpBlockChain newParent = dataManager.unloadSuperblockFromDB(parent);
+			return blockchain.changeToEqualParent(newParent);
+		} else {
+			OpBlockChain blc = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
+			OpBlockChain pnt = blockchain.getParent();
+			List<OpBlock> lst = new ArrayList<OpBlock>(pnt.getSuperblockFullBlocks());
+			Collections.reverse(lst);
+			for (OpBlock bl : lst) {
+				for (OpOperation u : bl.getOperations()) {
+					if (!blc.addOperation(u)) {
+						return false;
+					}
+				}
+				dataManager.removeFullBlock(bl);
+			}
+			for (OpOperation o : blockchain.getQueueOperations()) {
+				if (!blc.addOperation(o)) {
 					return false;
 				}
 			}
+			blockchain = blc;
+			String msg = String.format("Revert superblock from '%s:%d' to '%s:%d'", 
+					parent.getLastBlockFullHash(), parent.getLastBlockId(), blockchain.getLastBlockFullHash(), blockchain.getLastBlockId());
+			logSystem.logSuccessBlock(blockchain.getLastBlockHeader(), msg);
 		}
-		for(OpOperation o: blockchain.getQueueOperations()) {
-			if(!blc.addOperation(o)) {
-				return false;
-			}
-		}
-		OpBlockChain p = blockchain;
-		blockchain = blc;
-		String msg = String.format("Revert superblock from '%s:%d' to '%s:%d'", 
-				p.getLastBlockFullHash(), p.getLastBlockId(), blockchain.getLastBlockFullHash(), blockchain.getLastBlockId());
-		logSystem.logSuccessBlock(blockchain.getLastBlockHeader(), msg);
 		return true;
 	}
 	

@@ -240,7 +240,7 @@
 				],
 				"validate" : [
 					"std:eq(.type,.old.0.type)",
-					"std:eq(.id,.old.0.id)"
+					"std:eq(.new.id,.old.id)"
 				]
 			}]
 		},

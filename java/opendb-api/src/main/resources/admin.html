@@ -24,6 +24,7 @@
     <div id="home" class="tab-pane fade in active">
           <h1>Admin harness for OpenDB</h1>
           <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
+          <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
           <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
           <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
           
@@ -37,10 +38,11 @@
             
             <input type="submit" value="Create block" id="block-create-btn"/>
             <input type="submit" value="Clear log" id="clear-log-btn" />
-            <input type="submit" value="Clear queue" id="clear-list-btn" />
+            <input type="submit" value="Compact" id="compact-btn" />
             <br><br>
             <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
             <input type="submit" value="Revert super block" id="block-revert-btn"/>
+            <input type="submit" value="Clear queue" id="clear-list-btn" />
             <br><br>
             <input type="submit" value="Toggle pause blockchain" id="block-pause-btn"/>
 
@@ -247,7 +249,9 @@ function loadBlocksData() {
   $.getJSON( "/api/blocks", function( data ) {
       var items = "";
       $("#blockchain-status").html(data.status);
+      $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
       $("#admin-user").html(data.serverUser);
+
       // SHOW currentBlock, currentTx - as in progress or failed
       $("#blocks-tab").html("Blocks (" + data.blockchain.length + ")");
       for(var i = 0; i < data.blockchain.length; i++)  {
@@ -318,6 +322,12 @@ $( document ).ready(function() {
 
     $("#clear-log-btn").click(function(){
       $.post("/api/mgmt/logs-clear", {},  function(data, status){
+        loadData();
+      });
+    });
+
+    $("#compact-btn").click(function(){
+      $.post("/api/mgmt/compact", {},  function(data, status){
         loadData();
       });
     });

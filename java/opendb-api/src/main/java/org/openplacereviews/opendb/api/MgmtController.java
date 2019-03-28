@@ -102,6 +102,18 @@ public class MgmtController {
     	return ResponseEntity.ok("{\"status\":\"OK\", \"msg\":\"Blocks are reverted and operations added to the queue.\"}");
     }
     
+    @PostMapping(path = "/compact", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public ResponseEntity<String> compact(HttpSession session) throws FailedVerificationException {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
+    	if(!manager.compact()) {
+    		return ResponseEntity.ok("{\"status\":\"FAILED\", \"msg\":\"Compacting blocks failed\"}");
+    	}
+    	return ResponseEntity.ok("{\"status\":\"OK\", \"msg\":\"Blocks are compacted.\"}");
+    }
+    
     @PostMapping(path = "/toggle-pause", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> toggleBlockCreation(HttpSession session) {

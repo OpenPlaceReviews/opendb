@@ -25,7 +25,7 @@ class OpPrivateOperations {
 		this.dbAccess = dbAccess;
 	}
 
-	public Collection<OpOperation> getQueueOperations() {
+	public Deque<OpOperation> getQueueOperations() {
 		if(dbAccess != null) {
 			// in that case it could just return  empty list
 			// throw new UnsupportedOperationException("Queue is not supported by db access");
@@ -61,6 +61,13 @@ class OpPrivateOperations {
 			throw new UnsupportedOperationException();
 		}
 		queueOperations.clear();
+	}
+	
+	OpOperation removeLastOperation() {
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
+		return queueOperations.removeLast();
 	}
 	
 	void addNewOperation(OpOperation u) {
@@ -180,6 +187,8 @@ class OpPrivateOperations {
 		}
 		return ndi;
 	}
+
+	
 
 	
 }

@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.ops;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -194,6 +195,25 @@ public class OpBlockChain {
 			}
 		}
 		return block;
+	}
+	
+	public synchronized boolean removeQueueOperation(OpOperation r) {
+		validateIsUnlocked();
+		if(operations.getQueueOperations().getLast() != r) {
+			throw new UnsupportedOperationException("Not supported to delete custom operation");
+		}
+		locked = LOCKED_OP_IN_PROGRESS;
+		try {
+			OpOperation op = operations.removeLastOperation();
+			operations.removeOperationInfo(op);
+			atomicRemoveOperationObj(op, null);
+			locked = UNLOCKED;
+		} finally {
+			if (locked == LOCKED_OP_IN_PROGRESS) {
+				locked = LOCKED_ERROR;
+			}
+		}
+		return true;
 	}
 
 	public synchronized OpBlock replicateBlock(OpBlock block) {
@@ -435,7 +455,7 @@ public class OpBlockChain {
 	}
 
 	
-	public Collection<OpOperation> getQueueOperations() {
+	public Deque<OpOperation> getQueueOperations() {
 		return operations.getQueueOperations();
 	}
 	

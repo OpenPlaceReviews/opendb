@@ -1,6 +1,8 @@
 package org.openplacereviews.opendb.api ;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -74,13 +76,15 @@ public class ApiController {
 		return formatter.fullObjectToJson(r);
 	}
     
-    public static class BlockchainResult {
+    
+    protected static class BlockchainResult {
     	public String status;
     	public String serverUser;
-		public Collection<OpBlock> blockchain;
+		public List<OpBlock> blockchain;
+		public List<String> sblocks = new ArrayList<String>();
     }
     
-    public static class ObjectsResult {
+    protected static class ObjectsResult {
 		public Collection<OpObject> objects;
     }
     
@@ -90,6 +94,23 @@ public class ApiController {
 	public String blocksList(@RequestParam(required = false, defaultValue="50") int depth) throws FailedVerificationException {
 		BlockchainResult res = new BlockchainResult();
 		res.blockchain = manager.getBlockchain().getBlockHeaders(depth);
+		OpBlockChain o = manager.getBlockchain();
+		while(!o.isNullBlock()) {
+			if(o.getSuperBlockHash().equals("")) {
+				res.sblocks.add("Q-" + o.getQueueOperations().size());
+			} else {
+				String shorten = o.getSuperBlockHash();
+				while(shorten.indexOf("00")  == 0) {
+					shorten = shorten.substring(2);
+				}
+				shorten = shorten.substring(0, 2) + "-"  + shorten.substring(2, 10);
+				if(o.isDbAccessed()) {
+					shorten = "DB-" + shorten;
+				}
+				res.sblocks.add(shorten);
+			}
+			o = o.getParent();
+		}
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
 		return formatter.fullObjectToJson(res);
