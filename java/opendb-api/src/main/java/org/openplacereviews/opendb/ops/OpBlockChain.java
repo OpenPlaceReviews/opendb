@@ -843,7 +843,7 @@ public class OpBlockChain {
 		Collection<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
 
 		OpBlock getBlockByHash(String rawHash);
-		
+
 	}
 	
 	public static class ObjectsSearchRequest {

@@ -38,19 +38,6 @@ public class OpPrivateBlocksList {
 		return blocks;
 	}
 	
-	public OpBlock getBlockByHash(String rawHash) {
-		if (dbAccess != null) {
-			return dbAccess.getBlockByHash(rawHash);
-		}
-		// it could be optimized cause we could access blockheader quickly
-		for(OpBlock b : blocks) {
-			if(b.getRawHash().equals(rawHash)) {
-				return b;
-			}
-		}
-		return null;
-	}
-	
 	public Collection<OpBlock> getAllBlockHeaders() {
 		return blockHeaders;
 	}
@@ -72,10 +59,19 @@ public class OpPrivateBlocksList {
 	}
 	
 	public OpBlock getFullBlockByHash(String rawHash) {
-		if(dbAccess != null){
-			throw new UnsupportedOperationException();
+		OpBlock b = blocksInfo.get(rawHash);
+		if (b == null) {
+			return null;
 		}
-		return blocksInfo.get(rawHash);
+		if(dbAccess == null){
+			return dbAccess.getBlockByHash(rawHash);
+		}
+		for(OpBlock bs : blocks){
+			if(bs.getBlockId() == b.getBlockId()) {
+				return bs;
+			}
+		}
+		return b;
 	}
 	
 	
