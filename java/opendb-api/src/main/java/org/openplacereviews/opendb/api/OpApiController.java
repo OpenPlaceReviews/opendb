@@ -136,6 +136,7 @@ public class OpApiController {
 	@PostMapping(path = "/signup")
     @ResponseBody
     public ResponseEntity<String> signup(HttpSession session, @RequestParam(required = true) String name,  
+    		@RequestParam(required = false, defaultValue = "false") boolean edit,
     		@RequestParam(required = false) String pwd,  
     		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
@@ -147,6 +148,14 @@ public class OpApiController {
     	name = name.trim(); // reduce errors by having trailing spaces
     	if(!OpBlockchainRules.validateNickname(name)) {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
+    	}
+    	if(edit) {
+    		OpObject loginObj = manager.getLoginObj(name);
+    		if(loginObj == null) {
+//    			throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
+    		} else {
+    			op.addOld(loginObj.getParentHash(), 0);
+    		}
     	}
     	
     	op.setType(OpBlockchainRules.OP_SIGNUP);

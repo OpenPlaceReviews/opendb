@@ -26,6 +26,7 @@ import javax.sql.DataSource;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OUtils;
+import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
@@ -103,6 +104,7 @@ public class DBConsensusManager {
 
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
+		initializeDatabaseSchema(metadataDB);
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");
 		dbManagedChain = loadBlockHeadersAndBuildMainChain(rules);
@@ -142,6 +144,44 @@ public class DBConsensusManager {
 		return blcQueue;
 	}
 
+	private void initializeDatabaseSchema(MetadataDb metadataDB) {
+		for(String tableName : schema.keySet()) {
+			List<ColumnDef> cls = schema.get(tableName);
+			List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);
+			if(list == null) {
+				StringBuilder clb = new StringBuilder();
+				List<String> indx = new ArrayList<String>();
+				for(ColumnDef c : cls) {
+					if(clb.length() > 0) {
+						clb.append(", ");
+					}
+					clb.append(c.colName).append(" ").append(c.colType);
+					if(c.index) {
+						indx.add(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName, c.tableName, c.colName));
+					}
+				}
+				String createTable = String.format("create table %s (%s)", tableName, clb.toString());
+				jdbcTemplate.execute(createTable);
+				for(String ind : indx) {
+					jdbcTemplate.execute(ind);
+				}
+			} else {
+				for(ColumnDef c : cls) {
+					boolean found = false;
+					for(MetadataColumnSpec m : list) {
+						if(c.colName.equals(m.columnName)) {
+							found = true;
+							break;
+						}
+					}
+					if(!found) {
+						throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ", c.colName, tableName));
+					}
+				}
+			}
+			
+		}	
+	}
 
 
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent, 

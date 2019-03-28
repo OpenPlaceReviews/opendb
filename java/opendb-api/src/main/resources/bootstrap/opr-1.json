@@ -239,8 +239,8 @@
 					"std:eq(std:size(.old),1)"
 				],
 				"validate" : [
-					"std:eq(.type,.old.type)",
-					"std:eq(.id,.old.id)"
+					"std:eq(.type,.old.0.type)",
+					"std:eq(.id,.old.0.id)"
 				]
 			}]
 		},
@@ -274,7 +274,7 @@
 					"std:eq(std:size(.old), 1)"
 				],
 				"validate" : [
-					"auth:has_sig_roles(this, .old.role)"
+					"auth:has_sig_roles(this, .old.0.role)"
 				]
 			}]
 		},
@@ -302,7 +302,7 @@
 					"std:eq(std:size(.old), 1)"
 				],
 				"validate" : [
-					"auth:has_sig_roles(this, .old.owner_role)",
+					"auth:has_sig_roles(this, .old.0.owner_role)",
 					"std:eq(std:size(.new), 1)"
 				]
 			}]
