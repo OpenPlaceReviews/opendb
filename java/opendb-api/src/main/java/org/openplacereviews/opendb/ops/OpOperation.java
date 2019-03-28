@@ -109,6 +109,10 @@ public class OpOperation extends OpObject {
 		return getStringList(F_OLD);
 	}
 	
+	public void addOld(String hash, int ind) {
+		addOrSetStringValue(F_OLD, hash + ":" + ind);
+	}
+	
 	public List<OpObject> getNew() {
 		return newObjects;
 	}

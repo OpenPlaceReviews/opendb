@@ -210,23 +210,33 @@ public class OpApiController {
     @PostMapping(path = "/login")
     @ResponseBody
     public ResponseEntity<String> login(HttpSession session,
-    		@RequestParam(required = true) String name,  @RequestParam(required = false) String pwd, 
+    		@RequestParam(required = true) String name, 
+    		@RequestParam(required = false, defaultValue = "false") boolean edit, @RequestParam(required = false, defaultValue = "false") boolean delete,  
+    		@RequestParam(required = false) String pwd, 
     		@RequestParam(required = false) String signupPrivateKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
-    		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey) throws FailedVerificationException {
+    		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey,
+    		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
     	}
+    	
     	OpOperation op = new OpOperation();
     	op.setType(OpBlockchainRules.OP_LOGIN);
-    	OpObject obj = new OpObject();
-    	op.addNew(obj);
+    	if(edit) {
+    		OpObject loginObj = manager.getLoginObj(name);
+    		if(loginObj == null && delete) {
+    			throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
+    		} else {
+    			op.addOld(loginObj.getParentHash(), 0);
+    		}
+    	}
+    	
     	
 		KeyPair kp = null;
 		KeyPair otherKeyPair = null;
 		String nickname = OpBlockchainRules.getNicknameFromUser(name);
 		String purpose = OpBlockchainRules.getSiteFromUser(name);
-		obj.setId(nickname, purpose);
 		if(!OpBlockchainRules.validateNickname(purpose)) {
     		throw new IllegalArgumentException(String.format("The purpose '%s' couldn't be validated", purpose));
     	}
@@ -256,20 +266,31 @@ public class OpApiController {
 				throw new IllegalArgumentException("User was registered with different oauth id");
 			}
 			op.setSignedBy(serverName);
+		} else if (delete) {
+			kp = getServerLoginKeyPair(session);
+			op.setSignedBy(serverName);
 		}
 		if (kp == null) {
 			throw new IllegalArgumentException("Couldn't validate/find sign up key or server key for oauth");
 		}
     	
-    	KeyPair loginPair;
-		if (!OUtils.isEmpty(loginPubKey)) {
-			obj.putStringValue(OpBlockchainRules.F_ALGO, loginAlgo);
-    		loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
-    	} else {
-    		obj.putStringValue(OpBlockchainRules.F_ALGO, SecUtils.ALGO_EC);
-    		loginPair = SecUtils.generateRandomEC256K1KeyPair();
-    	}
-		obj.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
+    	KeyPair loginPair = null;
+		if (!delete) {
+			OpObject obj = new OpObject();
+			op.addNew(obj);
+			if (!OUtils.isEmpty(userDetails)) {
+				obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
+			}
+			obj.setId(nickname, purpose);
+			if (!OUtils.isEmpty(loginPubKey)) {
+				obj.putStringValue(OpBlockchainRules.F_ALGO, loginAlgo);
+				loginPair = SecUtils.getKeyPair(loginAlgo, null, loginPubKey);
+			} else {
+				obj.putStringValue(OpBlockchainRules.F_ALGO, SecUtils.ALGO_EC);
+				loginPair = SecUtils.generateRandomEC256K1KeyPair();
+			}
+			obj.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPublic()));
+		}
 		Map<String, Object> refs = new TreeMap<String, Object>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, nickname));
     	op.putObjectValue(OpOperation.F_REF, refs);
@@ -282,7 +303,7 @@ public class OpApiController {
     	
     	manager.addOperation(op);
     	// private key won't be stored on opendb
-    	if(loginPair.getPrivate() != null) {
+    	if(loginPair != null && loginPair.getPrivate() != null) {
     		op.putCacheObject(OpBlockchainRules.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
     	}
     	return ResponseEntity.ok(formatter.fullObjectToJson(op));

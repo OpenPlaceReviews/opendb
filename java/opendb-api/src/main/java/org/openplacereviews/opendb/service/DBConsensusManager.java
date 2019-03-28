@@ -448,6 +448,7 @@ public class DBConsensusManager {
 		public OpBlock getBlockByHash(String rawHash) {
 			return loadBlock(rawHash);
 		}
+
 		
 	}
 	
