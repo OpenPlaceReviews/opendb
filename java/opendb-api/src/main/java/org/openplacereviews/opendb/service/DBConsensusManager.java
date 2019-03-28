@@ -799,9 +799,10 @@ public class DBConsensusManager {
 	
 	public boolean removeOperation(OpOperation op) {
 		// simple approach without using transaction isolations
-		int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE + " a WHERE hash = ? and blocks = []) "
-				+ " INSERT INTO" + OPERATIONS_TRASH_TABLE
-				+ " (id, hash, time, content) SELECT id, hash, now(), content FROM moved_rows", SecUtils.getHashBytes(op.getRawHash()));
+		int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE + 
+				"     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
+				+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
+				+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows", SecUtils.getHashBytes(op.getRawHash()));
 		return upd != 0;
 	}
 	
@@ -811,8 +812,8 @@ public class DBConsensusManager {
 			jdbcTemplate.execute("BEGIN");
 			txRollback = true;
 			byte[] blockHash = SecUtils.getHashBytes(block.getRawHash());
-			int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + BLOCKS_TABLE + " a WHERE hash = ? and superblock is null) "
-					+ " INSERT INTO" + BLOCKS_TRASH_TABLE
+			int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + BLOCKS_TABLE + " a WHERE hash = ? and superblock is null RETURNING a.*) "
+					+ " INSERT INTO " + BLOCKS_TRASH_TABLE
 					+ " (hash, phash, blockid, time, content) SELECT hash, phash, blockid, now(), content FROM moved_rows", blockHash);
 			if(upd != 0) {
 				for (OpOperation o : block.getOperations()) {

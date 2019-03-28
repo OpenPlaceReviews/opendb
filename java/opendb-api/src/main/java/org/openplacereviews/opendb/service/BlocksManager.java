@@ -143,9 +143,9 @@ public class BlocksManager {
 		java.util.Deque<OpOperation> ls = blockchain.getQueueOperations();
 		while(!ls.isEmpty()) {
 			OpOperation o = ls.getLast();
-			blockchain.removeQueueOperation(o);
 			// remove from db to not add after restart
 			dataManager.removeOperation(o);
+			blockchain.removeQueueOperation(o);
 		}
 		// blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 	}
