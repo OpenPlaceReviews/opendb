@@ -88,7 +88,8 @@ public class OpApiController {
     		@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey, 
     		@RequestParam(required = false, defaultValue = "false") boolean dontSignByServer,
-    		@RequestParam(required = false, defaultValue = "false") boolean addToQueue)
+    		@RequestParam(required = false, defaultValue = "false") boolean addToQueue,
+    		@RequestParam(required = false, defaultValue = "false") boolean validate)
 			throws FailedVerificationException {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
@@ -100,7 +101,12 @@ public class OpApiController {
 			if (!OUtils.isEmpty(pwd)) {
 				kp = manager.getLoginKeyPairFromPwd(name, pwd);
 			} else if (!OUtils.isEmpty(privateKey)) {
-				kp = SecUtils.getKeyPair(SecUtils.ALGO_EC, privateKey, null);
+				if(validate) {
+					kp = manager.getLoginKeyPair(name, privateKey);
+				} else {
+					kp = SecUtils.getKeyPair(SecUtils.ALGO_EC, privateKey, null);
+				}
+				
 			}
 			if (kp == null) {
 				throw new IllegalArgumentException("Couldn't validate sign up key");

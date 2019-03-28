@@ -98,11 +98,9 @@ public class ApiController {
     @GetMapping(path = "/block-by-hash", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String getBlockByHash(@RequestParam(required = true) String hash) {
-    	OpBlock blockHeader = manager.getBlockchain().getBlockHeaderByRawHash(OpBlockchainRules.getRawHash(hash));
+    	OpBlock blockHeader = manager.getBlockchain().getFullBlockByRawHash(OpBlockchainRules.getRawHash(hash));
     	return formatter.fullObjectToJson(blockHeader);
     }
-    
-    
     
     
     @GetMapping(path = "/objects", produces = "text/json;charset=UTF-8")
@@ -133,7 +131,6 @@ public class ApiController {
 		return formatter.fullObjectToJson(obj);
 	}
     
-
     
     @GetMapping(path = "/block-bootstrap", produces = "text/json;charset=UTF-8")
     @ResponseBody

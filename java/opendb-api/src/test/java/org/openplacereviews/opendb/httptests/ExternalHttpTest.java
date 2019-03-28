@@ -41,7 +41,7 @@ public class ExternalHttpTest {
 		userSignup(client, "user_"+userInd, "supersecretepassword");
 		executeMgmtOp(client, MGMT_CREATE_BLOCK);
 		
-		for (int i = 1; i < 3; i++) {
+		for (int i = 1; i < 15; i++) {
 			// userSignup(client, "user_"+userInd++, "supersecretepassword");
 			// userSignup(client, "user_"+userInd++, "supersecretepassword");
 			userLogin(client, "user_" + userInd + ":" + (userInd+i), "supersecretepassword");

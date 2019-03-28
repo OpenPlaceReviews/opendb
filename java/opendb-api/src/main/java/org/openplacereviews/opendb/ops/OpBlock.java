@@ -38,6 +38,10 @@ public class OpBlock extends OpObject {
 	
 	protected List<OpOperation> operations = new ArrayList<OpOperation>();
 	
+	// cache for immutable
+	private int blockId = -1;
+	private String rawHash;
+	
 	public OpBlock() {
 	}
 	
@@ -69,6 +73,12 @@ public class OpBlock extends OpObject {
 	}
 	
 	public int getBlockId() {
+		if(isImmutable) {
+			if(blockId < 0) {
+				blockId = super.getIntValue(F_BLOCKID, -1);
+			}
+			return blockId;
+		}
 		return super.getIntValue(F_BLOCKID, -1);
 	}
 
@@ -85,6 +95,12 @@ public class OpBlock extends OpObject {
 	}
 	
 	public String getRawHash() {
+		if(isImmutable) {
+			if(rawHash == null) {
+				rawHash = OpBlockchainRules.getRawHash(getFullHash());
+			}
+			return rawHash;
+		}
 		return OpBlockchainRules.getRawHash(getFullHash());
 	}
 	

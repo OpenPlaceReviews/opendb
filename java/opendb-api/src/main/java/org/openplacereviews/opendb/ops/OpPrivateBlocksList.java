@@ -71,6 +71,14 @@ public class OpPrivateBlocksList {
 		return blocksInfo.get(rawHash);
 	}
 	
+	public OpBlock getFullBlockByHash(String rawHash) {
+		if(dbAccess != null){
+			throw new UnsupportedOperationException();
+		}
+		return blocksInfo.get(rawHash);
+	}
+	
+	
 	public String getSuperBlockHash() {
 		if (blockHeaders.size() == 0) {
 			return "";

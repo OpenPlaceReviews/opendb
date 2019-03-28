@@ -54,12 +54,9 @@ public class DBConsensusManager {
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	private static final double COMPACT_COEF = 1;
-	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 2; //32
+	private static final int SUPERBLOCK_SIZE_LIMIT_DB = 2; // TODO 32
 	protected static final int COMPACT_ITERATIONS = 3;
 	
-	// TODO update superblock information after compacting
-	// TODO stale access after db compacting
-		
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 	
