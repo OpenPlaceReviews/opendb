@@ -30,8 +30,6 @@ import org.springframework.stereotype.Service;
 public class BlocksManager {
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
-	public String[] BOOTSTRAP_LIST = new String[] {"opr-0-test", "std-ops-defintions", "std-roles", "std-validations"};
-	
 	@Autowired
 	private LogOperationService logSystem;
 	
@@ -40,6 +38,9 @@ public class BlocksManager {
 	
 	@Autowired
 	private DBConsensusManager dataManager;
+	
+	private String[] BOOTSTRAP_LIST = 
+			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "std-validations", "opr-0-test-grant"};
 	
 	@Value("${opendb.user}")
 	private String serverUser;
@@ -52,6 +53,7 @@ public class BlocksManager {
 	private KeyPair serverKeyPair;
 	
 	private OpBlockChain blockchain; 
+	
 	
 	public String getServerPrivateKey() {
 		return serverPrivateKey;

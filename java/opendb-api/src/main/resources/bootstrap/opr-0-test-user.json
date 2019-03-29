@@ -42,27 +42,5 @@
 		}],			
 		"hash": "json:sha256:41b132e7832099d14bf501606a969ba2a84ad2c46125b1c6470df709481d94b6",
 		"signature": "ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM"
-	},
-
-	
-	{
-		"type" : "sys.grant",
-		"ref" : {
-			"s" : ["sys.login","openplacereviews","test_1"]
-		},
-		"new" : [{ 
-			"id" : ["openplacereviews:test_1"],
-			"roles" : ["master", "administrator"]
-		}]
-	},
-	{
-		"type" : "sys.grant",
-		"ref" : {
-			"s" : ["sys.signup","openplacereviews"]
-		},
-		"new" : [{ 
-			"id" : ["openplacereviews"],
-			"roles" : ["owner"]
-		}]
 	}
 ]
