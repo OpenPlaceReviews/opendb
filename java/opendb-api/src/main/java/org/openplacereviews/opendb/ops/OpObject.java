@@ -34,6 +34,8 @@ public class OpObject {
 	// transient info about validation timing etc
 	public static final String F_EVAL = "eval";
 	public static final String F_VALIDATION = "validation";
+	public static final String F_PARENT_TYPE = "parentType";
+	public static final String F_PARENT_HASH = "parentHash";
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	{
@@ -263,14 +265,23 @@ public class OpObject {
 	
 	public Map<String, Object> getMixedFieldsAndCacheMap() {
 		TreeMap<String, Object> mp = new TreeMap<>(fields);
-		if(cacheFields != null) {
+		if(cacheFields != null || parentType != null || parentHash != null) {
 			TreeMap<String, Object> eval = new TreeMap<String, Object>();
-			Iterator<Entry<String, Object>> it = cacheFields.entrySet().iterator();
-			while(it.hasNext()) {
-				Entry<String, Object> e = it.next();
-				Object v = e.getValue();
-				if(v instanceof Map || v instanceof String || v instanceof Number) {
-					eval.put(e.getKey(), v);
+			
+			if(parentType != null) {
+				eval.put(F_PARENT_TYPE, parentType);
+			}
+			if(parentHash != null) {
+				eval.put(F_PARENT_HASH, parentHash);
+			}
+			if (cacheFields != null) {
+				Iterator<Entry<String, Object>> it = cacheFields.entrySet().iterator();
+				while (it.hasNext()) {
+					Entry<String, Object> e = it.next();
+					Object v = e.getValue();
+					if (v instanceof Map || v instanceof String || v instanceof Number) {
+						eval.put(e.getKey(), v);
+					}
 				}
 			}
 			if(eval.size() > 0) {

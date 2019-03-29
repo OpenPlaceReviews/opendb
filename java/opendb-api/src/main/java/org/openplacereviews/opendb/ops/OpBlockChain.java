@@ -587,6 +587,7 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
+		// to do: this method is not optimal cause we can query in db by raw hash much quicker through all parents
 		OperationDeleteInfo odi = operations.getOperationInfo(rawHash);
 		if(odi != null) {
 			return odi.op;
