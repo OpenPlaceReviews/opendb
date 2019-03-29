@@ -9,7 +9,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -136,21 +135,7 @@ public class MgmtController {
     	}
     	String serverName = getServerUser(session);
     	KeyPair serverLoginKeyPair = getServerLoginKeyPair(session);
-    	OpBlock block = formatter.parseBootstrapBlock("1");
-		if (!OUtils.isEmpty(serverName)) {
-			KeyPair kp = null;
-			for (OpOperation o : block.getOperations()) {
-				OpOperation op = o;
-				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
-					if(kp == null) {
-						kp = serverLoginKeyPair;
-					}
-					op.setSignedBy(serverName);
-					op = manager.generateHashAndSign(op, kp);
-				}
-				manager.addOperation(op);
-			}
-		}
+    	manager.bootstrap(serverName, serverLoginKeyPair);
 		return ResponseEntity.ok("{}");
     }
     

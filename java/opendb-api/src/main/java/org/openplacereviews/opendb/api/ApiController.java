@@ -153,10 +153,5 @@ public class ApiController {
 	}
     
     
-    @GetMapping(path = "/block-bootstrap", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public InputStreamResource block(@RequestParam(required = true) String id) {
-        return new InputStreamResource(formatter.getBlock(id));
-    }
     
 }

@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.service;
 
+import java.io.InputStreamReader;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,8 +10,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
@@ -26,6 +29,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class BlocksManager {
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
+	
+	public String[] BOOTSTRAP_LIST = new String[] {"opr-0-test", "std-ops-defintions", "std-roles", "std-validations"};
 	
 	@Autowired
 	private LogOperationService logSystem;
@@ -150,6 +155,28 @@ public class BlocksManager {
 		// blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 	}
 	
+	public synchronized void bootstrap(String serverName, KeyPair serverLoginKeyPair) throws FailedVerificationException {
+		for (String f : BOOTSTRAP_LIST) {
+			OpOperation[] lst = formatter.fromJson(
+					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
+					OpOperation[].class);
+			if (!OUtils.isEmpty(serverName)) {
+				KeyPair kp = null;
+				for (OpOperation o : lst) {
+					OpOperation op = o;
+					if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
+						if (kp == null) {
+							kp = serverLoginKeyPair;
+						}
+						op.setSignedBy(serverName);
+						op = generateHashAndSign(op, kp);
+					}
+					addOperation(op);
+				}
+			}
+		}
+	}
+	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
 		
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
@@ -269,7 +296,7 @@ public class BlocksManager {
 			candidates.add(o);
 		}
 		return candidates;
-	}	
+	}
 
 	
 }

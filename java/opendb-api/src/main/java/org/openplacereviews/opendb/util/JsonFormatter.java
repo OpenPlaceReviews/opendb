@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.util;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -24,6 +22,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSyntaxException;
 
 @Component
 public class JsonFormatter {
@@ -108,14 +107,6 @@ public class JsonFormatter {
 	}
 	
 //	operations to parse / format related
-	public InputStream getBlock(String id) {
-    	return ApiController.class.getResourceAsStream("/bootstrap/opr-"+id+".json");
-    }
-	
-	public OpBlock parseBootstrapBlock(String id) {
-		return gson.fromJson(new InputStreamReader(getBlock(id)), OpBlock.class);
-	}
-	
 	public OpOperation parseOperation(String opJson) {
 		return gson.fromJson(opJson, OpOperation.class);
 	}
@@ -139,6 +130,10 @@ public class JsonFormatter {
 	@SuppressWarnings("unchecked")
 	public TreeMap<String, Object> fromJsonToTreeMap(String json) {
 		return gson.fromJson(json, TreeMap.class);
+	}
+	
+	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
+		return gson.fromJson(json, classOfT);
 	}
 	
 	
