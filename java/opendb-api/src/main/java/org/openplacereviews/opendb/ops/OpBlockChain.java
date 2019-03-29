@@ -583,6 +583,17 @@ public class OpBlockChain {
 		return parent.getBlockHeaderByRawHash(hash);
 	}
 	
+	public OpOperation getOperationByHash(String rawHash) {
+		if(nullObject) {
+			return null;
+		}
+		OperationDeleteInfo odi = operations.getOperationInfo(rawHash);
+		if(odi != null) {
+			return odi.op;
+		}
+		return parent.getOperationByHash(rawHash);
+	}
+	
 	public OpObject getObjectByName(String type, String key) {
 		return getObjectByName(type, key, null);
 	}
@@ -878,7 +889,6 @@ public class OpBlockChain {
 		Object internalMapToFilterDuplicates; 
 		OpPrivateObjectInstancesById objToSetCache;
 	}
-
 
 
 }

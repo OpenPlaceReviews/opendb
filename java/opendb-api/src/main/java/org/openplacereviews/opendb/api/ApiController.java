@@ -123,6 +123,13 @@ public class ApiController {
     	return formatter.fullObjectToJson(blockHeader);
     }
     
+    @GetMapping(path = "/op-by-hash", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public String getOperationByHash(@RequestParam(required = true) String hash) {
+    	OpOperation op = manager.getBlockchain().getOperationByHash(OpBlockchainRules.getRawHash(hash));
+    	return formatter.fullObjectToJson(op);
+    }
+    
     
     @GetMapping(path = "/objects", produces = "text/json;charset=UTF-8")
     @ResponseBody
