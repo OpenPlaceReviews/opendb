@@ -227,7 +227,8 @@ public class OpApiController {
     @ResponseBody
     public ResponseEntity<String> login(HttpSession session,
     		@RequestParam(required = true) String name, 
-    		@RequestParam(required = false, defaultValue = "false") boolean edit, @RequestParam(required = false, defaultValue = "false") boolean delete,  
+    		@RequestParam(required = false, defaultValue = "false") boolean edit, @RequestParam(required = false, defaultValue = "false") boolean delete,
+    		@RequestParam(required = false, defaultValue = "false") boolean onlyValidate,
     		@RequestParam(required = false) String pwd, 
     		@RequestParam(required = false) String signupPrivateKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
@@ -316,8 +317,11 @@ public class OpApiController {
     	} else {
     		manager.generateHashAndSign(op, kp, otherKeyPair);
     	}
-    	
-    	manager.addOperation(op);
+    	if(onlyValidate) {
+    		manager.validateOperation(op);
+    	} else {
+    		manager.addOperation(op);
+    	}
     	// private key won't be stored on opendb
     	if(loginPair != null && loginPair.getPrivate() != null) {
     		op.putCacheObject(OpBlockchainRules.F_PRIVATEKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, loginPair.getPrivate()));
