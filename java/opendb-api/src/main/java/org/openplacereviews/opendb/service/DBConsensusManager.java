@@ -113,6 +113,7 @@ public class DBConsensusManager {
 		LOGGER.info(String.format("+++ Loaded %d block headers +++", blocks.size()));
 		
 		LinkedList<OpBlock> topBlockInfo = selectTopBlockFromOrphanedBlocks(dbManagedChain);
+//		LinkedList<OpBlock> topBlockInfo = new LinkedList<OpBlock>();
 		if(!topBlockInfo.isEmpty()) {
 			LOGGER.info(String.format("### Selected main blockchain with '%s' and %d id. Orphaned blocks %d. ###", 
 					topBlockInfo.getLast().getRawHash(), topBlockInfo.getLast().getBlockId(), orphanedBlocks.size()));
@@ -494,11 +495,12 @@ public class DBConsensusManager {
 				String pblockHash = SecUtils.hexify(rs.getBytes(2));
 				String superblock = SecUtils.hexify(rs.getBytes(4));
 				OpBlock parentBlockHeader = blocks.get(pblockHash);
+				OpBlock blockHeader = formatter.parseBlock(rs.getString(5));
 				if(!OUtils.isEmpty(pblockHash) && parentBlockHeader == null) {
 					LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash));
+					orphanedBlocks.put(blockHash, blockHeader);
 					return;
 				}
-				OpBlock blockHeader = formatter.parseBlock(rs.getString(5));
 				blocks.put(blockHash, blockHeader);
 				if(OUtils.isEmpty(superblock)) {
 					orphanedBlocks.put(blockHash, blockHeader);

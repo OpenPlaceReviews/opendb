@@ -151,10 +151,26 @@
 			"owner_role" : "none",
 			"if" :  [
 				"std:eq(.ref.s.auth_method,'provided')",
-				"std:eq(std:size(.new),1)"
+				"std:eq(std:size(.old),0)"
 			],
 			"validate" : [
 				"set:in(.ref.s.id, .signed_by)"
+			]
+		}]
+	},
+	{
+		"type" : "sys.validate",
+		"new" : [{
+			"id" : ["login_update_self_signed_provided"],
+			"type" : ["sys.login"],
+			"comment"   : "Check that login is signed by signup key. Nobody could change that rule",
+			"owner_role" : "none",
+			"if" :  [
+				"std:eq(.ref.s.auth_method,'provided')",
+				"std:eq(std:size(.old),1)"
+			],
+			"validate" : [
+				"std:or(set:in(.ref.s.id, .signed_by), set:in(.old.id, .signed_by))"
 			]
 		}]
 	},
@@ -166,7 +182,7 @@
 			"comment"   : "Check that signup is signed by itself. Nobody could change that rule",
 			"owner_role" : "none",
 			"if" :  [
-				"std:eq(.new.auth_method,'provided')"
+				"std:or(std:eq(.new.auth_method,'provided'), std:eq(.old.auth_method,'provided'))"
 			],
 			"validate" : [
 				"set:in(.new.id, .signed_by)"
@@ -182,10 +198,26 @@
 			"owner_role" : "owner",
 			"if" :  [
 				"std:eq(.ref.s.auth_method,'pwd')",
-				"std:eq(std:size(.new),1)"
+				"std:eq(std:size(.old),0)"
 			],
 			"validate" : [
 				"set:in(.ref.s.id, .signed_by)"
+			]
+		}]
+	},
+	{
+		"type" : "sys.validate",
+		"new" : [{
+			"id" : ["login_update_self_signed_pwd"],
+			"type" : ["sys.login"],
+			"comment"   : "Check that login is signed by signup key. Only owner could change that rule",
+			"owner_role" : "owner",
+			"if" :  [
+				"std:eq(.ref.s.auth_method,'pwd')",
+				"std:eq(std:size(.old),1)"
+			],
+			"validate" : [
+				"std:or(set:in(.ref.s.id, .signed_by), set:in(.old.id, .signed_by))"
 			]
 		}]
 	},
@@ -197,7 +229,7 @@
 			"comment"   : "Check that signup is signed by itself. Only owner could change that rule",
 			"owner_role" : "owner",
 			"if" :  [
-				"std:eq(.new.auth_method,'pwd')"
+				"std:or(std:eq(.new.auth_method,'pwd'),std:eq(.old.auth_method,'pwd'))"
 			],
 			"validate" : [
 				"set:in(.new.id, .signed_by)"

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -231,6 +232,10 @@ public class BlocksManager {
 	
 	public OpBlockChain getBlockchain() {
 		return blockchain == null ? OpBlockChain.NULL : blockchain;
+	}
+	
+	public Map<String, OpBlock> getOrphanedBlocks() {
+		return dataManager.getOrphanedBlocks();
 	}
 
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {

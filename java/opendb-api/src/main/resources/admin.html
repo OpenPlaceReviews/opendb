@@ -25,6 +25,7 @@
           <h1>Admin harness for OpenDB</h1>
           <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
           <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
+          <p id="blockchain-orphaned-blocks-header"><b>Orphaned blocks:</b> &nbsp;&nbsp;<span id="blockchain-orphaned-blocks"></span></p>
           <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
           <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
           
@@ -254,7 +255,19 @@ function loadStatusData() {
       var items = "";
       $("#blockchain-status").html(data.status);
       $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
+
       $("#admin-user").html(data.serverUser);
+      var ophS = Object.keys(data.orphanedBlocks);
+      if(ophS.length > 0) {
+        $("#blockchain-orphaned-blocks-header").show();
+        $("#blockchain-orphaned-blocks").html(
+            JSON.stringify(ophS, null, 4) + 
+            "<br><details><summary><b>Simple json</b></summary><pre>" + 
+                JSON.stringify(data.orphanedBlocks, null, 4) + "</pre></details>");
+      } else {
+        $("#blockchain-orphaned-blocks-header").hide();
+      }
+      
   });
 }
 
@@ -262,11 +275,11 @@ function loadBlocksData() {
   $.getJSON( "/api/blocks", function( data ) {
       var items = "";
       // SHOW currentBlock, currentTx - as in progress or failed
-      $("#blocks-tab").html("Blocks (" + data.blockchain.length + ")");
+      $("#blocks-tab").html("Blocks (" + data.blocks.length + ")");
       var superblockId = 0;
       var superblockHash = "";
-      for(var i = 0; i < data.blockchain.length; i++)  {
-        let op = data.blockchain[i];
+      for(var i = 0; i < data.blocks.length; i++)  {
+        let op = data.blocks[i];
         items += "<br><li><b>Block id</b>: " + op.block_id;
         items += "<br><b>Hash</b>: " + op.hash;
         if(op.eval) {
@@ -302,6 +315,11 @@ function loadQueueData() {
         delete clone.signature_hash;
         delete clone.validation;
         delete clone.eval;
+        if(clone.new) {
+          for(var ik = 0; ik < clone.new.length; ik++ ) {
+            delete clone.new[ik].eval;
+          }
+        }
         sha256(JSON.stringify(clone)).then(digestValue => {
           if(("json:sha256:" + digestValue) != op.hash) {
             alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");

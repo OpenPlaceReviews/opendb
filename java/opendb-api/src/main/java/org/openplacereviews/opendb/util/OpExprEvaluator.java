@@ -45,6 +45,8 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_STD_LEQ = "std:leq";
 	public static final String FUNCTION_STD_LE = "std:le";
 	public static final String FUNCTION_STD_SIZE = "std:size";
+	public static final String FUNCTION_STD_OR = "std:or";
+	public static final String FUNCTION_STD_AND = "std:and";
 
 	public static final String FUNCTION_SET_IN = "set:in";
 	public static final String FUNCTION_SET_ALL = "set:all";
@@ -197,6 +199,36 @@ public class OpExprEvaluator {
 				return ((JsonObject) ob).size();
 			}
 			return 1;
+		case FUNCTION_STD_AND:
+			for (Object o : args) {
+				if (o == null) {
+					return 0;
+				} else if (o instanceof Number) {
+					if (((Number) o).doubleValue() == 0) {
+						return 0;
+					}
+				} else if (o instanceof String) {
+					if (((String) o).length() == 0) {
+						return 0;
+					}
+				}
+			}
+			return 1;
+		case FUNCTION_STD_OR:
+			for (Object o : args) {
+				if (o == null) {
+					continue;
+				} else if (o instanceof Number) {
+					if (((Number) o).doubleValue() != 0) {
+						return 1;
+					}
+				} else if (o instanceof String) {
+					if (((String) o).length() > 0) {
+						return 1;
+					}
+				}
+			}
+			return 0;
 		case FUNCTION_AUTH_HAS_SIG_ROLES:
 			Object opSigned = getObjArgument(functionName, args, 0, false);
 			Object checkRoles = getObjArgument(functionName, args, 1, false);

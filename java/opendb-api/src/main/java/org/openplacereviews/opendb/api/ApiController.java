@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.api ;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,7 +45,7 @@ public class ApiController {
     @GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public String status() {
-    	BlockchainResult res = new BlockchainResult();
+    	BlockchainStatus res = new BlockchainStatus();
 		OpBlockChain o = manager.getBlockchain();
 		while(!o.isNullBlock()) {
 			if(o.getSuperBlockHash().equals("")) {
@@ -62,6 +63,7 @@ public class ApiController {
 			}
 			o = o.getParent();
 		}
+		res.orphanedBlocks = manager.getOrphanedBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
 		return formatter.fullObjectToJson(res);
@@ -97,11 +99,15 @@ public class ApiController {
 	}
     
     
-    protected static class BlockchainResult {
-    	public String status;
+    protected static class BlockchainStatus {
+		public String status;
     	public String serverUser;
-		public List<OpBlock> blockchain;
+		public Map<String, OpBlock> orphanedBlocks;
 		public List<String> sblocks = new ArrayList<String>();
+    }
+    
+    protected static class BlocksResult {
+		public Collection<OpBlock> blocks;
     }
     
     protected static class ObjectsResult {
@@ -112,8 +118,8 @@ public class ApiController {
     @GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
     @ResponseBody
 	public String blocksList(@RequestParam(required = false, defaultValue="50") int depth) throws FailedVerificationException {
-		BlockchainResult res = new BlockchainResult();
-		res.blockchain = manager.getBlockchain().getBlockHeaders(depth);
+    	BlocksResult res = new BlocksResult();
+		res.blocks = manager.getBlockchain().getBlockHeaders(depth);
 		return formatter.fullObjectToJson(res);
 	}
     
