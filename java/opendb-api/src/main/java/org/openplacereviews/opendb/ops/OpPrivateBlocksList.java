@@ -110,7 +110,6 @@ public class OpPrivateBlocksList {
 		String sb = getSuperBlockHash();
 		for(OpBlock blHeader : blockHeaders) {
 			blHeader.putCacheObject(OpBlock.F_SUPERBLOCK_HASH, sb);
-			blHeader.putCacheObject(OpBlock.F_SUPERBLOCK_ID, superBlockDepth);
 		}
 	}
 

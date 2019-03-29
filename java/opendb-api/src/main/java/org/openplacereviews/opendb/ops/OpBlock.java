@@ -34,7 +34,6 @@ public class OpBlock extends OpObject {
 	// transient (depends on the chain where block belongs to)
 	public static final String F_SUPERBLOCK_HASH = "superblock_hash";
 	public static final String F_OPERATIONS_SIZE = "operations_size";
-	public static final String F_SUPERBLOCK_ID = "superblock_id";
 	
 	protected List<OpOperation> operations = new ArrayList<OpOperation>();
 	

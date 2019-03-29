@@ -147,10 +147,12 @@ function loadData() {
 
 
 function loadAllData() {
+  loadStatusData();
   loadQueueData();
   loadObjectsData();
   loadBlocksData();
   loadErrorsData();
+
 }
 
 function refreshUser() {
@@ -247,22 +249,33 @@ function loadObjectsData() {
   }
 }
 
-function loadBlocksData() {
-  $.getJSON( "/api/blocks", function( data ) {
+function loadStatusData() {
+  $.getJSON( "/api/status", function( data ) {
       var items = "";
       $("#blockchain-status").html(data.status);
       $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
       $("#admin-user").html(data.serverUser);
+  });
+}
 
+function loadBlocksData() {
+  $.getJSON( "/api/blocks", function( data ) {
+      var items = "";
       // SHOW currentBlock, currentTx - as in progress or failed
       $("#blocks-tab").html("Blocks (" + data.blockchain.length + ")");
+      var superblockId = 0;
+      var superblockHash = "";
       for(var i = 0; i < data.blockchain.length; i++)  {
         let op = data.blockchain[i];
         items += "<br><li><b>Block id</b>: " + op.block_id;
         items += "<br><b>Hash</b>: " + op.hash;
         if(op.eval) {
+          if(op.eval.superblock_hash != superblockHash) {
+              superblockHash = op.eval.superblock_hash;
+              superblockId = superblockId + 1;
+          }
           items += "<br><b>Operations count</b>: " + op.eval.operations_size;
-          items += "<br><b>Superblock</b>: " + op.eval.superblock_id + ". " + op.eval.superblock_hash;
+          items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
         }
         items += "<br><b>Signed by</b>: " + op.signed_by;
         items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
