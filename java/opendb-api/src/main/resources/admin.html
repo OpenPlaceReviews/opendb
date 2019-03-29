@@ -395,7 +395,7 @@ $( document ).ready(function() {
         "privateKey":$("#sign-pk").val(),
         "dontSignByServer":$("#sign-by-server").is(':checked')
       };
-      $.post("/api/auth/sign-operation", obj)
+      $.post("/api/auth/process-operation", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });
@@ -408,7 +408,7 @@ $( document ).ready(function() {
         "addToQueue" : "true",
         "dontSignByServer":$("#sign-by-server").is(':checked')
       };
-      $.post("/api/auth/sign-operation", obj)
+      $.post("/api/auth/process-operation", obj)
           .done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
     });

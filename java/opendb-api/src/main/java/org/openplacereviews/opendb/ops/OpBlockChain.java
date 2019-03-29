@@ -303,15 +303,22 @@ public class OpBlockChain {
 		
 	}
 	
+	public boolean addOperation(OpOperation op) {
+		return addOperation(op, false);
+	}
+	
+	public boolean validateOperation(OpOperation op) {
+		return addOperation(op, true);
+	}
 	/**
 	 * Adds operation and validates it to block chain
 	 */
-	public synchronized boolean addOperation(OpOperation op) {
+	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate) {
 		op.checkImmutable();
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx("");
 		boolean valid = validateAndPrepareOperation(op, validationCtx);
-		if(!valid) {
+		if(!valid || onlyValidate) {
 			return valid;
 		}
 		locked = LOCKED_OP_IN_PROGRESS;

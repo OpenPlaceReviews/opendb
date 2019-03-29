@@ -82,9 +82,9 @@ public class OpApiController {
     			.body("{\"status\":\"ERROR\"}");
 	}
     
-    @PostMapping(path = "/sign-operation")
+    @PostMapping(path = "/process-operation")
     @ResponseBody
-    public ResponseEntity<String> signMessage(HttpSession session, 
+    public ResponseEntity<String> processOperation(HttpSession session, 
     		@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
     		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey, 
     		@RequestParam(required = false, defaultValue = "false") boolean dontSignByServer,
@@ -127,6 +127,9 @@ public class OpApiController {
 		} else if(kp != null) {
 			manager.generateHashAndSign(op, kp);
 		}
+		if(validate) {
+			manager.validateOperation(op);
+		}
 		if(addToQueue) {
 			manager.addOperation(op);
 		}
@@ -136,7 +139,7 @@ public class OpApiController {
 	@PostMapping(path = "/signup")
     @ResponseBody
     public ResponseEntity<String> signup(HttpSession session, @RequestParam(required = true) String name,  
-    		@RequestParam(required = false, defaultValue = "false") boolean edit,
+    		@RequestParam(required = false, defaultValue = "false") boolean edit, @RequestParam(required = false, defaultValue = "false") boolean onlyValidate,
     		@RequestParam(required = false) String pwd,  
     		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
@@ -212,7 +215,11 @@ public class OpApiController {
     	} else {
     		manager.generateHashAndSign(op, keyPair, otherKeyPair);
     	}
-    	manager.addOperation(op);
+    	if(onlyValidate) {
+    		manager.validateOperation(op);
+    	} else {
+    		manager.addOperation(op);
+    	}
     	return ResponseEntity.ok(formatter.fullObjectToJson(op));
     }
     

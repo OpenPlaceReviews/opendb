@@ -21,7 +21,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OUtils;
@@ -576,12 +575,30 @@ public class DBConsensusManager {
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
 //		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
-		jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
-				+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", 
-				blockHash, prevBlockHash, opBlock.getBlockId(), blockHeaderObj, blockObj);
-		for(OpOperation o : opBlock.getOperations()) {
-			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set blocks = blocks || ? where hash = ?" , 
-					blockHash, SecUtils.getHashBytes(o.getHash()));	
+		jdbcTemplate.execute("BEGIN");
+		boolean succeed = false;
+		try {
+			jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
+					+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", blockHash, prevBlockHash,
+					opBlock.getBlockId(), blockHeaderObj, blockObj);
+			for (OpOperation o : opBlock.getOperations()) {
+				int upd = jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set blocks = blocks || ? where hash = ?", blockHash,
+						SecUtils.getHashBytes(o.getHash()));
+				if (upd == 0) {
+					throw new IllegalArgumentException(
+							String.format("Can't create block '%s' cause op '%s' doesn't exist", opBlock.getRawHash(), o.getHash()));
+				}
+			}
+			jdbcTemplate.execute("COMMIT");
+			succeed = true;
+		} finally {
+			if (!succeed) {
+				try {
+					jdbcTemplate.execute("ROLLBACK");
+				} catch (DataAccessException e) {
+					LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
+				}
+			}
 		}
 		blocks.put(rawHash, blockheader);
 		orphanedBlocks.put(rawHash, blockheader);
@@ -874,6 +891,16 @@ public class DBConsensusManager {
 		return blc;
 	}
 	
+	public void validateDuplicateOperation(OpOperation op) {
+		String js = formatter.opToJson(op);
+		OpOperation existingOperation = getOperationByHash(op.getHash());
+		if (existingOperation != null && !js.equals(formatter.opToJson(existingOperation))) {
+			throw new IllegalArgumentException(String.format(
+					"Operation is duplicated with '%s' hash but different content: \n'%s'\n'%s'", op.getHash(),
+					formatter.opToJson(existingOperation).replace("\n", ""), js.replace("\n", "")));
+		}
+	}
+	
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
@@ -884,25 +911,21 @@ public class DBConsensusManager {
 			throw new IllegalArgumentException(e);
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
-		String[] exContent = new String[1];
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", 
+				bhash, pGobject);
+	}
+
+	public OpOperation getOperationByHash(String hash) {
+		final byte[] bhash = SecUtils.getHashBytes(hash);
+		OpOperation[] res = new OpOperation[1];
 		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where hash = ?" , new Object[] {bhash} , new RowCallbackHandler() {
 
 			@Override
 			public void processRow(ResultSet rs) throws SQLException {
-				exContent[0] = rs.getString(1);
+				res[0] = formatter.parseOperation(rs.getString(1));
 			}
 		});
-		if(exContent[0] == null) {
-			jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", 
-				bhash, pGobject);
-		} else {
-			exContent[0] = formatter.opToJson(formatter.parseOperation(exContent[0]));
-			if (!exContent[0].equals(js)) {
-				throw new IllegalArgumentException(String.format(
-						"Operation is duplicated with '%s' hash but different content: \n'%s'\n'%s'", op.getHash(),
-						exContent[0].replace("\n", ""), js.replace("\n", "")));
-			}
-		}
+		return res[0];
 	}
 	
 	

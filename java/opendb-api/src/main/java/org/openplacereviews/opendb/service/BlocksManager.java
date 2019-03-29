@@ -67,12 +67,22 @@ public class BlocksManager {
 		return serverKeyPair;
 	}
 	
+	public synchronized boolean validateOperation(OpOperation op) {
+		if(blockchain == null) {
+			return false;
+		}
+		return blockchain.validateOperation(op);
+	}
+	
 	public synchronized boolean addOperation(OpOperation op) {
 		if(blockchain == null) {
 			return false;
 		}
 		op.makeImmutable();
+		dataManager.validateDuplicateOperation(op);
 		boolean added = blockchain.addOperation(op);
+		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
+		// or that operation will be lost in queue and system needs to be restarted
 		dataManager.insertOperation(op);
 		return added;
 	}
@@ -105,6 +115,7 @@ public class BlocksManager {
 		}
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
+		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
