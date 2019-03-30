@@ -204,7 +204,7 @@ public class OpBlockChain {
 		}
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
-			operations.clearQueueOperations();
+			operations.clearQueueOperations(true);
 			objByName.clear();
 			locked = UNLOCKED;
 		} finally {
@@ -399,7 +399,7 @@ public class OpBlockChain {
 	}
 
 	private void atomicCreateBlockFromAllOps(OpBlock block) {
-		operations.clearQueueOperations();
+		operations.clearQueueOperations(false);
 		blocks.addBlock(block, getSuperblocksDepth());
 		
 	}

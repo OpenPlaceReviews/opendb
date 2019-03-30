@@ -56,12 +56,14 @@ class OpPrivateOperations {
 	}
 	
 
-	void clearQueueOperations() {
+	void clearQueueOperations(boolean deleteInfo) {
 		if(dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
 		queueOperations.clear();
-		opsByHash.clear();
+		if(deleteInfo) {
+			opsByHash.clear();
+		}
 	}
 	
 	void addNewOperation(OpOperation u) {
