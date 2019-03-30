@@ -131,17 +131,27 @@ public class MgmtController {
     	return ResponseEntity.ok("{\"status\":\"OK\", \"msg\":\"Blocks are compacted.\"}");
     }
     
-    @PostMapping(path = "/toggle-pause", produces = "text/json;charset=UTF-8")
+    @PostMapping(path = "/toggle-blockchain-pause", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public ResponseEntity<String> toggleOpsCreation(HttpSession session) {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
+    	if(manager.isBlockchainPaused()) {
+    		manager.unlockBlockchain();
+    	} else {
+    		manager.lockBlockchain();
+    	}
+    	return ResponseEntity.ok("{\"status\":\"OK\"}");
+    }
+    
+    @PostMapping(path = "/toggle-blocks-pause", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> toggleBlockCreation(HttpSession session) {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
     	}
-    	if(manager.isBlockchainPaused()) {
-    		manager.resumeBlockCreation();
-    	} else {
-    		manager.pauseBlockCreation();
-    	}
+    	manager.setBlockCreationOn(!manager.isBlockCreationOn());
     	return ResponseEntity.ok("{\"status\":\"OK\"}");
     }
     

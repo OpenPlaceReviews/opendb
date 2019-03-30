@@ -47,17 +47,18 @@ public class BlocksManager {
 	private String[] BOOTSTRAP_LIST = 
 			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "std-validations", "opr-0-test-grant"};
 	
-	@Value("${opendb.user}")
+	@Value("${opendb.mgmt.user}")
 	private String serverUser;
 	
-	@Value("${opendb.privateKey}")
+	@Value("${opendb.mgmt.privateKey}")
 	private String serverPrivateKey;
 	
-	@Value("${opendb.publicKey}")
+	@Value("${opendb.mgmt.publicKey}")
 	private String serverPublicKey;
 	private KeyPair serverKeyPair;
 	
 	private OpBlockChain blockchain; 
+	private boolean blockCreationOn = true;
 	
 	
 	public String getServerPrivateKey() {
@@ -70,6 +71,10 @@ public class BlocksManager {
 	
 	public KeyPair getServerLoginKeyPair() {
 		return serverKeyPair;
+	}
+	
+	public boolean isBlockCreationOn() {
+		return this.blockCreationOn;
 	}
 	
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
@@ -87,7 +92,11 @@ public class BlocksManager {
 	}
 	
 	
-	public synchronized boolean resumeBlockCreation() {
+	public synchronized void setBlockCreationOn(boolean on) {
+		this.blockCreationOn = on;
+	}
+	
+	public synchronized boolean unlockBlockchain() {
 		if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
 			blockchain.unlockByUser();
 			return true;
@@ -95,7 +104,7 @@ public class BlocksManager {
 		return false;
 	}
 	
-	public synchronized boolean pauseBlockCreation() {
+	public synchronized boolean lockBlockchain() {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
 			blockchain.lockByUser();
 			return true;

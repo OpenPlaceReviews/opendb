@@ -46,7 +46,8 @@
             <input type="submit" value="Revert 1 block" id="block-1revert-btn"/>
             <input type="submit" value="Clear queue" id="clear-list-btn" />
             <br><br>
-            <input type="submit" value="Pause/resume new ops/blocks" id="ops-pause-btn"/>
+            <input type="submit" value="Lock/unlock blockchain" id="ops-pause-btn"/>
+            <input type="submit" value="Pause/resume new blocks" id="blocks-pause-btn"/>
             <br><br>
             <input type="text" id="remove-orphaned-blocks-txt"/> 
             <input type="submit" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
@@ -392,7 +393,12 @@ $( document ).ready(function() {
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
     $("#ops-pause-btn").click(function(){
-       $.post("/api/mgmt/toggle-pause", {})
+       $.post("/api/mgmt/toggle-blockchain-pause", {})
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
+    $("#blocks-pause-btn").click(function(){
+       $.post("/api/mgmt/toggle-blocks-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });

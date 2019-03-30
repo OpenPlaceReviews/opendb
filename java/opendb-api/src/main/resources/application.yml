@@ -9,11 +9,17 @@ server:
   connection-timeout: 120000
 
 opendb:
-  user: ${OPENDB_LOGIN:openplacereviews:test_1}
-  privateKey: ${OPENDB_PK:base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCAOpUDyGrTPRPDQRCIRXysxC6gCgSTiNQ5nVEjhvsFITA==}
-  publicKey: ${OPENDB_PBK:base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==}
-  compactCoefficient: ${OPENDB_DB_CF:1.0}
-  dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
+  mgmt:
+    user: ${OPENDB_LOGIN:openplacereviews:test_1}
+    privateKey: ${OPENDB_PK:base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCAOpUDyGrTPRPDQRCIRXysxC6gCgSTiNQ5nVEjhvsFITA==}
+    publicKey: ${OPENDB_PBK:base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==}
+  db:
+    compactCoefficient: ${OPENDB_DB_CF:1.0}
+    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
+  block-create:
+    minSecondsInterval: 120
+    minQueueSize: 10
+    maxSecondsInterval: 3600
 
 management:
   endpoints:

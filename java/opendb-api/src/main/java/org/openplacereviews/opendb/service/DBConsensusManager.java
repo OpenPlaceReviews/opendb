@@ -55,10 +55,10 @@ public class DBConsensusManager {
 	protected static final Log LOGGER = LogFactory.getLog(DBConsensusManager.class);
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
-	@Value("${opendb.compactCoefficient}")
+	@Value("${opendb.db.compactCoefficient}")
 	private double compactCoefficient = 1;
 	
-	@Value("${opendb.dbSuperblockSize}")
+	@Value("${opendb.db.dbSuperblockSize}")
 	private int superblockSize = 32;
 	
 	@Autowired

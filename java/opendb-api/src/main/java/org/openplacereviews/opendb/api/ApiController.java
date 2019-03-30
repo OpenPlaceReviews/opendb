@@ -15,6 +15,7 @@ import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.LogOperationService.LogEntry;
@@ -42,6 +43,9 @@ public class ApiController {
     @Autowired
     private LogOperationService logService;
     
+    @Autowired
+    private OpenDBScheduledServices scheduledServices;
+    
     @GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public String status() {
@@ -66,6 +70,9 @@ public class ApiController {
 		res.orphanedBlocks = manager.getOrphanedBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
+		if (manager.isBlockCreationOn()) {
+			res.status += " (blocks every " + scheduledServices.minSecondsInterval + " seconds)";
+		}
 		return formatter.fullObjectToJson(res);
     }
     
