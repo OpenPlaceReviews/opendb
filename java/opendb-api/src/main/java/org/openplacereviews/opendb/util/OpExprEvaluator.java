@@ -34,6 +34,7 @@ public class OpExprEvaluator {
 
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
+	public static final String FUNCTION_STR_COMBINE = "str:combine";
 
 	public static final String FUNCTION_M_PLUS = "m:plus";
 	public static final String FUNCTION_M_MULT = "m:mult";
@@ -168,6 +169,24 @@ public class OpExprEvaluator {
 				}
 			}
 			return ffs;
+		case FUNCTION_STR_COMBINE:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			String s1 = getStringArgument(functionName, args, 1);
+			String res = "";
+			if (!isJsonArrayObj(obj1)) {
+				return obj1;
+			} else {
+				JsonArray ar1 = (JsonArray) obj1;
+				for(int i = 0; i < ar1.size(); i++) {
+					if(i > 0) {
+						res += s1;
+					}
+					JsonElement e1 = ar1.get(i);
+					res += e1 != null && e1.isJsonPrimitive() ? 
+							((JsonPrimitive)e1).getAsString() : toStringPrimitive(e1); 
+				}
+			}
+			return res;
 		case FUNCTION_STD_EQ:
 			obj1 = getObjArgument(functionName, args, 0);
 			obj2 = getObjArgument(functionName, args, 1);

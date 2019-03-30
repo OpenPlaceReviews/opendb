@@ -170,7 +170,7 @@
 				"std:eq(std:size(.old),1)"
 			],
 			"validate" : [
-				"std:or(set:in(.ref.s.id, .signed_by), set:in(.old.id, .signed_by))"
+				"std:or(set:in(.ref.s.id, .signed_by), set:in(str:combine(.old.id,':'), .signed_by))"
 			]
 		}]
 	},
@@ -217,7 +217,7 @@
 				"std:eq(std:size(.old),1)"
 			],
 			"validate" : [
-				"std:or(set:in(.ref.s.id, .signed_by), set:in(.old.id, .signed_by))"
+				"std:or(set:in(.ref.s.id, .signed_by), set:in(str:combine(.old.id,':'), .signed_by))"
 			]
 		}]
 	},

@@ -16,6 +16,7 @@ import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -277,13 +278,16 @@ public class OpApiController {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
     	}
+    	OpExprEvaluator.TRACE_EXPRESSIONS = true;
     	
     	OpOperation op = new OpOperation();
     	op.setType(OpBlockchainRules.OP_LOGIN);
     	if(edit) {
     		OpObject loginObj = manager.getLoginObj(name);
-    		if(loginObj == null && delete) {
-    			throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
+    		if(loginObj == null) {
+    			if(delete) {
+    				throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
+    			}
     		} else {
     			op.addOld(loginObj.getParentHash(), 0);
     		}
@@ -300,12 +304,21 @@ public class OpApiController {
 		String serverName = getServerUser(session);
 		OpObject sop = manager.getLoginObj(nickname);
 		if (!OUtils.isEmpty(pwd) || !OUtils.isEmpty(signupPrivateKey)) {
+			String signedBy = nickname;
 			if(!OUtils.isEmpty(signupPrivateKey)) {
-				kp = manager.getLoginKeyPair(nickname, signupPrivateKey);	
+				try {
+					kp = manager.getLoginKeyPair(nickname, signupPrivateKey);
+				} catch (FailedVerificationException e) {
+					// ignore it here
+				}	
+				if(kp == null) {
+					kp = manager.getLoginKeyPair(name, signupPrivateKey);
+					signedBy = name;
+				}
 			} else {
 				kp = manager.getLoginKeyPairFromPwd(nickname, pwd);
 			}
-			op.setSignedBy(nickname);
+			op.setSignedBy(signedBy);
 			// sign with server is it necessary or make it optional? 
 			if(!OUtils.isEmpty(serverName)) {
     			op.addOtherSignedBy(serverName);
