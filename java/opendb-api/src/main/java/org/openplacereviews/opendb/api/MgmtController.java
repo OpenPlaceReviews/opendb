@@ -107,6 +107,18 @@ public class MgmtController {
     	return ResponseEntity.ok("{\"status\":\"OK\", \"msg\":\"Blocks are reverted and operations added to the queue.\"}");
     }
     
+    @PostMapping(path = "/revert-1-block", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public ResponseEntity<String> revert1block(HttpSession session) throws FailedVerificationException {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
+    	if(!manager.revertOneBlock()) {
+    		return ResponseEntity.ok("{\"status\":\"FAILED\", \"msg\":\"Revert block failed\"}");
+    	}
+    	return ResponseEntity.ok("{\"status\":\"OK\", \"msg\":\"Block isreverted and operations added to the queue.\"}");
+    }
+    
     @PostMapping(path = "/compact", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> compact(HttpSession session) throws FailedVerificationException {

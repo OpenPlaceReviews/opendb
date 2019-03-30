@@ -31,14 +31,14 @@ public class OpPrivateBlocksList {
 		this.dbAccess = dbAccess;
 	}
 
-	public Collection<OpBlock> getAllBlocks() {
+	public Deque<OpBlock> getAllBlocks() {
 		if(dbAccess != null){
 			return dbAccess.getAllBlocks(blockHeaders);
 		}
 		return blocks;
 	}
 	
-	public Collection<OpBlock> getAllBlockHeaders() {
+	public Deque<OpBlock> getAllBlockHeaders() {
 		return blockHeaders;
 	}
 	

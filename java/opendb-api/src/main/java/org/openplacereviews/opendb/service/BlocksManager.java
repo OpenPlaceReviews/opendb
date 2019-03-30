@@ -5,6 +5,8 @@ import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -255,8 +257,50 @@ public class BlocksManager {
 		}
 	}
 	
+	public synchronized boolean revertOneBlock() throws FailedVerificationException {
+		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
+			throw new IllegalStateException("Blockchain is not ready to create block");
+		}
+		if (blockchain.getLastBlockRawHash().equals("")) {
+			return false;
+		}
+		if (blockchain.getParent().getSuperblockSize() == 1 || blockchain.getParent().isDbAccessed()) {
+			return revertSuperblock();
+		}
+
+		OpBlockChain newParent = new OpBlockChain(blockchain.getParent().getParent(), blockchain.getRules());
+		Deque<OpBlock> superblockFullBlocks = blockchain.getParent().getSuperblockFullBlocks();
+		Iterator<OpBlock> it = superblockFullBlocks.descendingIterator();
+		if (!it.hasNext()) {
+			return false;
+		}
+		OpBlock blockToRevert = null;
+		while (it.hasNext()) {
+			blockToRevert = it.next();
+			if (it.hasNext()) {
+				newParent.replicateBlock(blockToRevert);
+			}
+		}
+		OpBlockChain blc = new OpBlockChain(newParent, blockchain.getRules());
+		for (OpOperation o : blockToRevert.getOperations()) {
+			if (!blc.addOperation(o)) {
+				return false;
+			}
+		}
+		for (OpOperation o : blockchain.getQueueOperations()) {
+			if (!blc.addOperation(o)) {
+				return false;
+			}
+		}
+		dataManager.removeFullBlock(blockToRevert);
+		blockchain = blc;
+		String msg = String.format("Revert block '%s:%d'", 
+				blockToRevert.getRawHash(), blockToRevert.getBlockId());
+		logSystem.logSuccessBlock(blockToRevert, msg);
+		return true;
+	}
+	
 	public synchronized boolean revertSuperblock() throws FailedVerificationException {
-		
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}

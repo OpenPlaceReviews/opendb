@@ -43,6 +43,7 @@
             <br><br>
             <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
             <input type="submit" value="Revert super block" id="block-revert-btn"/>
+            <input type="submit" value="Revert 1 block" id="block-1revert-btn"/>
             <input type="submit" value="Clear queue" id="clear-list-btn" />
             <br><br>
             <input type="submit" value="Pause/resume new ops/blocks" id="ops-pause-btn"/>
@@ -385,6 +386,11 @@ $( document ).ready(function() {
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
+    $("#block-1revert-btn").click(function(){
+       $.post("/api/mgmt/revert-1-block", {})
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
     $("#ops-pause-btn").click(function(){
        $.post("/api/mgmt/toggle-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })
@@ -398,7 +404,7 @@ $( document ).ready(function() {
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
-    
+
     $("#remove-queue-ops-btn").click(function(){
        $.post("/api/mgmt/delete-queue-ops", {
             "opsListOrSingleValue" : $("#remove-queue-ops-txt").val() 

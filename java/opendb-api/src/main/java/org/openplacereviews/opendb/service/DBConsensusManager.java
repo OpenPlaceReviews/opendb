@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -450,7 +451,7 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public Collection<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) {
+		public Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) {
 			boolean isSuperblockReferenceActive = false;
 			readLock.lock();
 			try {
@@ -461,7 +462,7 @@ public class DBConsensusManager {
 			if (isSuperblockReferenceActive) {
 				// to do faster to load by superblock reference, so it could be 1 sql
 			}
-			List<OpBlock> blocks = new ArrayList<OpBlock>();
+			LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
 			for (OpBlock b : blockHeaders) {
 				OpBlock lb = loadBlock(b.getRawHash());
 				if (lb == null) {

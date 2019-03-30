@@ -558,11 +558,11 @@ public class OpBlockChain {
 		return parent.getSuperblocksDepth() + 1;
 	}
 	
-	public Collection<OpBlock> getSuperblockHeaders() {
+	public Deque<OpBlock> getSuperblockHeaders() {
 		return blocks.getAllBlockHeaders();
 	}
 	
-	public Collection<OpBlock> getSuperblockFullBlocks() {
+	public Deque<OpBlock> getSuperblockFullBlocks() {
 		return blocks.getAllBlocks();
 	}
 	
@@ -921,7 +921,7 @@ public class OpBlockChain {
 
 		OperationDeleteInfo getOperationInfo(String rawHash);
 
-		Collection<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
+		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
 
 		OpBlock getBlockByHash(String rawHash);
 
