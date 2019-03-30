@@ -26,7 +26,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
+
+import static org.openplacereviews.opendb.service.DBSchemaManager.*;
+
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
@@ -65,6 +67,9 @@ public class DBConsensusManager {
 	private JdbcTemplate jdbcTemplate;
 	
 	@Autowired
+	private DBSchemaManager dbSchema;
+	
+	@Autowired
 	private JsonFormatter formatter;
 	
 	@Autowired
@@ -74,17 +79,6 @@ public class DBConsensusManager {
 	private Map<String, OpBlock> orphanedBlocks = new ConcurrentHashMap<String, OpBlock>();
 	private Map<String, SuperblockDbAccess> dbSuperBlocks = new ConcurrentHashMap<>();
 	private OpBlockChain dbManagedChain = null;
-	
-	//////////// SYSTEM TABLES DDL ////////////
-	private static String BLOCKS_TABLE = "blocks";
-	private static String OPERATIONS_TABLE = "operations";
-	private static String OP_DELETED_TABLE = "op_deleted";
-	private static String OBJS_TABLE = "objs";
-	private static String OPERATIONS_TRASH_TABLE = "operations_trash";
-	private static String BLOCKS_TRASH_TABLE = "blocks_trash";
-	
-	
-	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	
 	public Map<String, OpBlock> getOrphanedBlocks() {
 		return orphanedBlocks;
@@ -107,7 +101,7 @@ public class DBConsensusManager {
 
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
-		initializeDatabaseSchema(metadataDB);
+		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");
 		dbManagedChain = loadBlockHeadersAndBuildMainChain(rules);
@@ -148,44 +142,7 @@ public class DBConsensusManager {
 		return blcQueue;
 	}
 
-	private void initializeDatabaseSchema(MetadataDb metadataDB) {
-		for(String tableName : schema.keySet()) {
-			List<ColumnDef> cls = schema.get(tableName);
-			List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);
-			if(list == null) {
-				StringBuilder clb = new StringBuilder();
-				List<String> indx = new ArrayList<String>();
-				for(ColumnDef c : cls) {
-					if(clb.length() > 0) {
-						clb.append(", ");
-					}
-					clb.append(c.colName).append(" ").append(c.colType);
-					if(c.index) {
-						indx.add(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName, c.tableName, c.colName));
-					}
-				}
-				String createTable = String.format("create table %s (%s)", tableName, clb.toString());
-				jdbcTemplate.execute(createTable);
-				for(String ind : indx) {
-					jdbcTemplate.execute(ind);
-				}
-			} else {
-				for(ColumnDef c : cls) {
-					boolean found = false;
-					for(MetadataColumnSpec m : list) {
-						if(c.colName.equals(m.columnName)) {
-							found = true;
-							break;
-						}
-					}
-					if(!found) {
-						throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ", c.colName, tableName));
-					}
-				}
-			}
-			
-		}	
-	}
+	
 
 
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent, 
@@ -263,18 +220,19 @@ public class DBConsensusManager {
 			jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashParent);
 			jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashCurrent);
 			
-			jdbcTemplate.update("INSERT INTO " + OBJS_TABLE + "(type, p1, p2, p3, p4, p5, ophash, superblock, sblockid, sorder, content) "
-					+ " SELECT coalesce(r1.type, r2.type), coalesce(r1.p1, r2.p1), coalesce(r1.p2, r2.p2), coalesce(r1.p3, r2.p3), coalesce(r1.p4, r2.p4), coalesce(r1.p5, r2.p5),"
+			for(String objTable : dbSchema.getObjectTables()) {
+				String queryIns = "INSERT INTO " + objTable + "(type, "+ dbSchema.generatePKString(objTable, "p%1$d", ", ") + ", ophash, superblock, sblockid, sorder, content) "
+					+ " SELECT coalesce(r1.type, r2.type), " + dbSchema.generatePKString(objTable, "coalesce(r1.p%1$d, r2.p%1$d)", ", ") + ", " 
 					+ "     coalesce(r1.ophash, r2.ophash), ?, coalesce(r1.sblockid, r2.sblockid), coalesce(r1.sorder, r2.sorder), coalesce(r1.content, r2.content) " 
 					+ " FROM "
-					+ " (select * from " + OBJS_TABLE +" where superblock = ? ) r1 "
+					+ " (select * from " + objTable +" where superblock = ? ) r1 "
 					+ "  FULL OUTER JOIN " 
-					+ " (select * from " + OBJS_TABLE +" where superblock = ? ) r2 "
-					+ " ON r1.type = r2.type and r1.p1 = r2.p1 and r1.p2 is not distinct from r2.p2 "
-					+ "    and r1.p3 is not distinct from r2.p3 and r1.p4 is not distinct from r2.p4 and r1.p5 is not distinct from r2.p5  ",
-					sbHashNew, sbHashCurrent, sbHashParent);
-			jdbcTemplate.update("DELETE FROM " + OBJS_TABLE + " WHERE superblock = ? ", sbHashParent);
-			jdbcTemplate.update("DELETE FROM " + OBJS_TABLE + " WHERE superblock = ? ", sbHashCurrent);
+					+ " (select * from " + objTable +" where superblock = ? ) r2 "
+					+ " ON r1.type = r2.type and " + dbSchema.generatePKString(objTable, "r1.p%1$d is not distinct from r2.p%1$d", " and ");
+				jdbcTemplate.update(queryIns, sbHashNew, sbHashCurrent, sbHashParent);
+				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashParent);
+				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashCurrent);
+			}
 
 			res = new OpBlockChain(blc.getParent().getParent(), 
 					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
@@ -336,7 +294,14 @@ public class DBConsensusManager {
 				o[0] = sbhash;
 				o[1] = type;
 				k.toArray(o, 2);
-				return jdbcTemplate.query(getQuery(sz), o, new ResultSetExtractor<OpObject>() {
+				String table = dbSchema.getTableByType(type);
+				if (sz > dbSchema.getKeySizeByType(type)) {
+					throw new UnsupportedOperationException();
+				}
+				String s = "select content, type, ophash from " + table +  
+							" where superblock = ? and type = ? and " +
+						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz);
+				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
 
 					@Override
 					public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -353,16 +318,6 @@ public class DBConsensusManager {
 			}
 		}
 
-		private String getQuery(int sz) {
-			String s = "select content, type, ophash from " + OBJS_TABLE +  " where superblock = ? and type = ? and p1 = ?";
-			if (sz > 5) {
-				throw new UnsupportedOperationException();
-			}
-			for (int t = 2; t <= sz; t++) {
-				s += " and p" + t + " = ?";
-			}
-			return s;
-		}
 
 		@Override
 		public Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request) {
@@ -378,7 +333,11 @@ public class DBConsensusManager {
 				Object[] o = new Object[2];
 				o[0] = sbhash;
 				o[1] = type;
-				String sql = "select content, type, ophash, p1, p2, p3, p4, p5 from " + OBJS_TABLE + " where superblock = ? and type = ? ";
+				
+				String objTable = dbSchema.getTableByType(type);
+				final int keySize = dbSchema.getKeySizeByType(type);
+				String sql = "select content, type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
+						+ "  from " + objTable + " where superblock = ? and type = ? ";
 				if(limit > 0) {
 					sql = sql + " limit " + limit;
 				}
@@ -388,11 +347,9 @@ public class DBConsensusManager {
 					@Override
 					public void processRow(ResultSet rs) throws SQLException {
 						ls.clear();
-						ls.add(rs.getString(4));
-						ls.add(rs.getString(5));
-						ls.add(rs.getString(6));
-						ls.add(rs.getString(7));
-						ls.add(rs.getString(8));
+						for(int i = 0; i < keySize; i++) {
+							ls.add(rs.getString(i + 4));
+						}
 						CompoundKey k = new CompoundKey(0, ls);
 						OpObject obj = formatter.parseObject(rs.getString(1));
 						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
@@ -739,30 +696,10 @@ public class DBConsensusManager {
 					Entry<CompoundKey, OpObject> e = it.next();
 					CompoundKey pkey = e.getKey();
 					OpObject obj = e.getValue();
-					if (pkey.size() > 5) {
-						throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
-					}
-					Object[] args = new Object[11];
-					args[0] = type;
-					pkey.toArray(args, 1);
-					String ophash = obj.getParentHash();
-					args[6] = SecUtils.getHashBytes(ophash);
-					args[7] = superBlockHash;
-					long l = opsId.get(ophash);
-					args[8] = OUtils.first(l);
-					args[9] = OUtils.second(l);
-					PGobject contentObj = new PGobject();
-					contentObj.setType("jsonb");
-					try {
-						contentObj.setValue(formatter.objToJson(obj));
-					} catch (SQLException es) {
-						throw new IllegalArgumentException(es);
-					}
-					args[10] = contentObj;
-
-					jdbcTemplate.update("INSERT INTO " + OBJS_TABLE
-							+ "(type,p1,p2,p3,p4,p5,ophash,superblock,sblockid,sorder,content) "
-							+ " values(?,?,?,?,?,?,?,?,?,?,?)", args);
+					long l = opsId.get(obj.getParentHash());
+					int sblockid = OUtils.first(l);
+					int sorder = OUtils.second(l);
+					dbSchema.insertObjIntoTable(type, pkey, obj, superBlockHash, sblockid, sorder, jdbcTemplate);
 				}
 			}
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
@@ -904,8 +841,10 @@ public class DBConsensusManager {
 				txRollback = true;
 				jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = NULL where superblock = ?", blockHash);
 				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = NULL where superblock = ? ", blockHash);
-				jdbcTemplate.update("DELETE FROM " + OBJS_TABLE + " where superblock = ?", blockHash);
 				jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " where superblock = ?", blockHash);
+				for (String objTable : dbSchema.getObjectTables()) {
+					jdbcTemplate.update("DELETE FROM " + objTable + " where superblock = ?", blockHash);
+				}
 				
 				jdbcTemplate.execute("COMMIT");
 				txRollback = false;
@@ -963,102 +902,5 @@ public class DBConsensusManager {
 	}
 	
 	
-	// SCHEMA DEFINITION
-	private static class ColumnDef {
-		String tableName; 
-		String colName; 
-		String colType;
-		boolean index;
-	}
-	
-	private static void registerColumn(String tableName, String colName, String colType, boolean index) {
-		List<ColumnDef> lst = schema.get(tableName);
-		if(lst == null) {
-			lst = new ArrayList<DBConsensusManager.ColumnDef>();
-			schema.put(tableName, lst);
-		}
-		ColumnDef cd = new ColumnDef();
-		cd.tableName = tableName;
-		cd.colName = colName;
-		cd.colType = colType;
-		cd.index = index;
-		lst.add(cd);
-	}
-	
-	static {
-		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(BLOCKS_TABLE, "phash", "bytea", false);
-		registerColumn(BLOCKS_TABLE, "blockid", "int", true);
-		registerColumn(BLOCKS_TABLE, "superblock", "bytea", true);
-		registerColumn(BLOCKS_TABLE, "header", "jsonb", false);
-		registerColumn(BLOCKS_TABLE, "content", "jsonb", false);
-		
-		registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", false);
-		registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", true);
-		registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", false);
-		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", false);
-		
-		
-		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
-		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", true);
-		registerColumn(OPERATIONS_TABLE, "sblockid", "int", true);
-		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
-		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
-		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
-		
-		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", true);
-		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", true);
-		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", false);
-		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", false);
-		
-		registerColumn(OP_DELETED_TABLE, "hash", "bytea", true);
-		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", true);
-		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
-		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
-		
-		registerColumn(OBJS_TABLE, "type", "text", true);
-		registerColumn(OBJS_TABLE, "p1", "text", true);
-		registerColumn(OBJS_TABLE, "p2", "text", true);
-		registerColumn(OBJS_TABLE, "p3", "text", true);
-		registerColumn(OBJS_TABLE, "p4", "text", true);
-		registerColumn(OBJS_TABLE, "p5", "text", true);
-		registerColumn(OBJS_TABLE, "ophash", "bytea", true);
-		registerColumn(OBJS_TABLE, "superblock", "bytea", true);
-		registerColumn(OBJS_TABLE, "sblockid", "int", true);
-		registerColumn(OBJS_TABLE, "sorder", "int", true);
-		registerColumn(OBJS_TABLE, "content", "jsonb", false);
-		
-	}
-	
-	// Query / insert values 
-	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';
-	// insert into test(b) values (decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
-	// UPDATE blocks SET superblocks = array_remove(superblocks, decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
-
-	public static void main(String[] args) {
-		
-		for(String tableName : schema.keySet()) {
-			List<ColumnDef> cls = schema.get(tableName);
-			StringBuilder clb = new StringBuilder();
-			StringBuilder indx = new StringBuilder();
-			for(ColumnDef c : cls) {
-				if(clb.length() > 0) {
-					clb.append(", ");
-				}
-				clb.append(c.colName).append(" ").append(c.colType);
-				if(c.index) {
-					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName, c.tableName, c.colName));
-				}
-			}
-			System.out.println(String.format("create table %s (%s);",tableName, clb.toString()));
-			System.out.println(indx.toString());
-		}
-		
-	}
-
-	
-
 
 }
