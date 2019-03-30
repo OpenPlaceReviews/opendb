@@ -277,10 +277,6 @@ public class OpApiController {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
     	}
-    	// TODO
-    	// OpExprEvaluator.TRACE_EXPRESSIONS = true;
-    	 delete = true;
-    	
     	OpOperation op = new OpOperation();
     	op.setType(OpBlockchainRules.OP_LOGIN);
     	if(edit) {
