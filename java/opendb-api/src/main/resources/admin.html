@@ -95,12 +95,19 @@
           1. Nickname: <input type="text" id="signup-name"/> 
         <br>
           2a. Password: <input type="text" id="signup-pwd"/> 
+          Old Password: <input type="text" id="signup-pwd-old"/> 
         <br>
           2b. Private key: <input type="text" id="signup-user-prk"/>  
           Public key: <input type="text" id="signup-user-pbk"/>  
         <br>
+          Old private key: <input type="text" id="signup-user-prk-old"/>  
+          Old public key: <input type="text" id="signup-user-pbk-old"/>  
+        <br>
           2c. OAuth provider: <input type="text" id="signup-oauth-p"/>  
           OAuth Id: <input type="text" id="signup-oauth-id"/> 
+        <br>
+          Old OAuth provider: <input type="text" id="signup-oauth-p-old"/>  
+          Old OAuth Id: <input type="text" id="signup-oauth-id-old"/> 
         <br>
           3. User details (raw json): <input type="text" id="signup-details"/>  
         <br>
@@ -109,14 +116,14 @@
       
       <h3>Login</h3>
       <div>
-          1. Login name (format 'nickname:site') : <input type="text" id="login-name"/> 
+          1. Nickname + purpose (format 'nickname:site') : <input type="text" id="login-name"/> 
         <br>
-          2a. Password: <input type="text" id="login-pwd"/> 
+          2a. Signup Password: <input type="text" id="login-pwd"/> 
         <br>
           2b. Signup private key: <input type="text" id="login-signup-key"/> 
         <br>
-          2c. OAuth provider: <input type="text" id="login-oauth-p"/>  
-          OAuth Id: <input type="text" id="login-oauth-id"/> 
+          2c. Signup OAuth provider: <input type="text" id="login-oauth-p"/>  
+          Signup OAuth Id: <input type="text" id="login-oauth-id"/> 
         <br>
           3. Public key (optional): <input type="text" id="login-public-key"/>  
         <br>
@@ -337,7 +344,8 @@ function loadQueueData() {
         items += "<br><li><b>Operation</b>: " + op.type;
         items += "<br><b>Hash</b>: " + op.hash;
         items += "<br><b>Added/removed objects</b>: " + 
-                (op.new ? op.new.length : "0") + " / " + (op.old ? op.old.length : "0");
+                (Array.isArray(op.new) ? op.new.length : (op.new ? "1" : "0")) + " / " +
+                (Array.isArray(op.old) ? op.old.length : (op.old ? "1" : "0"));
         if(op.new && op.new.length > 0) {
           items += "<br><b>Name</b>: " + op.new[0].id;
         } else if(op.old && op.old.length > 0) {
@@ -438,14 +446,18 @@ $( document ).ready(function() {
     
     $("#signup-btn").click(function() {
       var obj = {
-        "edit":"true",
         "pwd":$("#signup-pwd").val(),
+        "pwdOld":$("#signup-pwd-old").val(),
         "name":$("#signup-name").val(),
         "oauthProvider":$("#signup-oauth-p").val(),
+        "oauthProviderOld":$("#signup-oauth-p-old").val(),
         "oauthId":$("#signup-oauth-id").val(),
+        "oauthIdOld":$("#signup-oauth-id-old").val(),
         "algo":"EC",
         "privateKey":$("#signup-user-prk").val(),
+        "privateKeyOld":$("#signup-user-prk-old").val(),
         "publicKey":$("#signup-user-pbk").val(),
+        "publicKeyOld":$("#signup-user-pbk-old").val(),
         "userDetails":$("#signup-details").val()
       };
       $.post("/api/auth/signup", obj)

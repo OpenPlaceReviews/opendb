@@ -478,12 +478,12 @@ public class OpBlockchainRules {
 			return error(ob, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs);
 		}
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());
-		boolean firstSignup = false;
+		boolean signByItself = false;
 		String signupName = "";
 		if(OpBlockchainRules.OP_SIGNUP.equals(ob.getType()) && ob.getNew().size() == 1) {
-			OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
-			firstSignup = obj == null;
 			signupName =  ob.getNew().get(0).getId().get(0);
+			OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
+			signByItself = obj == null || obj.getStringValue(F_AUTH_METHOD).equals(METHOD_OAUTH);
 		}
 		// 1st signup could be signed by itself
 		for (int i = 0; i < sigs.size(); i++) {
@@ -493,7 +493,7 @@ public class OpBlockchainRules {
 				String sig = sigs.get(i);
 				String signedByName = signedBy.get(i);
 				OpObject keyObj;
-				if(firstSignup && signedByName.equals(signupName)) {
+				if(signByItself && signedByName.equals(signupName)) {
 					keyObj = ob.getNew().get(0);
 				} else {
 					keyObj = getLoginKeyObj(ctx, signedByName);

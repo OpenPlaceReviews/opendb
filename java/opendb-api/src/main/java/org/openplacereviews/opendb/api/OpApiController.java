@@ -139,10 +139,13 @@ public class OpApiController {
 	@PostMapping(path = "/signup")
     @ResponseBody
     public ResponseEntity<String> signup(HttpSession session, @RequestParam(required = true) String name,  
-    		@RequestParam(required = false, defaultValue = "false") boolean edit, @RequestParam(required = false, defaultValue = "false") boolean onlyValidate,
+    		@RequestParam(required = false, defaultValue = "false") boolean onlyValidate,
     		@RequestParam(required = false) String pwd,  
     		@RequestParam(required = false) String algo, @RequestParam(required = false) String privateKey, @RequestParam(required = false) String publicKey,
-    		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
+    		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId,
+    		@RequestParam(required = false) String pwdOld,  
+    		@RequestParam(required = false) String algoOld, @RequestParam(required = false) String privateKeyOld, @RequestParam(required = false) String publicKeyOld,
+    		@RequestParam(required = false) String oauthProviderOld, @RequestParam(required = false) String oauthIdOld, 
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
 		if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
@@ -152,12 +155,44 @@ public class OpApiController {
     	if(!OpBlockchainRules.validateNickname(name)) {
     		throw new IllegalArgumentException(String.format("The nickname '%s' couldn't be validated", name));
     	}
+    	if(OUtils.isEmpty(pwd) && OUtils.isEmpty(oauthId) && OUtils.isEmpty(privateKey)) {
+    		throw new IllegalArgumentException("Signup method is not specified");
+    	}
+    	boolean edit = true;
+    	if(OUtils.isEmpty(pwdOld) && OUtils.isEmpty(oauthIdOld) && OUtils.isEmpty(privateKeyOld)) {
+    		edit = false;
+    	}
+    	KeyPair signKeyPair = null;
+    	String signName = name;
+    	if (OUtils.isEmpty(algo)) {
+    		algo = SecUtils.ALGO_EC;
+    	}
+		if (OUtils.isEmpty(algoOld)) {
+    		algoOld = SecUtils.ALGO_EC;
+    	}
+		
     	if(edit) {
     		OpObject loginObj = manager.getLoginObj(name);
     		if(loginObj == null) {
-//    			throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
+    			throw new IllegalArgumentException("There is nothing to edit cause signup obj doesn't exist");
     		} else {
     			op.addOld(loginObj.getParentHash(), 0);
+    			String authMethod = loginObj.getStringValue(OpBlockchainRules.F_AUTH_METHOD);
+    			if(OpBlockchainRules.METHOD_PWD.equals(authMethod)) {
+    				signKeyPair = SecUtils.generateKeyPairFromPassword(algoOld, loginObj.getStringValue(OpBlockchainRules.F_KEYGEN_METHOD), 
+        					loginObj.getStringValue(OpBlockchainRules.F_SALT), pwdOld);
+    			} else if(OpBlockchainRules.METHOD_OAUTH.equals(authMethod)) {
+    				String phash = SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, loginObj.getStringValue(OpBlockchainRules.F_SALT), 
+    						oauthIdOld);
+    				if(!phash.equals(loginObj.getStringValue(OpBlockchainRules.F_OAUTHID_HASH)) || 
+    						!oauthProviderOld.equals(loginObj.getStringValue(OpBlockchainRules.F_OAUTH_PROVIDER))) {
+    					throw new IllegalArgumentException(String.format("Couldn't validate specified oauth credentions '%s':'%s'", oauthIdOld, oauthProviderOld));
+    				}
+    			} else {
+    				signKeyPair = SecUtils.getKeyPair(algo, privateKey, publicKey);
+    			}
+    			
+    			
     		}
     	}
     	
@@ -168,53 +203,58 @@ public class OpApiController {
     	if(!OUtils.isEmpty(userDetails)) {
     		obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
     	}
-    	
-		if (OUtils.isEmpty(algo)) {
-    		algo = SecUtils.ALGO_EC;
-    	}
-    	KeyPair keyPair;
-    	KeyPair otherKeyPair = null;
+    	KeyPair newKeyPair = null;
     	if(!OUtils.isEmpty(pwd)) {
     		obj.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PWD);
     		algo = SecUtils.ALGO_EC;
     		String salt = name;
     		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
-    		keyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
+    		newKeyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
     		obj.putStringValue(OpBlockchainRules.F_SALT, salt);
     		obj.putStringValue(OpBlockchainRules.F_KEYGEN_METHOD, keyGen);
-        	op.setSignedBy(name);
-    		if(!OUtils.isEmpty(getServerUser(session))) {
-    			op.addOtherSignedBy(getServerUser(session));
-    			otherKeyPair = getServerLoginKeyPair(session);
-    			if(otherKeyPair == null) {
-    				throw new IllegalArgumentException(
-    						String.format("Server %s to signup user doesn't have valid login key", getServerUser(session)));
-    			}
+    		if(signKeyPair == null) {
+    			signKeyPair = newKeyPair;
     		}
     	} else if(!OUtils.isEmpty(oauthId)) {
     		obj.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_OAUTH);
     		obj.putStringValue(OpBlockchainRules.F_SALT, name);
     		obj.putStringValue(OpBlockchainRules.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, name, oauthId));
     		obj.putStringValue(OpBlockchainRules.F_OAUTH_PROVIDER, oauthProvider);
-    		keyPair = getServerLoginKeyPair(session);
-    		op.setSignedBy(getServerUser(session));
+    		if(signKeyPair == null) {
+    			newKeyPair = null;
+        		signName = getServerUser(session);
+        		signKeyPair = getServerLoginKeyPair(session);
+    		}
     	} else {
     		obj.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PROVIDED);
-    		op.setSignedBy(name);
-    		keyPair = SecUtils.getKeyPair(algo, privateKey, publicKey);
+    		newKeyPair = SecUtils.getKeyPair(algo, privateKey, publicKey);
+    		if(signKeyPair == null) {
+    			signKeyPair = newKeyPair;
+    		}
     	}
-    	if(keyPair == null) {
+    	if(signKeyPair == null) {
 			throw new IllegalArgumentException(
 					String.format("Signup private / public key could not be generated"));
 		}
-    	obj.putStringValue(OpBlockchainRules.F_ALGO, algo);
-    	obj.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
-    	
-    	if(otherKeyPair == null) {
-    		manager.generateHashAndSign(op, keyPair);
-    	} else {
-    		manager.generateHashAndSign(op, keyPair, otherKeyPair);
+    	if(newKeyPair != null) {
+    		obj.putStringValue(OpBlockchainRules.F_ALGO, algo);
+    		obj.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, newKeyPair.getPublic()));
     	}
+    	
+    	op.setSignedBy(signName);
+    	String serverUser = getServerUser(session);
+		if(!OUtils.isEmpty(serverUser) && !serverUser.equals(signName)) {
+			op.addOtherSignedBy(serverUser);
+			KeyPair secondSignKeyPair = getServerLoginKeyPair(session);
+			if(secondSignKeyPair == null) {
+				throw new IllegalArgumentException(
+						String.format("Server %s to signup user doesn't have valid login key", getServerUser(session)));
+			}
+			manager.generateHashAndSign(op, signKeyPair, secondSignKeyPair);
+		} else {
+			manager.generateHashAndSign(op, signKeyPair);
+		}
+		
     	if(onlyValidate) {
     		manager.validateOperation(op);
     	} else {
