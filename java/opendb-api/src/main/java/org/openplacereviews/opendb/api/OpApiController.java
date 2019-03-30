@@ -16,7 +16,6 @@ import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -278,7 +277,9 @@ public class OpApiController {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();
     	}
-    	OpExprEvaluator.TRACE_EXPRESSIONS = true;
+    	// TODO
+    	// OpExprEvaluator.TRACE_EXPRESSIONS = true;
+    	 delete = true;
     	
     	OpOperation op = new OpOperation();
     	op.setType(OpBlockchainRules.OP_LOGIN);

@@ -365,6 +365,23 @@ public class OpBlockChain {
 	}
 	
 	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
+		List<String> deletedRefs = u.getOld();
+		for(int i = 0; i < deletedRefs.size(); i++) {
+			String delRef = deletedRefs.get(i);
+			String delHash = getHashFromAbsRef(delRef);
+			int delInd = getIndexFromAbsRef(delRef);
+			OperationDeleteInfo oinfo = operations.addDeletedObject(delHash, delInd, u);
+			for (OpObject delObj : oinfo.op.getNew()) {
+				List<String> id = delObj.getId();
+				if (id != null && id.size() > 0) {
+					String objType = u.getType();
+					OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
+					oinf.add(id, null);
+				}
+			}
+			
+		}
+		operations.addNewOperation(u);
 		for (OpObject newObj : u.getNew()) {
 			List<String> id = newObj.getId();
 			if (id != null && id.size() > 0) {
@@ -373,15 +390,7 @@ public class OpBlockChain {
 				oinf.add(id, newObj);
 			}
 		}
-		List<String> deletedRefs = u.getOld();
-		for(int i = 0; i < deletedRefs.size(); i++) {
-			String delRef = deletedRefs.get(i);
-			String delHash = getHashFromAbsRef(delRef);
-			int delInd = getIndexFromAbsRef(delRef);
-			operations.addDeletedObject(delHash, delInd, u);
-			
-		}
-		operations.addNewOperation(u);
+		
 		
 	}
 	

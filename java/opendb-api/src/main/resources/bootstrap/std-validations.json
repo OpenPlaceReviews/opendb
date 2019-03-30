@@ -136,6 +136,9 @@
 			"type" : ["sys.login"],
 			"comment"   : "Every login should reference signup (that validates signup is active)",
 			"owner_role" : "none",
+			"if" :  [
+				"std:eq(std:size(.new),1)"
+			],
 			"validate" : [
 				"std:eq(.ref.s.type, 'sys.signup')",
 				"std:eq(.new.id.0, .ref.s.id.0)"

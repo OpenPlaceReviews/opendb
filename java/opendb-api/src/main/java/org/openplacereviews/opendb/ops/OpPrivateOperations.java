@@ -77,18 +77,13 @@ class OpPrivateOperations {
 		queueOperations.add(u);		
 	}
 	
-	void addDeletedObject(String delHash, int delInd, OpOperation opRef) {
+	OperationDeleteInfo addDeletedObject(String delHash, int delInd, OpOperation opRef) {
 		if(dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
 		OperationDeleteInfo pi = opsByHash.get(delHash);
-		if(pi == null) {
-			pi = new OperationDeleteInfo();
-			pi.op = opRef;
-			opsByHash.put(delHash, pi);
-		}
 		if(pi.deletedObjects == null) {
-			pi.deletedObjects = new boolean[opRef.getNew().size()];
+			pi.deletedObjects = new boolean[pi.op.getNew().size()];
 		}
 		if(pi.deletedOpHashes == null) {
 			pi.deletedOpHashes = new ArrayList<String>();
@@ -97,6 +92,7 @@ class OpPrivateOperations {
 		}
 		pi.deletedOpHashes.add(opRef.getRawHash());
 		pi.deletedObjects[delInd] = true;
+		return pi;
 	}
 	
 	void copyAndMerge(OpPrivateOperations copy, OpPrivateOperations parent) {

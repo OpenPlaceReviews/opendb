@@ -217,7 +217,7 @@ public class OpExprEvaluator {
 			} else if (ob instanceof JsonObject) {
 				return ((JsonObject) ob).size();
 			}
-			return 1;
+			return ob == null ? 0 : 1;
 		case FUNCTION_STD_AND:
 			for (Object o : args) {
 				if (o == null) {
