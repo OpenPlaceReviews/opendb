@@ -678,6 +678,8 @@ public class OpBlockchainRules {
 		OP_ROLE_SUPER_ROLE_DOESNT_EXIST("Operation '%s': super role '%s' defined for '%s' is not defined"),
 		OP_ROLE_SUPER_ROLE_CIRCULAR_REF("Operation '%s': super role '%s' defined for '%s' has circular references"),
 		OP_GRANT_ROLE_DOESNT_EXIST("Operation '%s': role '%s' which is granted to '%s' doesn't exist"),
+		
+		MGMT_CANT_DELETE_NON_LAST_OPERATIONS("Operation '%s' couldn't be validated cause the parent operation '%s' is going to be deleted")
 		;
 		private final String msg;
 

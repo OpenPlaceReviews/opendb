@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -496,13 +497,12 @@ public class DBConsensusManager {
 				String superblock = SecUtils.hexify(rs.getBytes(4));
 				OpBlock parentBlockHeader = blocks.get(pblockHash);
 				OpBlock blockHeader = formatter.parseBlock(rs.getString(5));
+				blocks.put(blockHash, blockHeader);
 				if(!OUtils.isEmpty(pblockHash) && parentBlockHeader == null) {
 					LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash));
 					orphanedBlocks.put(blockHash, blockHeader);
 					return;
-				}
-				blocks.put(blockHash, blockHeader);
-				if(OUtils.isEmpty(superblock)) {
+				} else if(OUtils.isEmpty(superblock)) {
 					orphanedBlocks.put(blockHash, blockHeader);
 				} else {
 					String lastBlockHash = blockHeaders.size() == 0 ? res[0].getLastBlockRawHash() : blockHeaders.getFirst().getRawHash();
@@ -526,11 +526,34 @@ public class DBConsensusManager {
 	}
 
 
+	private boolean isConnected(OpBlock bi, String lastBlockRawHash) {
+		if(bi.getBlockId() == 0) {
+			return lastBlockRawHash.length() == 0;
+		}
+		if(bi.getRawHash().equals(lastBlockRawHash)) {
+			return true;
+		}
+		String prevRawHash = bi.getPrevRawHash();
+		OpBlock parentBlock = blocks.get(prevRawHash);
+		if(parentBlock != null) {
+			return isConnected(parentBlock, lastBlockRawHash);
+		}
+		return false;
+	}
+	
 	private LinkedList<OpBlock> selectTopBlockFromOrphanedBlocks(OpBlockChain prev) {
 		OpBlock topBlockInfo = null;
+		String lastBlockRawHash = prev.getLastBlockRawHash();
 		for(OpBlock bi : orphanedBlocks.values()) {
-			if(topBlockInfo == null || topBlockInfo.getBlockId() < bi.getBlockId() ||
-					(topBlockInfo.getBlockId() == bi.getBlockId() && topBlockInfo.getRawHash().compareTo(bi.getRawHash()) > 0)){
+			boolean isNewer = false;
+			if(topBlockInfo == null) {
+				isNewer = true;
+			} else if(topBlockInfo.getBlockId() < bi.getBlockId()) {
+				isNewer = true;
+			} else if(topBlockInfo.getBlockId() == bi.getBlockId() && topBlockInfo.getRawHash().compareTo(bi.getRawHash()) > 0) {
+				isNewer = true;
+			}
+			if(isNewer && isConnected(bi, lastBlockRawHash)) {
 				topBlockInfo = bi;
 			}
 		}
@@ -540,15 +563,15 @@ public class DBConsensusManager {
 			OpBlock blockInfo = topBlockInfo;
 			LinkedList<String> blocksInfoLst = new LinkedList<String>();
 			while(blockInfo != null) {
-				if(OUtils.equals(blockInfo.getRawHash(), prev.getLastBlockRawHash())) {
+				if(OUtils.equals(blockInfo.getRawHash(), lastBlockRawHash)) {
 					return blockList;
 				}
 				orphanedBlocks.remove(blockInfo.getRawHash());
 				blockList.addFirst(blockInfo);
 				blocksInfoLst.addFirst(blockInfo.getRawHash());
-				blockInfo = this.blocks.get(blockInfo.getPrevRawHash());
+				blockInfo = blocks.get(blockInfo.getPrevRawHash());
 			}
-			if(OUtils.isEmpty(prev.getLastBlockRawHash())) {
+			if(OUtils.isEmpty(lastBlockRawHash)) {
 				return blockList;
 			}
 			throw new IllegalStateException(String.format("Top selected block '%s' is not connected to superblock '%s'", 
@@ -816,13 +839,17 @@ public class DBConsensusManager {
 		
 		
 	
-	public boolean removeOperation(OpOperation op) {
+	public int removeOperations(Set<String> ops) {
+		int deleted = 0;
 		// simple approach without using transaction isolations
-		int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE + 
-				"     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
-				+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
-				+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows", SecUtils.getHashBytes(op.getRawHash()));
-		return upd != 0;
+		for (String op : ops) {
+			deleted += jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
+					+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) " + " INSERT INTO "
+					+ OPERATIONS_TRASH_TABLE
+					+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
+					SecUtils.getHashBytes(op));
+		}
+		return deleted;
 	}
 	
 	public boolean removeFullBlock(OpBlock block) {
@@ -835,11 +862,15 @@ public class DBConsensusManager {
 					+ " INSERT INTO " + BLOCKS_TRASH_TABLE
 					+ " (hash, phash, blockid, time, content) SELECT hash, phash, blockid, now(), content FROM moved_rows", blockHash);
 			if(upd != 0) {
+				// to do: 
+				// here we need to decide what to do with operations with empty blocks[] (they will be added to the queue after restart otherwise)
 				for (OpOperation o : block.getOperations()) {
 					jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE
 							+ " set blocks = array_remove(blocks, ?) where hash = ?", 
 							blockHash, SecUtils.getHashBytes(o.getRawHash()));
 				}
+				orphanedBlocks.remove(block.getRawHash());
+				blocks.remove(block.getRawHash());
 			}
 			jdbcTemplate.execute("COMMIT");
 			txRollback = false;

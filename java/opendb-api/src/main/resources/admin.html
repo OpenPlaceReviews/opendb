@@ -45,7 +45,13 @@
             <input type="submit" value="Revert super block" id="block-revert-btn"/>
             <input type="submit" value="Clear queue" id="clear-list-btn" />
             <br><br>
-            <input type="submit" value="Toggle pause blockchain" id="block-pause-btn"/>
+            <input type="submit" value="Pause/resume new ops/blocks" id="ops-pause-btn"/>
+            <br><br>
+            <input type="text" id="remove-orphaned-blocks-txt"/> 
+            <input type="submit" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
+            <br><br>
+            <input type="text" id="remove-queue-ops-txt"/> 
+            <input type="submit" value="Remove queue operations" id="remove-queue-ops-btn"/>
 
           </div>
     </div>
@@ -379,11 +385,28 @@ $( document ).ready(function() {
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
-    $("#block-pause-btn").click(function(){
+    $("#ops-pause-btn").click(function(){
        $.post("/api/mgmt/toggle-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });
+
+    $("#remove-orphaned-blocks-btn").click(function(){
+       $.post("/api/mgmt/delete-orphaned-blocks", {
+            "blockListOrSingleValue" : $("#remove-orphaned-blocks-txt").val() 
+          })
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
+    
+    $("#remove-queue-ops-btn").click(function(){
+       $.post("/api/mgmt/delete-queue-ops", {
+            "opsListOrSingleValue" : $("#remove-queue-ops-txt").val() 
+          })
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
+    
 
     $("#block-bootstrap-btn").click(function(){
       $.post("/api/mgmt/bootstrap", {})

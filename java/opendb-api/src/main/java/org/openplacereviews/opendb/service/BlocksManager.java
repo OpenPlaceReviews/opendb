@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,11 +70,50 @@ public class BlocksManager {
 		return serverKeyPair;
 	}
 	
+	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
+		try {
+			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
+		} catch (FailedVerificationException e) {
+			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
+			throw new RuntimeException(e);
+		}
+		this.blockchain = initBlockchain;
+		
+		String msg = "";
+		// db is bootstraped
+		LOGGER.info("+++ Blockchain is inititialized. " + msg);
+	}
+	
+	
+	public synchronized boolean resumeBlockCreation() {
+		if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
+			blockchain.unlockByUser();
+			return true;
+		}
+		return false;
+	}
+	
+	public synchronized boolean pauseBlockCreation() {
+		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
+			blockchain.lockByUser();
+			return true;
+		}
+		return false;
+	}
+	
 	public synchronized boolean validateOperation(OpOperation op) {
 		if(blockchain == null) {
 			return false;
 		}
 		return blockchain.validateOperation(op);
+	}
+	
+	public synchronized boolean removeOrphanedBlock(String blockHash) {
+		OpBlock block = dataManager.getOrphanedBlocks().get(blockHash);
+		if(block != null) {
+			return dataManager.removeFullBlock(block);
+		}
+		return false;
 	}
 	
 	public synchronized boolean addOperation(OpOperation op) {
@@ -156,17 +197,40 @@ public class BlocksManager {
 		return true;
 	}
 	
-	
-	public synchronized void clearQueue() {
-		// there is no proper clear queue on atomic load
-		java.util.Deque<OpOperation> ls = blockchain.getQueueOperations();
-		while(!ls.isEmpty()) {
-			OpOperation o = ls.getLast();
-			// remove from db to not add after restart
-			dataManager.removeOperation(o);
-			blockchain.removeQueueOperation(o);
+	public synchronized boolean clearQueue() {
+		TreeSet<String> set = new TreeSet<>(); 
+		for(OpOperation o: blockchain.getQueueOperations()) {
+			set.add(o.getRawHash());
 		}
+		boolean cleared = blockchain.removeAllQueueOperations();
+		if(!cleared) {
+			return false;
+		}
+		return dataManager.removeOperations(set) == set.size();
 		// blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+	}
+	
+	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
+		Set<String> deleted;
+		try {
+			deleted = blockchain.removeQueueOperations(operationsToDelete);
+		} catch (RuntimeException e) {
+			// handle non last operations - slow method
+			deleted = new TreeSet<String>();
+			OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+			for (OpOperation o : blockchain.getQueueOperations()) {
+				if (!operationsToDelete.contains(o.getRawHash())) {
+					if (!blc.addOperation(o)) {
+						return null;
+					}
+				} else {
+					deleted.add(o.getRawHash());
+				}
+			}
+			blockchain = blc; 
+		}
+		dataManager.removeOperations(deleted);
+		return deleted;
 	}
 	
 	public synchronized void bootstrap(String serverName, KeyPair serverLoginKeyPair) throws FailedVerificationException {
@@ -236,37 +300,6 @@ public class BlocksManager {
 	
 	public Map<String, OpBlock> getOrphanedBlocks() {
 		return dataManager.getOrphanedBlocks();
-	}
-
-	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
-		try {
-			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
-		} catch (FailedVerificationException e) {
-			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
-			throw new RuntimeException(e);
-		}
-		this.blockchain = initBlockchain;
-		
-		String msg = "";
-		// db is bootstraped
-		LOGGER.info("+++ Blockchain is inititialized. " + msg);
-	}
-	
-	
-	public synchronized boolean resumeBlockCreation() {
-		if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
-			blockchain.unlockByUser();
-			return true;
-		}
-		return false;
-	}
-	
-	public synchronized boolean pauseBlockCreation() {
-		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
-			blockchain.lockByUser();
-			return true;
-		}
-		return false;
 	}
 	
 	public String getCurrentState() {

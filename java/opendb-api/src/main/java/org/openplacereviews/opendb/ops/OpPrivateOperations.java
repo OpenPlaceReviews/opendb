@@ -61,13 +61,7 @@ class OpPrivateOperations {
 			throw new UnsupportedOperationException();
 		}
 		queueOperations.clear();
-	}
-	
-	OpOperation removeLastOperation() {
-		if(dbAccess != null) {
-			throw new UnsupportedOperationException();
-		}
-		return queueOperations.removeLast();
+		opsByHash.clear();
 	}
 	
 	void addNewOperation(OpOperation u) {

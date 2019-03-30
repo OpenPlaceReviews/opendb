@@ -1,6 +1,11 @@
 package org.openplacereviews.opendb.api ;
 
+import java.io.StringReader;
 import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.servlet.http.HttpSession;
 
@@ -18,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 
@@ -138,6 +144,52 @@ public class MgmtController {
     	manager.bootstrap(serverName, serverLoginKeyPair);
 		return ResponseEntity.ok("{}");
     }
+    
+    
+	@PostMapping(path = "/delete-orphaned-blocks", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> deleteOrphanedBlocks(HttpSession session,
+			@RequestParam(required = true) String blockListOrSingleValue) throws Exception {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		String trimmedList = blockListOrSingleValue.trim();
+		String[] blocks;
+		if (trimmedList.startsWith("[")) {
+			blocks = formatter.fromJson(new StringReader(blockListOrSingleValue), String[].class);
+		} else {
+			blocks = new String[] { trimmedList };
+		}
+		List<String> deleted = new ArrayList<>();
+		for (String b : blocks) {
+			if (manager.removeOrphanedBlock(b)) {
+				deleted.add(b);
+			}
+		}
+		return ResponseEntity.ok(formatter.fullObjectToJson(blocks));
+	}
+	
+	@PostMapping(path = "/delete-queue-ops", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> deleteQueueOperations(HttpSession session,
+			@RequestParam(required = true) String opsListOrSingleValue) throws Exception {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		String trimmedList = opsListOrSingleValue.trim();
+		String[] ops;
+		if (trimmedList.startsWith("[")) {
+			ops = formatter.fromJson(new StringReader(opsListOrSingleValue), String[].class);
+		} else {
+			ops = new String[] { trimmedList };
+		}
+		Set<String> deleted = new TreeSet<>();
+		for (String op : ops) {
+			deleted.add(op);
+		}
+		manager.removeQueueOperations(deleted);
+		return ResponseEntity.ok(formatter.fullObjectToJson(ops));
+	}
     
     
 }

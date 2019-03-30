@@ -197,16 +197,15 @@ public class OpBlockChain {
 		return block;
 	}
 	
-	public synchronized boolean removeQueueOperation(OpOperation r) {
+	public synchronized boolean removeAllQueueOperations() {
 		validateIsUnlocked();
-		if(operations.getQueueOperations().getLast() != r) {
-			throw new UnsupportedOperationException("Not supported to delete custom operation");
+		if(blocks.size() != 0) {
+			return false;
 		}
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
-			OpOperation op = operations.removeLastOperation();
-			operations.removeOperationInfo(op);
-			atomicRemoveOperationObj(op, null);
+			operations.clearQueueOperations();
+			objByName.clear();
 			locked = UNLOCKED;
 		} finally {
 			if (locked == LOCKED_OP_IN_PROGRESS) {
@@ -214,6 +213,38 @@ public class OpBlockChain {
 			}
 		}
 		return true;
+	}
+	
+	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
+		validateIsUnlocked();
+		Iterator<OpOperation> descendingIterator = operations.getQueueOperations().descendingIterator();
+		OpOperation nonDeletedLast = null;
+		while(descendingIterator.hasNext()) {
+			OpOperation no = descendingIterator.next();
+			if(nonDeletedLast == null){ 
+				if(!operationsToDelete.contains(no.getRawHash())) {
+					nonDeletedLast = no;
+				} 
+			} else {
+				if(operationsToDelete.contains(no.getRawHash())) {
+					rules.error(nonDeletedLast, ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS, nonDeletedLast.getRawHash(), no.getRawHash());
+				}
+			}
+		}
+		Set<String> result;
+		locked = LOCKED_OP_IN_PROGRESS;
+		try {
+			result = atomicDeleteOperations(operationsToDelete);
+			for(OpPrivateObjectInstancesById o : objByName.values()) {
+				o.resetAfterEdit();
+			}
+			locked = UNLOCKED;
+		} finally {
+			if (locked == LOCKED_OP_IN_PROGRESS) {
+				locked = LOCKED_ERROR;
+			}
+		}
+		return result;
 	}
 
 	public synchronized OpBlock replicateBlock(OpBlock block) {
@@ -383,12 +414,27 @@ public class OpBlockChain {
 		}
 		blocks.clear();
 		Set<String> operationsToDelete = new TreeSet<String>();
-		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
 		for(OpOperation o : operations.getQueueOperations()) {
 			OperationDeleteInfo odi = newParent.getOperationInfo(o.getRawHash());
-			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
 			if(odi != null && odi.create) {
 				operationsToDelete.add(o.getRawHash());
+			}
+		}
+		atomicDeleteOperations(operationsToDelete);
+		
+		for(OpPrivateObjectInstancesById o : objByName.values()) {
+			o.resetAfterEdit();
+		}
+		atomicSetParent(newParent);
+	}
+
+	private Set<String> atomicDeleteOperations(Set<String> operationsToDelete) {
+		Set<String> deletedOps = new TreeSet<>();
+		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
+		for(OpOperation o : operations.getQueueOperations()) {
+			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
+			if(operationsToDelete.contains(o.getRawHash())) {
+				deletedOps.add(o.getRawHash());
 				atomicRemoveOperationObj(o, nonDeletedOpsByTypes.get(o.getType()));
 			} else {
 				if(prevByType == null) {
@@ -399,11 +445,7 @@ public class OpBlockChain {
 			}
 		}
 		operations.removeOperations(operationsToDelete);
-		
-		for(OpPrivateObjectInstancesById o : objByName.values()) {
-			o.resetAfterEdit();
-		}
-		atomicSetParent(newParent);
+		return deletedOps;
 	}
 	
 	
