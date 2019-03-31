@@ -16,6 +16,11 @@ opendb:
   db:
     compactCoefficient: ${OPENDB_DB_CF:1.0}
     dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
+  db-schema:
+    object-tables:
+      login: ["sys.login", "sys.signup"]
+      grants: ["sys.grant"]
+      system_objs: ["sys.validate", "sys.operation", "sys.role"]
   block-create:
     minSecondsInterval: 120
     minQueueSize: 10

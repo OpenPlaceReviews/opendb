@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.service;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,13 +16,17 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DBSchemaManager {
 	
 	// //////////SYSTEM TABLES DDL ////////////
+	protected static String SETTINGS_TABLE = "opendb_settings";
 	protected static String BLOCKS_TABLE = "blocks";
 	protected static String OPERATIONS_TABLE = "operations";
 	protected static String OP_DELETED_TABLE = "op_deleted";
@@ -32,6 +37,10 @@ public class DBSchemaManager {
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
 	
+	private static int OPENDB_SCHEMA_VERSION = 1;
+	
+	@Value("${opendb.db-schema.version}")
+	private static int userSchemaVersion = 1;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -59,6 +68,10 @@ public class DBSchemaManager {
 	}
 
 	static {
+		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", true);
+		registerColumn(SETTINGS_TABLE, "value", "text", false);
+		registerColumn(SETTINGS_TABLE, "content", "jsonb", false);
+		
 		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", true);
 		registerColumn(BLOCKS_TABLE, "phash", "bytea", false);
 		registerColumn(BLOCKS_TABLE, "blockid", "int", true);
@@ -135,45 +148,95 @@ public class DBSchemaManager {
 		return s;
 	}
 
+	private void migrateDBSchema(JdbcTemplate jdbcTemplate) {
+		int dbVersion = getIntSetting(jdbcTemplate, "opendb.version");
+		if(dbVersion < OPENDB_SCHEMA_VERSION) {
+			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
+		} else if(dbVersion > OPENDB_SCHEMA_VERSION) {
+			throw new UnsupportedOperationException();
+		}
+	}
+	
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
+		createTable(metadataDB, jdbcTemplate, SETTINGS_TABLE, schema.get(SETTINGS_TABLE));
+		
+		migrateDBSchema(jdbcTemplate);
+		
 		for (String tableName : schema.keySet()) {
+			if(tableName.equals(SETTINGS_TABLE))  {
+				 continue;
+			}
 			List<ColumnDef> cls = schema.get(tableName);
-			List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);
-			if (list == null) {
-				StringBuilder clb = new StringBuilder();
-				List<String> indx = new ArrayList<String>();
-				for (ColumnDef c : cls) {
-					if (clb.length() > 0) {
-						clb.append(", ");
-					}
-					clb.append(c.colName).append(" ").append(c.colType);
-					if (c.index) {
-						indx.add(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-								c.tableName, c.colName));
-					}
+			createTable(metadataDB, jdbcTemplate, tableName, cls);
+		}
+	}
+
+	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
+		List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);
+		if (list == null) {
+			StringBuilder clb = new StringBuilder();
+			List<String> indx = new ArrayList<String>();
+			for (ColumnDef c : cls) {
+				if (clb.length() > 0) {
+					clb.append(", ");
 				}
-				String createTable = String.format("create table %s (%s)", tableName, clb.toString());
-				jdbcTemplate.execute(createTable);
-				for (String ind : indx) {
-					jdbcTemplate.execute(ind);
-				}
-			} else {
-				for (ColumnDef c : cls) {
-					boolean found = false;
-					for (MetadataColumnSpec m : list) {
-						if (c.colName.equals(m.columnName)) {
-							found = true;
-							break;
-						}
-					}
-					if (!found) {
-						throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ",
-								c.colName, tableName));
-					}
+				clb.append(c.colName).append(" ").append(c.colType);
+				if (c.index) {
+					indx.add(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
+							c.tableName, c.colName));
 				}
 			}
-
+			String createTable = String.format("create table %s (%s)", tableName, clb.toString());
+			jdbcTemplate.execute(createTable);
+			for (String ind : indx) {
+				jdbcTemplate.execute(ind);
+			}
+		} else {
+			for (ColumnDef c : cls) {
+				boolean found = false;
+				for (MetadataColumnSpec m : list) {
+					if (c.colName.equals(m.columnName)) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ",
+							c.colName, tableName));
+				}
+			}
 		}
+	}
+
+	private boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
+		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?)", key, v) != 0;
+	}
+	
+	private int getIntSetting(JdbcTemplate jdbcTemplate, String key) {
+		String s = getSetting(jdbcTemplate, key);
+		if(s == null) {
+			return 0;
+		}
+		return Integer.parseInt(s);
+	}
+	
+	private String getSetting(JdbcTemplate jdbcTemplate, String key) {
+		String s = null;
+		try {
+			s = jdbcTemplate.query("select value from " + SETTINGS_TABLE + " where key = ?", new ResultSetExtractor<String>() {
+
+				@Override
+				public String extractData(ResultSet rs) throws SQLException, DataAccessException {
+					boolean next = rs.next();
+					if (next) {
+						return rs.getString(1);
+					}
+					return null;
+				}
+			}, key);
+		} catch (DataAccessException e) {
+		}
+		return s;
 	}
 
 	
