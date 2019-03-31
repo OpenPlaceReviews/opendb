@@ -70,6 +70,9 @@ public class DBConsensusManager {
 	private DBSchemaManager dbSchema;
 	
 	@Autowired
+	private FileBackupManager backupManager;
+	
+	@Autowired
 	private JsonFormatter formatter;
 	
 	@Autowired
@@ -102,6 +105,7 @@ public class DBConsensusManager {
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
+		backupManager.init();
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");
 		dbManagedChain = loadBlockHeadersAndBuildMainChain(rules);
@@ -583,6 +587,7 @@ public class DBConsensusManager {
 				}
 			}
 		}
+		backupManager.insertBlock(opBlock);
 		blocks.put(rawHash, blockheader);
 		orphanedBlocks.put(rawHash, blockheader);
 	}
