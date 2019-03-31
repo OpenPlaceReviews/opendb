@@ -20,7 +20,7 @@ public class FileBackupManager {
 	
 	protected static final Log LOGGER = LogFactory.getLog(FileBackupManager.class);
 	
-	private static final String SEPARATOR_STRING = "---------------------";
+	private static final String SEPARATOR_STRING = "\n---------------------\n";
 	
 	@Value("${opendb.files-backup.directory}")
 	private String DIRECTORY = "";
