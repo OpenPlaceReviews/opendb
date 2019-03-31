@@ -17,10 +17,10 @@ opendb:
     compactCoefficient: ${OPENDB_DB_CF:1.0}
     dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
   db-schema:
-    object-tables:
-      login: ["sys.login", "sys.signup"]
-      grants: ["sys.grant"]
-      system_objs: ["sys.validate", "sys.operation", "sys.role"]
+    objtables:
+      obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
+      obj_grants: { "types" : ["sys.grant"], "keysize":2 }
+      obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
   block-create:
     minSecondsInterval: 120
     minQueueSize: 10

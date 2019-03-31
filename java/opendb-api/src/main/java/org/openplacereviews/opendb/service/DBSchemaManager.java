@@ -3,11 +3,17 @@ package org.openplacereviews.opendb.service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
@@ -16,14 +22,18 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
 public class DBSchemaManager {
+	
+	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
+	private static final int OPENDB_SCHEMA_VERSION = 1;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static String SETTINGS_TABLE = "opendb_settings";
@@ -36,15 +46,26 @@ public class DBSchemaManager {
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
+
+	// loaded from config
+	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
+	private TreeMap<String, ObjectTypeTable> objTableDefs = new TreeMap<String, ObjectTypeTable>();
+	private TreeMap<String, String> typeToTables = new TreeMap<String, String>();
 	
-	private static int OPENDB_SCHEMA_VERSION = 1;
-	
-	@Value("${opendb.db-schema.version}")
-	private static int userSchemaVersion = 1;
 
 	@Autowired
 	private JsonFormatter formatter;
 
+	static class ObjectTypeTable {
+		public ObjectTypeTable(String tableName, int keySize) {
+			this.tableName = tableName;
+			this.keySize = keySize;
+		}
+		String tableName;
+		int keySize;
+		Set<String> types = new TreeSet<>();
+	}
+	
 	// SCHEMA DEFINITION
 	private static class ColumnDef {
 		String tableName;
@@ -103,25 +124,39 @@ public class DBSchemaManager {
 		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
 		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
 
-		registerColumn(OBJS_TABLE, "type", "text", true);
-		registerColumn(OBJS_TABLE, "p1", "text", true);
-		registerColumn(OBJS_TABLE, "p2", "text", true);
-		registerColumn(OBJS_TABLE, "p3", "text", true);
-		registerColumn(OBJS_TABLE, "p4", "text", true);
-		registerColumn(OBJS_TABLE, "p5", "text", true);
-		registerColumn(OBJS_TABLE, "ophash", "bytea", true);
-		registerColumn(OBJS_TABLE, "superblock", "bytea", true);
-		registerColumn(OBJS_TABLE, "sblockid", "int", true);
-		registerColumn(OBJS_TABLE, "sorder", "int", true);
-		registerColumn(OBJS_TABLE, "content", "jsonb", false);
+		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
 
 	}
 
-	public List<String> getObjectTables() {
-		return Collections.singletonList(OBJS_TABLE);
+	private static void registerObjTable(String tbName, int maxKeySize) {
+		registerColumn(tbName, "type", "text", true);
+		for (int i = 1; i <= maxKeySize; i++) {
+			registerColumn(tbName, "p" + i, "text", true);
+		}
+		registerColumn(tbName, "ophash", "bytea", true);
+		registerColumn(tbName, "superblock", "bytea", true);
+		registerColumn(tbName, "sblockid", "int", true);
+		registerColumn(tbName, "sorder", "int", true);
+		registerColumn(tbName, "content", "jsonb", false);
+	}
+
+	public TreeMap<String, Map<String, Object>> getObjtables() {
+		return objtables;
+	}
+	
+	public void setObjtables(TreeMap<String, Map<String, Object>> objtables) {
+		this.objtables = objtables;
+	}
+
+	public Collection<String> getObjectTables() {
+		return objTableDefs.keySet();
 	}
 	
 	public String getTableByType(String type) {
+		String tableName = typeToTables.get(type);
+		if(tableName != null) {
+			return tableName;
+		}
 		return OBJS_TABLE;
 	}
 	
@@ -130,7 +165,7 @@ public class DBSchemaManager {
 	}
 	
 	public int getKeySizeByTable(String table) {
-		return MAX_KEY_SIZE;
+		return objTableDefs.get(table).keySize;
 	}
 
 	public String generatePKString(String objTable, String mainString, String sep) {
@@ -160,8 +195,8 @@ public class DBSchemaManager {
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
 		createTable(metadataDB, jdbcTemplate, SETTINGS_TABLE, schema.get(SETTINGS_TABLE));
 		
+		prepareObjTableMapping();
 		migrateDBSchema(jdbcTemplate);
-		
 		for (String tableName : schema.keySet()) {
 			if(tableName.equals(SETTINGS_TABLE))  {
 				 continue;
@@ -169,6 +204,83 @@ public class DBSchemaManager {
 			List<ColumnDef> cls = schema.get(tableName);
 			createTable(metadataDB, jdbcTemplate, tableName, cls);
 		}
+		
+		migrateObjMappingIfNeeded(jdbcTemplate);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void migrateObjMappingIfNeeded(JdbcTemplate jdbcTemplate) {
+		String objMapping = getSetting(jdbcTemplate, "opendb.mapping");
+		String newMapping = formatter.toJsonElement(objtables).toString();
+		if (!OUtils.equals(newMapping, objMapping)) {
+			LOGGER.info(String.format("Start object mapping migration from '%s' to '%s'", objMapping, newMapping));
+			TreeMap<String, String> previousTypeToTable = new TreeMap<>();
+			if (objMapping != null && objMapping.length() > 0) {
+				TreeMap<String, Object> previousMapping = formatter.fromJsonToTreeMap(objMapping);
+				for(String tableName : previousMapping.keySet()) {
+					Map<String, String> otypes = ((Map<String, Map<String, String>>) previousMapping.get(tableName)).get("types");
+					if(otypes != null) {
+						for(String type : otypes.values()) {
+							previousTypeToTable.put(type, tableName);
+						}
+					}
+				}
+			}
+
+			for (String tableName : objTableDefs.keySet()) {
+				ObjectTypeTable ott = objTableDefs.get(tableName);
+				for (String type : ott.types) {
+					String prevTable = previousTypeToTable.remove(type);
+					if (prevTable == null) {
+						prevTable = OBJS_TABLE;
+					}
+					migrateObjDataBetweenTables(type, tableName, prevTable, ott.keySize, jdbcTemplate);
+				}
+			}
+			for (String type : previousTypeToTable.keySet()) {
+				String prevTable = previousTypeToTable.get(type);
+				migrateObjDataBetweenTables(type, OBJS_TABLE, prevTable, MAX_KEY_SIZE, jdbcTemplate);
+			}
+			setSetting(jdbcTemplate, "opendb.mapping", newMapping);
+		}
+				
+	}
+
+	private void migrateObjDataBetweenTables(String type, String tableName, String prevTable, int keySize, JdbcTemplate jdbcTemplate) {
+		if(!OUtils.equals(tableName, prevTable)) {
+			LOGGER.info(String.format("Migrate objects of type '%s' from '%s' to '%s'...", type, prevTable, tableName));
+			// compare existing table
+			String pks = "";
+			for(int i = 1; i <= keySize; i++) {
+				pks += ", p" +i; 
+			}
+			int update = jdbcTemplate.update(
+					"WITH moved_rows AS ( DELETE FROM " + prevTable + " a WHERE type = ? RETURNING a.*) " + 
+					"INSERT INTO " + tableName + "(type, ophash, superblock, sblockid, sorder, content " + pks + ") " +
+					"SELECT type, ophash, superblock, sblockid, sorder, content " + pks + " FROM moved_rows", type);
+			LOGGER.info(String.format("Migrate %d objects of type '%s'.", update, type));
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void prepareObjTableMapping() {
+		for(String tableName : objtables.keySet()) {
+			Integer i = (Integer) objtables.get(tableName).get("keysize");
+			if(i == null) {
+				i = MAX_KEY_SIZE;
+			}
+			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
+			objTableDefs.put(tableName, ott);
+			registerObjTable(tableName, i);
+			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
+			if(tps != null) {
+				for(String type : tps.values()) {
+					typeToTables.put(type, tableName);
+					ott.types.add(type);
+				}
+			}
+		}
+		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
 	}
 
 	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
@@ -209,7 +321,8 @@ public class DBSchemaManager {
 	}
 
 	private boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
-		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?)", key, v) != 0;
+		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?) "
+				+ " ON CONFLICT (key) DO UPDATE SET value = ? ", key, v, v) != 0;
 	}
 	
 	private int getIntSetting(JdbcTemplate jdbcTemplate, String key) {
