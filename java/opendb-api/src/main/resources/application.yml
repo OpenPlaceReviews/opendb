@@ -22,7 +22,7 @@ opendb:
       obj_grants: { "types" : ["sys.grant"], "keysize":2 }
       obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
   files-backup:
-    directory: blocks
+    directory: ${FILE_BLOCKS_DIR:blocks}
   block-create:
     minSecondsInterval: 120
     minQueueSize: 10
