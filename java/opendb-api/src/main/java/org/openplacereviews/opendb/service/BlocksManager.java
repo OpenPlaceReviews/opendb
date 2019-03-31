@@ -1,12 +1,18 @@
 package org.openplacereviews.opendb.service;
 
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.KeyPair;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,6 +28,7 @@ import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.ValidationTimer;
@@ -47,6 +54,9 @@ public class BlocksManager {
 	private String[] BOOTSTRAP_LIST = 
 			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "std-validations", "opr-0-test-grant"};
 	
+	@Value("${opendb.replicate.url}")
+	private String replicateUrl;
+	
 	@Value("${opendb.mgmt.user}")
 	private String serverUser;
 	
@@ -57,9 +67,15 @@ public class BlocksManager {
 	private String serverPublicKey;
 	private KeyPair serverKeyPair;
 	
-	private OpBlockChain blockchain; 
-	private boolean blockCreationOn = true;
+	private BlockchainMgmtStatus mgmtStatus = BlockchainMgmtStatus.BLOCK_CREATION; 
 	
+	private OpBlockChain blockchain; 
+	
+	private enum BlockchainMgmtStatus {
+		BLOCK_CREATION,
+		REPLICATION,
+		NONE,
+	}
 	
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
@@ -74,7 +90,31 @@ public class BlocksManager {
 	}
 	
 	public boolean isBlockCreationOn() {
-		return this.blockCreationOn;
+		return this.mgmtStatus == BlockchainMgmtStatus.BLOCK_CREATION;
+	}
+	
+	public boolean isReplicateOn() {
+		return this.mgmtStatus == BlockchainMgmtStatus.REPLICATION && !OUtils.isEmpty(replicateUrl);
+	}
+	
+	public String getReplicateUrl() {
+		return replicateUrl;
+	}
+	
+	public synchronized void setReplicateOn(boolean on) {
+		if(on && this.mgmtStatus == BlockchainMgmtStatus.NONE) {
+			this.mgmtStatus = BlockchainMgmtStatus.REPLICATION;
+		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.REPLICATION) {
+			this.mgmtStatus = BlockchainMgmtStatus.NONE;
+		}
+	}
+	
+	public synchronized void setBlockCreationOn(boolean on) {
+		if(on && this.mgmtStatus == BlockchainMgmtStatus.NONE) {
+			this.mgmtStatus = BlockchainMgmtStatus.BLOCK_CREATION;
+		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.BLOCK_CREATION) {
+			this.mgmtStatus = BlockchainMgmtStatus.NONE;
+		}
 	}
 	
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
@@ -89,11 +129,6 @@ public class BlocksManager {
 		String msg = "";
 		// db is bootstraped
 		LOGGER.info("+++ Blockchain is inititialized. " + msg);
-	}
-	
-	
-	public synchronized void setBlockCreationOn(boolean on) {
-		this.blockCreationOn = on;
 	}
 	
 	public synchronized boolean unlockBlockchain() {
@@ -168,6 +203,10 @@ public class BlocksManager {
 		}
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
+		return replicateValidBlock(timer, blc, opBlock);
+	}
+
+	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock) {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
@@ -175,7 +214,7 @@ public class BlocksManager {
 		
 		// change only after block is inserted into db
 		int tmRebase = timer.startExtra();
-		boolean changeParent = blockchain.rebaseOperations(blc);
+		boolean changeParent = blockchain.rebaseOperations(blockChain);
 		if(!changeParent) {
 			return null;
 		}
@@ -219,6 +258,70 @@ public class BlocksManager {
 		}
 		return dataManager.removeOperations(set) == set.size();
 		// blockchain = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+	}
+	
+	private Reader readerFromUrl(String url) throws IOException {
+		return new InputStreamReader(new URL(url).openStream());
+	}
+	
+	public synchronized boolean replicate() {
+		if(isReplicateOn()) {
+			try {
+				String from = blockchain.getLastBlockRawHash();
+				OpBlock[] replicateBlockHeaders = formatter.fromJson(
+						readerFromUrl(replicateUrl + "api/blocks?from=" + from), 
+								OpBlock[].class);
+				LinkedList<OpBlock> headersToReplicate = new LinkedList<OpBlock>(Arrays.asList(replicateBlockHeaders));
+				if(!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
+					if(!OUtils.equals(headersToReplicate.peekFirst().getRawHash(), from)) {
+						logSystem.logError(headersToReplicate.peekFirst(), ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS, 
+								ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS.getErrorFormat(
+										headersToReplicate.peekFirst().getRawHash(), from, headersToReplicate), null);
+						return false;
+					} else {
+						headersToReplicate.removeFirst();	
+					}
+				}
+				for(OpBlock header : headersToReplicate) {
+					OpBlock fullBlock = downloadBlock(header);
+					if(fullBlock == null) {
+						logSystem.logError(header, ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED, 
+								ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED.getErrorFormat(header.getRawHash()), null);
+						return false;
+					}
+					replicateOneBlock(fullBlock);
+				}
+				return true;
+			} catch (IOException e) {
+				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED, "Failed to replicate from " + replicateUrl, e);
+			}
+		}
+		return false;
+	}
+
+	private OpBlock downloadBlock(OpBlock header) throws MalformedURLException, IOException {
+		URL downloadByHash = new URL(replicateUrl + "api/block-by-hash?hash=" + header.getRawHash());
+		OpBlock res = formatter.fromJson(new InputStreamReader(downloadByHash.openStream()), OpBlock.class);
+		if(res.getBlockId() == -1) {
+			return null;
+		}
+		return res;
+	}
+	
+	public synchronized boolean replicateOneBlock(OpBlock block) {
+		ValidationTimer timer = new ValidationTimer();
+		timer.start();
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		OpBlock res;
+		res = blc.replicateBlock(block);
+		if(res == null) {
+			return false;
+		}
+		res = replicateValidBlock(timer, blc, res);
+		if(res == null) {
+			return false;
+		}
+		return true;
 	}
 	
 	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
@@ -401,6 +504,7 @@ public class BlocksManager {
 		}
 		return candidates;
 	}
+
 
 	
 }

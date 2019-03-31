@@ -17,21 +17,39 @@ public class OpenDBScheduledServices {
 	protected static final long DAY = 24l * HOUR;
 	
 	
-	private static final int BLOCK_CREATION_INTERVAL_SECONDS = 15;
+	private static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
 	
 	@Value("${opendb.block-create.minSecondsInterval}")
-	public int minSecondsInterval = BLOCK_CREATION_INTERVAL_SECONDS;
+	public int minSecondsInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS;
 	
 	@Value("${opendb.block-create.minQueueSize}")
 	public int minQueueSize = 10;
 	
 	@Value("${opendb.block-create.maxSecondsInterval}")
-	public int maxSecondsInterval = BLOCK_CREATION_INTERVAL_SECONDS * 20;
+	public int maxSecondsInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 20;
+	
+	@Value("${opendb.replicate.interval}")
+	public int replicateInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 10;
+
+	private long previousReplicateCheck = 0;
 	
 	@Autowired
 	private BlocksManager blocksManager;
 	
-	@Scheduled(fixedRate = BLOCK_CREATION_INTERVAL_SECONDS * SECOND)
+	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
+	public void replicateBlock() throws FailedVerificationException {
+		if(blocksManager.isReplicateOn()) {
+			long now = System.currentTimeMillis() / 1000;
+			if(previousReplicateCheck - now > replicateInterval) {
+				blocksManager.replicate();
+				// ignore if replication was successful or not
+				// exception would mean network failure and conflicts will need to be resolved manually
+				previousReplicateCheck = now;
+			}
+		}
+	}
+	
+	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
 	public void createBlock() throws FailedVerificationException {
 		int sz = blocksManager.getBlockchain().getQueueOperations().size();
 		if(blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && sz > 0 && 

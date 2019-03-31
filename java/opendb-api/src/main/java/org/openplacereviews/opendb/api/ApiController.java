@@ -2,6 +2,8 @@ package org.openplacereviews.opendb.api ;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -72,6 +74,8 @@ public class ApiController {
 		res.status = manager.getCurrentState();
 		if (manager.isBlockCreationOn()) {
 			res.status += " (blocks every " + scheduledServices.minSecondsInterval + " seconds)";
+		} else if (manager.isReplicateOn()) {
+			res.status += String.format(" (replicate from %s every %d seconds", manager.getReplicateUrl(), scheduledServices.replicateInterval);
 		}
 		return formatter.fullObjectToJson(res);
     }
@@ -124,16 +128,39 @@ public class ApiController {
     
     @GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
     @ResponseBody
-	public String blocksList(@RequestParam(required = false, defaultValue="50") int depth) throws FailedVerificationException {
-    	BlocksResult res = new BlocksResult();
-		res.blocks = manager.getBlockchain().getBlockHeaders(depth);
-		return formatter.fullObjectToJson(res);
+	public String blocksList(@RequestParam(required = false, defaultValue="50") int depth,
+			@RequestParam(required = false) String from) throws FailedVerificationException {
+    	List<OpBlock> blocks;
+    	if(from != null) {
+    		if(OUtils.isEmpty(from)) {
+    			blocks = new ArrayList<OpBlock>(manager.getBlockchain().getBlockHeaders(-1));
+    			Collections.reverse(blocks);
+			} else {
+				OpBlock found = manager.getBlockchain().getBlockHeaderByRawHash(from);
+				if (found != null) {
+					depth = manager.getBlockchain().getLastBlockId() - found.getBlockId() + 2; // +1 extra
+					blocks = new LinkedList<OpBlock>(manager.getBlockchain().getBlockHeaders(depth));
+					Collections.reverse(blocks);
+					while(!blocks.isEmpty() && !OUtils.equals(blocks.get(0).getRawHash(), from)) {
+						blocks.remove(0);
+					}
+				} else {
+					blocks = new ArrayList<OpBlock>(manager.getBlockchain().getBlockHeaders(3));
+				}
+			}
+    	} else {
+    		blocks = manager.getBlockchain().getBlockHeaders(depth);
+    	}
+		return formatter.fullObjectToJson(blocks.toArray(new OpBlock[blocks.size()]));
 	}
     
     @GetMapping(path = "/block-by-hash", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String getBlockByHash(@RequestParam(required = true) String hash) {
     	OpBlock blockHeader = manager.getBlockchain().getFullBlockByRawHash(OpBlockchainRules.getRawHash(hash));
+    	if(blockHeader == null) {
+    		return "{}";
+    	}
     	return formatter.fullObjectToJson(blockHeader);
     }
     
@@ -141,6 +168,9 @@ public class ApiController {
     @ResponseBody
     public String getOperationByHash(@RequestParam(required = true) String hash) {
     	OpOperation op = manager.getBlockchain().getOperationByHash(OpBlockchainRules.getRawHash(hash));
+    	if(op == null) {
+    		return "{}";
+    	}
     	return formatter.fullObjectToJson(op);
     }
     

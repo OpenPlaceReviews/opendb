@@ -40,7 +40,9 @@
             <input type="submit" value="Create block" id="block-create-btn"/>
             <input type="submit" value="Clear log" id="clear-log-btn" />
             <input type="submit" value="Compact" id="compact-btn" />
+            <input type="submit" value="Replicate" id="replicate-btn" />
             <br><br>
+
             <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
             <input type="submit" value="Revert super block" id="block-revert-btn"/>
             <input type="submit" value="Revert 1 block" id="block-1revert-btn"/>
@@ -48,6 +50,7 @@
             <br><br>
             <input type="submit" value="Lock/unlock blockchain" id="ops-pause-btn"/>
             <input type="submit" value="Pause/resume new blocks" id="blocks-pause-btn"/>
+            <input type="submit" value="Pause/resume replication" id="replicate-pause-btn"/>
             <br><br>
             <input type="text" id="remove-orphaned-blocks-txt"/> 
             <input type="submit" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
@@ -290,11 +293,11 @@ function loadBlocksData() {
   $.getJSON( "/api/blocks", function( data ) {
       var items = "";
       // SHOW currentBlock, currentTx - as in progress or failed
-      $("#blocks-tab").html("Blocks (" + data.blocks.length + ")");
+      $("#blocks-tab").html("Blocks (" + data.length + ")");
       var superblockId = 0;
       var superblockHash = "";
-      for(var i = 0; i < data.blocks.length; i++)  {
-        let op = data.blocks[i];
+      for(var i = 0; i < data.length; i++)  {
+        let op = data[i];
         items += "<br><li><b>Block id</b>: " + op.block_id;
         items += "<br><b>Hash</b>: " + op.hash;
         if(op.eval) {
@@ -380,6 +383,11 @@ $( document ).ready(function() {
         loadData();
       });
     });
+    $("#replicate-btn").click(function(){
+      $.post("/api/mgmt/replicate", {},  function(data, status){
+        loadData();
+      });
+    });
     $("#objects-type-list").change(function() {
       loadObjectsData();
     });
@@ -407,6 +415,11 @@ $( document ).ready(function() {
     });
     $("#blocks-pause-btn").click(function(){
        $.post("/api/mgmt/toggle-blocks-pause", {})
+          .done(function(data){  $("#result").html(data); loadData(); })
+          .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+    });
+    $("#replicate-pause-btn").click(function(){
+       $.post("/api/mgmt/toggle-replicate-pause", {})
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
     });

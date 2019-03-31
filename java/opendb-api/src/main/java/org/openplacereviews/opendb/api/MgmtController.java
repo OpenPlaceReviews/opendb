@@ -155,6 +155,26 @@ public class MgmtController {
     	return ResponseEntity.ok("{\"status\":\"OK\"}");
     }
     
+    @PostMapping(path = "/toggle-replicate-pause", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public ResponseEntity<String> toggleReplicateCreation(HttpSession session) {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
+    	manager.setReplicateOn(!manager.isReplicateOn());
+    	return ResponseEntity.ok("{\"status\":\"OK\"}");
+    }
+    
+    @PostMapping(path = "/replicate", produces = "text/json;charset=UTF-8")
+    @ResponseBody
+    public ResponseEntity<String> replicate(HttpSession session) {
+    	if(!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+    	}
+    	manager.replicate();
+    	return ResponseEntity.ok("{\"status\":\"OK\"}");
+    }
+    
     @PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> bootstrap(HttpSession session) throws Exception {

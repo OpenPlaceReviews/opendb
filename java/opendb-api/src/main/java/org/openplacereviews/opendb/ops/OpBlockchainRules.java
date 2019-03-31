@@ -679,7 +679,10 @@ public class OpBlockchainRules {
 		OP_ROLE_SUPER_ROLE_CIRCULAR_REF("Operation '%s': super role '%s' defined for '%s' has circular references"),
 		OP_GRANT_ROLE_DOESNT_EXIST("Operation '%s': role '%s' which is granted to '%s' doesn't exist"),
 		
-		MGMT_CANT_DELETE_NON_LAST_OPERATIONS("Operation '%s' couldn't be validated cause the parent operation '%s' is going to be deleted")
+		MGMT_CANT_DELETE_NON_LAST_OPERATIONS("Operation '%s' couldn't be validated cause the parent operation '%s' is going to be deleted"),
+		MGMT_REPLICATION_IO_FAILED("Replication sync has failed"),
+		MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED("Replication: replication of '%s' block has failed"),
+		MGMT_REPLICATION_BLOCK_CONFLICTS("Replication: replication has conflicting blocks '%s'-there vs '%s'-here: '%s'")
 		;
 		private final String msg;
 
