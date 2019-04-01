@@ -63,7 +63,7 @@ public class OpPrivateBlocksList {
 		if (b == null) {
 			return null;
 		}
-		if(dbAccess == null){
+		if(dbAccess != null){
 			return dbAccess.getBlockByHash(rawHash);
 		}
 		for(OpBlock bs : blocks){
