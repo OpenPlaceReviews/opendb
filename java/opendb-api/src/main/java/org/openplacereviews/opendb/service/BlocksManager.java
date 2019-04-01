@@ -167,11 +167,13 @@ public class BlocksManager {
 			return false;
 		}
 		op.makeImmutable();
-		dataManager.validateDuplicateOperation(op);
+		boolean existing = dataManager.validateExistingOperation(op);
 		boolean added = blockchain.addOperation(op);
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
-		dataManager.insertOperation(op);
+		if(!existing) {
+			dataManager.insertOperation(op);
+		}
 		return added;
 	}
 	
@@ -290,6 +292,11 @@ public class BlocksManager {
 						return false;
 					}
 					fullBlock.makeImmutable();
+					for (OpOperation o : fullBlock.getOperations()) {
+						if (!dataManager.validateExistingOperation(o)) {
+							dataManager.insertOperation(o);
+						}
+					}
 					replicateOneBlock(fullBlock);
 				}
 				return true;

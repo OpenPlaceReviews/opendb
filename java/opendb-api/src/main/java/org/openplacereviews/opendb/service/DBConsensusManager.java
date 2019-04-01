@@ -869,7 +869,7 @@ public class DBConsensusManager {
 		return blc;
 	}
 	
-	public void validateDuplicateOperation(OpOperation op) {
+	public boolean validateExistingOperation(OpOperation op) {
 		String js = formatter.opToJson(op);
 		OpOperation existingOperation = getOperationByHash(op.getHash());
 		if (existingOperation != null && !js.equals(formatter.opToJson(existingOperation))) {
@@ -877,6 +877,7 @@ public class DBConsensusManager {
 					"Operation is duplicated with '%s' hash but different content: \n'%s'\n'%s'", op.getHash(),
 					formatter.opToJson(existingOperation).replace("\n", ""), js.replace("\n", "")));
 		}
+		return existingOperation != null;
 	}
 	
 	public void insertOperation(OpOperation op) {
