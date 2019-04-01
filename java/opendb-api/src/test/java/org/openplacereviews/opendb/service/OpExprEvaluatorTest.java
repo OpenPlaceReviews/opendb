@@ -19,20 +19,6 @@ public class OpExprEvaluatorTest {
 		return OpExprEvaluator.parseExpression(e).evaluateObject(ectx);
 	}
 	
-	public Object evaluateExprJson(String e) {
-		JsonElement o = (JsonElement) evaluateExpr(e);
-		if(o == null) {
-			return null;
-		}
-		if(o.isJsonPrimitive()) {
-			if(o.getAsJsonPrimitive().isNumber()) {
-				return o.getAsInt();
-			}
-			return o.getAsString();
-		}
-		return o.toString();
-	}
-
 	public void evaluateExprForException(String e) {
 		try {
 			evaluateExpr(e);
@@ -58,13 +44,13 @@ public class OpExprEvaluatorTest {
 
 	@Test
 	public void testSimpleGet() {
-		assertEquals(1, evaluateExprJson(".a"));
-		assertEquals(1, evaluateExprJson("this.a"));
-		assertEquals("b", evaluateExprJson(".b"));
-		assertEquals("[\"1\",\"2\"]", evaluateExprJson(".c"));
-		assertEquals(null, evaluateExprJson(".d"));
-		assertEquals(3, evaluateExprJson(".e.a.a"));
-		assertEquals(3, evaluateExprJson("this.e.a.a"));
+		assertEquals(1, ((Number)evaluateExpr(".a")).intValue());
+		assertEquals(1, ((Number)evaluateExpr("this.a")).intValue());
+		assertEquals("b", evaluateExpr(".b"));
+		assertEquals("[\"1\",\"2\"]", evaluateExpr(".c").toString());
+		assertEquals(null, evaluateExpr(".d"));
+		assertEquals(3, ((Number)evaluateExpr(".e.a.a")).intValue());
+		assertEquals(3, ((Number)evaluateExpr("this.e.a.a")).intValue());
 	}
 	
 	@Test

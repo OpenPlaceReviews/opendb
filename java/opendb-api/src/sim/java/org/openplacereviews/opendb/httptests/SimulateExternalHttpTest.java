@@ -14,7 +14,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.Test;
 
-public class ExternalHttpTest {
+public class SimulateExternalHttpTest {
 
 	protected static String LOCATION = "http://localhost:6463/api/";
 //	protected static String LOCATION = "https://dev.openplacereviews.org/api/";
