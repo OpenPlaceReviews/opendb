@@ -67,6 +67,10 @@ Represents an internal servcie for *BlocksManager* to deal with all DB-related o
 ## Store and compact tail of blockchain
 In order to be able to support large blockchains, most of blockchain should be accessed from database. OpBlockchain provides interface for immutable subchains BlockDbAccessInterface, so database access could be provided. 
 
+Db-Stored-blocks are constantly grouped by chains. The algorithm is simply following: <Size of Group 1>  + <Size of Group 2> >= <Size of Group 3>, then <Group 2> and <Group 3> could be combined. Once groups are combined the previous groups are no longer accessible. That's why running any validation during compacting operation is not consistent and could produce errors. As of today *BlocksManager* provides only synchronized methods to add-validate operations, so this is not an issue. On the other hand "compacting" could take significant time once the object count will be around 1 000 000. So, redesign to keep orphaned-db-stored-chains could be beneficial.
+
+Compacting algorithm guarantees that number of subchains is log(N) - number of blocks. So, even with 100 000 000, the number of queries for searching 1 object by id won't exceed 10 queries and could be optimized within 1 SQL query.
+
 ## Atomicity and transactionality
 Essentially it doesn't require atomicity cause it will be used solely by *BlocksManager* from synchornized methods. Though this service required to have proper transactionality and communication with *BlocksManager* that's why all atomic operations are wrapped with "START TRANSACTION/COMMIT/ROLLBACK". 
 
