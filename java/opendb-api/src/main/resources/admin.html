@@ -155,6 +155,11 @@
 <script>
 
 var loginName = "";
+
+function loadDataDelay(d=1500) {
+  setTimeout(function() { loadData(); }, d);
+}
+
 function loadData() {
   refreshUser();
   $.getJSON( "/api/auth/admin-status", function( data ) {
@@ -380,12 +385,12 @@ $( document ).ready(function() {
 
     $("#compact-btn").click(function(){
       $.post("/api/mgmt/compact", {},  function(data, status){
-        loadData();
+        loadDataDelay();
       });
     });
     $("#replicate-btn").click(function(){
       $.post("/api/mgmt/replicate", {},  function(data, status){
-        loadData();
+        loadDataDelay();
       });
     });
     $("#objects-type-list").change(function() {
