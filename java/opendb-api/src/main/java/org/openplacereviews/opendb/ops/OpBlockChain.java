@@ -638,7 +638,7 @@ public class OpBlockChain {
 		if(n != null) {
 			return n;
 		}
-		return parent.getBlockHeaderByRawHash(hash);
+		return parent.getFullBlockByRawHash(hash);
 	}
 	
 	public OpOperation getOperationByHash(String rawHash) {

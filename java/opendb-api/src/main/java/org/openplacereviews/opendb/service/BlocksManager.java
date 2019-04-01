@@ -289,6 +289,7 @@ public class BlocksManager {
 								ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED.getErrorFormat(header.getRawHash()), null);
 						return false;
 					}
+					fullBlock.makeImmutable();
 					replicateOneBlock(fullBlock);
 				}
 				return true;

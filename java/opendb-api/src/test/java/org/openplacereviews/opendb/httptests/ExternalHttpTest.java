@@ -16,7 +16,8 @@ import org.junit.Test;
 
 public class ExternalHttpTest {
 
-	protected static String LOCATION = "http://localhost:6463/api/"; 
+	protected static String LOCATION = "http://localhost:6463/api/";
+//	protected static String LOCATION = "https://dev.openplacereviews.org/api/";
 	protected static String AUTH_ADMIN_LOGIN = "auth/admin-login";
 	protected static String AUTH_SIGNUP = "auth/signup";
 	protected static String AUTH_LOGIN = "auth/login";
