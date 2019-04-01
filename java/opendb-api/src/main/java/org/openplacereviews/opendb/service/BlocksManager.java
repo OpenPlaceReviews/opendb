@@ -269,7 +269,7 @@ public class BlocksManager {
 			try {
 				String from = blockchain.getLastBlockRawHash();
 				OpBlock[] replicateBlockHeaders = formatter.fromJson(
-						readerFromUrl(replicateUrl + "api/blocks?from=" + from), 
+						readerFromUrl(replicateUrl + "blocks?from=" + from), 
 								OpBlock[].class);
 				LinkedList<OpBlock> headersToReplicate = new LinkedList<OpBlock>(Arrays.asList(replicateBlockHeaders));
 				if(!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
@@ -300,7 +300,7 @@ public class BlocksManager {
 	}
 
 	private OpBlock downloadBlock(OpBlock header) throws MalformedURLException, IOException {
-		URL downloadByHash = new URL(replicateUrl + "api/block-by-hash?hash=" + header.getRawHash());
+		URL downloadByHash = new URL(replicateUrl + "block-by-hash?hash=" + header.getRawHash());
 		OpBlock res = formatter.fromJson(new InputStreamReader(downloadByHash.openStream()), OpBlock.class);
 		if(res.getBlockId() == -1) {
 			return null;
@@ -505,6 +505,4 @@ public class BlocksManager {
 		return candidates;
 	}
 
-
-	
 }

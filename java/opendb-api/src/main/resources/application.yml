@@ -15,7 +15,7 @@ opendb:
     publicKey: ${OPENDB_PBK:base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==}
   replicate:
     interval: ${OPENDB_REPLICATE_INTERVAL:15}
-    url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/admin}
+    url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/}
   db:
     compactCoefficient: ${OPENDB_DB_CF:1.0}
     dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}

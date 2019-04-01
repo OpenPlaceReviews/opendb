@@ -75,7 +75,7 @@ public class ApiController {
 		if (manager.isBlockCreationOn()) {
 			res.status += " (blocks every " + scheduledServices.minSecondsInterval + " seconds)";
 		} else if (manager.isReplicateOn()) {
-			res.status += String.format(" (replicate from %s every %d seconds", manager.getReplicateUrl(), scheduledServices.replicateInterval);
+			res.status += String.format(" (replicate from %s every %d seconds)	", manager.getReplicateUrl(), scheduledServices.replicateInterval);
 		}
 		return formatter.fullObjectToJson(res);
     }
