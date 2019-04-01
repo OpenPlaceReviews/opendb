@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.service;
+package org.openplacereviews.opendb.util;
 
 import static org.junit.Assert.assertEquals;
 
