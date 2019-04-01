@@ -763,10 +763,13 @@ public class OpBlockChain {
 		}
 		Collection<OpBlock> blockHeaders = blocks.getAllBlockHeaders();
 		lst.addAll(blockHeaders);
-		depth -= blockHeaders.size();
-		if(depth > 0) {
-			parent.fetchBlockHeaders(lst, depth);
+		if(depth != -1) {
+			depth -= blockHeaders.size();
+			if(depth < 0) {
+				return;
+			}
 		}
+		parent.fetchBlockHeaders(lst, depth);
 	}
 	
 	
