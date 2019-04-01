@@ -31,8 +31,8 @@ You should be able to see admin page at http://localhost:6463/api/admin.
 ## Env variables
 In order to be able to bootstrap first block with specified users. Note: You can always construct it yourself. You need to specify following env variables so the server will be able to sign messages
 ```
-OPENDB_LOGIN=openplacereviews:test
-OPENDB_PK="base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
+# OPENDB_LOGIN=openplacereviews:test_1  # empty to use test_1 for development
+# OPENDB_PK=  # empty to use test_1 for development network
 OPENDB_PORT=6463
 DB_URL=jdbc:postgresql://localhost:5432/openplacereviews
 DB_USER=test
