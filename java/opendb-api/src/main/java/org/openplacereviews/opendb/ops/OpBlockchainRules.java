@@ -149,6 +149,7 @@ public class OpBlockchainRules {
 			if(i > 0) {
 				return hs.substring(i + 1);
 			}
+			return hs;
 		}
 		return "";
 	}

@@ -293,6 +293,7 @@ public class BlocksManager {
 				}
 				return true;
 			} catch (IOException e) {
+				LOGGER.error(e.getMessage(), e);
 				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED, "Failed to replicate from " + replicateUrl, e);
 			}
 		}
