@@ -1,7 +1,10 @@
+package org.openplacereviews.opendb.psql;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -14,18 +17,17 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 
 	private static EmbeddedPostgres postgres;
 
-	private static String jdbcUrl;
+	private static String JDBC_URL;
 	private static final String JDBC_USERNAME = "my_test_username";
 	private static final String JDBC_PASSWORD = "my_test_password";
 	private static final String DB_NAME = "test_db";
 	
-	public static String getJdbcUrl() {
-		return jdbcUrl;
+	public Connection getConnection() throws SQLException {
+		return DriverManager.getConnection(JDBC_URL, JDBC_USERNAME, JDBC_PASSWORD);
 	}
 
-	private Collection<String> getAllDatabaseTables() {
-		// TODO Auto-generated method stub
-		return null;
+	private static Collection<String> getAllDatabaseTables() {
+		return Collections.emptyList();
 	}
 
 	@Override
@@ -34,7 +36,7 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 			if (postgres == null) {
 				final EmbeddedPostgres postgres = new EmbeddedPostgres();
 				postgres.start("127.0.0.1", 25512, DB_NAME, JDBC_USERNAME, JDBC_PASSWORD);
-				jdbcUrl = postgres.getConnectionUrl().orElseThrow(
+				JDBC_URL = postgres.getConnectionUrl().orElseThrow(
 						() -> new IllegalStateException("Failed to get PostgreSQL Connection URL"));
 				// Register hook to shutdown the
 				// PostgreSQL Embedded server at JVM shutdown.
@@ -42,9 +44,15 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 						new Thread(() -> Optional.ofNullable(postgres).ifPresent(EmbeddedPostgres::stop)));
 			}
 		}
-		System.setProperty("spring.datasource.url", jdbcUrl);
+		System.setProperty("spring.datasource.url", JDBC_URL);
 		System.setProperty("spring.datasource.username", JDBC_USERNAME);
 		System.setProperty("spring.datasource.password", JDBC_PASSWORD);
+	}
+	
+	@Override
+	protected void after() {
+		super.after();
+		postgres.stop();
 	}
 
 	public static class Wiper implements org.junit.rules.TestRule {
@@ -74,31 +82,29 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 
 	}
 
-	public static  void wipeDatabase(PostgreSQLServer postgreSQLServer) throws Exception {
+	public void wipeDatabase() throws Exception {
 		synchronized (PostgreSQLServer.class) {
-			try (final Connection connection = 
-					DriverManager.getConnection(jdbcUrl, JDBC_USERNAME, JDBC_PASSWORD);
+			try (final Connection connection = getConnection();
 					final java.sql.Statement databaseTruncationStatement = connection.createStatement()) {
 				databaseTruncationStatement.execute("BEGIN TRANSACTION");
 				databaseTruncationStatement.execute(String.format("TRUNCATE %s RESTART IDENTITY CASCADE",
-						String.join(",", postgreSQLServer.getAllDatabaseTables())));
+						String.join(",", getAllDatabaseTables())));
 				databaseTruncationStatement.execute("COMMIT TRANSACTION"); // Reset constraints
 			}
 		}
 
 	}
-
-	public static void deleteAllTables(PostgreSQLServer postgreSQLServer) throws SQLException {
+	
+	public void deleteAllTables() throws SQLException {
 		synchronized (PostgreSQLServer.class) {
-			try (final Connection connection = 
-					DriverManager.getConnection(jdbcUrl, JDBC_USERNAME, JDBC_PASSWORD);
-					final java.sql.Statement databaseTruncationStatement = connection.createStatement()) {
+			try (final Connection connection = getConnection()) {
+				final java.sql.Statement databaseTruncationStatement = connection.createStatement();
 				// Disable all constraints
 				databaseTruncationStatement.execute("SET session_replication_role = replica"); 
 				databaseTruncationStatement.execute("BEGIN TRANSACTION");
 				final Set<String> temporaryTablesStatements = new TreeSet<>();
 				int index = 0;
-				final Collection<String> allDatabaseTables = postgreSQLServer.getAllDatabaseTables();
+				final Collection<String> allDatabaseTables = getAllDatabaseTables();
 				for (final String table : allDatabaseTables) {
 					// Much faster to delete all tables in a single statement
 					temporaryTablesStatements.add(String.format("table_%s AS (DELETE FROM %s)", index++, table));
