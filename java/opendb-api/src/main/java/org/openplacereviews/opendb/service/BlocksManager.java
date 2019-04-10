@@ -51,7 +51,7 @@ public class BlocksManager {
 	@Autowired
 	private DBConsensusManager dataManager;
 	
-	private String[] BOOTSTRAP_LIST = 
+	protected String[] BOOTSTRAP_LIST = 
 			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "std-validations", "opr-0-test-grant"};
 	
 	@Value("${opendb.replicate.url}")
@@ -362,15 +362,11 @@ public class BlocksManager {
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
 					OpOperation[].class);
 			if (!OUtils.isEmpty(serverName)) {
-				KeyPair kp = null;
 				for (OpOperation o : lst) {
 					OpOperation op = o;
 					if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
-						if (kp == null) {
-							kp = serverLoginKeyPair;
-						}
 						op.setSignedBy(serverName);
-						op = generateHashAndSign(op, kp);
+						op = generateHashAndSign(op, serverLoginKeyPair);
 					}
 					addOperation(op);
 				}

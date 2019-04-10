@@ -598,6 +598,21 @@ public class OpBlockChain {
 		return lst;
 	}
 	
+	public OpBlock getBlockHeadersById(int id) {
+		if(nullObject) {
+			return null;
+		}
+		if(parent.getLastBlockId() < id) {
+			return parent.getBlockHeadersById(id);
+		}
+		for(OpBlock o : blocks.getAllBlockHeaders()) {
+			if(o.getBlockId() == id) {
+				return o;
+			}
+		}
+		return null;
+	}
+	
 	public String getSuperBlockHash() {
 		return blocks.getSuperBlockHash();
 	}
