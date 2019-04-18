@@ -31,6 +31,21 @@
 				"pubkey" : "public key to be used to validate signature",
 				"salt" : "salt used for private key generation from password and for hash of oauthid_hash",
 				"userdetails" : "custom json map of user details"
+			},
+			"description" : {
+				"name" : "User",
+				"plural-name" : "Users",
+				"operation-icon" : "opendb-icons:ic_user_login",
+				"operation-format" : [
+					"if(op.new && op.new.length > 0 && (!op.old || op.old.length == 0)) return 'Welcome new user ' + op.new[0].id + '!';",
+					"if(op.old && op.old.length > 0 && (!op.new || op.new.length == 0)) return 'User ' + op.old[0].id + ' was deleted!';",
+					"return 'User ' + op.new[0].id + ' updated details';",
+				],
+				"object-icon" : "opendb-icons:ic_user_login",
+				"object-name-format" : ["return 'User ' + obj.id;"],
+				"object-description-format" : [
+					"return 'User ' + obj.id + ' details: ' + JSON.stringify(obj.userdetails);"
+				]
 			}
 		}]
 	},
@@ -45,6 +60,21 @@
 				"id" : "combined id 'signup_name':'purpose', purpose could describe website, bot name or application",
 				"algo" : "crypto algorithm of generated public key",
 				"pubkey" : "public key to be used to validate signature"
+			},
+			"description" : {
+				"name" : "User login",
+				"plural-name" : "User logins",
+				"operation-icon" : "opendb-icons:ic_user_login",
+				"operation-format" : [
+					"if(op.new && op.new.length > 0 && (!op.old || op.old.length == 0)) return 'Welcome new user ' + op.new[0].id + '!';",
+					"if(op.old && op.old.length > 0 && (!op.new || op.new.length == 0)) return 'User ' + op.old[0].id + ' was deleted!';",
+					"return 'User ' + op.new[0].id + ' updated details';",
+				],
+				"object-icon" : "opendb-icons:ic_user_login",
+				"object-name-format" : ["return 'User ' + obj.id;"],
+				"object-description-format" : [
+					"return 'User login' + obj.id;"
+				]
 			}
 		}]
 	},
@@ -69,9 +99,6 @@
 		"new": [{
 			"id" : ["sys.grant"],
 			"comment" : "Operation that assigns user to a specific role",
-			"description" : {
-				"multiple-name" : "Grant operations"	
-			},
 			"version" : 0,
 			"arity" : 0,
 			"fields": {
