@@ -69,6 +69,9 @@
 		"new": [{
 			"id" : ["sys.grant"],
 			"comment" : "Operation that assigns user to a specific role",
+			"description" : {
+				"multiple-name" : "Grant operations"	
+			},
 			"version" : 0,
 			"arity" : 0,
 			"fields": {
