@@ -1,2 +1,10 @@
+if (new File('../../osmand-android/').exists()) {
+	includeBuild('../../osmand-android/') {
+		dependencySubstitution {
+        	substitute module('net.osmand:osmand-base') with project(':OsmAnd-java')
+    	}
+    }
+}
 include 'opendb-api'
 include 'openplacereviews-db'
+
