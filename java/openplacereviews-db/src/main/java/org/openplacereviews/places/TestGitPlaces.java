@@ -10,7 +10,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 public class TestGitPlaces {
 
 	public static void main(String[] args) throws GitAPIException, IOException {
-		File gitDir = new File("osm");
+		File gitDir = new File("osm/git-repo");
 		Git git ;
 		if (!gitDir.exists() || ((git = Git.open(gitDir)) == null)) {
 			System.out.println("Initialize git repo");

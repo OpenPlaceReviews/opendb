@@ -34,6 +34,7 @@ public class OpObject {
 	// transient info about validation timing etc
 	public static final String F_EVAL = "eval";
 	public static final String F_VALIDATION = "validation";
+	public static final String F_TIMESTAMP_ADDED = "timestamp";
 	public static final String F_PARENT_TYPE = "parentType";
 	public static final String F_PARENT_HASH = "parentHash";
 

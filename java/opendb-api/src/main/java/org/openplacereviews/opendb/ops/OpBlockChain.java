@@ -838,6 +838,9 @@ public class OpBlockChain {
 		}
 		vld.measure(ValidationTimer.OP_VALIDATION);
 		u.putCacheObject(OpObject.F_VALIDATION, vld.getTimes());
+		if(u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {
+			u.putCacheObject(OpObject.F_TIMESTAMP_ADDED, System.currentTimeMillis());
+		}
 		return true;
 	}
 	
