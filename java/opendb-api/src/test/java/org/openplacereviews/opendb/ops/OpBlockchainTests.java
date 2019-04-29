@@ -257,16 +257,14 @@ public class OpBlockchainTests {
         assertEquals(0, opBlockChain.getLastBlockId());
     }
 
-
-    //TODO add operations to queue
-    @Ignore
     @Test
     public void testReplicateBlockWithNotEmptyOperationQueue() throws FailedVerificationException {
+	    OpOperation opOperation = blc.getQueueOperations().removeFirst();
+
         OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
         OpBlockChain opBlockChain = new OpBlockChain(blc.getParent(), blc.getRules());
-
-
+        opBlockChain.addOperation(opOperation);
 
         assertNull(opBlockChain.replicateBlock(opBlock));
     }
@@ -283,15 +281,15 @@ public class OpBlockchainTests {
         assertEquals(blc.getParent(), opBlockChain);
     }
 
-    //TODO add operations to queue
-    @Ignore
     @Test
     public void testRebaseOperationsWithNotEmptyOperationQueue() throws FailedVerificationException {
-        OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+        OpOperation opOperation = blc.getQueueOperations().removeFirst();
+        blc.createBlock(serverName, serverKeyPair);
 
         OpBlockChain opBlockChain = new OpBlockChain(blc.getParent(), blc.getRules());
+        opBlockChain.addOperation(opOperation);
 
-        blc.rebaseOperations(opBlockChain);
+        assertFalse(blc.rebaseOperations(opBlockChain));
     }
 
 
@@ -307,16 +305,22 @@ public class OpBlockchainTests {
         assertTrue(opBlockChain.changeToEqualParent(opBlockChain.getParent()));
     }
 
-    //TODO generate Locked opBlockChain
-    @Ignore
     @Test
     public void testChangeToEqualLockedParent() {
+        OpBlockChain newOp = new OpBlockChain(OpBlockChain.NULL, blc.getRules());
+        newOp.lockByUser();
+
+        exceptionRule.expect(IllegalStateException.class);
+        exceptionRule.expectMessage("This chain is locked not by user or in a broken state");
+        blc.changeToEqualParent(newOp);
     }
 
-    //TODO generate other opBlockChain
-    @Ignore
     @Test
-    public void testChangeToNotEqualParent() {
+    public void testChangeToNotEqualParent() throws FailedVerificationException {
+        blc.createBlock(serverName, serverKeyPair);
+        OpBlockChain opBlockChain = new OpBlockChain(OpBlockChain.NULL, blc.getRules());
+
+        assertFalse(opBlockChain.changeToEqualParent(blc));
     }
 
     @Test
@@ -509,13 +513,14 @@ public class OpBlockchainTests {
         assertFalse(blockHeaders.isEmpty());
     }
 
-    //TODO fix it
+    //TODO error in retrieving parent info, not found block by id
     @Ignore
     @Test
     public void testGetBlockHeadersById() throws FailedVerificationException {
 	    OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
-	    OpBlock loadedOpBlock = blc.getBlockHeadersById(opBlock.getBlockId());
+	    int lastBlockId = blc.getLastBlockId();
+        OpBlock loadedOpBlock = blc.getBlockHeadersById(lastBlockId);
 	    assertNotNull(loadedOpBlock);
 
 	    assertEquals(opBlock.getRawHash(), loadedOpBlock.getRawHash());
