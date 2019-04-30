@@ -600,4 +600,133 @@ public class OpBlockchainTests {
 	}
 
 
+	    // VALIDATION TESTS
+
+    // ErrorType.OP_HASH_IS_NOT_CORRECT
+    @Test
+    public void testAddOperationExpectError_OpHashIsNotCorrect() {
+	    OpOperation opOperation = new OpOperation();
+	    opOperation.makeImmutable();
+
+	    blc.removeAllQueueOperations();
+
+        exceptionRule.expect(IllegalArgumentException.class);
+	    exceptionRule.expectMessage("Operation hash is not correct 'null' != ''");
+	    blc.addOperation(opOperation);
+    }
+
+    // ErrorType.OP_HASH_IS_DUPLICATED
+    @Test
+    public void testAddOperationExpectError_OpHashIsDuplicated() {
+	    OpOperation opOperation = blc.getQueueOperations().getFirst();
+
+        exceptionRule.expect(IllegalArgumentException.class);
+	    exceptionRule.expectMessage("Operation 'json:sha256:10c5978d2466b67505d2d94a9a0f29695e03bf11893a4a5cac3cd700aa757dd9' hash is duplicated in block ''");
+	    blc.addOperation(opOperation);
+    }
+
+    // ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS
+    @Test
+    public void testAddOperationExpectError_MgmtCantDeleteNonLastOperations() {
+	    OpOperation opOperation = blc.getQueueOperations().getFirst();
+
+        exceptionRule.expect(IllegalArgumentException.class);
+	    exceptionRule.expectMessage("Operation 'a857982deb6993910051e7ea78cf9a72f7e8c139c40a83091f8b0a6c8097abae' couldn't be validated cause the parent operation '10c5978d2466b67505d2d94a9a0f29695e03bf11893a4a5cac3cd700aa757dd9' is going to be deleted");
+	    blc.removeQueueOperations(new HashSet<>(Collections.singletonList(opOperation.getRawHash())));
+    }
+
+    // ErrorType.REF_OBJ_NOT_FOUND
+    @Test
+    public void testAddOperationPrepareReferencedObjectsExpectError_RefObjNotFound() throws FailedVerificationException {
+	    String operation = "{\n" +
+                "\t\t\"type\" : \"sys.grant\",\n" +
+                "\t\t\"ref\" : {\n" +
+                "\t\t\t\"s\" : [\"sys.login1\",\"openplacereviews\",\"test_1\"]\n" +
+                "\t\t},\n" +
+                "\t\t\"new\" : [{ \n" +
+                "\t\t\t\"id\" : [\"openplacereviews:test_2\"],\n" +
+                "\t\t\t\"roles\" : [\"master\", \"administrator\"]\n" +
+                "\t\t}]\n" +
+                "\t}";
+
+	    OpOperation opOperation = formatter.parseOperation(operation);
+	    opOperation.setSignedBy(serverName);
+	    opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+	    opOperation.makeImmutable();
+
+        exceptionRule.expect(IllegalArgumentException.class);
+        exceptionRule.expectMessage("Operation 'json:sha256:eeb0bc93f6e1b5cde86b2967f3169a9d060c256f925ec2a26186a6975a596106': object to reference wasn't found '[sys.login1, openplacereviews, test_1]'"); //ref sys.login1 is not exist
+        blc.addOperation(opOperation);
+    }
+
+    // ErrorType.DEL_OBJ_NOT_FOUND
+    @Test
+    public void testAddOperationPrepareDeletedObjectsExpectError_DelObjNotFound() throws FailedVerificationException {
+        String operation = "{\n" +
+                "\t\t\"type\" : \"sys.login\",\n" +
+                "\t\t\"signed_by\": \"openplacereviews\",\n" +
+                "\t\t\"ref\" : {\n" +
+                "\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
+                "\t\t},\n" +
+                "\t\t\"old\" : [\"fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c801:0\"],\n" +
+                "\t\t\"signature\": \"ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM\"\n" +
+                "\t}";
+
+        OpOperation opOperation = formatter.parseOperation(operation);
+        opOperation.setSignedBy(serverName);
+        opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+        opOperation.makeImmutable();
+
+        exceptionRule.expect(IllegalArgumentException.class);
+        exceptionRule.expectMessage("Operation 'json:sha256:558a2c0cf832a90c4887dd0d165af6faf8aaa605079e2dd3ec324b429a45e661': object to delete 'fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c801:0' wasn't found");
+        blc.addOperation(opOperation);
+    }
+
+    // ErrorType.DEL_OBJ_DOUBLE_DELETED
+    //TODO fix not correct format for DEL_OBJ_DOUBLE_DELETED ErrorType  -> d != java.lang.String
+    @Ignore
+    @Test
+    public void testAddOperationPrepareDeletedObjectsExpectError_DelObjDoubleDeleted() throws FailedVerificationException {
+        String operation = "{\n" +
+                "\t\t\"type\" : \"sys.login\",\n" +
+                "\t\t\"signed_by\": \"openplacereviews\",\n" +
+                "\t\t\"ref\" : {\n" +
+                "\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
+                "\t\t},\n" +
+                "\t\t\"old\" : [\"fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802:0\"],\n" +
+                "\t\t\"signature\": \"ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM\"\n" +
+                "\t}";
+
+        OpOperation opOperation = formatter.parseOperation(operation);
+        opOperation.setSignedBy(serverName);
+        opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+        opOperation.makeImmutable();
+
+        blc.addOperation(opOperation);
+    }
+
+    //ErrorType.NEW_OBJ_DOUBLE_CREATED
+    @Test
+    public void testAddOperationPrepareNoNewDuplicatedObjectsExpectError_NewObjDoubleCreated() throws FailedVerificationException {
+        String operation = "{\n" +
+                "\t\t\"type\" : \"sys.grant\",\n" +
+                "\t\t\"ref\" : {\n" +
+                "\t\t\t\"s\" : [\"sys.login1\",\"openplacereviews\",\"test_1\"]\n" +
+                "\t\t},\n" +
+                "\t\t\"new\" : [{ \n" +
+                "\t\t\t\"id\" : [\"openplacereviews:test_1\"],\n" +
+                "\t\t\t\"roles\" : [\"master\", \"administrator\"]\n" +
+                "\t\t}]\n" +
+                "\t}";
+
+        OpOperation opOperation = formatter.parseOperation(operation);
+        opOperation.setSignedBy(serverName);
+        opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+        opOperation.makeImmutable();
+
+        exceptionRule.expect(IllegalArgumentException.class);
+        exceptionRule.expectMessage("Operation 'json:sha256:ea6becc0cd48c59c7f85dd8a5684d391db2662b7a3fa7b82f88cfd00960c17be': object '[openplacereviews:test_1]' was already created");
+        blc.addOperation(opOperation);
+    }
+
 }
