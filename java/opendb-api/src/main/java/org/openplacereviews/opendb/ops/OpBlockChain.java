@@ -602,7 +602,7 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
-		if(parent.getLastBlockId() < id) {
+		if(parent.getLastBlockId() > id) {
 			return parent.getBlockHeadersById(id);
 		}
 		for(OpBlock o : blocks.getAllBlockHeaders()) {
