@@ -158,7 +158,7 @@ public class OpBlockchainRulesTest {
 	public void testAddOperationPrepareDeletedObjectsExpectError_DelObjDoubleDeleted() throws FailedVerificationException {
 		blc.createBlock(serverName, serverKeyPair);
 
-		String operation = "" +
+		String operation =
 				"{\n" +
 				"\t\t\"type\" : \"sys.login\",\n" +
 				"\t\t\"signed_by\": \"openplacereviews\",\n" +
@@ -434,14 +434,14 @@ public class OpBlockchainRulesTest {
 	public void testValidateRulesExpectError_OpRoleSuperRoleDoesntExist() throws FailedVerificationException {
 		String operation =
 				"{\n" +
-						"\t\t\"type\"  : \"sys.role\",\n" +
-						"\t\t\"new\" : [{\n" +
-						"\t\t\t\"id\" : [\"owner1\"],\n" +
-						"\t\t\t\"comment\" : \"Owner role is a super role that nobody could change it\",\n" +
-						"\t\t\t\"owner_role\" : \"owner\",\n" +
-						"\t\t\t\"super_roles\": [\"owner1\"]\n" +
-						"\t\t}]\n" +
-						"\t}";
+				"\t\t\"type\"  : \"sys.role\",\n" +
+				"\t\t\"new\" : [{\n" +
+				"\t\t\t\"id\" : [\"owner1\"],\n" +
+				"\t\t\t\"comment\" : \"Owner role is a super role that nobody could change it\",\n" +
+				"\t\t\t\"owner_role\" : \"owner\",\n" +
+				"\t\t\t\"super_roles\": [\"owner1\"]\n" +
+				"\t\t}]\n" +
+				"\t}";
 
 		OpOperation opOperation = formatter.parseOperation(operation);
 		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
