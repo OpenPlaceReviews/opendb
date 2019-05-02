@@ -602,7 +602,7 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
-		if(parent.getLastBlockId() < id) {
+		if(parent.getLastBlockId() > id) {
 			return parent.getBlockHeadersById(id);
 		}
 		for(OpBlock o : blocks.getAllBlockHeaders()) {
@@ -891,7 +891,7 @@ public class OpBlockChain {
 			if(opInfo.deletedObjects != null && delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd]) {
 					return rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
-							delRef, opInfo.deletedObjects[delInd]);
+							delRef, ctx.blockHash);
 				}
 			}
 			List<OpObject> nw = opInfo.op.getNew();
