@@ -10,14 +10,12 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
 import java.security.KeyPair;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateBigJSON;
 import static org.openplacereviews.opendb.VariableHelperTest.*;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.BLOCK_VERSION;
 
 public class OpBlockchainRulesTest {
 
@@ -62,7 +60,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.OP_HASH_IS_NOT_CORRECT
+	 * Expected ErrorType.OP_HASH_IS_NOT_CORRECT
 	 */
 	@Test
 	public void testAddOperationExpectError_OpHashIsNotCorrect() {
@@ -76,7 +74,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.OP_HASH_IS_DUPLICATED
+	 * Expected ErrorType.OP_HASH_IS_DUPLICATED
 	 */
 	@Test
 	public void testAddOperationExpectError_OpHashIsDuplicated() {
@@ -87,7 +85,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS
+	 * Expected ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS
 	 */
 	@Test
 	public void testAddOperationExpectError_MgmtCantDeleteNonLastOperations() {
@@ -98,7 +96,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.REF_OBJ_NOT_FOUND
+	 * Expected ErrorType.REF_OBJ_NOT_FOUND
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -125,7 +123,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.DEL_OBJ_NOT_FOUND
+	 * Expected ErrorType.DEL_OBJ_NOT_FOUND
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -151,7 +149,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.DEL_OBJ_DOUBLE_DELETED
+	 * Expected ErrorType.DEL_OBJ_DOUBLE_DELETED
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -179,7 +177,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.NEW_OBJ_DOUBLE_CREATED
+	 * Expected ErrorType.NEW_OBJ_DOUBLE_CREATED
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -207,6 +205,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Success validation block
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateBlock() throws FailedVerificationException {
@@ -214,33 +213,105 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_PREV_HASH
+	 * Expected ErrorType.BLOCK_PREV_HASH
+	 * @throws FailedVerificationException
 	 */
-	@Ignore
 	@Test
-	public void testValidateBlockExpectError_BlockPrevHash() {
+	public void testValidateBlockExpectError_BlockPrevHash() throws FailedVerificationException {
+		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.replicateBlock(opBlock);
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_PREV_ID
+	 * Expected ErrorType.BLOCK_PREV_ID
+	 * @throws FailedVerificationException
 	 */
-	@Ignore
 	@Test
-	public void testValidateBlockExpectError_BlockPrevId() {
+	public void testValidateBlockExpectError_BlockPrevId() throws FailedVerificationException {
+		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
+
+		List<OpOperation> opOperations = new ArrayList<>();
+		Set<String> operationsToDelete = new HashSet<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		selectOperations(opOperations, operationsToDelete, iterator);
+
+		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		assertEquals(5, removedOperations.size());
+
+		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+
+		OpBlock block = new OpBlock();
+		block.operations.addAll(opOperations);
+		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
+		block.putObjectValue(OpBlock.F_BLOCKID, opBlock.getBlockId());
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, opBlock.getFullHash());
+		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, blc.getRules().calculateMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, blc.getRules().calculateSigMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIGNED_BY, serverName);
+		block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
+		block.putStringValue(OpBlock.F_DETAILS, "");
+		block.putStringValue(OpBlock.F_HASH, blc.getRules().calculateHash(block));
+		if (serverKeyPair != null) {
+			byte[] hashBytes = SecUtils.getHashBytes(block.getFullHash());
+			block.putStringValue(OpBlock.F_SIGNATURE,
+					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
+		}
+		block.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.replicateBlock(block);
+	}
+
+	/**
+	 * Expected ErrorType.BLOCK_HASH_IS_DUPLICATED
+	 * @throws FailedVerificationException
+	 */
+	@Test
+	public void testValidateBlockExpectError_BlockHashIsDuplicated() throws FailedVerificationException {
+		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
+
+		List<OpOperation> opOperations = new ArrayList<>();
+		Set<String> operationsToDelete = new HashSet<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		selectOperations(opOperations, operationsToDelete, iterator);
+
+		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		assertEquals(5, removedOperations.size());
+
+		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+
+		OpBlock block = new OpBlock();
+		block.operations.addAll(opOperations);
+		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
+		block.putObjectValue(OpBlock.F_BLOCKID, opBlock.getBlockId() + 1);
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, opBlock.getFullHash());
+		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, blc.getRules().calculateMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, blc.getRules().calculateSigMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIGNED_BY, serverName);
+		block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
+		block.putStringValue(OpBlock.F_DETAILS, "");
+		block.putStringValue(OpBlock.F_HASH, opBlock.getRawHash());
+		if (serverKeyPair != null) {
+			byte[] hashBytes = SecUtils.getHashBytes(block.getFullHash());
+			block.putStringValue(OpBlock.F_SIGNATURE,
+					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
+		}
+		block.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.replicateBlock(block);
 
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_HASH_IS_DUPLICATED
-	 */
-	@Ignore
-	@Test
-	public void testValidateBlockExpectError_BlockHashIsDuplicated() {
-
-	}
-
-	/**
-	 * Expect ErrorType.BLOCK_EMPTY
+	 * Expected ErrorType.BLOCK_EMPTY
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockEmpty() throws FailedVerificationException {
@@ -251,25 +322,92 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_MERKLE_TREE_FAILED
+	 * Expected ErrorType.BLOCK_MERKLE_TREE_FAILED
+	 * @throws FailedVerificationException
 	 */
-	@Ignore
 	@Test
-	public void testValidateBlockExpectError_BlockMerkleTreeFailed() {
+	public void testValidateBlockExpectError_BlockMerkleTreeFailed() throws FailedVerificationException {
+		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
 
+		List<OpOperation> opOperations = new ArrayList<>();
+		Set<String> operationsToDelete = new HashSet<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		selectOperations(opOperations, operationsToDelete, iterator);
+
+		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		assertEquals(5, removedOperations.size());
+
+		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+
+		OpBlock block = new OpBlock();
+		block.operations.addAll(opOperations);
+		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
+		block.putObjectValue(OpBlock.F_BLOCKID, opBlock.getBlockId() + 1);
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, opBlock.getFullHash());
+		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, blc.getRules().calculateSigMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, blc.getRules().calculateSigMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIGNED_BY, serverName);
+		block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
+		block.putStringValue(OpBlock.F_DETAILS, "");
+		block.putStringValue(OpBlock.F_HASH, blc.getRules().calculateHash(block));
+		if (serverKeyPair != null) {
+			byte[] hashBytes = SecUtils.getHashBytes(block.getFullHash());
+			block.putStringValue(OpBlock.F_SIGNATURE,
+					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
+		}
+		block.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.replicateBlock(block);
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED
+	 * Expected ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED
+	 * @throws FailedVerificationException
 	 */
-	@Ignore
 	@Test
-	public void testValidateBlockExpectError_BlockSigMerkleTreeFailed() {
+	public void testValidateBlockExpectError_BlockSigMerkleTreeFailed() throws FailedVerificationException {
+		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
 
+		List<OpOperation> opOperations = new ArrayList<>();
+		Set<String> operationsToDelete = new HashSet<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		selectOperations(opOperations, operationsToDelete, iterator);
+
+		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		assertEquals(5, removedOperations.size());
+
+		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+
+		OpBlock block = new OpBlock();
+		block.operations.addAll(opOperations);
+		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
+		block.putObjectValue(OpBlock.F_BLOCKID, opBlock.getBlockId() + 1);
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, opBlock.getFullHash());
+		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, blc.getRules().calculateMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, blc.getRules().calculateMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIGNED_BY, serverName);
+		block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
+		block.putStringValue(OpBlock.F_DETAILS, "");
+		block.putStringValue(OpBlock.F_HASH, blc.getRules().calculateHash(block));
+		if (serverKeyPair != null) {
+			byte[] hashBytes = SecUtils.getHashBytes(block.getFullHash());
+			block.putStringValue(OpBlock.F_SIGNATURE,
+					SecUtils.signMessageWithKeyBase64(serverKeyPair, hashBytes, SecUtils.SIG_ALGO_ECDSA, null));
+		}
+		block.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.replicateBlock(block);
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_SIGNATURE_FAILED
+	 * Expected ErrorType.BLOCK_SIGNATURE_FAILED
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockSignatureFailed() throws FailedVerificationException {
@@ -278,15 +416,44 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.BLOCK_HASH_FAILED
+	 * Expected ErrorType.BLOCK_HASH_FAILED
+	 * @throws FailedVerificationException
 	 */
-	@Ignore
 	@Test
-	public void testValidateBlockExpectError_BlockHashFailed() {
+	public void testValidateBlockExpectError_BlockHashFailed() throws FailedVerificationException {
+		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
+
+		List<OpOperation> opOperations = new ArrayList<>();
+		Set<String> operationsToDelete = new HashSet<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		selectOperations(opOperations, operationsToDelete, iterator);
+
+		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		assertEquals(5, removedOperations.size());
+
+		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+
+		OpBlock block = new OpBlock();
+		block.operations.addAll(opOperations);
+		block.setDate(OpBlock.F_DATE, System.currentTimeMillis());
+		block.putObjectValue(OpBlock.F_BLOCKID, opBlock.getBlockId() + 1);
+		block.putStringValue(OpBlock.F_PREV_BLOCK_HASH, opBlock.getFullHash());
+		block.putStringValue(OpBlock.F_MERKLE_TREE_HASH, blc.getRules().calculateMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIG_MERKLE_TREE_HASH, blc.getRules().calculateSigMerkleTreeHash(block));
+		block.putStringValue(OpBlock.F_SIGNED_BY, serverName);
+		block.putObjectValue(OpBlock.F_VERSION, BLOCK_VERSION);
+		block.putStringValue(OpBlock.F_DETAILS, "");
+		block.putStringValue(OpBlock.F_HASH, "");
+		block.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.replicateBlock(block);
 	}
 
 	/**
-	 * Expect ErrorType.OP_SIGNATURE_FAILED
+	 * Expected ErrorType.OP_SIGNATURE_FAILED
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -313,7 +480,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.OP_SIGNATURE_FAILED
+	 * Expected ErrorType.OP_SIGNATURE_FAILED
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -366,7 +533,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 *  Expect ErrorType.OP_HASH_IS_NOT_CORRECT
+	 *  Expected ErrorType.OP_HASH_IS_NOT_CORRECT
 	 */
 	@Test
 	public void testValidateOpExpectError_OpHashIsNotCorrect() {
@@ -390,7 +557,7 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * Expect ErrorType.OP_SIZE_IS_EXCEEDED
+	 * Expected ErrorType.OP_SIZE_IS_EXCEEDED
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -404,21 +571,56 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * 	Expect ErrorType.OP_INVALID_VALIDATE_EXPRESSION
+	 * 	Expected ErrorType.OP_INVALID_VALIDATE_EXPRESSION
+	 * 	@throws FailedVerificationException
 	 */
-	@Ignore
 	@Test
-	public void testValidateRulesExpectError_OpInvalidValidateExpression() {
+	public void testValidateRulesExpectError_OpInvalidValidateExpression() throws FailedVerificationException {
+		String operation =
+				"{  \n" +
+				"\t\t\"type\" : \"sys.validate\",\n" +
+				"\t\t\"new\" : [{ \n" +
+				"\t\t\t\"id\" : [\"all_op_arity_new_del1\"],\n" +
+				"\t\t\t\"type\" : [\"*\"],\n" +
+				"\t\t\t\"comment\" : \"Validate operation arity\",\n" +
+				"\t\t\t\"role\" : \"none\",\n" +
+				"\t\t\t\"if\" : [\n" +
+				"\t\t\t\t\"std:eq()\"\n" +
+				"\t\t\t],\n" +
+				"\t\t\t\"validate\" : [\n" +
+				"\t\t\t\t\"std:leq(std:size(.new),1)\",\n" +
+				"\t\t\t\t\"std:leq(std:size(.old),1)\"\n" +
+				"\t\t\t]\n" +
+				"\t\t}]\n" +
+				"\t}";
+
+		OpOperation opOperation = formatter.parseOperation(operation);
+		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		opOperation.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.addOperation(opOperation);
 
 	}
 
 	/**
-	 *  Expect ErrorType.OP_ROLE_SUPER_ROLE_CIRCULAR_REF
+	 *  Expected ErrorType.OP_ROLE_SUPER_ROLE_CIRCULAR_REF
+	 *  @throws FailedVerificationException
 	 */
+	//TODO generate circular ref
 	@Ignore
 	@Test
 	public void testValidateRulesExpectError_OpRoleSuperRoleCircularRef() throws FailedVerificationException {
-		String operation = "";
+		String operation =
+				"{\n" +
+				"\t\t\"type\" : \"sys.role\",\n" +
+				"\t\t\"new\" : [{ \n" +
+				"\t\t\t\"id\"\t: [\"owner\"],\n" +
+				"\t\t\t\"comment\"   : \"Role master and only owner could change it\",\n" +
+				"\t\t\t\"owner_role\" : \"master\",\n" +
+				"\t\t\t\"super_roles\" : [\"master\"]\n" +
+				"\t\t}]\n" +
+				"\t}";
 
 		OpOperation opOperation = formatter.parseOperation(operation);
 		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
@@ -428,7 +630,8 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 *  Expect ErrorType.OP_ROLE_SUPER_ROLE_DOESNT_EXIST
+	 *  Expected ErrorType.OP_ROLE_SUPER_ROLE_DOESNT_EXIST
+	 *  @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpRoleSuperRoleDoesntExist() throws FailedVerificationException {
@@ -452,7 +655,8 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 *  Expect ErrorType.OP_GRANT_ROLE_DOESNT_EXIST
+	 *  Expected ErrorType.OP_GRANT_ROLE_DOESNT_EXIST
+	 *  @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpGrantRoleDoesntExist() throws FailedVerificationException {
@@ -474,5 +678,16 @@ public class OpBlockchainRulesTest {
 
 		exceptionRule.expect(IllegalArgumentException.class);
 		blc.addOperation(opOperation);
+	}
+
+	private void selectOperations(List<OpOperation> opOperations, Set<String> operationsToDelete, Iterator<OpOperation> iterator) {
+		int i = 0;
+
+		while (i < 5) {
+			OpOperation opOperation = iterator.next();
+			opOperations.add(opOperation);
+			operationsToDelete.add(opOperation.getRawHash());
+			i++;
+		}
 	}
 }

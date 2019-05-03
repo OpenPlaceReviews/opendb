@@ -46,20 +46,29 @@ public class ObjectGeneratorTest {
 	 */
 	public static String generateBigJSON() {
 		StringBuilder startOperation =
-				new StringBuilder("{\n" +
+				new StringBuilder(
+						"{\n" +
 						"\t\t\"type\" : \"sys.grant\",\n" +
 						"\t\t\"ref\" : {\n" +
 						"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
 						"\t\t},\n" +
-						"\t\t\"new\" : [");
+						"\t\t\"new\" : ["
+				);
 
 		while (startOperation.length() <= OpBlockchainRules.MAX_OP_SIZE_MB) {
 			for(int i = 0; i < 100; i++) {
-				startOperation.append("\t\t{ \n" + "\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews").append(startOperation.length()).append(i).append("\"],\n").append("\t\t\t\"roles\" : [\"owner\"]\n").append("\t\t},");
+				startOperation
+						.append("\t\t{ \n" + "\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews")
+						.append(startOperation.length())
+						.append(i)
+						.append("\"],\n")
+						.append("\t\t\t\"roles\" : [\"owner\"]\n")
+						.append("\t\t},");
 			}
 		}
 
-		startOperation.append("\t\t{ \n" + "\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews\"],\n" + "\t\t\t\"roles\" : [\"owner\"]\n" + "\t\t}]\n" + "\t}");
+		startOperation
+				.append("\t\t{ \n" + "\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews\"],\n" + "\t\t\t\"roles\" : [\"owner\"]\n" + "\t\t}]\n" + "\t}");
 
 		return startOperation.toString();
 	}
