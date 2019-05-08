@@ -215,6 +215,6 @@ public class OpBlockchainGettersTest {
 
 		blc.getObjects(OpBlockchainRules.OP_SIGNUP, r);
 
-		assertEquals(1, r.result.size());
+		assertEquals(2, r.result.size());
 	}
 }

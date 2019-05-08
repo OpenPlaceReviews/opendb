@@ -15,7 +15,9 @@ import java.util.*;
 import static org.junit.Assert.*;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.*;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.BLOCK_VERSION;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
+import static org.openplacereviews.opendb.ops.OpObject.F_COMMENT;
+import static org.openplacereviews.opendb.ops.OpOperation.F_HASH;
 
 public class OpBlockchainRulesTest {
 
@@ -40,20 +42,22 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testAddOperation() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.grant\",\n" +
-				"\t\t\"ref\" : {\n" +
-				"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
-				"\t\t},\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\" : [\"openplacereviews1\"],\n" +
-				"\t\t\t\"roles\" : [\"owner\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String id = "openplacereviews", role = "master", role1 = "administrator";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		OpObject opObject = new OpObject();
+		opObject.setId(id + 1);
+		//opObject.putStringValue(F_ROLES, role);
+		//opObject.addOrSetStringValue(F_ROLES, role1);
+
+		Map<String, Object> refs = new TreeMap<>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, id));
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putObjectValue(OpOperation.F_REF, refs);
+		opOperation.setType(OpBlockchainRules.OP_GRANT);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
@@ -101,21 +105,22 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testAddOperationPrepareReferencedObjectsExpectError_RefObjNotFound() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.grant\",\n" +
-				"\t\t\"ref\" : {\n" +
-				"\t\t\t\"s\" : [\"sys.login1\",\"openplacereviews\",\"test_1\"]\n" +
-				"\t\t},\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\" : [\"openplacereviews:test_2\"],\n" +
-				"\t\t\t\"roles\" : [\"master\", \"administrator\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String name = "openplacereviews", name2 = "test_", role = "owner", secondRole = "administrator";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		opOperation.setSignedBy(serverName);
-		opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+		OpObject opObject = new OpObject();
+		opObject.setId(name+":" + name2 + 2); //openplacereviews:test_2
+		opObject.putStringValue(F_ROLES, role);
+		opObject.addOrSetStringValue(F_ROLES, secondRole);
+
+		Map<String, Object> refs = new TreeMap<>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP + 1, name, name2 + 1));
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putObjectValue(OpOperation.F_REF, refs);
+		opOperation.setType(OpBlockchainRules.OP_GRANT);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -128,20 +133,20 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testAddOperationPrepareDeletedObjectsExpectError_DelObjNotFound() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.login\",\n" +
-				"\t\t\"signed_by\": \"openplacereviews\",\n" +
-				"\t\t\"ref\" : {\n" +
-				"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
-				"\t\t},\n" +
-				"\t\t\"old\" : [\"fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c801:0\"],\n" +
-				"\t\t\"signature\": \"ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM\"\n" +
-				"\t}";
+		String name = "openplacereviews", notExistingHash = "fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c801";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		opOperation.setSignedBy(serverName);
-		opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+		OpObject opObject = new OpObject();
+
+		Map<String, Object> refs = new TreeMap<>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putObjectValue(OpOperation.F_REF, refs);
+		opOperation.setType(OpBlockchainRules.OP_LOGIN);
+		opOperation.addOld(notExistingHash, 0);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -154,22 +159,21 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testAddOperationPrepareDeletedObjectsExpectError_DelObjDoubleDeleted() throws FailedVerificationException {
+		String name = "openplacereviews", oldHash = "fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802";
 		blc.createBlock(serverName, serverKeyPair);
 
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.login\",\n" +
-				"\t\t\"signed_by\": \"openplacereviews\",\n" +
-				"\t\t\"ref\" : {\n" +
-				"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
-				"\t\t},\n" +
-				"\t\t\"old\" : [\"fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802:0\"],\n" +
-				"\t\t\"signature\": \"ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM\"\n" +
-				"\t}";
+		OpObject opObject = new OpObject();
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		opOperation.setSignedBy(serverName);
-		opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+		Map<String, Object> refs = new TreeMap<>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putObjectValue(OpOperation.F_REF, refs);
+		opOperation.setType(OpBlockchainRules.OP_LOGIN);
+		opOperation.addOld(oldHash, 0);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -182,21 +186,22 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testAddOperationPrepareNoNewDuplicatedObjectsExpectError_NewObjDoubleCreated() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.grant\",\n" +
-				"\t\t\"ref\" : {\n" +
-				"\t\t\t\"s\" : [\"sys.login1\",\"openplacereviews\",\"test_1\"]\n" +
-				"\t\t},\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\" : [\"openplacereviews:test_1\"],\n" +
-				"\t\t\t\"roles\" : [\"master\", \"administrator\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String name = "openplacereviews", name1 = "test_1", role = "master", secondRole = "administrator";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		opOperation.setSignedBy(serverName);
-		opOperation = blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+		OpObject opObject = new OpObject();
+		opObject.setId(serverName);
+		opObject.putStringValue(F_ROLES, role);
+		opObject.addOrSetStringValue(F_ROLES, secondRole);
+
+		Map<String, Object> refs = new TreeMap<>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name, name1));
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putObjectValue(OpOperation.F_REF, refs);
+		opOperation.setType(OpBlockchainRules.OP_GRANT);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -458,20 +463,17 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateSignaturesExpectError_OpSignatureFailed() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.signup\",\n" +
-				"\t\t\"new\": [{\t\n" +
-				"\t\t\t\"id\": [\"openplacereviews1\"],\n" +
-				"\t\t\t\"name\" : \"openplacereviews1\",\n" +
-				"\t\t\t\"algo\": \"EC\",\n" +
-				"\t\t\t\"auth_method\": \"oauth\",\n" +
-				"\t\t\t\"pwd\": \"149814981498a\"\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String id = "openplacereviews", oauthMethod = "oauth";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		OpObject opObject = new OpObject();
+		opObject.setId(id + 1);
+		opObject.putStringValue(F_AUTH_METHOD, oauthMethod);
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.remove(OpOperation.F_SIGNATURE);
 		opOperation.makeImmutable();
 
@@ -485,22 +487,19 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateSignaturesFirstSignupCouldBeSignedByItselfExpectError_OpSignatureFailed() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.signup\",\n" +
-				"\t\t\"signed_by\": \"openplacereviews:test_1\",\n" +
-				"\t\t\"new\": [{\t\n" +
-				"\t\t\t\"id\": [\"openplacereviews1\"],\n" +
-				"\t\t\t\"name\" : \"openplacereviews1\",\n" +
-				"\t\t\t\"algo\": \"EC\",\n" +
-				"\t\t\t\"auth_method\": \"oauth\",\n" +
-				"\t\t\t\"pwd\": \"149814981498a\"\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String id = "openplacereviews", oauthMethod = "oauth";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
+		OpObject opObject = new OpObject();
+		opObject.setId(id + 1);
+		opObject.putStringValue(F_AUTH_METHOD, oauthMethod);
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
+		opOperation.addNew(opObject);
+
 		opOperation.setSignedBy(serverName + 1);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, false);
+		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
+		opOperation.remove(OpOperation.F_SIGNATURE);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -513,20 +512,17 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateOp() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.signup\",\n" +
-				"\t\t\"new\": [{\t\n" +
-				"\t\t\t\"id\": [\"openplacereviews1\"],\n" +
-				"\t\t\t\"name\" : \"openplacereviews1\",\n" +
-				"\t\t\t\"algo\": \"EC\",\n" +
-				"\t\t\t\"auth_method\": \"oauth\",\n" +
-				"\t\t\t\"pwd\": \"149814981498a\"\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String id = "openplacereviews", oauthMethod = "oauth";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		OpObject opObject = new OpObject();
+		opObject.setId(id + 1);
+		opObject.putStringValue(F_AUTH_METHOD, oauthMethod);
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		assertTrue(blc.validateOperation(opOperation));
@@ -537,23 +533,24 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateOpExpectError_OpHashIsNotCorrect() {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.role\",\n" +
-				"\t\t\"hash\" : \"json:sha256:e55df720278460a277425e6331f08c436160a64db639051a82d79015e10dff03\",\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\"\t: [\"subadmin\"],\n" +
-				"\t\t\t\"comment\"   : \"Role master and only owner could change it\",\n" +
-				"\t\t\t\"owner_role\" : \"administrator\",\n" +
-				"\t\t\t\"super_roles\" : [\"owner\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String id = "openplacereviews", ownerRole = "administrator", superRole = "owner", opHash = "json:sha256:e55df720278460a277425e6331f08c436160a64db639051a82d79015e10dff03";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
+		OpObject opObject = new OpObject();
+		opObject.setId(id);
+		opObject.putStringValue(F_COMMENT, "some comment");
+		opObject.putStringValue("owner_role", ownerRole);
+		opObject.putStringValue("super_roles", superRole);
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putStringValue(F_HASH, opHash);
+		opOperation.setType(OpBlockchainRules.OP_ROLE);
+		opOperation.addNew(opObject);
+
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
 		blc.validateOperation(opOperation);
+
 	}
 
 	/**
@@ -563,7 +560,7 @@ public class OpBlockchainRulesTest {
 	@Test
 	public void testValidateOpExpectError_OpSizeIsExceeded() throws FailedVerificationException {
 		OpOperation opOperation = formatter.parseOperation(generateBigJSON());
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -576,26 +573,23 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpInvalidValidateExpression() throws FailedVerificationException {
-		String operation =
-				"{  \n" +
-				"\t\t\"type\" : \"sys.validate\",\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\" : [\"all_op_arity_new_del1\"],\n" +
-				"\t\t\t\"type\" : [\"*\"],\n" +
-				"\t\t\t\"comment\" : \"Validate operation arity\",\n" +
-				"\t\t\t\"role\" : \"none\",\n" +
-				"\t\t\t\"if\" : [\n" +
-				"\t\t\t\t\"std:eq()\"\n" +
-				"\t\t\t],\n" +
-				"\t\t\t\"validate\" : [\n" +
-				"\t\t\t\t\"std:leq(std:size(.new),1)\",\n" +
-				"\t\t\t\t\"std:leq(std:size(.old),1)\"\n" +
-				"\t\t\t]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String name = "all_op_arity_new_del1", comment = "Validate operation arity", role = "none";
+		String ifStatement = "std:eq()", validateStatement1 = "std:leq(std:size(.new),1)", validateStatement2 = "std:leq(std:size(.old),1)";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		OpObject opObject = new OpObject();
+		opObject.setId(name);
+		opObject.putStringValue(F_TYPE, "*");
+		opObject.putStringValue(F_COMMENT, comment);
+		opObject.putStringValue(F_ROLES, role);
+		opObject.putStringValue(F_IF, ifStatement);
+		opObject.putStringValue(F_VALIDATE, validateStatement1);
+		opObject.addOrSetStringValue(F_VALIDATE, validateStatement2);
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType(OpBlockchainRules.OP_VALIDATE);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -623,7 +617,7 @@ public class OpBlockchainRulesTest {
 				"\t}";
 
 		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
@@ -635,19 +629,18 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpRoleSuperRoleDoesntExist() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\"  : \"sys.role\",\n" +
-				"\t\t\"new\" : [{\n" +
-				"\t\t\t\"id\" : [\"owner1\"],\n" +
-				"\t\t\t\"comment\" : \"Owner role is a super role that nobody could change it\",\n" +
-				"\t\t\t\"owner_role\" : \"owner\",\n" +
-				"\t\t\t\"super_roles\": [\"owner1\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String name = "owner1", ownerRole= "owner", superRole = "owner1";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		OpObject opObject = new OpObject();
+		opObject.setId(name);
+		opObject.putStringValue("owner_role", ownerRole);
+		opObject.putStringValue("super_roles", superRole);
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType(OpBlockchainRules.OP_ROLE);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);
@@ -660,20 +653,21 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpGrantRoleDoesntExist() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.grant\",\n" +
-				"\t\t\"ref\" : {\n" +
-				"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
-				"\t\t},\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\" : [\"openplacereviews_test\"],\n" +
-				"\t\t\t\"roles\" : [\"owner1\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
+		String name = "openplacereviews", newRole = "owner1";
 
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, serverKeyPair, blc, true);
+		OpObject opObject = new OpObject();
+		opObject.setId(serverName + 1);
+		opObject.putStringValue(F_ROLES, newRole);
+
+		Map<String, Object> refs = new TreeMap<>();
+		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.putObjectValue(OpOperation.F_REF, refs);
+		opOperation.setType(OpBlockchainRules.OP_GRANT);
+		opOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(IllegalArgumentException.class);

@@ -296,7 +296,7 @@ public class OpExprEvaluator {
 
 			if (isJsonMapObj(obj2)) {
 				obj1Set.removeAll(((JsonObject) obj1).keySet());
-			} else if (isJsonArrayObj(obj1)) {
+			} else if (isJsonArrayObj(obj1) && obj2 instanceof JsonArray) {
 				JsonArray j2 = ((JsonArray) obj2);
 				for (int i = 0; i < j2.size(); i++) {
 					obj1Set.remove(toStringPrimitive(j2.get(i)));
@@ -307,7 +307,8 @@ public class OpExprEvaluator {
 
 			JsonArray ar = new JsonArray(obj1Set.size());
 			for (String s : obj1Set) {
-				ar.add(s);
+				if (!s.equals(""))
+					ar.add(s);
 			}
 			return ar;
 		case FUNCTION_SET_ALL:

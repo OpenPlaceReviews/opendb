@@ -39,7 +39,7 @@
 				"operation-format" : [
 					"if(op.new && op.new.length > 0 && (!op.old || op.old.length == 0)) return 'Welcome new user ' + op.new[0].id + '!';",
 					"if(op.old && op.old.length > 0 && (!op.new || op.new.length == 0)) return 'User ' + op.old[0].id + ' was deleted!';",
-					"return 'User ' + op.new[0].id + ' updated details';",
+					"return 'User ' + op.new[0].id + ' updated details';"
 				],
 				"object-icon" : "opendb-icons:ic_user_login",
 				"object-name-format" : ["return 'User ' + obj.id;"],
@@ -68,7 +68,7 @@
 				"operation-format" : [
 					"if(op.new && op.new.length > 0 && (!op.old || op.old.length == 0)) return 'Welcome new user ' + op.new[0].id + '!';",
 					"if(op.old && op.old.length > 0 && (!op.new || op.new.length == 0)) return 'User ' + op.old[0].id + ' was deleted!';",
-					"return 'User ' + op.new[0].id + ' updated details';",
+					"return 'User ' + op.new[0].id + ' updated details';"
 				],
 				"object-icon" : "opendb-icons:ic_user_login",
 				"object-name-format" : ["return 'User ' + obj.id;"],

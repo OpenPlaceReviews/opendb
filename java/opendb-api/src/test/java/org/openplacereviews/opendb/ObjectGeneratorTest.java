@@ -14,7 +14,7 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 public class ObjectGeneratorTest {
 
 	private static String[] BOOTSTRAP_LIST =
-			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "std-validations", "opr-0-test-grant"};
+			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-user-test", "opr-0-test-grant", "std-validations"};
 
 	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc, KeyPair serverKeyPair) throws FailedVerificationException {
 		for (String f : BOOTSTRAP_LIST) {
@@ -32,7 +32,7 @@ public class ObjectGeneratorTest {
 		}
 	}
 
-	public static void generateHashAndSignForOperation(OpOperation opOperation, KeyPair keyPair, OpBlockChain blc, boolean signedBy) throws FailedVerificationException {
+	public static void generateHashAndSignForOperation(OpOperation opOperation, OpBlockChain blc, boolean signedBy, KeyPair... keyPair) throws FailedVerificationException {
 		if (signedBy) {
 			opOperation.setSignedBy(serverName);
 		}
