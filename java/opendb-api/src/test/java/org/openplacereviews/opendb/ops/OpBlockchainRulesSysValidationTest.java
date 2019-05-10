@@ -878,11 +878,31 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * Expected validation error: all_op_arity_new_del
 	 */
-	//TODO
 	@Test
-	@Ignore
-	public void testCheck_AllOpArityNewDel()  {
+	public void testCheck_AllOpArityNewDel() throws FailedVerificationException {
+		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment = "Some comment";
 
+		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
+		assertNotNull(loadedObject);
+
+		OpObject opObject = new OpObject();
+		opObject.setId(validationName + 1);
+		opObject.putStringValue(F_TYPE, OP_OPERATION);
+		opObject.putStringValue(F_COMMENT, comment);
+		opObject.putObjectValue("role", "master");
+
+		OpOperation grantOperation = new OpOperation();
+		grantOperation.setSignedBy(name);
+		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
+		grantOperation.addOld(loadedObject.getParentHash(), 0);
+		grantOperation.addOld(loadedObject.getParentHash(), 0);
+		grantOperation.addNew(opObject);
+
+		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
+		grantOperation.makeImmutable();
+
+		exceptionRule.expect(IllegalArgumentException.class);
+		blc.addOperation(grantOperation);
 	}
 
 	/**
