@@ -1,17 +1,15 @@
 package org.openplacereviews.opendb.psql;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import org.junit.runner.Description;
+import ru.yandex.qatools.embed.postgresql.EmbeddedPostgres;
+
+import java.sql.*;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.junit.runner.Description;
-
-import ru.yandex.qatools.embed.postgresql.EmbeddedPostgres;
+import static org.openplacereviews.opendb.VariableHelperTest.tables;
 
 public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 
@@ -26,15 +24,21 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 		return DriverManager.getConnection(JDBC_URL, JDBC_USERNAME, JDBC_PASSWORD);
 	}
 
-	private static Collection<String> getAllDatabaseTables() {
-		return Collections.emptyList();
+	private Collection<String> getAllDatabaseTables() throws SQLException {
+		DatabaseMetaData md = getConnection().getMetaData();
+		ResultSet rs = md.getTables(null, null, "%", new String[] { "TABLE" });
+		while (rs.next()) {
+			tables.add(rs.getString("TABLE_NAME"));
+		}
+
+		return tables;
 	}
 
 	@Override
 	protected void before() throws Throwable {
 		synchronized (PostgreSQLServer.class) {
 			if (postgres == null) {
-				final EmbeddedPostgres postgres = new EmbeddedPostgres();
+				postgres = new EmbeddedPostgres();
 				postgres.start("127.0.0.1", 25512, DB_NAME, JDBC_USERNAME, JDBC_PASSWORD);
 				JDBC_URL = postgres.getConnectionUrl().orElseThrow(
 						() -> new IllegalStateException("Failed to get PostgreSQL Connection URL"));
@@ -85,14 +89,13 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 	public void wipeDatabase() throws Exception {
 		synchronized (PostgreSQLServer.class) {
 			try (final Connection connection = getConnection();
-					final java.sql.Statement databaseTruncationStatement = connection.createStatement()) {
+				 final java.sql.Statement databaseTruncationStatement = connection.createStatement()) {
 				databaseTruncationStatement.execute("BEGIN TRANSACTION");
 				databaseTruncationStatement.execute(String.format("TRUNCATE %s RESTART IDENTITY CASCADE",
 						String.join(",", getAllDatabaseTables())));
 				databaseTruncationStatement.execute("COMMIT TRANSACTION"); // Reset constraints
 			}
 		}
-
 	}
 	
 	public void deleteAllTables() throws SQLException {

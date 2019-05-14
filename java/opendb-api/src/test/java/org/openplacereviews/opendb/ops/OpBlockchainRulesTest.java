@@ -9,12 +9,12 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
-import java.security.KeyPair;
 import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
-import static org.openplacereviews.opendb.VariableHelperTest.*;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
 import static org.openplacereviews.opendb.ops.OpObject.F_COMMENT;
 import static org.openplacereviews.opendb.ops.OpOperation.F_HASH;
@@ -26,13 +26,11 @@ public class OpBlockchainRulesTest {
 
 	private OpBlockChain blc;
 	private JsonFormatter formatter;
-	private KeyPair serverKeyPair;
 
 	@Before
 	public void beforeEachTestMethod() throws Exception {
 		formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverKey, serverPublicKey);
 		generateOperations(formatter, blc, serverKeyPair);
 	}
 

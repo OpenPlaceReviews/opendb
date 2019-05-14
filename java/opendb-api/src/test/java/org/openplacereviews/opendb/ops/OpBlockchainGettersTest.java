@@ -3,12 +3,10 @@ package org.openplacereviews.opendb.ops;
 import org.junit.Before;
 import org.junit.Test;
 import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
-import java.security.KeyPair;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
@@ -16,18 +14,17 @@ import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.*;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 public class OpBlockchainGettersTest {
 
 	private OpBlockChain blc;
-	private KeyPair serverKeyPair;
 
 	@Before
 	public void beforeEachTestMethod() throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverKey, serverPublicKey);
 		generateOperations(formatter, blc, serverKeyPair);
 	}
 

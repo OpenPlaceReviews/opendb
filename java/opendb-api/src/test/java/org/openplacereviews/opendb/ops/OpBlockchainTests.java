@@ -5,20 +5,18 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
-import java.security.KeyPair;
 import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.*;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 public class OpBlockchainTests {
 
 	private OpBlockChain blc;
-	private KeyPair serverKeyPair;
 
 	@Rule
 	public ExpectedException exceptionRule = ExpectedException.none();
@@ -27,7 +25,6 @@ public class OpBlockchainTests {
 	public void beforeEachTestMethod() throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverKey, serverPublicKey);
 		generateOperations(formatter, blc, serverKeyPair);
 	}
 

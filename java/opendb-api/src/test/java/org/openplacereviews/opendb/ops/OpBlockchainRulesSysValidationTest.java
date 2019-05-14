@@ -26,15 +26,11 @@ public class OpBlockchainRulesSysValidationTest {
 	public ExpectedException exceptionRule = ExpectedException.none();
 
 	private OpBlockChain blc;
-	private JsonFormatter formatter;
-	private KeyPair serverKeyPair;
 
 	@Before
 	public void beforeEachTestMethod() throws Exception {
-		formatter = new JsonFormatter();
+		JsonFormatter formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverKey, serverPublicKey);
-
 		generateOperations(formatter, blc, serverKeyPair);
 		blc.createBlock(serverName, serverKeyPair);
 	}

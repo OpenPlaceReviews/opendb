@@ -89,7 +89,6 @@ public class OpExprEvaluatorTest {
 		assertEquals("3", evaluateExpr("str:second(this.l)"));
 	}
 
-	//TODO
 	@Test
 	public void testFunction_Str_combine() {
 		assertEquals("12", evaluateExpr("str:combine('12',':')"));
