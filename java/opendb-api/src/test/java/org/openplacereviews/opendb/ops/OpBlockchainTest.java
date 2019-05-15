@@ -1,9 +1,12 @@
 package org.openplacereviews.opendb.ops;
 
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
@@ -14,9 +17,16 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-public class OpBlockchainTests {
+@RunWith(JUnitParamsRunner.class)
+public class OpBlockchainTest {
 
-	private OpBlockChain blc;
+	private Object[] parametersWithNullableBlockchain() {
+		return new Object[] {
+				null, null
+		};
+	}
+
+	public OpBlockChain blc;
 
 	@Rule
 	public ExpectedException exceptionRule = ExpectedException.none();
@@ -25,22 +35,35 @@ public class OpBlockchainTests {
 	public void beforeEachTestMethod() throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc, serverKeyPair);
+		generateOperations(formatter, blc);
 	}
 
 	@Test
-	public void testOpBlockChain() throws FailedVerificationException {
-		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
+	@Parameters(method = "parametersWithNullableBlockchain")
+	public void testOpBlockChain(OpBlockChain blcDB, OpBlock opBlock) throws FailedVerificationException {
+		if (blcDB != null) {
+			OpBlockChain opBlockChain = new OpBlockChain(blcDB.getParent(), blcDB.getRules());
 
-		OpBlockChain opBlockChain = new OpBlockChain(blc.getParent(), blc.getRules());
+			opBlockChain.replicateBlock(opBlock);
+			//opBlockChain.rebaseOperations(opBlockChain1);
 
-		opBlockChain.replicateBlock(opBlock);
-		blc.rebaseOperations(opBlockChain);
+			assertTrue(opBlockChain.changeToEqualParent(opBlockChain.getParent()));
 
-		assertTrue(opBlockChain.changeToEqualParent(opBlockChain.getParent()));
+			OpBlockChain opBlockChain2 = new OpBlockChain(blcDB, opBlockChain, blcDB.getRules());
+			assertNotNull(opBlockChain2);
+		} else {
+			opBlock = blc.createBlock(serverName, serverKeyPair);
 
-		OpBlockChain opBlockChain1 = new OpBlockChain(blc, opBlockChain, blc.getRules());
-		assertNotNull(opBlockChain1);
+			OpBlockChain opBlockChain = new OpBlockChain(blc.getParent(), blc.getRules());
+
+			opBlockChain.replicateBlock(opBlock);
+			blc.rebaseOperations(opBlockChain);
+
+			assertTrue(opBlockChain.changeToEqualParent(opBlockChain.getParent()));
+
+			OpBlockChain opBlockChain1 = new OpBlockChain(blc, opBlockChain, blc.getRules());
+			assertNotNull(opBlockChain1);
+		}
 	}
 
 	@Test

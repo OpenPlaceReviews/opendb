@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,7 +30,7 @@ public class OpBlockchainRulesTest {
 	public void beforeEachTestMethod() throws Exception {
 		formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc, serverKeyPair);
+		generateOperations(formatter, blc);
 	}
 
 	/**
@@ -44,8 +43,6 @@ public class OpBlockchainRulesTest {
 
 		OpObject opObject = new OpObject();
 		opObject.setId(id + 1);
-		//opObject.putStringValue(F_ROLES, role);
-		//opObject.addOrSetStringValue(F_ROLES, role1);
 
 		Map<String, Object> refs = new TreeMap<>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, id));
@@ -593,32 +590,6 @@ public class OpBlockchainRulesTest {
 		exceptionRule.expect(IllegalArgumentException.class);
 		blc.addOperation(opOperation);
 
-	}
-
-	/**
-	 *  Expected ErrorType.OP_ROLE_SUPER_ROLE_CIRCULAR_REF
-	 *  @throws FailedVerificationException
-	 */
-	//TODO generate circular ref
-	@Ignore
-	@Test
-	public void testValidateRulesExpectError_OpRoleSuperRoleCircularRef() throws FailedVerificationException {
-		String operation =
-				"{\n" +
-				"\t\t\"type\" : \"sys.role\",\n" +
-				"\t\t\"new\" : [{ \n" +
-				"\t\t\t\"id\"\t: [\"owner\"],\n" +
-				"\t\t\t\"comment\"   : \"Role master and only owner could change it\",\n" +
-				"\t\t\t\"owner_role\" : \"master\",\n" +
-				"\t\t\t\"super_roles\" : [\"master\"]\n" +
-				"\t\t}]\n" +
-				"\t}";
-
-		OpOperation opOperation = formatter.parseOperation(operation);
-		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
-		opOperation.makeImmutable();
-
-		blc.addOperation(opOperation);
 	}
 
 	/**

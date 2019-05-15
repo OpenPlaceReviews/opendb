@@ -22,6 +22,33 @@
 		}]
 	},
 	{
+		"type"  : "sys.role",
+		"new" : [{
+			"id" : ["none2"],
+			"comment" : "2Owner role is a super role that nobody could change it",
+			"owner_role" : "none",
+			"super_roles": []
+		}]
+	},
+	{
+		"type"  : "sys.role",
+		"new" : [{
+			"id" : ["none1"],
+			"comment" : "1Owner role is a super role that nobody could change it",
+			"owner_role" : "none",
+			"super_roles": []
+		}]
+	},
+	{
+		"type"  : "sys.role",
+		"new" : [{
+			"id" : ["none3"],
+			"comment" : "3Owner role is a super role that nobody could change it",
+			"owner_role" : "none",
+			"super_roles": []
+		}]
+	},
+	{
 		"type" : "sys.grant",
 		"ref" : {
 			"s" : ["sys.signup","openplacereviewsPWD"]

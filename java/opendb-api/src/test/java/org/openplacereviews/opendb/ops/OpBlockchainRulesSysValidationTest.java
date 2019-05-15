@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -16,7 +15,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateHashAndSignForOperation;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.*;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
 import static org.openplacereviews.opendb.ops.OpObject.F_COMMENT;
 
@@ -31,7 +31,7 @@ public class OpBlockchainRulesSysValidationTest {
 	public void beforeEachTestMethod() throws Exception {
 		JsonFormatter formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc, serverKeyPair);
+		generateOperations(formatter, blc);
 		blc.createBlock(serverName, serverKeyPair);
 	}
 

@@ -1,26 +1,19 @@
 package org.openplacereviews.opendb.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.serverKey;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-import static org.openplacereviews.opendb.VariableHelperTest.serverPublicKey;
-
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import org.junit.Before;
+import com.google.gson.JsonElement;
 import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.util.OpExprEvaluator;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 
 import java.security.KeyPair;
+
+import static org.junit.Assert.assertEquals;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.VariableHelperTest.*;
 
 public class OpExprEvaluatorTest {
 
@@ -241,7 +234,7 @@ public class OpExprEvaluatorTest {
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
 		serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverKey, serverPublicKey);
 
-		generateOperations(formatter, blc, serverKeyPair);
+		generateOperations(formatter, blc);
 		blc.createBlock(serverName, serverKeyPair);
 
 		return blc;

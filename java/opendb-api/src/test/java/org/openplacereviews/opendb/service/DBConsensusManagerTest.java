@@ -5,7 +5,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.openplacereviews.opendb.DBConstants;
 import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.ops.OpBlock;
@@ -18,14 +17,15 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
@@ -73,25 +73,7 @@ public class DBConsensusManagerTest {
 		Mockito.doNothing().when(fileBackupManager).init();
 
 		metadataDb = new OpenDBServer.MetadataDb();
-		try {
-			DatabaseMetaData mt = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection().getMetaData();
-			ResultSet rs = mt.getColumns(null, DBConstants.SCHEMA_NAME, null, null);
-			while(rs.next()) {
-				String tName = rs.getString("TABLE_NAME");
-				if(!metadataDb.tablesSpec.containsKey(tName)) {
-					metadataDb.tablesSpec.put(tName, new ArrayList<>());
-				}
-				List<OpenDBServer.MetadataColumnSpec> cols = metadataDb.tablesSpec.get(tName);
-				OpenDBServer.MetadataColumnSpec spec = new OpenDBServer.MetadataColumnSpec();
-				spec.columnName = rs.getString("COLUMN_NAME");
-				spec.sqlType = rs.getInt("DATA_TYPE");
-				spec.dataType = rs.getString("TYPE_NAME");
-				spec.columnSize = rs.getInt("COLUMN_SIZE");
-				cols.add(spec);
-			}
-		} catch (SQLException e) {
-			throw new IllegalStateException("Can't read db metadata", e);
-		}
+		generateMetadataDB(metadataDb, jdbcTemplate);
 	}
 
 	@After
@@ -108,7 +90,7 @@ public class DBConsensusManagerTest {
 	public void testAddingOperationsToDB() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 
 		assertEquals(0, getAmountFromDbByTable(OPERATIONS_TABLE));
 
@@ -121,7 +103,7 @@ public class DBConsensusManagerTest {
 	public void testCreatingBlock() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
@@ -138,7 +120,7 @@ public class DBConsensusManagerTest {
 		int amountDeletedOperations = 3;
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
@@ -157,7 +139,7 @@ public class DBConsensusManagerTest {
 	public void testRemoveFullBlock() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
@@ -170,44 +152,53 @@ public class DBConsensusManagerTest {
 		assertEquals(1, getAmountFromDbByTable(BLOCKS_TRASH_TABLE));
 	}
 
-	//TODO
-	@Ignore
 	@Test
 	public void testUnloadSuperblockFromDB() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
-		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
-
-		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
-		assertEquals(opBlock.getOperations().size(), getAmountFromDbByTable(OPERATIONS_TABLE));
-
-		assertEquals(0, getAmountFromDbByTable(BLOCKS_TABLE));
-
+		generate30Blocks(formatter, opBlockChain, dbConsensusManager);
 		dbConsensusManager.saveMainBlockchain(opBlockChain);
-		dbConsensusManager.insertBlock(opBlock);
 
 		final long[] amount = new long[1];
 
-		jdbcTemplate.query("SELECT COUNT(*) FROM " + OPERATIONS_TABLE + " WHERE superblock is NOT NULL", rs -> {
+		OpBlockChain blockChain = new OpBlockChain(opBlockChain.getParent(), opBlockChain.getBlockHeaders(0), dbConsensusManager.createDbAccess(
+				opBlockChain.getSuperBlockHash(), opBlockChain.getSuperblockHeaders()), opBlockChain.getRules());
+
+		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
 			amount[0] = rs.getLong(1);
 		});
-		opBlockChain = dbConsensusManager.unloadSuperblockFromDB(opBlockChain);
+		assertEquals(33, amount[0]);
+
+		dbConsensusManager.unloadSuperblockFromDB(blockChain);
+
+		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
+			amount[0] = rs.getLong(1);
+		});
+		assertEquals(0, amount[0]);
 
 	}
 
-	//TODO
-	@Ignore
 	@Test
 	public void testSaveMainBlockchain() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
-		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
+		generate30Blocks(formatter, opBlockChain, dbConsensusManager);
 
-		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
+		final long[] amount = new long[1];
+
+		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
+			amount[0] = rs.getLong(1);
+		});
+
+		assertEquals(0, amount[0]);
 
 		dbConsensusManager.saveMainBlockchain(opBlockChain);
+
+		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
+			amount[0] = rs.getLong(1);
+		});
+
+		assertEquals(33, amount[0]);
 	}
 
 	//TODO
@@ -216,7 +207,7 @@ public class DBConsensusManagerTest {
 	public void testCompact() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
@@ -231,7 +222,7 @@ public class DBConsensusManagerTest {
 	public void testGetOperationByHash() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
@@ -247,7 +238,7 @@ public class DBConsensusManagerTest {
 	public void testValidateExistingOperation() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generateOperations(formatter, opBlockChain, serverKeyPair);
+		generateOperations(formatter, opBlockChain);
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
