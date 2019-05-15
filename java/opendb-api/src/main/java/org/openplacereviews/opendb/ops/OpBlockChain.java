@@ -47,7 +47,7 @@ public class OpBlockChain {
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation  
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
-	public static final int LOCKED_STATE = 2; // locked successfully and could be used as parent superblock
+	public static final int LOCKED_STATE = 2; // FINAL STATE. locked successfully and could be used as parent superblock
 	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user 
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 
