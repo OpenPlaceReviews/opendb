@@ -27,248 +27,247 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 public class OpBlockchainGettersDbAccessTest {
 
-	@Spy
-	@InjectMocks
-	private DBConsensusManager dbConsensusManager;
+    @ClassRule
+    public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
+    @Spy
+    @InjectMocks
+    private DBConsensusManager dbConsensusManager;
+    @Spy
+    @InjectMocks
+    private DBSchemaManager dbSchemaManager;
+    @Spy
+    @InjectMocks
+    private FileBackupManager fileBackupManager;
+    @Spy
+    private JsonFormatter jsonFormatter;
+    private OpBlockchainGettersTest opBlockchainGettersTest;
+    private JdbcTemplate jdbcTemplate;
+    private OpenDBServer.MetadataDb metadataDb;
 
-	@Spy
-	@InjectMocks
-	private DBSchemaManager dbSchemaManager;
+    @AfterClass
+    public static void afterClassTest() throws SQLException {
+        databaseServer.getConnection().close();
+    }
 
-	@Spy
-	@InjectMocks
-	private FileBackupManager fileBackupManager;
+    @Before
+    public void beforeEachTest() throws SQLException, FailedVerificationException {
+        MockitoAnnotations.initMocks(this);
 
-	@Spy
-	private JsonFormatter jsonFormatter;
+        Connection connection = databaseServer.getConnection();
+        this.jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(connection, false));
+        this.opBlockchainGettersTest = new OpBlockchainGettersTest();
+        this.opBlockchainGettersTest.beforeEachTestMethod();
 
-	@ClassRule
-	public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
+        ReflectionTestUtils.setField(dbConsensusManager, "jdbcTemplate", jdbcTemplate);
+        ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
+        ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
 
-	private OpBlockchainGettersTest opBlockchainGettersTest;
-	private JdbcTemplate jdbcTemplate;
-	private OpenDBServer.MetadataDb metadataDb;
+        Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
+        Mockito.doNothing().when(fileBackupManager).init();
 
-	@Before
-	public void beforeEachTest() throws SQLException, FailedVerificationException {
-		MockitoAnnotations.initMocks(this);
+        metadataDb = new OpenDBServer.MetadataDb();
+        generateMetadataDB(metadataDb, jdbcTemplate);
+    }
 
-		Connection connection = databaseServer.getConnection();
-		this.jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(connection, false));
-		this.opBlockchainGettersTest = new OpBlockchainGettersTest();
-		this.opBlockchainGettersTest.beforeEachTestMethod();
+    @After
+    public void afterEachTest() throws Exception {
+        databaseServer.wipeDatabase();
+    }
 
-		ReflectionTestUtils.setField(dbConsensusManager, "jdbcTemplate", jdbcTemplate);
-		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
-		ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
+    @Test
+    public void testGetLastBlockFullHashIfBlockExistWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
-		Mockito.doNothing().when(fileBackupManager).init();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		metadataDb = new OpenDBServer.MetadataDb();
-		generateMetadataDB(metadataDb, jdbcTemplate);
-	}
+        opBlockchainGettersTest.testGetLastBlockFullHashIfBlockExist(blockChain);
+    }
 
-	@After
-	public void afterEachTest() throws Exception {
-		databaseServer.wipeDatabase();
-	}
+    @Test
+    public void testGetLastBlockFullHashIfBlockIsNotExistWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	@AfterClass
-	public static void afterClassTest() throws SQLException {
-		databaseServer.getConnection().close();
-	}
+        opBlockchainGettersTest.testGetLastBlockFullHashIfBlockIsNotExist(blockChain);
+    }
 
-	@Test
-	public void testGetLastBlockFullHashIfBlockExistWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetLastBlockRawHashHashIfBlockExistWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetLastBlockFullHashIfBlockExist(blockChain);
-	}
+        opBlockchainGettersTest.testGetLastBlockRawHashHashIfBlockExist(blockChain);
+    }
 
-	@Test
-	public void testGetLastBlockFullHashIfBlockIsNotExistWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetLastBlockRawHashIfBlockIsNotExistWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetLastBlockFullHashIfBlockIsNotExist(blockChain);
-	}
+        opBlockchainGettersTest.testGetLastBlockRawHashIfBlockIsNotExist(blockChain);
+    }
 
-	@Test
-	public void testGetLastBlockRawHashHashIfBlockExistWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetSuperBlockHashWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetLastBlockRawHashHashIfBlockExist(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperBlockHash(blockChain);
+    }
 
-	@Test
-	public void testGetLastBlockRawHashIfBlockIsNotExistWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetSuperBlockHashIfSuperBlockWasNotCreatedWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetLastBlockRawHashIfBlockIsNotExist(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperBlockHashIfSuperBlockWasNotCreated(blockChain);
+    }
 
-	@Test
-	public void testGetSuperBlockHashWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetSuperBlockSizeWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetSuperBlockHash(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperBlockSize(blockChain);
+    }
 
-	@Test
-	public void testGetSuperBlockHashIfSuperBlockWasNotCreatedWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetSuperblockHeadersIfBlockWasNotCreatedWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetSuperBlockHashIfSuperBlockWasNotCreated(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperblockHeadersIfBlockWasNotCreated(blockChain);
+    }
 
-	@Test
-	public void testGetSuperBlockSizeWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetSuperblockHeadersWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetSuperBlockSize(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperblockHeaders(blockChain);
+    }
 
-	@Test
-	public void testGetSuperblockHeadersIfBlockWasNotCreatedWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetSuperblockFullBlocksIfBlockWasNotCreatedWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetSuperblockHeadersIfBlockWasNotCreated(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperblockFullBlocksIfBlockWasNotCreated(blockChain);
+    }
 
-	@Test
-	public void testGetSuperblockHeadersWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetSuperblockFullBlocksWithDBAccess() throws FailedVerificationException {
+        OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+        opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
+        dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetSuperblockHeaders(blockChain);
-	}
+        opBlockchainGettersTest.testGetSuperblockFullBlocks(blockChain);
+    }
 
-	@Test
-	public void testGetSuperblockFullBlocksIfBlockWasNotCreatedWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetSuperblockDeleteInfoWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		opBlockchainGettersTest.testGetSuperblockFullBlocksIfBlockWasNotCreated(blockChain);
-	}
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	@Test
-	public void testGetSuperblockFullBlocksWithDBAccess() throws FailedVerificationException {
-		OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
-		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
-		dbConsensusManager.insertBlock(opBlock);
+        opBlockchainGettersTest.testGetSuperblockDeleteInfo(blockChain);
+    }
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetSuperblockObjectsWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		opBlockchainGettersTest.testGetSuperblockFullBlocks(blockChain);
-	}
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	@Test(expected = UnsupportedOperationException.class)
-	public void testGetSuperblockDeleteInfoWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+        opBlockchainGettersTest.testGetSuperblockObjects(blockChain);
+    }
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetBlockHeadersWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		opBlockchainGettersTest.testGetSuperblockDeleteInfo(blockChain);
-	}
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	@Test(expected = UnsupportedOperationException.class)
-	public void testGetSuperblockObjectsWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+        opBlockchainGettersTest.testGetBlockHeaders(blockChain);
+    }
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetBlockHeadersByIdWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		opBlockchainGettersTest.testGetSuperblockObjects(blockChain);
-	}
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	@Test
-	public void testGetBlockHeadersWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+        opBlockchainGettersTest.testGetBlockHeadersById(blockChain);
+    }
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetBlockHeadersByNotExistingIdWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetBlockHeaders(blockChain);
-	}
+        opBlockchainGettersTest.testGetBlockHeadersByNotExistingId(blockChain);
+    }
 
-	@Test
-	public void testGetBlockHeadersByIdWithDBAccess() throws FailedVerificationException {
-		OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetBlockHeaderByRawHashWithDBAccess() throws FailedVerificationException {
+        opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetBlockHeadersById(blockChain, opBlock);
-	}
+        opBlockchainGettersTest.testGetBlockHeaderByRawHash(blockChain);
+    }
 
-	@Test
-	public void testGetBlockHeadersByNotExistingIdWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetBlockHeaderByNotExistingRawHashWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetBlockHeadersByNotExistingId(blockChain);
-	}
+        opBlockchainGettersTest.testGetBlockHeaderByNotExistingRawHash(blockChain);
+    }
 
-	@Test
-	public void testGetBlockHeaderByRawHashWithDBAccess() throws FailedVerificationException {
-		OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    @Test
+    public void testGetFullBlockByRawHashWithDBAccess() throws FailedVerificationException {
+        OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+        opBlock.getOperations().forEach(opOperation1 -> dbConsensusManager.insertOperation(opOperation1));
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        dbConsensusManager.insertBlock(opBlock);
 
-		opBlockchainGettersTest.testGetBlockHeaderByRawHash(blockChain, opBlock);
-	}
+        opBlockchainGettersTest.testGetFullBlockByRawHash(blockChain);
+    }
 
-	@Test
-	public void testGetBlockHeaderByNotExistingRawHashWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+    @Test
+    public void testGetFullBlockByNotExistingRawHashWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-		opBlockchainGettersTest.testGetBlockHeaderByNotExistingRawHash(blockChain);
-	}
+        opBlockchainGettersTest.testGetFullBlockByNotExistingRawHash(blockChain);
+    }
 
-	@Test
-	public void testGetFullBlockByRawHashWithDBAccess() throws FailedVerificationException {
-		OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+    //TODO
+    @Ignore
+    @Test
+    public void testGetOperationByHashWithDBAccess() throws FailedVerificationException {
+        OpOperation opOperation = opBlockchainGettersTest.blc.getQueueOperations().getLast();
 
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
+        opBlock.getOperations().forEach(opOperation1 -> dbConsensusManager.insertOperation(opOperation1));
 
-		opBlockchainGettersTest.testGetFullBlockByRawHash(blockChain, opBlock);
-	}
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	@Test
-	public void testGetFullBlockByNotExistingRawHashWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
+        opBlockchainGettersTest.testGetOperationByHash(blockChain, opOperation.getRawHash());
+    }
 
-		opBlockchainGettersTest.testGetFullBlockByNotExistingRawHash(blockChain);
-	}
+    @Test
+    public void testGetOperationByNotExistingHashWithDBAccess() {
+        OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
-	//TODO
-	@Ignore
-	@Test
-	public void testGetOperationByHashWithDBAccess() throws FailedVerificationException {
-		OpOperation opOperation = opBlockchainGettersTest.blc.getQueueOperations().getLast();
+        opBlockchainGettersTest.testGetOperationByNotExistingHash(blockChain, "10c5978d2466b67505d2d94a9a0f29695e03bf11893a4a5cac3cd700aa757dd9");
+    }
 
-		OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
-		opBlock.getOperations().forEach(opOperation1 -> dbConsensusManager.insertOperation(opOperation1));
-
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
-
-		opBlockchainGettersTest.testGetOperationByHash(blockChain, opOperation);
-	}
-
-	@Test
-	public void testGetOperationByNotExistingHashWithDBAccess() {
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
-
-		opBlockchainGettersTest.testGetOperationByNotExistingHash(blockChain);
-	}
-
-	private OpBlockChain generateBlockchainWithDBAccess() {
-		return new OpBlockChain(opBlockchainGettersTest.blc.getParent(), opBlockchainGettersTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainGettersTest.blc.getSuperBlockHash(), opBlockchainGettersTest.blc.getSuperblockHeaders()), opBlockchainGettersTest.blc.getRules());
-	}
+    private OpBlockChain generateBlockchainWithDBAccess() {
+        return new OpBlockChain(opBlockchainGettersTest.blc.getParent(), opBlockchainGettersTest.blc.getBlockHeaders(0),
+                dbConsensusManager.createDbAccess(
+                        opBlockchainGettersTest.blc.getSuperBlockHash(),
+                        opBlockchainGettersTest.blc.getSuperblockHeaders()), opBlockchainGettersTest.blc.getRules());
+    }
 
 }

@@ -23,18 +23,6 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainGettersTest {
 
-	private Object[] parametersWithNullableBlockchain() {
-		return new Object[] {
-				null
-		};
-	}
-
-	private Object[] parametersWithNullableBlockchainAndOpObject() {
-		return new Object[] {
-				null, null
-		};
-	}
-
 	public OpBlockChain blc;
 
 	@Before
@@ -45,311 +33,170 @@ public class OpBlockchainGettersTest {
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetLastBlockFullHashIfBlockExist(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			assertNotNull(opBlockChain.getLastBlockFullHash());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-
-			assertNotNull(blc.getLastBlockFullHash());
-		}
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetLastBlockFullHashIfBlockExist(OpBlockChain opBlockChain) {
+		assertNotNull(opBlockChain.getLastBlockFullHash());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetLastBlockFullHashIfBlockIsNotExist(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			assertEquals("", opBlockChain.getLastBlockFullHash());
-		} else {
-			assertEquals("", blc.getLastBlockFullHash());
-		}
+		assertEquals("", opBlockChain.getLastBlockFullHash());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetLastBlockRawHashHashIfBlockExist(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			assertNotNull(opBlockChain.getLastBlockRawHash());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-
-			assertNotNull(blc.getLastBlockRawHash());
-		}
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetLastBlockRawHashHashIfBlockExist(OpBlockChain opBlockChain) {
+		assertNotNull(opBlockChain.getLastBlockRawHash());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetLastBlockRawHashIfBlockIsNotExist(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
 			assertEquals("", opBlockChain.getLastBlockRawHash());
-		} else {
-
-		}
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetSuperBlockHash(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			assertNotNull(opBlockChain.getSuperBlockHash());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-
-			assertNotNull(blc.getSuperBlockHash());
-		}
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetSuperBlockHash(OpBlockChain opBlockChain) {
+		assertNotNull(opBlockChain.getSuperBlockHash());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperBlockHashIfSuperBlockWasNotCreated(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			assertEquals("", opBlockChain.getSuperBlockHash());
-		} else {
-			assertEquals("", blc.getSuperBlockHash());
-		}
+		assertEquals("", opBlockChain.getSuperBlockHash());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetSuperBlockSize(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			assertEquals(1, opBlockChain.getSuperblockSize());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-
-			assertEquals(1, blc.getSuperblockSize());
-		}
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetSuperBlockSize(OpBlockChain opBlockChain) {
+		assertEquals(1, opBlockChain.getSuperblockSize());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperblockHeadersIfBlockWasNotCreated(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			Deque<OpBlock> opBlockDeque = blc.getSuperblockHeaders();
+		Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockHeaders();
 
-			assertTrue(opBlockDeque.isEmpty());
-		} else {
-			Deque<OpBlock> opBlockDeque = blc.getSuperblockHeaders();
-
-			assertTrue(opBlockDeque.isEmpty());
-		}
+		assertTrue(opBlockDeque.isEmpty());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetSuperblockHeaders(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockHeaders();
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetSuperblockHeaders(OpBlockChain opBlockChain) {
+		Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockHeaders();
 
-			assertFalse(opBlockDeque.isEmpty());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-
-			Deque<OpBlock> opBlockDeque = blc.getSuperblockHeaders();
-
-			assertFalse(opBlockDeque.isEmpty());
-		}
+		assertFalse(opBlockDeque.isEmpty());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperblockFullBlocksIfBlockWasNotCreated(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockFullBlocks();
+		Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockFullBlocks();
 
-			assertTrue(opBlockChain.isDbAccessed());
-			assertTrue(opBlockDeque.isEmpty());
-		} else {
-			Deque<OpBlock> opBlockDeque = blc.getSuperblockFullBlocks();
-
-			assertFalse(blc.isDbAccessed());
-			assertTrue(opBlockDeque.isEmpty());
-		}
+		assertTrue(opBlockDeque.isEmpty());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetSuperblockFullBlocks(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockFullBlocks();
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetSuperblockFullBlocks(OpBlockChain opBlockChain) {
+		Deque<OpBlock> opBlockDeque = opBlockChain.getSuperblockFullBlocks();
 
-			assertTrue(opBlockChain.isDbAccessed());
-			assertFalse(opBlockDeque.isEmpty());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-			Deque<OpBlock> opBlockDeque = blc.getSuperblockFullBlocks();
-
-			assertFalse(blc.isDbAccessed());
-			assertFalse(opBlockDeque.isEmpty());
-		}
+		assertFalse(opBlockDeque.isEmpty());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetSuperblockDeleteInfo(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			Collection<OperationDeleteInfo> listOperationDeleteInfo = opBlockChain.getSuperblockDeleteInfo();
-			assertFalse(listOperationDeleteInfo.isEmpty());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-
-			Collection<OperationDeleteInfo> listOperationDeleteInfo = blc.getSuperblockDeleteInfo();
-			assertFalse(listOperationDeleteInfo.isEmpty());
-		}
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetSuperblockDeleteInfo(OpBlockChain opBlockChain) {
+		Collection<OperationDeleteInfo> listOperationDeleteInfo = opBlockChain.getSuperblockDeleteInfo();
+		assertFalse(listOperationDeleteInfo.isEmpty());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperblockObjects(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			final int amountLoadedObjects = 6;
-			Map<String, Map<CompoundKey, OpObject>> superBlockObject = opBlockChain.getSuperblockObjects();
+		final int amountLoadedObjects = 6;
+		Map<String, Map<CompoundKey, OpObject>> superBlockObject = opBlockChain.getSuperblockObjects();
 
-			assertEquals(amountLoadedObjects, superBlockObject.size());
-		} else {
-			final int amountLoadedObjects = 6;
-			Map<String, Map<CompoundKey, OpObject>> superBlockObject = blc.getSuperblockObjects();
-
-			assertEquals(amountLoadedObjects, superBlockObject.size());
-		}
+		assertEquals(amountLoadedObjects, superBlockObject.size());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetBlockHeaders(OpBlockChain opBlockChain) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			int depth = opBlockChain.getDepth();
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetBlockHeaders(OpBlockChain opBlockChain) {
+		int depth = opBlockChain.getDepth();
 
-			List<OpBlock> blockHeaders = opBlockChain.getBlockHeaders(depth);
+		List<OpBlock> blockHeaders = opBlockChain.getBlockHeaders(depth);
 
-			assertFalse(blockHeaders.isEmpty());
-		} else {
-			blc.createBlock(serverName, serverKeyPair);
-			int depth = blc.getDepth();
-
-			List<OpBlock> blockHeaders = blc.getBlockHeaders(depth);
-
-			assertFalse(blockHeaders.isEmpty());
-		}
+		assertFalse(blockHeaders.isEmpty());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchainAndOpObject")
-	public void testGetBlockHeadersById(OpBlockChain opBlockChain, OpBlock opBlock) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			int lastBlockId = opBlockChain.getLastBlockId();
-			OpBlock loadedOpBlock = opBlockChain.getBlockHeadersById(lastBlockId);
-			assertNotNull(loadedOpBlock);
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetBlockHeadersById(OpBlockChain opBlockChain) {
+		int lastBlockId = opBlockChain.getLastBlockId();
+		OpBlock opBlock = opBlockChain.getBlockHeadersById(0);
+		OpBlock loadedOpBlock = opBlockChain.getBlockHeadersById(lastBlockId);
+		assertNotNull(loadedOpBlock);
 
-			assertEquals(opBlock.getRawHash(), loadedOpBlock.getRawHash());
-		} else {
-			opBlock = blc.createBlock(serverName, serverKeyPair);
-
-			int lastBlockId = blc.getLastBlockId();
-			OpBlock loadedOpBlock = blc.getBlockHeadersById(lastBlockId);
-			assertNotNull(loadedOpBlock);
-
-			assertEquals(opBlock.getRawHash(), loadedOpBlock.getRawHash());
-		}
+		assertEquals(opBlock.getRawHash(), loadedOpBlock.getRawHash());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetBlockHeadersByNotExistingId(OpBlockChain opBlockChain) {
 		final int notExistingId = 0;
 
-		if (opBlockChain != null) {
-			assertNull(opBlockChain.getBlockHeadersById(notExistingId));
-		} else {
-			assertNull(blc.getBlockHeadersById(notExistingId));
-		}
+		assertNull(opBlockChain.getBlockHeadersById(notExistingId));
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchainAndOpObject")
-	public void testGetBlockHeaderByRawHash(OpBlockChain opBlockChain, OpBlock opBlock) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			OpBlock loadedOpBlock = opBlockChain.getBlockHeaderByRawHash(opBlock.getRawHash());
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetBlockHeaderByRawHash(OpBlockChain opBlockChain) {
+		OpBlock opBlock = opBlockChain.getBlockHeadersById(0);
+		OpBlock loadedOpBlock = opBlockChain.getBlockHeaderByRawHash(opBlock.getRawHash());
 
-			assertEquals(opBlock.getBlockId(), loadedOpBlock.getBlockId());
-		} else {
-			opBlock = blc.createBlock(serverName, serverKeyPair);
-
-			OpBlock loadedOpBlock = blc.getBlockHeaderByRawHash(opBlock.getRawHash());
-
-			assertEquals(opBlock.getBlockId(), loadedOpBlock.getBlockId());
-		}
+		assertEquals(opBlock.getBlockId(), loadedOpBlock.getBlockId());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
 	public void testGetBlockHeaderByNotExistingRawHash(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			OpBlock loadedOpBlock = opBlockChain.getBlockHeaderByRawHash("1");
-			assertNull(loadedOpBlock);
-		} else {
-			OpBlock loadedOpBlock = blc.getBlockHeaderByRawHash("1");
-			assertNull(loadedOpBlock);
-		}
+		OpBlock loadedOpBlock = opBlockChain.getBlockHeaderByRawHash("1");
+		assertNull(loadedOpBlock);
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchainAndOpObject")
-	public void testGetFullBlockByRawHash(OpBlockChain opBlockChain, OpBlock opBlock) throws FailedVerificationException {
-		if (opBlockChain != null) {
-			OpBlock loadedOpBlock = blc.getFullBlockByRawHash(opBlock.getRawHash());
+	@Parameters(method = "opblockchainBasicParameterWithBlock")
+	public void testGetFullBlockByRawHash(OpBlockChain opBlockChain) {
+		OpBlock opBlock = opBlockChain.getBlockHeadersById(0);
+		OpBlock loadedOpBlock = opBlockChain.getFullBlockByRawHash(opBlock.getRawHash());
 
-			assertEquals(opBlock.getBlockId(), loadedOpBlock.getBlockId());
-		} else {
-			opBlock = blc.createBlock(serverName, serverKeyPair);
-
-			OpBlock loadedOpBlock = blc.getFullBlockByRawHash(opBlock.getRawHash());
-
-			assertEquals(opBlock.getBlockId(), loadedOpBlock.getBlockId());
-		}
+		assertEquals(opBlock.getBlockId(), loadedOpBlock.getBlockId());
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
+	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetFullBlockByNotExistingRawHash(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			OpBlock loadedOpBlock = opBlockChain.getFullBlockByRawHash("1");
-			assertNull(loadedOpBlock);
-		} else {
-			OpBlock loadedOpBlock = blc.getFullBlockByRawHash("1");
-			assertNull(loadedOpBlock);
-		}
+		OpBlock loadedOpBlock = opBlockChain.getFullBlockByRawHash("1");
+		assertNull(loadedOpBlock);
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchainAndOpObject")
-	public void testGetOperationByHash(OpBlockChain opBlockChain, OpOperation operation) {
-		if (opBlockChain != null) {
-			OpOperation opOperation = opBlockChain.getOperationByHash(operation.getRawHash());
+	@Parameters(method = "opblockchainBasicParameterWithExistingOperationRowHash")
+	public void testGetOperationByHash(OpBlockChain opBlockChain, String operation) {
+		OpOperation opOperation = opBlockChain.getOperationByHash(operation);
 
-			assertEquals(operation, opOperation);
-		} else {
-			OpOperation queueOperation = blc.getQueueOperations().getLast();
-
-			OpOperation opOperation = blc.getOperationByHash(queueOperation.getRawHash());
-
-			assertEquals(queueOperation, opOperation);
-		}
+		assertNotNull(opOperation);
 	}
 
 	@Test
-	@Parameters(method = "parametersWithNullableBlockchain")
-	public void testGetOperationByNotExistingHash(OpBlockChain opBlockChain) {
-		if (opBlockChain != null) {
-			OpOperation opOperation = opBlockChain.getOperationByHash("10c5978d2466b67505d2d94a9a0f29695e03bf11893a4a5cac3cd700aa757dd9");
+	@Parameters(method = "opblockchainBasicParameterWithNotExistingOperationRowHash")
+	public void testGetOperationByNotExistingHash(OpBlockChain opBlockChain, String operation) {
+		OpOperation opOperation = opBlockChain.getOperationByHash(operation);
 
-			assertNull(opOperation);
-		} else {
-			OpOperation opOperation = blc.getOperationByHash("1");
-
-			assertNull(opOperation);
-		}
+		assertNull(opOperation);
 	}
 
 	@Test
@@ -370,5 +217,46 @@ public class OpBlockchainGettersTest {
 		blc.getObjects(OpBlockchainRules.OP_SIGNUP, r);
 
 		assertEquals(2, r.result.size());
+	}
+
+	private Object[] opblockchainBasicParameterWithBlock() throws FailedVerificationException {
+		JsonFormatter formatter = new JsonFormatter();
+		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
+		generateOperations(formatter, blc);
+
+		blc.createBlock(serverName, serverKeyPair);
+		return new Object[]{
+				blc
+		};
+	}
+
+	private Object[] opblockchainBasicParameterWithoutBlock() throws FailedVerificationException {
+		JsonFormatter formatter = new JsonFormatter();
+		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
+		generateOperations(formatter, blc);
+
+		return new Object[]{
+				blc
+		};
+	}
+
+	private Object[] opblockchainBasicParameterWithExistingOperationRowHash() throws FailedVerificationException {
+		JsonFormatter formatter = new JsonFormatter();
+		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
+		generateOperations(formatter, blc);
+
+		return new Object[]{
+				blc, blc.getQueueOperations().getLast().getRawHash()
+		};
+	}
+
+	private Object[] opblockchainBasicParameterWithNotExistingOperationRowHash() throws FailedVerificationException {
+		JsonFormatter formatter = new JsonFormatter();
+		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
+		generateOperations(formatter, blc);
+
+		return new Object[]{
+				blc, "1"
+		};
 	}
 }
