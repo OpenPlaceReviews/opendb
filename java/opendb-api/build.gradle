@@ -21,7 +21,7 @@ task generateGitProperties {
             // def timestamp = revision ? new java.util.Date(java.util.concurrent.TimeUnit.SECONDS.toMillis(revision.split(' ').first() as long)).format("yyyy-MM-dd'T'HH:mm:ssZ") : null
             def commit = 'git log -1 --pretty=format:"%h%x09%an%x09%ad%x09%s"'.execute().text.trim()
             File propertiesFile = new File(project.getBuildDir(), '/resources/main/git.properties')
-            if(commit) {
+            if (commit) {
                 propertiesFile.text = """git.commit.format=$commit"""
             }
         } catch (e) {
@@ -91,6 +91,9 @@ dependencies {
     implementation group: 'net.sf.kxml', name: 'kxml2', version: '2.3.0'
 
     testImplementation "junit:junit"
+    testImplementation "pl.pragmatists:JUnitParams:0.3.6"
+
+
     testImplementation "org.apache.httpcomponents:httpclient:4.5.7"
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 

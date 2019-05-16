@@ -871,7 +871,9 @@ public class OpBlockChain {
 				ctx.refObjsCache.put(refName, oi);
 			}
 		}
-		ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
+
+		if (getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()) != null)
+			ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
 		return true;
 	}
 	
@@ -891,7 +893,7 @@ public class OpBlockChain {
 			if(opInfo.deletedObjects != null && delInd < opInfo.deletedObjects.length){
 				if(opInfo.deletedObjects[delInd]) {
 					return rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(), 
-							delRef, opInfo.deletedObjects[delInd]);
+							delRef, ctx.blockHash);
 				}
 			}
 			List<OpObject> nw = opInfo.op.getNew();

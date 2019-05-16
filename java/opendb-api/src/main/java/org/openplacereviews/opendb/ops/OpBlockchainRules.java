@@ -669,8 +669,8 @@ public class OpBlockchainRules {
 		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
 		
 		NEW_OBJ_DOUBLE_CREATED("Operation '%s': object '%s' was already created"),
-		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found "),
-		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%d'"),
+		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
+		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%s'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),

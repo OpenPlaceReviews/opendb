@@ -93,7 +93,7 @@
 		"new" : [{
 			"id" : ["role_could_be_changed_only_by_owner"],
 			"type" : ["sys.role"],
-			"comment" : "Check that role coudl be changed only by owner. Role couldn't be deleted cause it will requre revoking all grant access!",
+			"comment" : "Check that role could be changed only by owner. Role couldn't be deleted cause it will require revoking all grant access!",
 			"role" : "none",
 			"if" : [
 				"std:eq(std:size(.old), 1)"
@@ -112,8 +112,8 @@
 			"comment" : "Check that role is assigned by person who has it. The role could be revoked or added only if operation is signed by a person who has that role. Check that Owner role could change that validation.",
 			"owner_role" : "owner",
 			"validate" : [
-				"auth:has_sig_roles(this, set:minus(.roles, .old.roles))",
-				"auth:has_sig_roles(this, set:minus(.old.roles, .roles))"
+				"auth:has_sig_roles(this, set:minus(.new.roles, .old.roles))",
+				"auth:has_sig_roles(this, set:minus(.old.roles, .new.roles))"
 			]
 		}]
 	},

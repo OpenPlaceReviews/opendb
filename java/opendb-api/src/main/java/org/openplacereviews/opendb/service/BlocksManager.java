@@ -52,7 +52,7 @@ public class BlocksManager {
 	private DBConsensusManager dataManager;
 	
 	protected String[] BOOTSTRAP_LIST = 
-			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "std-validations", "opr-0-test-grant"};
+			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"};
 	
 	@Value("${opendb.replicate.url}")
 	private String replicateUrl;
