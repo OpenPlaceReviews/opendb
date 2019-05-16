@@ -18,10 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -201,21 +198,41 @@ public class DBConsensusManagerTest {
 		assertEquals(33, amount[0]);
 	}
 
-	//TODO
-	@Ignore
 	@Test
 	public void testCompact() throws FailedVerificationException {
+		int i = 0;
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
 		generateOperations(formatter, opBlockChain);
-		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 
+		Deque<OpOperation> dequeOperations = opBlockChain.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
+
+		Set<String> operationsToDelete = new HashSet<>();
+		List<OpOperation> addOperation = new ArrayList<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		while (i < 3) {
+			OpOperation opOperation = iterator.next();
+			operationsToDelete.add(opOperation.getRawHash());
+			addOperation.add(opOperation);
+			i++;
+		}
+
+		opBlockChain.removeQueueOperations(operationsToDelete);
+
+		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		assertEquals(opBlock.getOperations().size(), getAmountFromDbByTable(OPERATIONS_TABLE));
 
-		assertEquals(0, getAmountFromDbByTable(BLOCKS_TABLE));
+		OpBlockChain newBlc = new OpBlockChain(opBlockChain, opBlockChain.getRules());
+		addOperation.forEach(newBlc::addOperation);
+		opBlock = newBlc.createBlock(serverName, serverKeyPair);
 
-		dbConsensusManager.compact(0, opBlockChain, true);
+		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
+
+		newBlc = dbConsensusManager.compact(0, newBlc, true);
+		assertNotNull(newBlc);
 	}
 
 	@Test
