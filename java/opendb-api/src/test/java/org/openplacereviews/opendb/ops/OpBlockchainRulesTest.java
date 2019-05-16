@@ -8,6 +8,8 @@ import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -35,6 +37,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Success adding new operation
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -96,14 +99,16 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.REF_OBJ_NOT_FOUND
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testAddOperationPrepareReferencedObjectsExpectError_RefObjNotFound() throws FailedVerificationException {
+	public void testAddOperationPrepareReferencedObjectsExpectError_RefObjNotFound() throws
+			FailedVerificationException {
 		String name = "openplacereviews", name2 = "test_", role = "owner", secondRole = "administrator";
 
 		OpObject opObject = new OpObject();
-		opObject.setId(name+":" + name2 + 2); //openplacereviews:test_2
+		opObject.setId(name + ":" + name2 + 2); //openplacereviews:test_2
 		opObject.putStringValue(F_ROLES, role);
 		opObject.addOrSetStringValue(F_ROLES, secondRole);
 
@@ -124,11 +129,13 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.DEL_OBJ_NOT_FOUND
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testAddOperationPrepareDeletedObjectsExpectError_DelObjNotFound() throws FailedVerificationException {
-		String name = "openplacereviews", notExistingHash = "fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c801";
+		String name = "openplacereviews", notExistingHash =
+				"fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c801";
 
 		OpObject opObject = new OpObject();
 
@@ -150,10 +157,12 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.DEL_OBJ_DOUBLE_DELETED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testAddOperationPrepareDeletedObjectsExpectError_DelObjDoubleDeleted() throws FailedVerificationException {
+	public void testAddOperationPrepareDeletedObjectsExpectError_DelObjDoubleDeleted() throws
+			FailedVerificationException {
 		String name = "openplacereviews", oldHash = "fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802";
 		blc.createBlock(serverName, serverKeyPair);
 
@@ -177,10 +186,12 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.NEW_OBJ_DOUBLE_CREATED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testAddOperationPrepareNoNewDuplicatedObjectsExpectError_NewObjDoubleCreated() throws FailedVerificationException {
+	public void testAddOperationPrepareNoNewDuplicatedObjectsExpectError_NewObjDoubleCreated() throws
+			FailedVerificationException {
 		String name = "openplacereviews", name1 = "test_1", role = "master", secondRole = "administrator";
 
 		OpObject opObject = new OpObject();
@@ -205,6 +216,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Success validation block
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -214,6 +226,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_PREV_HASH
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -226,6 +239,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_PREV_ID
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -268,6 +282,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_HASH_IS_DUPLICATED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -311,6 +326,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_EMPTY
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -323,6 +339,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_MERKLE_TREE_FAILED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -365,6 +382,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_SIG_MERKLE_TREE_FAILED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -407,6 +425,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_SIGNATURE_FAILED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -417,6 +436,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.BLOCK_HASH_FAILED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -454,6 +474,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.OP_SIGNATURE_FAILED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -478,10 +499,12 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.OP_SIGNATURE_FAILED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testValidateSignaturesFirstSignupCouldBeSignedByItselfExpectError_OpSignatureFailed() throws FailedVerificationException {
+	public void testValidateSignaturesFirstSignupCouldBeSignedByItselfExpectError_OpSignatureFailed() throws
+			FailedVerificationException {
 		String id = "openplacereviews", oauthMethod = "oauth";
 
 		OpObject opObject = new OpObject();
@@ -503,6 +526,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Success validateOperations
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -524,11 +548,12 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 *  Expected ErrorType.OP_HASH_IS_NOT_CORRECT
+	 * Expected ErrorType.OP_HASH_IS_NOT_CORRECT
 	 */
 	@Test
 	public void testValidateOpExpectError_OpHashIsNotCorrect() {
-		String id = "openplacereviews", ownerRole = "administrator", superRole = "owner", opHash = "json:sha256:e55df720278460a277425e6331f08c436160a64db639051a82d79015e10dff03";
+		String id = "openplacereviews", ownerRole = "administrator", superRole = "owner", opHash =
+				"json:sha256:e55df720278460a277425e6331f08c436160a64db639051a82d79015e10dff03";
 
 		OpObject opObject = new OpObject();
 		opObject.setId(id);
@@ -550,6 +575,7 @@ public class OpBlockchainRulesTest {
 
 	/**
 	 * Expected ErrorType.OP_SIZE_IS_EXCEEDED
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -563,13 +589,15 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 * 	Expected ErrorType.OP_INVALID_VALIDATE_EXPRESSION
-	 * 	@throws FailedVerificationException
+	 * Expected ErrorType.OP_INVALID_VALIDATE_EXPRESSION
+	 *
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpInvalidValidateExpression() throws FailedVerificationException {
 		String name = "all_op_arity_new_del1", comment = "Validate operation arity", role = "none";
-		String ifStatement = "std:eq()", validateStatement1 = "std:leq(std:size(.new),1)", validateStatement2 = "std:leq(std:size(.old),1)";
+		String ifStatement = "std:eq()", validateStatement1 = "std:leq(std:size(.new),1)", validateStatement2 =
+				"std:leq(std:size(.old),1)";
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
@@ -593,12 +621,13 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 *  Expected ErrorType.OP_ROLE_SUPER_ROLE_DOESNT_EXIST
-	 *  @throws FailedVerificationException
+	 * Expected ErrorType.OP_ROLE_SUPER_ROLE_DOESNT_EXIST
+	 *
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpRoleSuperRoleDoesntExist() throws FailedVerificationException {
-		String name = "owner1", ownerRole= "owner", superRole = "owner1";
+		String name = "owner1", ownerRole = "owner", superRole = "owner1";
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
@@ -617,8 +646,9 @@ public class OpBlockchainRulesTest {
 	}
 
 	/**
-	 *  Expected ErrorType.OP_GRANT_ROLE_DOESNT_EXIST
-	 *  @throws FailedVerificationException
+	 * Expected ErrorType.OP_GRANT_ROLE_DOESNT_EXIST
+	 *
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testValidateRulesExpectError_OpGrantRoleDoesntExist() throws FailedVerificationException {
@@ -643,7 +673,40 @@ public class OpBlockchainRulesTest {
 		blc.addOperation(opOperation);
 	}
 
-	private void selectOperations(List<OpOperation> opOperations, Set<String> operationsToDelete, Iterator<OpOperation> iterator) {
+	/**
+	 * Test that merkle tree got the same result for same sequence,
+	 * and different result if we change one single byte.
+	 *
+	 * @throws NoSuchMethodException
+	 */
+	@Test
+	public void testCalculateMerkleTreeInPlaceHash() throws NoSuchMethodException, InvocationTargetException,
+			IllegalAccessException {
+		OpBlockchainRules bRules = blc.getRules();
+		Class<OpBlockchainRules> clazz = OpBlockchainRules.class;
+		Method calMerTreeM = clazz.getDeclaredMethod("calculateMerkleTreeInPlaceHash", String.class, List.class);
+		calMerTreeM.setAccessible(true);
+
+		List<byte[]> inChain = new ArrayList<>();
+		for (int i = 0; i < 9; i++) {
+			byte[] inData = new byte[200];
+			new Random().nextBytes(inData);
+			inChain.add(inData);
+		}
+
+		//have to get same sequence for the same bytes sequence
+		String rootHash = (String) calMerTreeM.invoke(bRules, SecUtils.HASH_SHA256, inChain);
+		String rootHashDuplicate = (String) calMerTreeM.invoke(bRules, SecUtils.HASH_SHA256, inChain);
+		assertEquals(rootHash, rootHashDuplicate);
+
+		//have to get different sequence for the different bytes sequence
+		inChain.get(8)[198] = (byte) (inChain.get(8)[198] >> 1);
+		String rootHash2 = (String) calMerTreeM.invoke(bRules, SecUtils.HASH_SHA256, inChain);
+		assertNotEquals(rootHash, rootHash2);
+	}
+
+	private void selectOperations(List<OpOperation> opOperations, Set<String> operationsToDelete,
+								  Iterator<OpOperation> iterator) {
 		int i = 0;
 
 		while (i < 5) {
