@@ -1,1 +1,5 @@
 .gradle
+.idea
+.coverage
+docker-compose.yml
+env.sh
