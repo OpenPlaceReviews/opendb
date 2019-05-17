@@ -12,7 +12,7 @@ subprojects {
     apply plugin: 'idea'
 
 
-    group 'org.opengeoreviews'
+    group 'org.openplacereviews'
     version '1.0'
     sourceCompatibility = 1.8
     
