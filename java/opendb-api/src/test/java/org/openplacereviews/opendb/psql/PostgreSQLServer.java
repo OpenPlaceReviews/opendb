@@ -13,20 +13,19 @@ import static org.openplacereviews.opendb.VariableHelperTest.tables;
 
 public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 
-	private static EmbeddedPostgres postgres;
-
-	private static String JDBC_URL;
 	private static final String JDBC_USERNAME = "my_test_username";
 	private static final String JDBC_PASSWORD = "my_test_password";
 	private static final String DB_NAME = "test_db";
-	
+	private static EmbeddedPostgres postgres;
+	private static String JDBC_URL;
+
 	public Connection getConnection() throws SQLException {
 		return DriverManager.getConnection(JDBC_URL, JDBC_USERNAME, JDBC_PASSWORD);
 	}
 
 	private Collection<String> getAllDatabaseTables() throws SQLException {
 		DatabaseMetaData md = getConnection().getMetaData();
-		ResultSet rs = md.getTables(null, null, "%", new String[] { "TABLE" });
+		ResultSet rs = md.getTables(null, null, "%", new String[]{"TABLE"});
 		while (rs.next()) {
 			tables.add(rs.getString("TABLE_NAME"));
 		}
@@ -52,17 +51,52 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 		System.setProperty("spring.datasource.username", JDBC_USERNAME);
 		System.setProperty("spring.datasource.password", JDBC_PASSWORD);
 	}
-	
+
 	@Override
 	protected void after() {
 		super.after();
 		postgres.stop();
 	}
 
+	public void wipeDatabase() throws Exception {
+		synchronized (PostgreSQLServer.class) {
+			try (final Connection connection = getConnection();
+				 final java.sql.Statement databaseTruncationStatement = connection.createStatement()) {
+				databaseTruncationStatement.execute("BEGIN TRANSACTION");
+				databaseTruncationStatement.execute(String.format("TRUNCATE %s RESTART IDENTITY CASCADE",
+						String.join(",", getAllDatabaseTables())));
+				databaseTruncationStatement.execute("COMMIT TRANSACTION"); // Reset constraints
+			}
+		}
+	}
+
+	public void deleteAllTables() throws SQLException {
+		synchronized (PostgreSQLServer.class) {
+			try (final Connection connection = getConnection()) {
+				final java.sql.Statement databaseTruncationStatement = connection.createStatement();
+				// Disable all constraints
+				databaseTruncationStatement.execute("SET session_replication_role = replica");
+				databaseTruncationStatement.execute("BEGIN TRANSACTION");
+				final Set<String> temporaryTablesStatements = new TreeSet<>();
+				int index = 0;
+				final Collection<String> allDatabaseTables = getAllDatabaseTables();
+				for (final String table : allDatabaseTables) {
+					// Much faster to delete all tables in a single statement
+					temporaryTablesStatements.add(String.format("table_%s AS (DELETE FROM %s)", index++, table));
+				}
+				databaseTruncationStatement.execute(String.format("WITH %S SELECT 1",
+						String.join(",", temporaryTablesStatements)));
+				databaseTruncationStatement.execute("COMMIT TRANSACTION");
+				databaseTruncationStatement.execute("SET session_replication_role = DEFAULT"); // Reset constraints
+			}
+		}
+	}
+
 	public static class Wiper implements org.junit.rules.TestRule {
 
 		@Override
-		public org.junit.runners.model.Statement apply(org.junit.runners.model.Statement base, Description description) {
+		public org.junit.runners.model.Statement apply(org.junit.runners.model.Statement base,
+													   Description description) {
 			return new org.junit.runners.model.Statement() {
 				@Override
 				public void evaluate() throws Throwable {
@@ -84,39 +118,5 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 			// Discussed later in the "Test" section
 		}
 
-	}
-
-	public void wipeDatabase() throws Exception {
-		synchronized (PostgreSQLServer.class) {
-			try (final Connection connection = getConnection();
-				 final java.sql.Statement databaseTruncationStatement = connection.createStatement()) {
-				databaseTruncationStatement.execute("BEGIN TRANSACTION");
-				databaseTruncationStatement.execute(String.format("TRUNCATE %s RESTART IDENTITY CASCADE",
-						String.join(",", getAllDatabaseTables())));
-				databaseTruncationStatement.execute("COMMIT TRANSACTION"); // Reset constraints
-			}
-		}
-	}
-	
-	public void deleteAllTables() throws SQLException {
-		synchronized (PostgreSQLServer.class) {
-			try (final Connection connection = getConnection()) {
-				final java.sql.Statement databaseTruncationStatement = connection.createStatement();
-				// Disable all constraints
-				databaseTruncationStatement.execute("SET session_replication_role = replica"); 
-				databaseTruncationStatement.execute("BEGIN TRANSACTION");
-				final Set<String> temporaryTablesStatements = new TreeSet<>();
-				int index = 0;
-				final Collection<String> allDatabaseTables = getAllDatabaseTables();
-				for (final String table : allDatabaseTables) {
-					// Much faster to delete all tables in a single statement
-					temporaryTablesStatements.add(String.format("table_%s AS (DELETE FROM %s)", index++, table));
-				}
-				databaseTruncationStatement.execute(String.format("WITH %S SELECT 1",
-						String.join(",", temporaryTablesStatements)));
-				databaseTruncationStatement.execute("COMMIT TRANSACTION");
-				databaseTruncationStatement.execute("SET session_replication_role = DEFAULT"); // Reset constraints
-			}
-		}
 	}
 }

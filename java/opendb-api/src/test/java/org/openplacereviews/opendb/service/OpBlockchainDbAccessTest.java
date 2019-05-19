@@ -25,11 +25,16 @@ import java.util.*;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 public class OpBlockchainDbAccessTest {
+
+	@ClassRule
+	public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
+
+	@Rule
+	public ExpectedException exceptionRule = ExpectedException.none();
 
 	@Spy
 	@InjectMocks
@@ -45,16 +50,14 @@ public class OpBlockchainDbAccessTest {
 	@Spy
 	@InjectMocks
 	private FileBackupManager fileBackupManager;
-
-	@ClassRule
-	public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
-
-	@Rule
-	public ExpectedException exceptionRule = ExpectedException.none();
-
 	private OpBlockchainTest opBlockchainTest;
 	private JdbcTemplate jdbcTemplate;
 	private OpenDBServer.MetadataDb metadataDb;
+
+	@AfterClass
+	public static void afterClassTest() throws SQLException {
+		databaseServer.getConnection().close();
+	}
 
 	@Before
 	public void beforeEachTest() throws SQLException, FailedVerificationException {
@@ -74,17 +77,15 @@ public class OpBlockchainDbAccessTest {
 		Mockito.doNothing().when(fileBackupManager).init();
 
 		metadataDb = new OpenDBServer.MetadataDb();
+
 		generateMetadataDB(metadataDb, jdbcTemplate);
+
+		dbConsensusManager.init(metadataDb);
 	}
 
 	@After
 	public void afterEachTest() throws Exception {
 		databaseServer.wipeDatabase();
-	}
-
-	@AfterClass
-	public static void afterClassTest() throws SQLException {
-		databaseServer.getConnection().close();
 	}
 
 	@Test
@@ -93,11 +94,14 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(UnsupportedOperationException.class);
-		opBlockchainTest.testOpBlockChain(blockChain, opBlock);
+		opBlockchainTest.testOpBlockChain(blockChain);
 	}
 
 	@Test
@@ -106,11 +110,14 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(IllegalStateException.class);
-		opBlockchainTest.testOpBlockChainWithNotEqualParents(blockChain, opBlock);
+		opBlockchainTest.testOpBlockChainWithNotEqualParents(blockChain);
 	}
 
 	@Ignore
@@ -139,8 +146,11 @@ public class OpBlockchainDbAccessTest {
 		dbConsensusManager.insertBlock(opBlock);
 
 		dbConsensusManager.init(metadataDb);
-		OpBlockChain opBlockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain opBlockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 		opBlockChain = dbConsensusManager.saveMainBlockchain(opBlockChain);
 
 		addOperation.forEach(opBlockChain::addOperation);
@@ -157,8 +167,11 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(IllegalStateException.class);
 		opBlockchainTest.testRemoveQueueOperationsByListOfRowHashes();
@@ -170,11 +183,14 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(UnsupportedOperationException.class);
-		opBlockchainTest.testRebaseOperations(blockChain, opBlock);
+		opBlockchainTest.testRebaseOperations(blockChain);
 	}
 
 	@Test
@@ -183,11 +199,14 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(UnsupportedOperationException.class);
-		opBlockchainTest.testChangeToEqualParent(blockChain, opBlock);
+		opBlockchainTest.testChangeToEqualParent(blockChain);
 	}
 
 	@Ignore
@@ -197,8 +216,11 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(IllegalStateException.class);
 		opBlockchainTest.testAddOperations();
@@ -211,8 +233,11 @@ public class OpBlockchainDbAccessTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		dbConsensusManager.insertBlock(opBlock);
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()), opBlockchainTest.blc.getRules());
+		OpBlockChain blockChain =
+				new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
+						dbConsensusManager.createDbAccess(
+								opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
+						opBlockchainTest.blc.getRules());
 
 		exceptionRule.expect(IllegalStateException.class);
 		opBlockchainTest.testValidateOperations();

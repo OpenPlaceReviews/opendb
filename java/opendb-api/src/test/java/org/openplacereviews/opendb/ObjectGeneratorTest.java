@@ -24,9 +24,11 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 public class ObjectGeneratorTest {
 
 	private static String[] BOOTSTRAP_LIST =
-			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-user-test", "opr-0-test-grant", "std-validations"};
+			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
+					"opr-0-test-grant", "std-validations"};
 
-	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc) throws FailedVerificationException {
+	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc) throws
+			FailedVerificationException {
 		for (String f : BOOTSTRAP_LIST) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
@@ -42,7 +44,8 @@ public class ObjectGeneratorTest {
 		}
 	}
 
-	public static void generate30Blocks(JsonFormatter formatter, OpBlockChain blc, DBConsensusManager dbConsensusManager) throws FailedVerificationException {
+	public static void generate30Blocks(JsonFormatter formatter, OpBlockChain blc,
+										DBConsensusManager dbConsensusManager) throws FailedVerificationException {
 		int i = 0;
 		for (String f : BOOTSTRAP_LIST) {
 			OpOperation[] lst = formatter.fromJson(
@@ -66,7 +69,8 @@ public class ObjectGeneratorTest {
 		}
 	}
 
-	public static void generateHashAndSignForOperation(OpOperation opOperation, OpBlockChain blc, boolean signedBy, KeyPair... keyPair) throws FailedVerificationException {
+	public static void generateHashAndSignForOperation(OpOperation opOperation, OpBlockChain blc, boolean signedBy,
+													   KeyPair... keyPair) throws FailedVerificationException {
 		if (signedBy) {
 			opOperation.setSignedBy(serverName);
 		}
@@ -76,23 +80,25 @@ public class ObjectGeneratorTest {
 
 	/**
 	 * Allows to generate JSON with big size for creating Error Type.OP_SIZE_IS_EXCEEDED
+	 *
 	 * @return - String Json
 	 */
 	public static String generateBigJSON() {
 		StringBuilder startOperation =
 				new StringBuilder(
 						"{\n" +
-						"\t\t\"type\" : \"sys.grant\",\n" +
-						"\t\t\"ref\" : {\n" +
-						"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
-						"\t\t},\n" +
-						"\t\t\"new\" : ["
+								"\t\t\"type\" : \"sys.grant\",\n" +
+								"\t\t\"ref\" : {\n" +
+								"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
+								"\t\t},\n" +
+								"\t\t\"new\" : ["
 				);
 
 		while (startOperation.length() <= OpBlockchainRules.MAX_OP_SIZE_MB) {
-			for(int i = 0; i < 100; i++) {
+			for (int i = 0; i < 100; i++) {
 				startOperation
-						.append("\t\t{ \n" + "\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews")
+						.append("\t\t{ \n" +
+								"\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews")
 						.append(startOperation.length())
 						.append(i)
 						.append("\"],\n")
@@ -102,7 +108,9 @@ public class ObjectGeneratorTest {
 		}
 
 		startOperation
-				.append("\t\t{ \n" + "\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews\"],\n" + "\t\t\t\"roles\" : [\"owner\"]\n" + "\t\t}]\n" + "\t}");
+				.append("\t\t{ \n" +
+						"\t\t\t\"id\" : [\"openplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviewsopenplacereviews\"],\n" +
+						"\t\t\t\"roles\" : [\"owner\"]\n" + "\t\t}]\n" + "\t}");
 
 		return startOperation.toString();
 	}
@@ -111,9 +119,9 @@ public class ObjectGeneratorTest {
 		try {
 			DatabaseMetaData mt = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection().getMetaData();
 			ResultSet rs = mt.getColumns(null, DBConstants.SCHEMA_NAME, null, null);
-			while(rs.next()) {
+			while (rs.next()) {
 				String tName = rs.getString("TABLE_NAME");
-				if(!metadataDb.tablesSpec.containsKey(tName)) {
+				if (!metadataDb.tablesSpec.containsKey(tName)) {
 					metadataDb.tablesSpec.put(tName, new ArrayList<>());
 				}
 				List<OpenDBServer.MetadataColumnSpec> cols = metadataDb.tablesSpec.get(tName);

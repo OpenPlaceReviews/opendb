@@ -40,6 +40,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.signup operation
 	 * Success self signing with pwd method
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -50,6 +51,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.signup operation
 	 * Success self signing with oauth method
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -60,7 +62,8 @@ public class OpBlockchainRulesSysValidationTest {
 		OpObject opObject = new OpObject();
 		opObject.setId(salt);
 		opObject.putStringValue(OpObject.F_NAME, salt);
-		opObject.putStringValue(OpBlockchainRules.F_OAUTHID_HASH, SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, salt, oauthProvider));
+		opObject.putStringValue(OpBlockchainRules.F_OAUTHID_HASH,
+				SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, salt, oauthProvider));
 		opObject.putStringValue(OpBlockchainRules.F_OAUTH_PROVIDER, oauthProvider);
 
 		OpOperation opOperation = new OpOperation();
@@ -77,6 +80,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.signup operation
 	 * Success self signing with provided method
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -87,20 +91,24 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.signup operation
 	 * Expected validation error: signup_self_signed_pwd
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testSelfSignedForSysSignupExpectErrorValidation_SignupSelfSignedPwd() throws FailedVerificationException {
+	public void testSelfSignedForSysSignupExpectErrorValidation_SignupSelfSignedPwd() throws
+			FailedVerificationException {
 		String name = "elen1";
 		String password = "149814981498a";
 
-		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, SecUtils.KEYGEN_PWD_METHOD_1, name, password);
+		KeyPair keyPair =
+				SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, SecUtils.KEYGEN_PWD_METHOD_1, name, password);
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
 		opObject.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PWD);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(serverName);
@@ -117,10 +125,12 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.signup operation
 	 * Expected validation error: signup_self_signed_provided
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testSelfSignedForSysSignupExpectErrorValidation_SignupSelfSignedProvided() throws FailedVerificationException {
+	public void testSelfSignedForSysSignupExpectErrorValidation_SignupSelfSignedProvided() throws
+			FailedVerificationException {
 		String name = "openplacereviews1";
 		KeyPair keyPair = SecUtils.generateRandomEC256K1KeyPair();
 
@@ -129,7 +139,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.putStringValue(OpObject.F_NAME, name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
 		opObject.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PROVIDED);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(serverName);
@@ -146,10 +157,12 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.signup operation
 	 * Expected validation error: signup_login_only_by_administrator
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
-	public void testSelfSignedForSysSignupExpectErrorValidation_SignupLoginOnlyByAdministrator() throws FailedVerificationException {
+	public void testSelfSignedForSysSignupExpectErrorValidation_SignupLoginOnlyByAdministrator() throws
+			FailedVerificationException {
 		String name = "openplacereviews";
 		KeyPair keyPair = SecUtils.generateRandomEC256K1KeyPair();
 
@@ -158,7 +171,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.putStringValue(OpObject.F_NAME, name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
 		opObject.putStringValue(OpBlockchainRules.F_AUTH_METHOD, OpBlockchainRules.METHOD_PROVIDED);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(name + 1);
@@ -181,6 +195,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * Success creating sys.login operation by pwd
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -193,7 +208,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name);
 		opObject.addOrSetStringValue(OpObject.F_ID, name1);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		Map<String, Object> refs = new TreeMap<>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
@@ -215,6 +231,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * expected validation error: signup_login_only_by_administrator
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -227,7 +244,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name);
 		opObject.addOrSetStringValue(OpObject.F_ID, name1);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		Map<String, Object> refs = new TreeMap<>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
@@ -249,6 +267,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * expected validation error: login_should_reference_its_signup
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -260,7 +279,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name + 1);
 		opObject.addOrSetStringValue(OpObject.F_ID, name + 1);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		Map<String, Object> refs = new TreeMap<>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
@@ -282,6 +302,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * Expected validation error: login_self_signed_provided
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -293,7 +314,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name);
 		opObject.addOrSetStringValue(OpObject.F_ID, name1);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		Map<String, Object> refs = new TreeMap<>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, refName));
@@ -314,6 +336,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * Expected validation error: login_update_self_signed_provided
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -325,7 +348,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(sName);
 		opObject.addOrSetStringValue(OpObject.F_ID, name1);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		Map<String, Object> refs = new TreeMap<>();
 		refs.put("s", Arrays.asList(OpBlockchainRules.OP_SIGNUP, name));
@@ -348,6 +372,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * Expected validation error: login_self_signed_pwd
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -379,6 +404,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.login operation
 	 * Expected validation error: login_update_self_signed_pwd
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -415,6 +441,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.role operation
 	 * Success validation for creating new role
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -432,6 +459,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.role operation
 	 * Expected validation error: role_none_could_not_be_created
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -450,11 +478,13 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.role operation
 	 * Success validation for changing role
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testChangeRole() throws FailedVerificationException {
-		String role = "user", ownerRole = "administrator", newOwnerRole = "master", comment = "some comment", newComment = "some comment 1";
+		String role = "user", ownerRole = "administrator", newOwnerRole = "master", comment = "some comment",
+				newComment = "some comment 1";
 		String operationHash;
 
 		// generate role with owner_role = administrator
@@ -480,11 +510,13 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.role operation
 	 * Expected validation error: role_could_be_changed_only_by_owner
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testChangeRoleExpectError_RoleCouldBeChangedOnlyByOwner() throws FailedVerificationException {
-		String role = "user", ownerRole = "administrator", newOwnerRole = "master", notOwner = "admin", comment = "some comment", newComment = "some comment 1";
+		String role = "user", ownerRole = "administrator", newOwnerRole = "master", notOwner = "admin", comment =
+				"some comment", newComment = "some comment 1";
 		String operationHash;
 
 		// generate role with owner_role = administrator
@@ -513,12 +545,14 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.grant operation
 	 * expected success granting role for user
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testGrantRole() throws FailedVerificationException {
 		// generate user role
-		String username = "testUsername", role = "user", ownerRole = "master", newOwnerRole = "administrator", comment = "some comment", newComment = "some comment 1";
+		String username = "testUsername", role = "user", ownerRole = "master", newOwnerRole = "administrator", comment =
+				"some comment", newComment = "some comment 1";
 		String operationHash;
 
 		KeyPair userKeyPair = generateSysSignupWithPwdAuth(username);
@@ -571,6 +605,7 @@ public class OpBlockchainRulesSysValidationTest {
 	/**
 	 * sys.role operation
 	 * Expected validation error: grant_check_op_role_and_check_assigned_role
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -603,12 +638,14 @@ public class OpBlockchainRulesSysValidationTest {
 	//////////////////////////////////////////////////////// SYS.VALIDATE ///////////////////////////////////////////////////////
 
 	/**
-	 *	Expected validation error: sysvalidate_check_previous_role_for_change
-	 *	@throws FailedVerificationException
+	 * Expected validation error: sysvalidate_check_previous_role_for_change
+	 *
+	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testSysValidateExpectError_SysValidateCheckPreviousRoleForChange() throws FailedVerificationException {
-		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, "sysvalidate_check_previous_role_for_change");
+		OpObject loadedObject =
+				blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, "sysvalidate_check_previous_role_for_change");
 		assertNotNull(loadedObject);
 
 		String newId = "openplacereviews", comment = "Some comment";
@@ -633,11 +670,13 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Expected validation error: sysvalidate_check_previous_role_for_change
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testSysValidateSuccessCheckPreviousRoleForChange() throws FailedVerificationException {
-		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment = "Some comment";
+		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment =
+				"Some comment";
 
 		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
 		assertNotNull(loadedObject);
@@ -664,6 +703,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Success checking for existing type: sys.grant
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -690,6 +730,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Success checking for existing type: sys.login
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -709,7 +750,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 		opOperation.addNew(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
@@ -720,6 +762,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Success checking for existing type: sys.role
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -743,6 +786,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Success checking for existing type: sys.operation
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -766,12 +810,14 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Success checking for existing type: sys.validate
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testCheckOperationType_OpValidate() throws FailedVerificationException {
 		String name = "all_op_arity_new_del1", comment = "Validate operation arity", role = "none";
-		String ifStatement = "std:eq(.ref.op.arity, 0)", validateStatement1 = "std:leq(std:size(.new),1)", validateStatement2 = "std:leq(std:size(.old),1)";
+		String ifStatement = "std:eq(.ref.op.arity, 0)", validateStatement1 = "std:leq(std:size(.new),1)",
+				validateStatement2 = "std:leq(std:size(.old),1)";
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
@@ -794,6 +840,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Success checking for existing type: sys.signup
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -807,7 +854,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name);
 		opObject.putStringValue(OpObject.F_NAME, name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setSignedBy(name);
@@ -823,6 +871,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Expected validation error: operation_std_arity_always_0
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -849,6 +898,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Expected validation error: all_op_type_registered for not existing type
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
@@ -876,7 +926,8 @@ public class OpBlockchainRulesSysValidationTest {
 	 */
 	@Test
 	public void testCheck_AllOpArityNewDel() throws FailedVerificationException {
-		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment = "Some comment";
+		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment =
+				"Some comment";
 
 		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
 		assertNotNull(loadedObject);
@@ -903,11 +954,13 @@ public class OpBlockchainRulesSysValidationTest {
 
 	/**
 	 * Expected validation error: all_op_arity_same_type_and_id
+	 *
 	 * @throws FailedVerificationException
 	 */
 	@Test
 	public void testCheck_AllOpAritySameTypeAndId() throws FailedVerificationException {
-		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment = "Some comment";
+		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment =
+				"Some comment";
 
 		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
 		assertNotNull(loadedObject);
@@ -943,7 +996,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name);
 		opObject.putStringValue(OpObject.F_NAME, name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setSignedBy(name);
@@ -970,7 +1024,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(name);
 		opObject.putStringValue(OpObject.F_NAME, name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
-		opObject.putStringValue(OpBlockchainRules.F_PUBKEY, SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
+		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
+				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setSignedBy(name);

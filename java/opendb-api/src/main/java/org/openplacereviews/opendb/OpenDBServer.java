@@ -1,19 +1,12 @@
 package org.openplacereviews.opendb;
 
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.LogOperationService;
+import org.openplacereviews.opendb.service.ipfs.IPFSService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -24,6 +17,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @SpringBootApplication
 @EnableScheduling
@@ -43,7 +44,7 @@ public class OpenDBServer  {
 	
 	@Autowired
 	LogOperationService logOperationService;
-	
+
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
 		SpringApplication.run(OpenDBServer.class, args);
@@ -105,5 +106,10 @@ public class OpenDBServer  {
 				throw e;
 			}
 		};
+	}
+
+	@Bean
+	public IPFSService ipfsService() {
+		return IPFSService.connect();
 	}
 }

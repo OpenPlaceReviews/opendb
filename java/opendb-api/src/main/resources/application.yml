@@ -8,6 +8,12 @@ server:
   tomcat.max-threads: 5
   connection-timeout: 120000
 
+ipfs:
+  host: ${IPFS_HOST:localhost}
+  port: ${IPFS_PORT:5001}
+  timeout: ${IPFS_TIMEOUT:10000}
+  directory: ${IPFS_DIRECTORY:/opendb/storage/}
+
 opendb:
   mgmt:
     user: ${OPENDB_LOGIN:openplacereviews:test_1}

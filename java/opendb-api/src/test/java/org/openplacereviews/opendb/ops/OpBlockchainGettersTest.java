@@ -53,7 +53,7 @@ public class OpBlockchainGettersTest {
 	@Test
 	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetLastBlockRawHashIfBlockIsNotExist(OpBlockChain opBlockChain) {
-			assertEquals("", opBlockChain.getLastBlockRawHash());
+		assertEquals("", opBlockChain.getLastBlockRawHash());
 	}
 
 	@Test
@@ -220,9 +220,7 @@ public class OpBlockchainGettersTest {
 	}
 
 	private Object[] opblockchainBasicParameterWithBlock() throws FailedVerificationException {
-		JsonFormatter formatter = new JsonFormatter();
-		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc);
+		beforeEachTestMethod();
 
 		blc.createBlock(serverName, serverKeyPair);
 		return new Object[]{
@@ -231,9 +229,7 @@ public class OpBlockchainGettersTest {
 	}
 
 	private Object[] opblockchainBasicParameterWithoutBlock() throws FailedVerificationException {
-		JsonFormatter formatter = new JsonFormatter();
-		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc);
+		beforeEachTestMethod();
 
 		return new Object[]{
 				blc
@@ -241,9 +237,7 @@ public class OpBlockchainGettersTest {
 	}
 
 	private Object[] opblockchainBasicParameterWithExistingOperationRowHash() throws FailedVerificationException {
-		JsonFormatter formatter = new JsonFormatter();
-		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc);
+		beforeEachTestMethod();
 
 		return new Object[]{
 				blc, blc.getQueueOperations().getLast().getRawHash()
@@ -251,9 +245,7 @@ public class OpBlockchainGettersTest {
 	}
 
 	private Object[] opblockchainBasicParameterWithNotExistingOperationRowHash() throws FailedVerificationException {
-		JsonFormatter formatter = new JsonFormatter();
-		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
-		generateOperations(formatter, blc);
+		beforeEachTestMethod();
 
 		return new Object[]{
 				blc, "1"

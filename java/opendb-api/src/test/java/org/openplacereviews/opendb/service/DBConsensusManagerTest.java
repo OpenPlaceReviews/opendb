@@ -29,6 +29,12 @@ import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 public class DBConsensusManagerTest {
 
+	@ClassRule
+	public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
+
+	@Rule
+	public final PostgreSQLServer.Wiper databaseWiper = new PostgreSQLServer.Wiper();
+
 	@Spy
 	@InjectMocks
 	private DBConsensusManager dbConsensusManager;
@@ -43,15 +49,13 @@ public class DBConsensusManagerTest {
 	@Spy
 	@InjectMocks
 	private FileBackupManager fileBackupManager;
-
-	@ClassRule
-	public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
-
-	@Rule
-	public final PostgreSQLServer.Wiper databaseWiper = new PostgreSQLServer.Wiper();
-
 	private JdbcTemplate jdbcTemplate;
 	private OpenDBServer.MetadataDb metadataDb;
+
+	@AfterClass
+	public static void closeDBConnection() throws SQLException {
+		databaseServer.getConnection().close();
+	}
 
 	@Before
 	public void beforeEachTestMethod() throws Exception {
@@ -76,11 +80,6 @@ public class DBConsensusManagerTest {
 	@After
 	public void tearDown() throws Exception {
 		databaseServer.wipeDatabase();
-	}
-
-	@AfterClass
-	public static void closeDBConnection() throws SQLException {
-		databaseServer.getConnection().close();
 	}
 
 	@Test
@@ -123,12 +122,13 @@ public class DBConsensusManagerTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 
 		Set<String> operations = new LinkedHashSet<>();
-		for(int i = 0; i < amountDeletedOperations; i++) {
+		for (int i = 0; i < amountDeletedOperations; i++) {
 			operations.add(opBlock.getOperations().get(i).getRawHash());
 		}
 
 		assertEquals(amountDeletedOperations, dbConsensusManager.removeOperations(operations));
-		assertEquals(opBlock.getOperations().size() - amountDeletedOperations, getAmountFromDbByTable(OPERATIONS_TABLE));
+		assertEquals(opBlock.getOperations().size() - amountDeletedOperations,
+				getAmountFromDbByTable(OPERATIONS_TABLE));
 		assertEquals(amountDeletedOperations, getAmountFromDbByTable(OPERATIONS_TRASH_TABLE));
 	}
 
@@ -158,8 +158,10 @@ public class DBConsensusManagerTest {
 
 		final long[] amount = new long[1];
 
-		OpBlockChain blockChain = new OpBlockChain(opBlockChain.getParent(), opBlockChain.getBlockHeaders(0), dbConsensusManager.createDbAccess(
-				opBlockChain.getSuperBlockHash(), opBlockChain.getSuperblockHeaders()), opBlockChain.getRules());
+		OpBlockChain blockChain = new OpBlockChain(opBlockChain.getParent(), opBlockChain.getBlockHeaders(0),
+				dbConsensusManager.createDbAccess(
+						opBlockChain.getSuperBlockHash(), opBlockChain.getSuperblockHeaders()),
+				opBlockChain.getRules());
 
 		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
 			amount[0] = rs.getLong(1);
@@ -247,7 +249,8 @@ public class DBConsensusManagerTest {
 		OpOperation opOperation = opBlock.getOperations().get(0);
 
 		assertNotNull(dbConsensusManager.getOperationByHash(opOperation.getHash()));
-		assertEquals(1, dbConsensusManager.removeOperations(new HashSet<>(Collections.singletonList(opOperation.getHash()))));
+		assertEquals(1,
+				dbConsensusManager.removeOperations(new HashSet<>(Collections.singletonList(opOperation.getHash()))));
 		assertNull(dbConsensusManager.getOperationByHash(opOperation.getHash()));
 	}
 
@@ -263,7 +266,8 @@ public class DBConsensusManagerTest {
 		OpOperation opOperation = opBlock.getOperations().get(0);
 
 		assertTrue(dbConsensusManager.validateExistingOperation(opOperation));
-		assertEquals(1, dbConsensusManager.removeOperations(new HashSet<>(Collections.singletonList(opOperation.getHash()))));
+		assertEquals(1,
+				dbConsensusManager.removeOperations(new HashSet<>(Collections.singletonList(opOperation.getHash()))));
 		assertFalse(dbConsensusManager.validateExistingOperation(opOperation));
 	}
 
