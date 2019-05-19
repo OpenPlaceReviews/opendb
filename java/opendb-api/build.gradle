@@ -7,6 +7,12 @@ buildscript {
     }
 }
 
+allprojects {
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
+}
+
 apply plugin: 'antlr'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
@@ -53,6 +59,9 @@ generateGrammarSource {
 }
 
 dependencies {
+
+    implementation 'com.github.ipfs:java-ipfs-http-client:v1.2.3'
+
     implementation "org.springframework.boot:spring-boot-starter-web:2.0.1.RELEASE"
     implementation "org.springframework.boot:spring-boot-starter-actuator:2.0.1.RELEASE"
     implementation "org.springframework.boot:spring-boot-starter-security:2.0.1.RELEASE"
@@ -91,6 +100,16 @@ dependencies {
     testImplementation "junit:junit"
     testImplementation "pl.pragmatists:JUnitParams:0.3.6"
 
+    // https://mvnrepository.com/artifact/com.github.ipfs/java-ipfs-api
+    implementation "com.github.ipfs:java-ipfs-api:v1.2.3"
+    implementation "com.mashape.unirest:unirest-java:1.4.9"
+    // https://mvnrepository.com/artifact/net.jodah/failsafe
+    compile group: 'net.jodah', name: 'failsafe', version: '2.0.0'
+    // https://mvnrepository.com/artifact/commons-io/commons-io
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
+
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    compile group: 'com.google.guava', name: 'guava', version: '27.1-jre'
 
     testImplementation "org.apache.httpcomponents:httpclient:4.5.7"
     testImplementation("org.springframework.boot:spring-boot-starter-test")
