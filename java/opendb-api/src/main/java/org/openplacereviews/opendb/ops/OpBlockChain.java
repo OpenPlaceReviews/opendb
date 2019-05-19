@@ -872,8 +872,9 @@ public class OpBlockChain {
 			}
 		}
 
-		if (getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()) != null)
+		if (getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()) != null) {
 			ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
+		}
 		return true;
 	}
 	

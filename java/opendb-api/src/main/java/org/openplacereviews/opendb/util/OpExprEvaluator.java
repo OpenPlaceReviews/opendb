@@ -307,8 +307,9 @@ public class OpExprEvaluator {
 
 			JsonArray ar = new JsonArray(obj1Set.size());
 			for (String s : obj1Set) {
-				if (!s.equals(""))
+				if (!s.equals("")) {
 					ar.add(s);
+				}
 			}
 			return ar;
 		case FUNCTION_SET_ALL:
