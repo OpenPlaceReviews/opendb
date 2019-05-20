@@ -1,22 +1,13 @@
 package org.openplacereviews.opendb.api ;
 
-import java.io.StringReader;
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
-import javax.servlet.http.HttpSession;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.OUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,12 +17,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpSession;
+import java.io.StringReader;
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
 
 @Controller
 @RequestMapping("/api/mgmt")
 public class MgmtController {
-	
-    protected static final Log LOGGER = LogFactory.getLog(MgmtController.class);
+
+	private static final Logger LOGGER = LogManager.getLogger(MgmtController.class);
     
     @Autowired
     private BlocksManager manager;

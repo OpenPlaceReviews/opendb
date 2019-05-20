@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import org.junit.Test;
-import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;

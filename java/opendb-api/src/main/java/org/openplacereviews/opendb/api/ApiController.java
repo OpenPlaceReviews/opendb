@@ -1,27 +1,16 @@
 package org.openplacereviews.opendb.api;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.LogOperationService.LogEntry;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
@@ -30,11 +19,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.*;
+
 @Controller
 @RequestMapping("/api")
 public class ApiController {
 
-	protected static final Log LOGGER = LogFactory.getLog(ApiController.class);
+	private static final Logger LOGGER = LogManager.getLogger(ApiController.class);
 
 	@Autowired
 	private BlocksManager manager;

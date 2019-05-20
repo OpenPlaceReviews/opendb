@@ -2,9 +2,8 @@ package org.openplacereviews.opendb.service.ipfs.file;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -12,21 +11,30 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-//TODO integrate with IPFS service
 public class IPFSFileManager {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(IPFSFileManager.class);
+	private static final Logger LOGGER = LogManager.getLogger(IPFSFileManager.class);
 
-	@Value("${ipfs.directory}")
 	private String DIRECTORY = "/opendb/storage/";
+
+	public void init(String directory) {
+		try {
+			DIRECTORY = directory;
+			Files.createDirectories(Paths.get(getRootDirectoryPath()));
+			LOGGER.debug("IPFS directory for images was created");
+		} catch (IOException e) {
+			e.printStackTrace();
+			LOGGER.error("IPFS directory for images was not created");
+		}
+	}
 
 	public void init() {
 		try {
 			Files.createDirectories(Paths.get(getRootDirectoryPath()));
-			LOGGER.info("IPFS directory for images was created");
+			LOGGER.debug("IPFS directory for images was created");
 		} catch (IOException e) {
 			e.printStackTrace();
-			LOGGER.info("IPFS directory for images was not created");
+			LOGGER.error("IPFS directory for images was not created");
 		}
 	}
 
@@ -60,10 +68,10 @@ public class IPFSFileManager {
 
 		try {
 			Files.createDirectories(Paths.get(getRootDirectoryPath() + fPath.toString()));
-			LOGGER.info("Image directory was created");
+			LOGGER.debug("Image directory for cid : " + hash + " was created");
 		} catch (IOException e) {
 			e.printStackTrace();
-			LOGGER.info("Image directory was not created");
+			LOGGER.error("Image directory was not created");
 		}
 
 		return fPath;

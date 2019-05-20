@@ -5,7 +5,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;

@@ -7,7 +7,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
 import java.util.*;

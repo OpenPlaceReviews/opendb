@@ -1,25 +1,16 @@
 package org.openplacereviews.opendb.ops;
 
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.security.KeyPair;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *  Guidelines of object methods:

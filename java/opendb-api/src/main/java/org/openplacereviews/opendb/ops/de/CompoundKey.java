@@ -1,12 +1,8 @@
 package org.openplacereviews.opendb.ops.de;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import org.openplacereviews.opendb.util.OUtils;
 
-import org.openplacereviews.opendb.OUtils;
+import java.util.*;
 
 public class CompoundKey implements Collection<String> {
 	final String first;

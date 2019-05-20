@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb;
 
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Arrays;

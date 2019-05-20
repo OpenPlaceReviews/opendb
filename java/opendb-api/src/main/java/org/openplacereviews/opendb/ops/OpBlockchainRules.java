@@ -1,37 +1,28 @@
 package org.openplacereviews.opendb.ops;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
+import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.OUtils;
-import org.openplacereviews.opendb.OpenDBServer;
-import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.OpExprEvaluator;
-import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import java.util.*;
 
 /**
  * State less blockchain rules to validate roles and calculate hashes
  */
 public class OpBlockchainRules {
 
-	protected static final Log LOGGER = LogFactory.getLog(OpenDBServer.class);
+	private static final Logger LOGGER = LogManager.getLogger(OpBlockchainRules.class);
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;

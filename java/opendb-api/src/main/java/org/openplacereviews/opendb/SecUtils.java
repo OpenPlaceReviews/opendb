@@ -1,31 +1,19 @@
 package org.openplacereviews.opendb;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.SignatureException;
-import java.security.spec.ECGenParameterSpec;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.crypto.prng.FixedSecureRandom;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.security.*;
+import java.security.spec.*;
+import java.util.Base64;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class SecUtils {
 	private static final String SIG_ALGO_SHA1_EC = "SHA1withECDSA";

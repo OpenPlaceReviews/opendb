@@ -13,7 +13,7 @@ import java.util.Set;
 public interface StorageService {
 
 	/**
-	 * Return the ReplicatSet configuration (list of services able to pin a file)
+	 * Return the ReplicatSet AppConfiguration (list of services able to pin a file)
 	 * @return ReplicaSet   List of PinningServices
 	 */
 	Set<PinningService> getReplicaSet();

@@ -5,7 +5,7 @@ import junitparams.Parameters;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.openplacereviews.opendb.FailedVerificationException;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 import org.openplacereviews.opendb.util.JsonFormatter;

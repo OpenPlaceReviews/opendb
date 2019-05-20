@@ -4,17 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openplacereviews.opendb.util.HttpRequestFilter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 
 public class IPFSClusterPinningService implements PinningService {
 
-	protected static final Logger LOGGER = LoggerFactory.getLogger(IPFSClusterPinningService.class);
+	private static final Logger LOGGER = LogManager.getLogger(HttpRequestFilter.class);
 
 	private static final String BASE_URI = "%s://%s:%s/";
 	private static final String DEFAULT_PROTOCOL = "http";
@@ -43,7 +44,8 @@ public class IPFSClusterPinningService implements PinningService {
 	public static IPFSClusterPinningService connect(String host, Integer port, String protocol) {
 		try {
 			LOGGER.trace("call GET {}://{}:{}/id", protocol, host, port);
-			HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "/id", protocol, host, port)).asString();
+			HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", protocol, host, port)).asString();
+			assert(response.getStatus() == 200);
 			LOGGER.info("Connected to IPFS-Cluster [protocol: {}, host: {}, port: {}]: Info {}", protocol, host, port, response.getBody());
 
 			return new IPFSClusterPinningService(host, port, protocol);

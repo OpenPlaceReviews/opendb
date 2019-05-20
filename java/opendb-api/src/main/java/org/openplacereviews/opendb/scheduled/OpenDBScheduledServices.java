@@ -1,9 +1,9 @@
 package org.openplacereviews.opendb.scheduled;
 
-import org.openplacereviews.opendb.FailedVerificationException;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;

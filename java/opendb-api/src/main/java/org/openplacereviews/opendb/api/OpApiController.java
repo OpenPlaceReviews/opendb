@@ -1,30 +1,25 @@
 package org.openplacereviews.opendb.api;
 
-import java.security.KeyPair;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.TreeMap;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import org.openplacereviews.opendb.FailedVerificationException;
-import org.openplacereviews.opendb.OUtils;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.security.KeyPair;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
 
 
 @Controller

@@ -1,16 +1,16 @@
-package org.openplacereviews.opendb;
+package org.openplacereviews.opendb.config;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
 @Configuration
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
-	
-    
-    protected static final Log LOG = LogFactory.getLog(WebSecurityConfiguration.class);
+
+
+	private static final Logger LOGGER = LogManager.getLogger(WebSecurityConfiguration.class);
     
     public static final String ROLE_ADMIN = "ROLE_ADMIN";
     public static final String ROLE_USER = "ROLE_USER";
@@ -27,8 +27,5 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 		http.logout().logoutSuccessUrl("/").permitAll();
 //		http.addFilterBefore(ssoFilter(), BasicAuthenticationFilter.class);
 	}
-
-	
-	
 	
 }

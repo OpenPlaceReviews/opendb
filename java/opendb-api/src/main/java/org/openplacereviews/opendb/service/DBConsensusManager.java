@@ -1,60 +1,37 @@
 package org.openplacereviews.opendb.service;
 
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.postgresql.util.PGobject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.*;
+import org.springframework.stereotype.Service;
+
+import java.sql.*;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OUtils;
-
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
-
-import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
-import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
-import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
-import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.ops.de.CompoundKey;
-import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
-import org.openplacereviews.opendb.util.JsonFormatter;
-import org.postgresql.util.PGobject;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.PreparedStatementCreator;
-import org.springframework.jdbc.core.ResultSetExtractor;
-import org.springframework.jdbc.core.RowCallbackHandler;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Service;
 
 @Service
 public class DBConsensusManager {
-	protected static final Log LOGGER = LogFactory.getLog(DBConsensusManager.class);
+
+	private static final Logger LOGGER = LogManager.getLogger(DBConsensusManager.class);
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	@Value("${opendb.db.compactCoefficient}")

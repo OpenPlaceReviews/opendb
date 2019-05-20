@@ -100,15 +100,16 @@ dependencies {
     testImplementation "junit:junit"
     testImplementation "pl.pragmatists:JUnitParams:0.3.6"
 
-    // https://mvnrepository.com/artifact/com.github.ipfs/java-ipfs-api
+    implementation('commons-fileupload:commons-fileupload:1.3.3')
     implementation "com.github.ipfs:java-ipfs-api:v1.2.3"
     implementation "com.mashape.unirest:unirest-java:1.4.9"
-    // https://mvnrepository.com/artifact/net.jodah/failsafe
     compile group: 'net.jodah', name: 'failsafe', version: '2.0.0'
-    // https://mvnrepository.com/artifact/commons-io/commons-io
     compile group: 'commons-io', name: 'commons-io', version: '2.6'
 
-    // https://mvnrepository.com/artifact/com.google.guava/guava
+    compile('org.apache.logging.log4j:log4j-api:2.11.1')
+    compile('org.apache.logging.log4j:log4j-core:2.11.1')
+    compile('org.slf4j:slf4j-api:1.7.25')
+
     compile group: 'com.google.guava', name: 'guava', version: '27.1-jre'
 
     testImplementation "org.apache.httpcomponents:httpclient:4.5.7"

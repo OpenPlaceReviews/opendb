@@ -1,25 +1,14 @@
 package org.openplacereviews.opendb.service;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -28,11 +17,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+
 @Service
 @ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
 public class DBSchemaManager {
-	
-	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
+
+	private static final Logger LOGGER = LogManager.getLogger(DBSchemaManager.class);
 	private static final int OPENDB_SCHEMA_VERSION = 1;
 	
 	// //////////SYSTEM TABLES DDL ////////////

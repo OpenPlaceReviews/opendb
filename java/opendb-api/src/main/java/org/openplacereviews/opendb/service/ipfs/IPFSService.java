@@ -8,13 +8,17 @@ import io.ipfs.multihash.Multihash;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.io.IOUtils;
-import org.openplacereviews.opendb.service.ipfs.configuration.IPFSSettings;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openplacereviews.opendb.config.AppConfiguration;
+import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
+import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
 import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -28,49 +32,55 @@ import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-import static org.openplacereviews.opendb.service.ipfs.configuration.IPFSSettings.DEFAULT_HOST;
-import static org.openplacereviews.opendb.service.ipfs.configuration.IPFSSettings.DEFAULT_PORT;
-
 public class IPFSService implements StorageService, PinningService {
 
-	protected static final Logger LOGGER = LoggerFactory.getLogger(IPFSService.class);
+	@Autowired
+	private AppConfiguration appConfiguration;
 
-	private final IPFSSettings settings;
+	private static final Logger LOGGER = LogManager.getLogger(IPFSService.class);
+	private static final String DEFAULT_HOST = "localhost";
+	private static final int DEFAULT_PORT = 5001;
+
 	private final IPFS ipfs;
 
 	private ExecutorService pool;
 	private RetryPolicy<Object> retryPolicy;
 	private Set<PinningService> replicaSet;
+	private IPFSFileManager ipfsFileManager;
 
-	private IPFSService(IPFSSettings settings, IPFS ipfs) {
-		this.settings = settings;
+	private IPFSService(IPFS ipfs, IPFSFileManager ipfsFileManager) {
 		this.ipfs = ipfs;
-		this.replicaSet = Sets.newHashSet(this); // IPFSService is a PinningService
+		this.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
 		this.configureThreadPool(10);
 		this.configureRetry(3);
+		this.ipfsFileManager = ipfsFileManager;
 	}
 
 	public static IPFSService connect() {
-		return connect(DEFAULT_HOST, DEFAULT_PORT);
+		IPFSFileManager ipfsFileManager = new IPFSFileManager();
+		ipfsFileManager.init();
+
+		return connect(DEFAULT_HOST, DEFAULT_PORT, ipfsFileManager);
 	}
 
-	public static IPFSService connect(String host, Integer port) {
-		return connect(host, port, null);
+	public static IPFSService connect(String host, Integer port, IPFSFileManager ipfsFileManager) {
+		return connect(host, port, null, ipfsFileManager);
 	}
 
 	public static IPFSService connect(String multiaddress) {
-		return connect(null, null, multiaddress);
+		IPFSFileManager ipfsFileManager = new IPFSFileManager();
+		ipfsFileManager.init();
+
+		return connect(null, null, multiaddress, ipfsFileManager);
 	}
 
-	private static IPFSService connect(String host, Integer port, String multiaddress) {
-		IPFSSettings settings = IPFSSettings.of(host, port, multiaddress);
-
+	private static IPFSService connect(String host, Integer port, String multiaddress, IPFSFileManager ipfsFileManager) {
 		try {
 			IPFS ipfs = Optional.ofNullable(multiaddress).map(IPFS::new).orElseGet(() -> new IPFS(host, port));
 			LOGGER.info("Connected to ipfs [host: {}, port: {}, multiaddress: {}]: Node v.{}", host, port, multiaddress,
 					ipfs.version());
 
-			return new IPFSService(settings, ipfs);
+			return new IPFSService(ipfs, ipfsFileManager);
 
 		} catch (Exception ex) {
 			String msg = String.format("Error whilst connecting to IPFS [host: %s, port: %s, multiaddress: %s]", host,
@@ -82,7 +92,7 @@ public class IPFSService implements StorageService, PinningService {
 	}
 
 	public IPFSService configureTimeout(Integer timeout) {
-		this.settings.setTimeout(timeout);
+		this.appConfiguration.ipfsTimeout = timeout;
 		return this;
 	}
 
@@ -109,6 +119,15 @@ public class IPFSService implements StorageService, PinningService {
 	public IPFSService addReplica(PinningService pinningService) {
 		this.replicaSet.add(pinningService);
 		return this;
+	}
+
+	public String addFile(MultipartFile multipartFile) throws IOException {
+		InputStream inputStream = multipartFile.getInputStream();
+		String cid = write(inputStream);
+
+		ipfsFileManager.addFileToStorage(cid, multipartFile);
+
+		return cid;
 	}
 
 	@Override
@@ -150,11 +169,11 @@ public class IPFSService implements StorageService, PinningService {
 				.onFailure(event -> LOGGER.error("Exception pinning cid {} on IPFS after {} attemps", cid, event.getAttemptCount()))
 				.onSuccess(event -> LOGGER.debug("CID {} pinned on IPFS", cid))
 				.run(() -> {
-					Multihash hash = Multihash.fromBase58(cid);
-//					replicaSet.forEach(replica -> {
-//						replica.pin(cid);
-//					});
-					this.ipfs.pin.add(hash);
+					//Multihash hash = Multihash.fromBase58(cid);
+					replicaSet.forEach(replica -> {
+						replica.pin(cid);
+					});
+					//this.ipfs.pin.add(hash);
 				});
 	}
 
@@ -208,14 +227,14 @@ public class IPFSService implements StorageService, PinningService {
 
 						Future<byte[]> ipfsFetcherResult = pool.submit(new IPFSContentFetcher(ipfs, filePointer));
 
-						byte[] content = ipfsFetcherResult.get(settings.getTimeout(), TimeUnit.MILLISECONDS);
+						byte[] content = ipfsFetcherResult.get(appConfiguration.ipfsTimeout, TimeUnit.MILLISECONDS);
 						IOUtils.write(content, output);
 
 						return output;
 
 					} catch (java.util.concurrent.TimeoutException ex) {
 						LOGGER.error("Timeout Exception while fetching file from IPFS [id: {}, timeout: {} ms]", id,
-								settings.getTimeout());
+								appConfiguration.ipfsTimeout);
 						throw new TimeoutException("Timeout Exception while fetching file from IPFS [id: " + id + "]");
 
 					} catch (InterruptedException ex) {

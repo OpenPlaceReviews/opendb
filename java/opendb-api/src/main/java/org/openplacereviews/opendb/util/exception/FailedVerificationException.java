@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb;
+package org.openplacereviews.opendb.util.exception;
 
 public class FailedVerificationException extends Exception {
 
