@@ -1,9 +1,18 @@
 apply plugin: 'java'
 apply plugin: 'antlr'
+apply plugin: 'maven-publish'
 
 allprojects {
     repositories {
         maven { url 'https://jitpack.io' }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
     }
 }
 
