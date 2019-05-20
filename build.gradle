@@ -31,7 +31,7 @@ subprojects {
     apply plugin: 'idea'
     apply plugin: "io.spring.dependency-management"
 
-    group 'org.opengeoreviews'
+    group 'org.openplacereviews'
     version '1.0'
     sourceCompatibility = 1.8
 
@@ -83,7 +83,6 @@ subprojects {
         mavenCentral()
         jcenter()
         google()
-        
     }
 }
 
