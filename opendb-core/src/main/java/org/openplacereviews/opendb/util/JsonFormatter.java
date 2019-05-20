@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
@@ -134,6 +135,10 @@ public class JsonFormatter {
 	
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
 		return gson.fromJson(json, classOfT);
+	}
+
+	public String imageObjectToJson(ImageDTO imageDTO) {
+		return gson.toJson(imageDTO, ImageDTO.class);
 	}
 	
 	

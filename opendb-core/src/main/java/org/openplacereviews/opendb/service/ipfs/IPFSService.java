@@ -8,17 +8,19 @@ import io.ipfs.multihash.Multihash;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.openplacereviews.opendb.config.AppConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
+import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,55 +34,68 @@ import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+@Service
 public class IPFSService implements StorageService, PinningService {
 
+	protected static final Log LOGGER = LogFactory.getLog(IPFSService.class);
+
+	@Value("${ipfs.host:localhost}")
+	public String ipfsHost;
+
+	@Value("${ipfs.port:5001}")
+	public int ipfsPort;
+
+	@Value("${ipfs.directory:/image/storage/}")
+	public String ipfsDirectory;
+
+	@Value("${ipfs.timeout:10000}")
+	public int ipfsTimeout;
+
 	@Autowired
-	private AppConfiguration appConfiguration;
+	private DBConsensusManager dbConsensusManager;
 
-	private static final Logger LOGGER = LogManager.getLogger(IPFSService.class);
-	private static final String DEFAULT_HOST = "localhost";
-	private static final int DEFAULT_PORT = 5001;
-
-	private final IPFS ipfs;
-
+	private IPFS ipfs;
 	private ExecutorService pool;
 	private RetryPolicy<Object> retryPolicy;
 	private Set<PinningService> replicaSet;
 	private IPFSFileManager ipfsFileManager;
 
-	private IPFSService(IPFS ipfs, IPFSFileManager ipfsFileManager) {
-		this.ipfs = ipfs;
-		this.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
-		this.configureThreadPool(10);
-		this.configureRetry(3);
-		this.ipfsFileManager = ipfsFileManager;
+	public  IPFSService() {
 	}
 
-	public static IPFSService connect() {
+	private void generateInstance(IPFSService ipfsService, IPFS ipfs, IPFSFileManager ipfsFileManager) {
+		ipfsService.ipfs = ipfs;
+		ipfsService.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
+		ipfsService.configureThreadPool(10);
+		ipfsService.configureRetry(3);
+		ipfsService.ipfsFileManager = ipfsFileManager;
+	}
+
+	public void connect() {
 		IPFSFileManager ipfsFileManager = new IPFSFileManager();
 		ipfsFileManager.init();
 
-		return connect(DEFAULT_HOST, DEFAULT_PORT, ipfsFileManager);
+		connect(ipfsHost, ipfsPort, ipfsFileManager);
 	}
 
-	public static IPFSService connect(String host, Integer port, IPFSFileManager ipfsFileManager) {
-		return connect(host, port, null, ipfsFileManager);
+	public void connect(String host, Integer port, IPFSFileManager ipfsFileManager) {
+		connect(host, port, null, ipfsFileManager);
 	}
 
-	public static IPFSService connect(String multiaddress) {
+	public void connect(String multiaddress) {
 		IPFSFileManager ipfsFileManager = new IPFSFileManager();
 		ipfsFileManager.init();
 
-		return connect(null, null, multiaddress, ipfsFileManager);
+		connect(null, null, multiaddress, ipfsFileManager);
 	}
 
-	private static IPFSService connect(String host, Integer port, String multiaddress, IPFSFileManager ipfsFileManager) {
+	private void connect(String host, Integer port, String multiaddress, IPFSFileManager ipfsFileManager) {
 		try {
 			IPFS ipfs = Optional.ofNullable(multiaddress).map(IPFS::new).orElseGet(() -> new IPFS(host, port));
-			LOGGER.info("Connected to ipfs [host: {}, port: {}, multiaddress: {}]: Node v.{}", host, port, multiaddress,
-					ipfs.version());
+			LOGGER.info(String.format("Connected to ipfs [host: %s, port: %d, multiaddress: %s]: Node v.%s", host, port, multiaddress,
+					ipfs.version()));
 
-			return new IPFSService(ipfs, ipfsFileManager);
+			generateInstance(this, ipfs, ipfsFileManager);
 
 		} catch (Exception ex) {
 			String msg = String.format("Error whilst connecting to IPFS [host: %s, port: %s, multiaddress: %s]", host,
@@ -92,7 +107,7 @@ public class IPFSService implements StorageService, PinningService {
 	}
 
 	public IPFSService configureTimeout(Integer timeout) {
-		this.appConfiguration.ipfsTimeout = timeout;
+		this.ipfsTimeout = timeout;
 		return this;
 	}
 
@@ -121,13 +136,16 @@ public class IPFSService implements StorageService, PinningService {
 		return this;
 	}
 
-	public String addFile(MultipartFile multipartFile) throws IOException {
-		InputStream inputStream = multipartFile.getInputStream();
-		String cid = write(inputStream);
+	public ImageDTO addFile(ImageDTO imageDTO) throws IOException {
+		imageDTO.setCid(write(imageDTO.getMultipartFile().getBytes()));
 
-		ipfsFileManager.addFileToStorage(cid, multipartFile);
+		// add file to storage
+		ipfsFileManager.addFileToStorage(imageDTO);
 
-		return cid;
+		// add file to db
+		dbConsensusManager.storeImageObject(imageDTO);
+
+		return imageDTO;
 	}
 
 	@Override
@@ -152,8 +170,8 @@ public class IPFSService implements StorageService, PinningService {
 		LOGGER.debug("Write file on IPFS");
 
 		return Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error("Exception writting file on IPFS after {} attemps. {}", event.getAttemptCount(), event.getResult()))
-				.onSuccess(event -> LOGGER.debug("File written on IPFS: hash={} ", event.getResult()))
+				.onFailure(event -> LOGGER.error(String.format("Exception writting file on IPFS after %d attemps. %s", event.getAttemptCount(), event.getResult())))
+				.onSuccess(event -> LOGGER.debug(String.format("File written on IPFS: hash=%s ", event.getResult())))
 				.get(() -> {
 					NamedStreamable.ByteArrayWrapper file = new NamedStreamable.ByteArrayWrapper(content);
 					MerkleNode response = this.ipfs.add(file).get(0);
@@ -163,11 +181,11 @@ public class IPFSService implements StorageService, PinningService {
 
 	@Override
 	public void pin(String cid) {
-		LOGGER.debug("Pin CID {} on IPFS", cid);
+		LOGGER.debug(String.format("Pin CID %s on IPFS", cid));
 
 		Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error("Exception pinning cid {} on IPFS after {} attemps", cid, event.getAttemptCount()))
-				.onSuccess(event -> LOGGER.debug("CID {} pinned on IPFS", cid))
+				.onFailure(event -> LOGGER.error(String.format("Exception pinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
+				.onSuccess(event -> LOGGER.debug(String.format("CID %s pinned on IPFS", cid)))
 				.run(() -> {
 					//Multihash hash = Multihash.fromBase58(cid);
 					replicaSet.forEach(replica -> {
@@ -179,17 +197,17 @@ public class IPFSService implements StorageService, PinningService {
 
 	@Override
 	public void unpin(String cid) {
-		LOGGER.debug("Unpin CID {} on IPFS", cid);
+		LOGGER.debug(String.format("Unpin CID %s on IPFS", cid));
 
 		Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error("Exception unpinning cid {} on IPFS after {} attemps", cid, event.getAttemptCount()))
-				.onSuccess(event -> LOGGER.debug("CID {} unpinned on IPFS", cid))
+				.onFailure(event -> LOGGER.error(String.format("Exception unpinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
+				.onSuccess(event -> LOGGER.debug(String.format("CID %s unpinned on IPFS", cid)))
 				.run(() -> {
-					Multihash hash = Multihash.fromBase58(cid);
-//					replicaSet.forEach(replica -> {
-//						replica.unpin(cid);
-//					});
-					this.ipfs.pin.rm(hash);
+					//Multihash hash = Multihash.fromBase58(cid);
+					replicaSet.forEach(replica -> {
+						replica.unpin(cid);
+					});
+					//this.ipfs.pin.rm(hash);
 				});
 	}
 
@@ -198,8 +216,8 @@ public class IPFSService implements StorageService, PinningService {
 		LOGGER.debug("Get pinned files on IPFS");
 
 		return Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error("Exception getting pinned files on IPFS after {} attemps", event.getAttemptCount()))
-				.onSuccess(event -> LOGGER.debug("Get pinned files on IPFS: {}", event.getResult()))
+				.onFailure(event -> LOGGER.error(String.format("Exception getting pinned files on IPFS after %d attemps", event.getAttemptCount())))
+				.onSuccess(event -> LOGGER.debug(String.format("Get pinned files on IPFS: %s", event.getResult())))
 				.get(() -> {
 					Map<Multihash, Object> cids = this.ipfs.pin.ls(IPFS.PinType.all);
 
@@ -216,38 +234,38 @@ public class IPFSService implements StorageService, PinningService {
 
 	@Override
 	public OutputStream read(String id, OutputStream output) {
-		LOGGER.debug("Read file on IPFS [id: {}]", id);
+		LOGGER.debug(String.format("Read file on IPFS [id: {}]", id));
 
 		return Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error("Exception reading file [id: {}] on IPFS after {} attemps. {}", id, event.getAttemptCount(), event.getResult()))
-				.onSuccess(event -> LOGGER.debug("File read on IPFS: [id: {}] ", id))
+				.onFailure(event -> LOGGER.error(String.format("Exception reading file [id: %s] on IPFS after %d attemps. %s", id, event.getAttemptCount(), event.getResult())))
+				.onSuccess(event -> LOGGER.debug(String.format("File read on IPFS: [id: %s] ", id)))
 				.get(() -> {
 					try {
 						Multihash filePointer = Multihash.fromBase58(id);
 
 						Future<byte[]> ipfsFetcherResult = pool.submit(new IPFSContentFetcher(ipfs, filePointer));
 
-						byte[] content = ipfsFetcherResult.get(appConfiguration.ipfsTimeout, TimeUnit.MILLISECONDS);
+						byte[] content = ipfsFetcherResult.get(ipfsTimeout, TimeUnit.MILLISECONDS);
 						IOUtils.write(content, output);
 
 						return output;
 
 					} catch (java.util.concurrent.TimeoutException ex) {
-						LOGGER.error("Timeout Exception while fetching file from IPFS [id: {}, timeout: {} ms]", id,
-								appConfiguration.ipfsTimeout);
+						LOGGER.error(String.format("Timeout Exception while fetching file from IPFS [id: %s, timeout: %d ms]", id,
+								ipfsTimeout));
 						throw new TimeoutException("Timeout Exception while fetching file from IPFS [id: " + id + "]");
 
 					} catch (InterruptedException ex) {
-						LOGGER.error("Interrupted Exception while fetching file from IPFS [id: {}]", id);
+						LOGGER.error(String.format("Interrupted Exception while fetching file from IPFS [id: %s]", id));
 						Thread.currentThread().interrupt();
 						throw new TechnicalException("Interrupted Exception while fetching file from IPFS [id: " + id + "]", ex);
 
 					} catch (ExecutionException ex) {
-						LOGGER.error("Execution Exception while fetching file from IPFS [id: {}]", id, ex);
+						LOGGER.error(String.format("Execution Exception while fetching file from IPFS [id: %s]", id), ex);
 						throw new TechnicalException("Execution Exception while fetching file from IPFS [id: " + id + "]", ex);
 
 					} catch (IOException ex) {
-						LOGGER.error("IOException while fetching file from IPFS [id: {}]", id, ex);
+						LOGGER.error(String.format("IOException while fetching file from IPFS [id: %s]", id), ex);
 						throw new TechnicalException("Execution Exception while fetching file from IPFS [id: " + id + "]", ex);
 					}
 				});
@@ -269,7 +287,7 @@ public class IPFSService implements StorageService, PinningService {
 			try {
 				return this.ipfs.cat(multihash);
 			} catch (IOException ex) {
-				LOGGER.error("Exception while fetching file from IPFS [hash: {}]", multihash, ex);
+				LOGGER.error(String.format("Exception while fetching file from IPFS [hash: %s]", multihash), ex);
 				throw new TechnicalException("Exception while fetching file from IPFS " + multihash, ex);
 			}
 		}

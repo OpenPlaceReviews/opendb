@@ -2,8 +2,8 @@ package org.openplacereviews.opendb.ops;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -22,7 +22,7 @@ import java.util.*;
  */
 public class OpBlockchainRules {
 
-	private static final Logger LOGGER = LogManager.getLogger(OpBlockchainRules.class);
+	protected static final Log LOGGER = LogFactory.getLog(OpBlockchainRules.class);
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;

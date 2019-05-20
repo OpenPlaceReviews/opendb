@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.api ;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
@@ -30,7 +30,7 @@ import java.util.TreeSet;
 @RequestMapping("/api/mgmt")
 public class MgmtController {
 
-	private static final Logger LOGGER = LogManager.getLogger(MgmtController.class);
+	protected static final Log LOGGER = LogFactory.getLog(MgmtController.class);
     
     @Autowired
     private BlocksManager manager;

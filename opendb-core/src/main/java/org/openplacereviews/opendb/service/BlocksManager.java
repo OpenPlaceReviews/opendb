@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.service;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
@@ -26,7 +26,7 @@ import java.util.*;
 @Service
 public class BlocksManager {
 
-	private static final Logger LOGGER = LogManager.getLogger(BlocksManager.class);
+	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
 	@Autowired
 	private LogOperationService logSystem;

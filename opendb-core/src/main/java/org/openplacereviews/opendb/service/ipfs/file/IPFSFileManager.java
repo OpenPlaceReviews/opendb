@@ -1,10 +1,10 @@
 package org.openplacereviews.opendb.service.ipfs.file;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.web.multipart.MultipartFile;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,20 +13,10 @@ import java.nio.file.Paths;
 
 public class IPFSFileManager {
 
-	private static final Logger LOGGER = LogManager.getLogger(IPFSFileManager.class);
+	protected static final Log LOGGER = LogFactory.getLog(IPFSFileManager.class);
 
-	private String DIRECTORY = "/opendb/storage/";
-
-	public void init(String directory) {
-		try {
-			DIRECTORY = directory;
-			Files.createDirectories(Paths.get(getRootDirectoryPath()));
-			LOGGER.debug("IPFS directory for images was created");
-		} catch (IOException e) {
-			e.printStackTrace();
-			LOGGER.error("IPFS directory for images was not created");
-		}
-	}
+	@Value("${ipfs.directory:/opendb/storage/}")
+	private String DIRECTORY;
 
 	public void init() {
 		try {
@@ -45,10 +35,10 @@ public class IPFSFileManager {
 		return System.getProperty("user.home") + "/" + DIRECTORY;
 	}
 
-	public void addFileToStorage(String hash, MultipartFile mFile) throws IOException {
-		File file = new File(getRootDirectoryPath() + generateFileName(hash, FilenameUtils.getExtension(mFile.getOriginalFilename())));
+	public void addFileToStorage(ImageDTO imageDTO) throws IOException {
+		File file = new File(getRootDirectoryPath() + generateFileName(imageDTO.getCid(), imageDTO.getExtension()));
 
-		FileUtils.writeByteArrayToFile(file, mFile.getBytes());
+		FileUtils.writeByteArrayToFile(file, imageDTO.getMultipartFile().getBytes());
 	}
 
 	public String generateFileName(String hash, String ext) {

@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.service;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,7 @@ import java.util.zip.GZIPOutputStream;
 @Service
 public class FileBackupManager {
 
-	private static final Logger LOGGER = LogManager.getLogger(FileBackupManager.class);
+	protected static final Log LOGGER = LogFactory.getLog(FileBackupManager.class);
 	private static final String SEPARATOR_STRING = "\n---------------------\n";
 	
 	@Value("${opendb.files-backup.directory}")

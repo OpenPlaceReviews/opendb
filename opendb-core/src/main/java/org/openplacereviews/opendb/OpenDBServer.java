@@ -1,20 +1,18 @@
 package org.openplacereviews.opendb;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.openplacereviews.opendb.config.AppConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
 import org.openplacereviews.opendb.util.DBConstants;
 import org.openplacereviews.opendb.util.HttpRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.MultipartConfigFactory;
 import org.springframework.context.ApplicationContext;
@@ -32,20 +30,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-//@SpringBootApplication
 @EnableScheduling
 @EnableJpaAuditing
 @EnableConfigurationProperties
 public class OpenDBServer  {
 
-	private static final Logger LOGGER = LogManager.getLogger(HttpRequestFilter.class);
+	protected static final Log LOGGER = LogFactory.getLog(HttpRequestFilter.class);
 	
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 	
 	@Autowired
 	BlocksManager blocksManager;
-	
+
 	@Autowired
 	DBConsensusManager dbDataManager;
 	
@@ -53,7 +50,16 @@ public class OpenDBServer  {
 	LogOperationService logOperationService;
 
 	@Autowired
-	private AppConfiguration appConfiguration;
+	IPFSService ipfsService;
+
+	@Value("${spring.servlet.multipart.max-file-size}")
+	public String maxUploadSize;
+
+	@Value("${spring.servlet.multipart.max-request-size}")
+	public String maxRequestSize;
+
+	@Value("${ipfs.run:false}")
+	public boolean runIPFSService;
 
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
@@ -110,6 +116,9 @@ public class OpenDBServer  {
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
+				if (runIPFSService) {
+					ipfsService.connect();
+				}
 				LOGGER.info("Application has started");
 			} catch (RuntimeException e) {
 				LOGGER.error(e.getMessage(), e);
@@ -119,18 +128,10 @@ public class OpenDBServer  {
 	}
 
 	@Bean
-	public IPFSService ipfsService() {
-		IPFSFileManager ipfsFileManager = new IPFSFileManager();
-		ipfsFileManager.init(appConfiguration.ipfsDirectory);
-
-		return IPFSService.connect(appConfiguration.ipfsHost, appConfiguration.ipfsPort, ipfsFileManager);
-	}
-
-	@Bean
 	public MultipartConfigElement multipartConfigElement() {
 		MultipartConfigFactory factory = new MultipartConfigFactory();
-		factory.setMaxFileSize(appConfiguration.maxUploadSize);
-		factory.setMaxRequestSize(appConfiguration.maxRequestSize);
+		factory.setMaxFileSize(maxUploadSize);
+		factory.setMaxRequestSize(maxRequestSize);
 		return factory.createMultipartConfig();
 	}
 

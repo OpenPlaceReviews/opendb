@@ -9,37 +9,11 @@
 	<springProfile name="default">
 
 		<!-- debug security package -->
-		<!-- <logger name="org.springframework.security" level="DEBUG" /> -->
-		<!-- hibernate show sql -->
-		<!--<logger name="org.hibernate.SQL" level="DEBUG" />-->
-		<!--&lt;!&ndash;  <logger name="org.hibernate.type" level="TRACE" />  &ndash;&gt;-->
-		<!--<root level="INFO">-->
-			<!--<appender-ref ref="CONSOLE" />-->
-		<!--</root>-->
-
-		<appender name="APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
-			<File>logs/rest-api.log</File>
-			<encoder>
-				<pattern>%X{rid} %d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %c{1.} - %msg%n</pattern>
-			</encoder>
-			<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-				<maxIndex>10</maxIndex>
-				<FileNamePattern>logs/rest-api.log.%i</FileNamePattern>
-			</rollingPolicy>
-			<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-				<MaxFileSize>10000KB</MaxFileSize>
-			</triggeringPolicy>
-		</appender>
-
-		<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-			<withJansi>true</withJansi>
-			<encoder>
-				<pattern>%X{rid} %d{yyy-MM-dd HH:mm:ss.SSS} %green([%thread]) %highlight(%-5level) %cyan(%c{1.}) - %msg%n</pattern>
-			</encoder>
-		</appender>
-
+		<!--<logger name="org.springframework.security" level="DEBUG" />-->
+		<!--hibernate show sql-->
+		<logger name="org.hibernate.SQL" level="DEBUG" />
+		  <!--<logger name="org.hibernate.type" level="TRACE" />-->
 		<root level="INFO">
-			<appender-ref ref="APPENDER" />
 			<appender-ref ref="CONSOLE" />
 		</root>
 

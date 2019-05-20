@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.service;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ValidationListener;
@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Service
 public class LogOperationService implements ValidationListener {
 
-	private static final Logger LOGGER = LogManager.getLogger(LogOperationService.class);
+	protected static final Log LOGGER = LogFactory.getLog(LogOperationService.class);
 
 	private static final int LIMIT = 1000;
 	

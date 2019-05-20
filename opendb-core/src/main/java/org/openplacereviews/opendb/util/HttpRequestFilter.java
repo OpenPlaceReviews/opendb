@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.logging.log4j.ThreadContext;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +20,7 @@ import java.io.IOException;
  */
 @Configuration
 public class HttpRequestFilter {
-    private static final Logger log = LogManager.getLogger(HttpRequestFilter.class);
+    protected static final Log LOGGER = LogFactory.getLog(HttpRequestFilter.class);
 
     public static final ThreadLocal<Long> START_MS = new ThreadLocal<>();
 
@@ -62,13 +62,13 @@ public class HttpRequestFilter {
             long took = System.currentTimeMillis() - startMs;
 
             if (httpRequest.isAsyncStarted()) {
-                log.info("[{} ms] HTTP thread released", took);
+                LOGGER.info(String.format("[{%d ms] HTTP thread released", took));
             } else {
                 //sync request completion
                 long tookMs = System.currentTimeMillis() - startMs;
                 StringBuilder b = LoggingUtils.buildRequestTimingLogLine(tookMs);
                 b.append("Request completed ~RESP");
-                log.info(b);
+                LOGGER.info(b);
             }
 
             ThreadContext.clearMap();
@@ -77,10 +77,10 @@ public class HttpRequestFilter {
         static void logRequest(ServletRequest request) {
             try {
                 HttpServletRequest req = (HttpServletRequest) request;
-                log.info(new StringBuilder("--> ").append(req.getMethod()).append(" ").append(req.getRequestURI())
+                LOGGER.info(new StringBuilder("--> ").append(req.getMethod()).append(" ").append(req.getRequestURI())
                         .append(" (").append(request.getContentType()).append(") ~REQ"));
             } catch (Exception e) {
-                log.error("Failed to log request/response pair", e);
+                LOGGER.error("Failed to log request/response pair", e);
             }
         }
 

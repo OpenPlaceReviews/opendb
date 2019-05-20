@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.service;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.*;
@@ -9,6 +9,7 @@ import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
+import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
@@ -18,8 +19,10 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.*;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -31,7 +34,7 @@ import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 @Service
 public class DBConsensusManager {
 
-	private static final Logger LOGGER = LogManager.getLogger(DBConsensusManager.class);
+	protected static final Log LOGGER = LogFactory.getLog(DBConsensusManager.class);
 	
 	// check SimulateSuperblockCompactSequences to verify numbers
 	@Value("${opendb.db.compactCoefficient}")
@@ -844,6 +847,33 @@ public class DBConsensusManager {
 			}
 		}
 		return blc;
+	}
+
+	public ImageDTO storeImageObject(ImageDTO imageDTO) throws IOException {
+		imageDTO.setHash(SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, imageDTO.getMultipartFile().getBytes()));
+
+		if (imageObjectIsExist(imageDTO) == null) {
+			imageDTO.setAdded(new Date());
+			jdbcTemplate.update("INSERT INTO " + IMAGE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
+					imageDTO.getHash(), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
+		}
+
+		return imageDTO;
+	}
+
+	public ImageDTO imageObjectIsExist(ImageDTO imageDTO) {
+		return jdbcTemplate.query("select added, active from " + IMAGE_TABLE + " where hash = ?", new ResultSetExtractor<ImageDTO>() {
+
+			@Override
+			public ImageDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
+				if (rs.next()) {
+					imageDTO.setAdded(rs.getTimestamp(1));
+					imageDTO.setActive(rs.getBoolean(2));
+					return imageDTO;
+				}
+				return null;
+			}
+		}, imageDTO.getHash());
 	}
 	
 	public boolean validateExistingOperation(OpOperation op) {

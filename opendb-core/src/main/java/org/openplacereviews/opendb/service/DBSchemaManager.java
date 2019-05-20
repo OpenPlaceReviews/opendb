@@ -1,7 +1,7 @@
 package org.openplacereviews.opendb.service;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
@@ -25,7 +25,7 @@ import java.util.*;
 @ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
 public class DBSchemaManager {
 
-	private static final Logger LOGGER = LogManager.getLogger(DBSchemaManager.class);
+	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
 	private static final int OPENDB_SCHEMA_VERSION = 1;
 	
 	// //////////SYSTEM TABLES DDL ////////////
@@ -36,6 +36,7 @@ public class DBSchemaManager {
 	protected static String OBJS_TABLE = "objs";
 	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
 	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
+	protected static String IMAGE_TABLE = "image";
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
@@ -116,6 +117,12 @@ public class DBSchemaManager {
 		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", true);
 		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
 		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
+
+		registerColumn(IMAGE_TABLE, "hash", "text PRIMARY KEY", true);
+		registerColumn(IMAGE_TABLE, "extension", "text", false);
+		registerColumn(IMAGE_TABLE, "cid", "text", false);
+		registerColumn(IMAGE_TABLE, "active", "bool", false);
+		registerColumn(IMAGE_TABLE, "added", "timestamp", false);
 
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
 
