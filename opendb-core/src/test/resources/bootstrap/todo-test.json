@@ -1,0 +1,25 @@
+{
+	"block_id":-1,
+	"date":"2019-02-15T00:00:00.000Z",
+	"ops": [
+		// test double objects could not be created
+		{"type" : "sys.role","new" : [{ "id" : ["none5"]}, { "id" : ["none4"]}]},
+		// test none could not be created
+		{"type" : "sys.role","new" : [{ "id" : ["none"]} ]},
+
+
+		{  
+			"type" : "sys.validate",
+			"new" : [{ 
+				"id" : ["validate_op_type_registered_easy"],
+				"type" : ["*"],
+				"comment" : "Validate that operation is registered - TODO delete",
+				"role" : "owner",
+				"validate" : [
+					"blc:find('sys.operation',.type)"
+				]
+			}]
+		}	
+
+	]
+}

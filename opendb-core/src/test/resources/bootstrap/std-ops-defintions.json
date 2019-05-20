@@ -1,0 +1,125 @@
+[
+	{
+		"type" : "sys.operation",
+		"new": [{
+			"id" : ["sys.operation"],
+			"comment" : "Operation to define other operations with description and fields",
+			"version" : 0,
+			"fields": {
+				"id" : "operation name usually written as <package_name>.<op_name>",
+				"fields" : "map of fields accepted by operation with their description",
+				"arity" : "integer number describing arity of operation, 0 - means that operation could create/delete 0 or 1 object maximum.",
+				"comment" : "description of the operation, purpose and how it could be used",
+				"version" : "optional int version of the defined operation"	
+			}
+		}]
+	},
+	{
+		"type" : "sys.operation",
+		"new": [{
+			"id" : ["sys.signup"],
+			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",
+			"version" : 0,
+			"arity" : 0,
+			"fields": {
+				"id" : "unique id of user",
+				"algo" : "crypto algorithm of generated public key",
+				"auth_method" : "one of 'pwd', 'provided' (provided private key),'oauth' ",
+				"keygen_method" : "keygen algorithm of private key from password applicable to .auth_method pwd",
+				"oauth_provider" : "one of 'fb', 'osm', 'google'",
+				"oauthid_hash" : "hash of 'oauth id + salt' ",
+				"pubkey" : "public key to be used to validate signature",
+				"salt" : "salt used for private key generation from password and for hash of oauthid_hash",
+				"userdetails" : "custom json map of user details"
+			},
+			"description" : {
+				"name" : "User",
+				"plural-name" : "Users",
+				"operation-icon" : "opendb-icons:ic_user_login",
+				"operation-format" : [
+					"if(op.new && op.new.length > 0 && (!op.old || op.old.length == 0)) return 'Welcome new user ' + op.new[0].id + '!';",
+					"if(op.old && op.old.length > 0 && (!op.new || op.new.length == 0)) return 'User ' + op.old[0].id + ' was deleted!';",
+					"return 'User ' + op.new[0].id + ' updated details';"
+				],
+				"object-icon" : "opendb-icons:ic_user_login",
+				"object-name-format" : ["return 'User ' + obj.id;"],
+				"object-description-format" : [
+					"return 'User ' + obj.id + ' details: ' + JSON.stringify(obj.userdetails);"
+				]
+			}
+		}]
+	},
+	{
+		"type" : "sys.operation",
+		"new": [{	
+			"id" : ["sys.login"],
+			"comment" : "Operation to create login pair of private key",
+			"version" : 0,
+			"arity" : 0,
+			"fields": {
+				"id" : "combined id 'signup_name':'purpose', purpose could describe website, bot name or application",
+				"algo" : "crypto algorithm of generated public key",
+				"pubkey" : "public key to be used to validate signature"
+			},
+			"description" : {
+				"name" : "User login",
+				"plural-name" : "User logins",
+				"operation-icon" : "opendb-icons:ic_user_login",
+				"operation-format" : [
+					"if(op.new && op.new.length > 0 && (!op.old || op.old.length == 0)) return 'Welcome new user ' + op.new[0].id + '!';",
+					"if(op.old && op.old.length > 0 && (!op.new || op.new.length == 0)) return 'User ' + op.old[0].id + ' was deleted!';",
+					"return 'User ' + op.new[0].id + ' updated details';"
+				],
+				"object-icon" : "opendb-icons:ic_user_login",
+				"object-name-format" : ["return 'User ' + obj.id;"],
+				"object-description-format" : [
+					"return 'User login' + obj.id;"
+				]
+			}
+		}]
+	},
+	{
+		"type" : "sys.operation",
+		"new": [{	
+			"id" : ["sys.validate"],
+			"comment" : "Operation that defines validation on blockchain operations",
+			"version" : 0,
+			"arity" : 0,
+			"fields": {
+				"id" : "Unique name for validation",
+				"type" : "Array of operations to which validation is applicable (* is a global)",
+				"if" : "Array of preconditions (combined with AND) for validation to be applicable",
+				"validate" : "Array of validation rules (all should be evaluated to true or number != 0",
+				"role" : "Role of users could change that validation"
+			}
+		}]
+	},
+	{
+		"type" : "sys.operation",
+		"new": [{
+			"id" : ["sys.grant"],
+			"comment" : "Operation that assigns user to a specific role",
+			"version" : 0,
+			"arity" : 0,
+			"fields": {
+				"ref.s" : "Login or signup reference",
+				"id" : "login or signup named id",
+				"roles" : "array of assigned roles"
+			}
+		}]
+	},
+	{
+		"type" : "sys.operation",
+		"new": [{	
+			"id" : ["sys.role"],
+			"comment" : "Operation that defines role for user, role restriction are defined by validation operations",
+			"version" : 0,
+			"arity" : 0,
+			"fields": {
+				"id" : "Unique role name",
+				"owner_role" : "Role that could change this role definition",
+				"super_roles" : "Define all roles that are superior than this role, so everybody with a superior role could perform operation with this role."
+			}
+		}]
+	}
+]

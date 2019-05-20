@@ -1,0 +1,22 @@
+[
+	{
+		"type" : "sys.grant",
+		"ref" : {
+			"s" : ["sys.login","openplacereviews","test_1"]
+		},
+		"new" : [{ 
+			"id" : ["openplacereviews:test_1"],
+			"roles" : ["master", "administrator"]
+		}]
+	},
+	{
+		"type" : "sys.grant",
+		"ref" : {
+			"s" : ["sys.signup","openplacereviews"]
+		},
+		"new" : [{ 
+			"id" : ["openplacereviews"],
+			"roles" : ["owner"]
+		}]
+	}
+]
