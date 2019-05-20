@@ -1,0 +1,11 @@
+package org.openplacereviews.opendb.util.exception;
+
+public class TechnicalException extends RuntimeException {
+
+    private static final long serialVersionUID = 9201898433665734132L;
+
+    public TechnicalException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+}

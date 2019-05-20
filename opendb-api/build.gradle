@@ -1,0 +1,22 @@
+apply plugin: 'org.springframework.boot'
+apply plugin: 'antlr'
+
+allprojects {
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+bootJar {
+    launchScript()
+    version =  version
+    mainClassName = 'org.openplacereviews.opendb.OpenDbBoot'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':opendb-core')
+}

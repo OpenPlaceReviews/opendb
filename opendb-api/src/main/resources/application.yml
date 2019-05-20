@@ -1,0 +1,81 @@
+logging:
+  file: logs/server.log
+  config: classpath:logback-spring.xml
+  pattern.console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){yellow} %-5level [%thread]: %message%n%ex{4}"
+
+server:
+  port: ${OPENDB_PORT:6463}
+  connection-timeout: 120000
+  tomcat:
+    max-http-post-size: 4096
+    max-threads: 5
+
+ipfs:
+  host: ${IPFS_HOST:localhost}
+  port: ${IPFS_PORT:5001}
+  timeout: ${IPFS_TIMEOUT:10000}
+  directory: ${IPFS_DIRECTORY:/opendb/storage/}
+
+opendb:
+  mgmt:
+    user: ${OPENDB_LOGIN:openplacereviews:test_1}
+    privateKey: ${OPENDB_PK:base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCAOpUDyGrTPRPDQRCIRXysxC6gCgSTiNQ5nVEjhvsFITA==}
+    publicKey: ${OPENDB_PBK:base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==}
+  replicate:
+    interval: ${OPENDB_REPLICATE_INTERVAL:15}
+    url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/}
+  db:
+    compactCoefficient: ${OPENDB_DB_CF:1.0}
+    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
+  db-schema:
+    objtables:
+      obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
+      obj_grants: { "types" : ["sys.grant"], "keysize":2 }
+      obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
+  files-backup:
+    directory: ${FILE_BLOCKS_DIR:blocks}
+  block-create:
+    minSecondsInterval: 120
+    minQueueSize: 10
+    maxSecondsInterval: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+spring:
+  servlet:
+    multipart:
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX-FILE-SIZE:15MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX-REQUEST-SIZE:15MB}
+      enabled: true
+  jpa:
+    properties.hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+    properties.hibernate.jdbc.lob.non_contextual_creation: true
+    hibernate.ddl-auto: update
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/openplacereviews}
+    username: ${DB_USER:test}
+    password: ${DB_PWD:test}
+# classpath:/static/
+
+---
+spring.jpa.hibernate.ddl-auto: validate
+spring:
+  profiles: productions
+
+logging:
+  config: classpath:logback-spring.xml
+
+server:
+  tomcat.max-threads: 50
+  address: ${SERVER_ADDRESS:127.0.0.1} #keep it behind proxy
+  tomcat:
+    protocol_header: x-forwarded-proto
+    remote_ip_header: x-forwarded-for
+    accesslog:
+      enabled: true
+      rotate: false
+      pattern: '%h %l %u %t "%r" %s %b %D "%{Referer}i" "%{User-Agent}i"'
+
