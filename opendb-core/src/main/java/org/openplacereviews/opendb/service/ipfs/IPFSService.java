@@ -54,48 +54,47 @@ public class IPFSService implements StorageService, PinningService {
 	@Autowired
 	private DBConsensusManager dbConsensusManager;
 
+	@Autowired
+	private IPFSFileManager ipfsFileManager;
+
 	private IPFS ipfs;
 	private ExecutorService pool;
 	private RetryPolicy<Object> retryPolicy;
 	private Set<PinningService> replicaSet;
-	private IPFSFileManager ipfsFileManager;
 
 	public  IPFSService() {
 	}
 
-	private void generateInstance(IPFSService ipfsService, IPFS ipfs, IPFSFileManager ipfsFileManager) {
+	private void generateInstance(IPFSService ipfsService, IPFS ipfs) {
 		ipfsService.ipfs = ipfs;
 		ipfsService.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
 		ipfsService.configureThreadPool(10);
 		ipfsService.configureRetry(3);
-		ipfsService.ipfsFileManager = ipfsFileManager;
+		ipfsFileManager.init();
 	}
 
 	public void connect() {
-		IPFSFileManager ipfsFileManager = new IPFSFileManager();
-		ipfsFileManager.init();
-
-		connect(ipfsHost, ipfsPort, ipfsFileManager);
+		connect(ipfsHost, ipfsPort);
 	}
 
-	public void connect(String host, Integer port, IPFSFileManager ipfsFileManager) {
-		connect(host, port, null, ipfsFileManager);
+	public void connect(String host, Integer port) {
+		connect(host, port, null);
 	}
 
 	public void connect(String multiaddress) {
 		IPFSFileManager ipfsFileManager = new IPFSFileManager();
 		ipfsFileManager.init();
 
-		connect(null, null, multiaddress, ipfsFileManager);
+		connect(null, null, multiaddress);
 	}
 
-	private void connect(String host, Integer port, String multiaddress, IPFSFileManager ipfsFileManager) {
+	private void connect(String host, Integer port, String multiaddress) {
 		try {
 			IPFS ipfs = Optional.ofNullable(multiaddress).map(IPFS::new).orElseGet(() -> new IPFS(host, port));
 			LOGGER.info(String.format("Connected to ipfs [host: %s, port: %d, multiaddress: %s]: Node v.%s", host, port, multiaddress,
 					ipfs.version()));
 
-			generateInstance(this, ipfs, ipfsFileManager);
+			generateInstance(this, ipfs);
 
 		} catch (Exception ex) {
 			String msg = String.format("Error whilst connecting to IPFS [host: %s, port: %s, multiaddress: %s]", host,

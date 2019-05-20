@@ -5,18 +5,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+@Service
 public class IPFSFileManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(IPFSFileManager.class);
 
 	@Value("${ipfs.directory:/opendb/storage/}")
-	private String DIRECTORY;
+	public String DIRECTORY;
+
+	public IPFSFileManager() {
+
+	}
 
 	public void init() {
 		try {
