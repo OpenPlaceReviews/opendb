@@ -1,0 +1,46 @@
+[
+	{
+		"type" : "sys.signup",
+		"signed_by": "openplacereviews",
+		"new": [{	
+			"id": ["openplacereviews"],
+			"name" : "openplacereviews",
+			"algo": "EC",
+			"auth_method": "provided",
+			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw=="
+		}],
+		"hash": "json:sha256:10c5978d2466b67505d2d94a9a0f29695e03bf11893a4a5cac3cd700aa757dd9",
+		"signature": "ECDSA:base64:MEUCIQDjwKWF4BTeDdILZKq51eBt7VW0fkCBggCT0DDRd7hpFgIgdnKccY5yMoHaL2FWbMWqGZlvzvF76oacrlbqBmQDYBo="
+	},
+	{
+		"type" : "sys.login",
+		"signed_by": "openplacereviews",
+		"ref" : {
+			"s" : ["sys.signup","openplacereviews"]
+		},
+		"new" : [{	
+			"id" : ["openplacereviews","test_1"],
+			"algo" : "EC",
+			"auth_method" : "provided",
+			"pubkey": "base64:X.509:XXXwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqb=="
+		}],
+		"hash": "json:sha256:fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802",
+		"signature": "ECDSA:base64:MEUCIQDbaIttXUkJCqiR61b39u6xr9xxOPw/XOM2no+04XrPlgIgOrAwPOVIh9oL8wb4FvWA0Fcx0SpqOK6P3GfPHLmTQ60="
+	},
+	{
+		"type" : "sys.login",
+		"signed_by": "openplacereviews",
+		"ref" : {
+			"s" : ["sys.signup","openplacereviews"]
+		},
+		"old" : ["fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802:0"],
+		"new": [{	
+			"id": ["openplacereviews","test_1"],
+			"algo": "EC",
+			"auth_method": "provided",
+			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
+		}],			
+		"hash": "json:sha256:41b132e7832099d14bf501606a969ba2a84ad2c46125b1c6470df709481d94b6",
+		"signature": "ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM"
+	}
+]

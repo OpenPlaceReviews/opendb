@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
 import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
+import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,7 +46,8 @@ public class IPFSTest {
 
 		ipfs.pin.rm(filePointer);
 
-		IPFSService ipfsService = IPFSService.connect("/ip4/127.0.0.1/tcp/5001");
+		IPFSService ipfsService = new IPFSService();
+		ipfsService.connect("/ip4/127.0.0.1/tcp/5001");
 
 		String cid = ipfsService.write(file1.getInputStream());
 
@@ -59,7 +61,8 @@ public class IPFSTest {
 	@Ignore
 	@Test
 	public void IPFS() throws IOException {
-		IPFSService ipfsService = IPFSService.connect("/ip4/127.0.0.1/tcp/5001");
+		IPFSService ipfsService = new IPFSService();
+		ipfsService.connect("/ip4/127.0.0.1/tcp/5001");
 		//ipfsService.addReplica(IPFSClusterPinningService.connect("",0,""));
 		File file = new File(
 				getClass().getClassLoader().getResource("1.jpg").getFile()
@@ -93,6 +96,6 @@ public class IPFSTest {
 		MultipartFile multipartFile = new MockMultipartFile("file",
 				file.getName(), "text/plain", IOUtils.toByteArray(input));
 
-		ipfsFileManager.addFileToStorage("12D3KooWFrrmGJcQhE5h6VUvUEXdLH7gPKdWh2q4CEM62rFGcFpr", multipartFile);
+		ipfsFileManager.addFileToStorage(new ImageDTO());
 	}
 }
