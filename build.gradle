@@ -1,0 +1,89 @@
+buildscript {
+    buildscript {
+        repositories {
+            jcenter()
+            mavenCentral()
+            maven { url "https://plugins.gradle.org/m2/" }
+            maven { url 'https://jitpack.io' }
+        }
+        dependencies {
+            classpath("org.springframework.boot:spring-boot-gradle-plugin:2.0.1.RELEASE")
+        }
+    }
+}
+//
+//allprojects {
+//    dependencies {
+//        implementation "org.springframework.boot:spring-boot-starter-web"
+//        implementation "org.springframework.boot:spring-boot-starter-actuator"
+//        implementation "org.springframework.boot:spring-boot-starter-security"
+//        implementation "org.springframework.boot:spring-boot-starter-thymeleaf"
+//        implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+//        implementation "org.springframework.boot:spring-boot-starter-data-redis"
+//        // make optional for release run
+//        implementation "org.springframework.boot:spring-boot-devtools"
+//    }
+//}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+    apply plugin: "io.spring.dependency-management"
+
+    group 'org.opengeoreviews'
+    version '1.0'
+    sourceCompatibility = 1.8
+
+    dependencyManagement {
+        imports {
+            mavenBom 'io.spring.platform:platform-bom:Cairo-RELEASE'
+        }
+    }
+
+    dependencies {
+        implementation "org.springframework.boot:spring-boot-starter-web"
+        implementation "org.springframework.boot:spring-boot-starter-actuator"
+        implementation "org.springframework.boot:spring-boot-starter-security"
+        implementation "org.springframework.boot:spring-boot-starter-thymeleaf"
+        implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+        implementation "org.springframework.boot:spring-boot-starter-data-redis"
+        // make optional for release run
+        implementation "org.springframework.boot:spring-boot-devtools"
+    }
+
+    test {
+        reports {
+            junitXml.enabled = true
+            html.enabled = false
+        }               
+    }
+
+    task fatJar(type: Jar) {
+        
+        manifest.from jar.manifest
+        dependsOn configurations.runtimeClasspath
+        if(project.hasProperty('mainClassAttribute')) {
+            manifest.attributes 'Main-Class': project.getProperty('mainClassAttribute');
+        }
+        archiveName "${project.name}.jar"
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        } 
+        {
+            exclude "META-INF/*.SF"
+            exclude "META-INF/*.DSA"
+            exclude "META-INF/*.RSA"
+        }
+        with jar
+    }
+
+
+    repositories {
+        mavenCentral()
+        jcenter()
+        google()
+        
+    }
+}
+

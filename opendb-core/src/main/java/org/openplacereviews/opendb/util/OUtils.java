@@ -3,11 +3,11 @@ package org.openplacereviews.opendb.util;
 import java.util.List;
 
 public class OUtils {
-	
+
 	public static boolean isEmpty(String s) {
 		return s == null || s.trim().length() == 0;
 	}
-	
+
 	public static boolean validateSqlIdentifier(String id, StringBuilder errorMessage, String field, String action) {
 		if(isEmpty(id)) {
 			errorMessage.append(String.format("Field '%s' is not specified which is necessary to %s", field, action));
@@ -19,13 +19,13 @@ public class OUtils {
 		}
 		return true;
 	}
-	
+
 	public static long combine(int x1, int x2) {
 		long l = Integer.toUnsignedLong(x1);
 		l = (l << 32) | Integer.toUnsignedLong(x2);
 		return l;
 	}
-	
+
 	public static int first(long l) {
 		long s = Integer.MAX_VALUE;
 		int t = (int) ((l & (s << 32)) >> 32);
@@ -34,7 +34,7 @@ public class OUtils {
 		}
 		return t;
 	}
-	
+
 	public static int second(long l) {
 		int t = (int) (l & Integer.MAX_VALUE);
 		if ((l & 0x80000000l) != 0) {
@@ -42,20 +42,20 @@ public class OUtils {
 		}
 		return t;
 	}
-	
+
 	public static boolean isValidJavaIdentifier(String s) {
-	    if (s.isEmpty()) {
-	        return false;
-	    }
-	    if (!Character.isJavaIdentifierStart(s.charAt(0))) {
-	        return false;
-	    }
-	    for (int i = 1; i < s.length(); i++) {
-	        if (!Character.isJavaIdentifierPart(s.charAt(i))) {
-	            return false;
-	        }
-	    }
-	    return true;
+		if (s.isEmpty()) {
+			return false;
+		}
+		if (!Character.isJavaIdentifierStart(s.charAt(0))) {
+			return false;
+		}
+		for (int i = 1; i < s.length(); i++) {
+			if (!Character.isJavaIdentifierPart(s.charAt(i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public static boolean equals(List<?> s1, List<?> s2) {
