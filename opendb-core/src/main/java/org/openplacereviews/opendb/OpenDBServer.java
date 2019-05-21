@@ -8,7 +8,6 @@ import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
 import org.openplacereviews.opendb.util.DBConstants;
-import org.openplacereviews.opendb.util.HttpRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -35,7 +34,7 @@ import java.util.TreeMap;
 @EnableConfigurationProperties
 public class OpenDBServer  {
 
-	protected static final Log LOGGER = LogFactory.getLog(HttpRequestFilter.class);
+	protected static final Log LOGGER = LogFactory.getLog(OpenDBServer.class);
 	
 	@Autowired
 	private JdbcTemplate jdbcTemplate;

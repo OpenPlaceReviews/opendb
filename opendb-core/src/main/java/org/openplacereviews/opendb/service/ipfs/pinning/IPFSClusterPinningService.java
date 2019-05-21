@@ -6,7 +6,6 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.util.HttpRequestFilter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 
@@ -15,7 +14,7 @@ import java.util.List;
 
 public class IPFSClusterPinningService implements PinningService {
 
-	protected static final Log LOGGER = LogFactory.getLog(HttpRequestFilter.class);
+	protected static final Log LOGGER = LogFactory.getLog(IPFSClusterPinningService.class);
 
 	private static final String BASE_URI = "%s://%s:%s/";
 	private static final String DEFAULT_PROTOCOL = "http";

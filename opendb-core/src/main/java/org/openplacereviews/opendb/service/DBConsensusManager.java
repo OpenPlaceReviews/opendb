@@ -875,6 +875,25 @@ public class DBConsensusManager {
 			}
 		}, imageDTO.getHash());
 	}
+
+	public ImageDTO loadImageObjectIfExist(String cid) {
+		return jdbcTemplate.query("select hash, extension, cid, active, added from " + IMAGE_TABLE + " where cid = ?", new ResultSetExtractor<ImageDTO>() {
+
+			@Override
+			public ImageDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
+				if (rs.next()) {
+					ImageDTO imageDTO = new ImageDTO();
+					imageDTO.setHash(rs.getString(1));
+					imageDTO.setExtension(rs.getString(2));
+					imageDTO.setCid(rs.getString(3));
+					imageDTO.setActive(rs.getBoolean(4));
+					imageDTO.setAdded(rs.getTimestamp(5));
+					return imageDTO;
+				}
+				return null;
+			}
+		}, cid);
+	}
 	
 	public boolean validateExistingOperation(OpOperation op) {
 		String js = formatter.opToJson(op);

@@ -8,8 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @Service
@@ -39,6 +41,16 @@ public class IPFSFileManager {
 	 */
 	public String getRootDirectoryPath() {
 		return System.getProperty("user.home") + "/" + DIRECTORY;
+	}
+
+	public Path getFileByCid(String cid, String extension) throws FileNotFoundException {
+		String filePath = System.getProperty("user.home") + "/" + DIRECTORY + generateFileName(cid, extension);
+
+		if (Files.exists(Paths.get(filePath))) {
+			return Paths.get(filePath);
+		} else {
+			throw new FileNotFoundException();
+		}
 	}
 
 	public void addFileToStorage(ImageDTO imageDTO) throws IOException {

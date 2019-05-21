@@ -6,15 +6,16 @@ import org.openplacereviews.opendb.service.ipfs.IPFSService;
 import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
@@ -43,8 +44,10 @@ public class IPFSController {
 
 	@GetMapping
 	@ResponseBody
-	public FileSystemResource getFile(@RequestParam("cid") String cid) {
-		return null;
+	public void getFile(@RequestParam("cid") String cid, HttpServletResponse response) throws IOException {
+		ByteArrayOutputStream outputStream = (ByteArrayOutputStream) ipfsService.read(cid);
+
+		outputStream.writeTo(response.getOutputStream());
 	}
 
 }

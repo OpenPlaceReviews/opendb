@@ -6,6 +6,7 @@ import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
 import io.ipfs.multihash.Multihash;
 import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.FailsafeException;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -17,6 +18,7 @@ import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
 import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
+import org.openplacereviews.opendb.util.exception.IPFSNotFoundException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +28,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +49,7 @@ public class IPFSService implements StorageService, PinningService {
 	@Value("${ipfs.port:5001}")
 	public int ipfsPort;
 
-	@Value("${ipfs.directory:/image/storage/}")
+	@Value("${ipfs.directory:/opendb/storage/}")
 	public String ipfsDirectory;
 
 	@Value("${ipfs.timeout:10000}")
@@ -124,6 +128,7 @@ public class IPFSService implements StorageService, PinningService {
 				.handle(IOException.class)
 				.handle(ExecutionException.class)
 				.handle(TimeoutException.class)
+				.handle(IPFSNotFoundException.class)
 				.withDelay(delay)
 				.withMaxRetries(maxRetry);
 
@@ -227,13 +232,29 @@ public class IPFSService implements StorageService, PinningService {
 	}
 
 	@Override
-	public OutputStream read(String id) {
-		return read(id, new ByteArrayOutputStream());
+	public OutputStream read(String cid) {
+		try {
+			return read(cid, new ByteArrayOutputStream());
+		} catch (FailsafeException e) {
+			ImageDTO imageDTO = dbConsensusManager.loadImageObjectIfExist(cid);
+			if (imageDTO == null) {
+				throw new TechnicalException(e.getMessage(), e);
+			}
+
+			try {
+				Path filepath = ipfsFileManager.getFileByCid(imageDTO.getCid(), imageDTO.getExtension());
+				write(Files.readAllBytes(filepath));
+			} catch (Exception e1) {
+				throw new TechnicalException("Execution exception while adding new file to IPFS [id: " + cid + "]", e1);
+			}
+
+			return read(cid, new ByteArrayOutputStream());
+		}
 	}
 
 	@Override
 	public OutputStream read(String id, OutputStream output) {
-		LOGGER.debug(String.format("Read file on IPFS [id: {}]", id));
+		LOGGER.debug(String.format("Read file on IPFS [id: %s]", id));
 
 		return Failsafe.with(retryPolicy)
 				.onFailure(event -> LOGGER.error(String.format("Exception reading file [id: %s] on IPFS after %d attemps. %s", id, event.getAttemptCount(), event.getResult())))
