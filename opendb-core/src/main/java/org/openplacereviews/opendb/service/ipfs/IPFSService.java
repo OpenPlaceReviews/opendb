@@ -1,6 +1,10 @@
 package org.openplacereviews.opendb.service.ipfs;
 
 import com.google.common.collect.Sets;
+import com.google.gson.Gson;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import io.ipfs.api.IPFS;
 import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
@@ -11,11 +15,13 @@ import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONObject;
 import org.openplacereviews.opendb.service.DBConsensusManager;
+import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatus;
 import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
-import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
@@ -30,12 +36,11 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+
+import static org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService.BASE_URI;
 
 @Service
 public class IPFSService implements StorageService, PinningService {
@@ -53,6 +58,9 @@ public class IPFSService implements StorageService, PinningService {
 
 	@Value("${ipfs.timeout:10000}")
 	public int ipfsTimeout;
+
+	@Value("${ipfs.storing.time:86400}")
+	public int timeStoringUnusedObjects;
 
 	@Autowired
 	private DBConsensusManager dbConsensusManager;
@@ -150,6 +158,47 @@ public class IPFSService implements StorageService, PinningService {
 		return imageDTO;
 	}
 
+	public void removeImageObject(ImageDTO imageDTO) {
+		dbConsensusManager.removeImageObject(imageDTO);
+		ipfsFileManager.removeFileFromStorage(imageDTO);
+	}
+
+	public void checkingMissingImagesInIPFS() {
+		List<String> pinnedImagesOnIPFS = getTracked();
+		List<String> activeObjects = dbConsensusManager.loadImageObjectsByActiveStatus(true);
+
+		activeObjects.parallelStream().forEach(cid -> {
+			if (!pinnedImagesOnIPFS.contains(cid)) {
+				this.pin(cid);
+			}
+		});
+	}
+
+	public void removeUnusedImageObjectsFromSystemAndUnpinningThem() {
+		List<ImageDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeStoringUnusedObjects);
+
+		notActiveImageObjects.parallelStream().forEach(image -> {
+			this.unpin(image.getCid());
+			removeImageObject(image);
+		});
+
+		dbConsensusManager.removeUnusedImageObject(timeStoringUnusedObjects);
+	}
+
+	public IpfsStatus getIpfsStatus() throws IOException, UnirestException {
+		HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", ipfs.protocol, ipfs.host, ipfs.port)).asString();
+		TreeMap objectTreeMap = new Gson().fromJson(response.getBody(), TreeMap.class);
+
+		return new IpfsStatus()
+				.setStatus("CONNECTED")
+				.setPeerId(ipfs.config.get("Identity.PeerID").toString())
+				.setVersion(objectTreeMap.get("AgentVersion").toString())
+				.setGateway(ipfs.config.get("Addresses.Gateway").toString())
+				.setApi(ipfs.config.get("Addresses.API").toString())
+				.setAddresses(objectTreeMap.get("Addresses").toString())
+				.setPublicKey(objectTreeMap.get("PublicKey").toString());
+	}
+
 	@Override
 	public Set<PinningService> getReplicaSet() {
 		return replicaSet;
@@ -189,11 +238,11 @@ public class IPFSService implements StorageService, PinningService {
 				.onFailure(event -> LOGGER.error(String.format("Exception pinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
 				.onSuccess(event -> LOGGER.debug(String.format("CID %s pinned on IPFS", cid)))
 				.run(() -> {
-					//Multihash hash = Multihash.fromBase58(cid);
-					replicaSet.forEach(replica -> {
-						replica.pin(cid);
-					});
-					//this.ipfs.pin.add(hash);
+					Multihash hash = Multihash.fromBase58(cid);
+//					replicaSet.forEach(replica -> {
+//						replica.pin(cid);
+//					});
+					this.ipfs.pin.add(hash);
 				});
 	}
 
@@ -205,11 +254,11 @@ public class IPFSService implements StorageService, PinningService {
 				.onFailure(event -> LOGGER.error(String.format("Exception unpinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
 				.onSuccess(event -> LOGGER.debug(String.format("CID %s unpinned on IPFS", cid)))
 				.run(() -> {
-					//Multihash hash = Multihash.fromBase58(cid);
-					replicaSet.forEach(replica -> {
-						replica.unpin(cid);
-					});
-					//this.ipfs.pin.rm(hash);
+					Multihash hash = Multihash.fromBase58(cid);
+//					replicaSet.forEach(replica -> {
+//						replica.unpin(cid);
+//					});
+					this.ipfs.pin.rm(hash);
 				});
 	}
 

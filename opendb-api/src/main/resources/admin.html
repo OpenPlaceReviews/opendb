@@ -18,6 +18,7 @@
       <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
       <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
       <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
+      <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
       <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
   </ul>
   <div class="tab-content">
@@ -84,13 +85,40 @@
 
     </div>
 
-
     <div id="errors" class="tab-pane fade">
       <h3>Log</h3>
         <ul id="errors-list">
         </ul>
 
     </div>
+
+    <div id="ipfs" class="tab-pane fade">
+      <h3>IPFS info</h3>
+      <div>
+        <p><b>IPFS STATUS:</b> &nbsp;&nbsp;<span id="ipfs-status"></span></p>
+        <p><b>PEER ID:</b> &nbsp;&nbsp;<span id="ipfs-peer-id"></span></p>
+        <p><b>VERSION:</b> &nbsp;&nbsp;<span id="ipfs-version"></span></p>
+        <p><b>GATEWAY</b> &nbsp;&nbsp;<span id="ipfs-gateway"></span></p>
+        <p><b>API</b> &nbsp;&nbsp;<span id="ipfs-api"></span></p>
+        <p><b>ADDRESSES</b> &nbsp;&nbsp;<span id="ipfs-addresses"></span></p>
+        <p><b>PUBLIC KEY</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
+      </div>
+
+      <h3>Add Image</h3>
+      <div>
+          1. File: <input type="file" id="image-file">
+        <br>
+          <input type="submit" value="Add File" id="add-file-btn">
+        <br>
+          <p><b>Result: </b> &nbsp;&nbsp;<span id="result-add-image"></span></p>
+      </div>
+
+      <h3>Pin image</h3>
+
+      <h3>Unpin image</h3>
+
+    </div>
+
 
     <div id="reg" class="tab-pane fade">
       <h3>Signup</h3>
@@ -176,7 +204,7 @@ function loadAllData() {
   loadObjectsData();
   loadBlocksData();
   loadErrorsData();
-
+  loadIpfsStatusData();
 }
 
 function refreshUser() {
@@ -292,6 +320,18 @@ function loadStatusData() {
       }
       
   });
+}
+
+function loadIpfsStatusData() {
+    $.getJSON("/api/ipfs", function ( data ) {
+        $("#ipfs-status").html(data.status);
+        $("#ipfs-peer-id").html(data.peerId);
+        $("#ipfs-version").html(data.version);
+        $("#ipfs-gateway").html(data.gateway);
+        $("#ipfs-api").html(data.api);
+        $("#ipfs-addresses").html(JSON.stringify(data.addresses));
+        $("#ipfs-public-key").html(data.publicKey);
+    })
 }
 
 function loadBlocksData() {
@@ -460,6 +500,25 @@ $( document ).ready(function() {
       $.post("/api/auth/admin-login", obj)
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
+    });
+
+    $("#add-file-btn").click(function () {
+        var formData = new FormData();
+        formData.append("file", $("#image-file")[0].files[0]);
+
+        $.ajax({
+            url: '/api/ipfs/image',
+            data: formData,
+            processData: false,
+            contentType: false,
+            type: 'POST',
+            success: function(data) {
+                $("#result-add-image").html(data.toString());
+            },
+            error: function (xhr, status, error) {
+                $("#result-add-image").html("ERROR: " + error);
+            }
+        });
     });
     
     $("#signup-btn").click(function() {

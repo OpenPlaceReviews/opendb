@@ -1,11 +1,15 @@
 package org.openplacereviews.opendb.api;
 
+import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
+import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatus;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -21,7 +25,7 @@ import java.io.IOException;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @Controller
-@RequestMapping("/api/image")
+@RequestMapping("/api/ipfs")
 public class IPFSController {
 
 	protected static final Log LOGGER = LogFactory.getLog(IPFSController.class);
@@ -32,10 +36,16 @@ public class IPFSController {
 	@Autowired
 	private JsonFormatter formatter;
 
-	@PostMapping(consumes = MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@Value("${ipfs.run:false}")
+	public boolean ipfsServiceIsRunning;
+
+	@PostMapping(value = "/image", consumes = MULTIPART_FORM_DATA_VALUE, produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> uploadImage(
 			@RequestPart(name = "file") @Valid @NotNull MultipartFile file) throws IOException {
+		if (!ipfsServiceIsRunning)
+			throw new ConnectionException("IPFS service was not runned!");
+
 		ImageDTO imageDTO = ImageDTO.of(file);
 		imageDTO = ipfsService.addFile(imageDTO);
 
@@ -44,10 +54,25 @@ public class IPFSController {
 
 	@GetMapping
 	@ResponseBody
+	public ResponseEntity<String> loadIpfsStatus() throws IOException, UnirestException {
+		IpfsStatus ipfsStatus = ipfsServiceIsRunning ? ipfsService.getIpfsStatus() : getIpfsStatus();
+
+		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsStatus));
+	}
+
+	@GetMapping(value = "/image")
+	@ResponseBody
 	public void getFile(@RequestParam("cid") String cid, HttpServletResponse response) throws IOException {
+		if (!ipfsServiceIsRunning)
+			throw new ConnectionException("IPFS service was not runned!");
+
 		ByteArrayOutputStream outputStream = (ByteArrayOutputStream) ipfsService.read(cid);
 
 		outputStream.writeTo(response.getOutputStream());
+	}
+
+	private IpfsStatus getIpfsStatus() throws IOException {
+		return new IpfsStatus().setStatus("NOT CONNECTED");
 	}
 
 }

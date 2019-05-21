@@ -4,7 +4,7 @@ import com.google.gson.*;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.springframework.stereotype.Component;
 
 import java.io.Reader;

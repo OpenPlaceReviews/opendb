@@ -12,6 +12,8 @@ server:
 
 ipfs:
   run: ${IPFS_RUN:false}
+  storing:
+    time: ${IPFS_STORING_TIME:86400}
   host: ${IPFS_HOST:localhost}
   port: ${IPFS_PORT:5001}
   timeout: ${IPFS_TIMEOUT:10000}

@@ -10,7 +10,7 @@ import org.junit.Test;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
 import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
-import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 

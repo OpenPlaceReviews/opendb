@@ -3,7 +3,7 @@ package org.openplacereviews.opendb.service.ipfs.file;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +39,7 @@ public class IPFSFileManager {
 	/**
 	 * @return root directory for images.
 	 */
-	public String getRootDirectoryPath() {
+	private String getRootDirectoryPath() {
 		return System.getProperty("user.home") + "/" + DIRECTORY;
 	}
 
@@ -59,7 +59,17 @@ public class IPFSFileManager {
 		FileUtils.writeByteArrayToFile(file, imageDTO.getMultipartFile().getBytes());
 	}
 
-	public String generateFileName(String hash, String ext) {
+	public void removeFileFromStorage(ImageDTO imageDTO) {
+		File file = new File(getRootDirectoryPath() + generateFileName(imageDTO.getCid(), imageDTO.getExtension()));
+
+		if(file.delete()){
+			LOGGER.debug(file.getName() + " is deleted!");
+		}else{
+			LOGGER.error("Delete operation is failed.");
+		}
+	}
+
+	private String generateFileName(String hash, String ext) {
 		StringBuilder fPath = generateDirectoryHierarchy(hash);
 		fPath.append(hash).append(".").append(ext);
 

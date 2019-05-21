@@ -16,7 +16,7 @@ public class IPFSClusterPinningService implements PinningService {
 
 	protected static final Log LOGGER = LogFactory.getLog(IPFSClusterPinningService.class);
 
-	private static final String BASE_URI = "%s://%s:%s/";
+	public static final String BASE_URI = "%s://%s:%s/";
 	private static final String DEFAULT_PROTOCOL = "http";
 	private static final String DEFAULT_HOST = "localhost";
 	private static final int DEFAULT_PORT = 9094;
