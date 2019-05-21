@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.service.ipfs.storage;
 
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
-import org.openplacereviews.opendb.util.exception.IPFSNotFoundException;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,5 +45,5 @@ public interface StorageService {
 	 * @param output OutputStream to write content to
 	 * @return Outputstream passed as argument
 	 */
-	OutputStream read(String id, OutputStream output) throws IPFSNotFoundException;
+	OutputStream read(String id, OutputStream output);
 }

@@ -18,7 +18,6 @@ import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
 import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
-import org.openplacereviews.opendb.util.exception.IPFSNotFoundException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -128,7 +127,6 @@ public class IPFSService implements StorageService, PinningService {
 				.handle(IOException.class)
 				.handle(ExecutionException.class)
 				.handle(TimeoutException.class)
-				.handle(IPFSNotFoundException.class)
 				.withDelay(delay)
 				.withMaxRetries(maxRetry);
 
