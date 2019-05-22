@@ -15,13 +15,12 @@ import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONObject;
 import org.openplacereviews.opendb.service.DBConsensusManager;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatus;
 import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
-import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
@@ -231,35 +230,47 @@ public class IPFSService implements StorageService, PinningService {
 	}
 
 	@Override
-	public void pin(String cid) {
+	public boolean pin(String cid) {
 		LOGGER.debug(String.format("Pin CID %s on IPFS", cid));
 
-		Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error(String.format("Exception pinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
-				.onSuccess(event -> LOGGER.debug(String.format("CID %s pinned on IPFS", cid)))
-				.run(() -> {
-					Multihash hash = Multihash.fromBase58(cid);
-//					replicaSet.forEach(replica -> {
-//						replica.pin(cid);
-//					});
-					this.ipfs.pin.add(hash);
-				});
+		try {
+			Failsafe.with(retryPolicy)
+					.onFailure(event -> LOGGER.error(String.format("Exception pinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
+					.onSuccess(event -> LOGGER.debug(String.format("CID %s pinned on IPFS", cid)))
+					.run(() -> {
+						Multihash hash = Multihash.fromBase58(cid);
+//				replicaSet.forEach(replica -> {
+//					replica.pin(cid);
+//				});
+						this.ipfs.pin.add(hash);
+					});
+
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 	@Override
-	public void unpin(String cid) {
+	public boolean unpin(String cid) {
 		LOGGER.debug(String.format("Unpin CID %s on IPFS", cid));
 
-		Failsafe.with(retryPolicy)
-				.onFailure(event -> LOGGER.error(String.format("Exception unpinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
-				.onSuccess(event -> LOGGER.debug(String.format("CID %s unpinned on IPFS", cid)))
-				.run(() -> {
-					Multihash hash = Multihash.fromBase58(cid);
+		try {
+			Failsafe.with(retryPolicy)
+					.onFailure(event -> LOGGER.error(String.format("Exception unpinning cid %s on IPFS after %d attemps", cid, event.getAttemptCount())))
+					.onSuccess(event -> LOGGER.debug(String.format("CID %s unpinned on IPFS", cid)))
+					.run(() -> {
+						Multihash hash = Multihash.fromBase58(cid);
 //					replicaSet.forEach(replica -> {
 //						replica.unpin(cid);
 //					});
-					this.ipfs.pin.rm(hash);
-				});
+						this.ipfs.pin.rm(hash);
+					});
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+
 	}
 
 	@Override
@@ -270,7 +281,7 @@ public class IPFSService implements StorageService, PinningService {
 				.onFailure(event -> LOGGER.error(String.format("Exception getting pinned files on IPFS after %d attemps", event.getAttemptCount())))
 				.onSuccess(event -> LOGGER.debug(String.format("Get pinned files on IPFS: %s", event.getResult())))
 				.get(() -> {
-					Map<Multihash, Object> cids = this.ipfs.pin.ls(IPFS.PinType.all);
+					Map<Multihash, Object> cids = this.ipfs.pin.ls(IPFS.PinType.recursive);
 
 					return cids.entrySet().stream()
 							.map(e-> e.getKey().toBase58())

@@ -114,8 +114,34 @@
       </div>
 
       <h3>Pin image</h3>
+      <div>
+        1. Cid of image: <input type="text" id="pin-cid">
+        <br>
+        <input type="submit" value="Pin image" id="pin-image-btn">
+      </div>
 
       <h3>Unpin image</h3>
+      <div>
+        1. Cid of image: <input type="text" id="unpin-cid">
+        <br>
+        <input type="submit" value="Unpin image" id="unpin-image-btn">
+      </div>
+
+      <h3>Tracked images</h3>
+      <div>
+        <input type="submit" value="Get tracked images" id="tracked-image-btn">
+        <br>
+        <p><b>Result: </b> &nbsp;&nbsp;<span id="result-tracked-images"></span></p>
+      </div>
+
+      <h3>Get file</h3>
+      <div>
+        1. Cid of image: <input type="text" id="get-image">
+        <br>
+        <input type="submit" value="Get image" id="get-image-btn">
+        <br>
+        <img id="image-preview" src="" />
+      </div>
 
     </div>
 
@@ -520,7 +546,42 @@ $( document ).ready(function() {
             }
         });
     });
-    
+
+    $("#pin-image-btn").click(function () {
+        var obj = {
+            "cid":$("#pin-cid").val()
+        };
+        $.post("/api/ipfs/image", obj)
+            .done(function (data) { $("#result").html(data); loadData(); })
+            .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
+    });
+
+    $("#unpin-image-btn").click(function () {
+        var obj = {
+            "cid":$("#unpin-cid").val(),
+            "_method":"delete"
+        };
+        $.post("/api/ipfs/image", obj)
+            .done(function (data) { $("#result").html(data); loadData(); })
+            .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
+    });
+
+    $("#tracked-image-btn").click(function () {
+       $.get("/api/ipfs/image/tracked")
+           .done(function (data) { $("#result-tracked-images").html(data); loadData(); })
+           .fail(function (xhr, status, error) { $("#result-tracked-images").html("ERROR: " + error); })
+    });
+
+    $("#get-image-btn").click(function () {
+        var obj = {
+            "cid": $("#get-image").val()
+        };
+       $.get("/api/ipfs/image", obj)
+           .done(function (data) {
+               $("#image-preview").attr("src", "data:image/png;base64" + data); })
+           .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
+    });
+
     $("#signup-btn").click(function() {
       var obj = {
         "pwd":$("#signup-pwd").val(),

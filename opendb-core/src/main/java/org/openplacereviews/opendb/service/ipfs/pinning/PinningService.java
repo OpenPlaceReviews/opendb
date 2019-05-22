@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb.service.ipfs.pinning;
 
+import com.mashape.unirest.http.exceptions.UnirestException;
+
 import java.util.List;
 
 /**
@@ -12,13 +14,13 @@ public interface PinningService {
 	 * Pin content
 	 * @param id Content ID (hash, CID)
 	 */
-	void pin(String id);
+	boolean pin(String id) throws UnirestException;
 
 	/**
 	 * unpin content
 	 * @param id Content ID (hash, CID)
 	 */
-	void unpin(String id);
+	boolean unpin(String id) throws UnirestException;
 
 	/**
 	 * Get list of all tracked files

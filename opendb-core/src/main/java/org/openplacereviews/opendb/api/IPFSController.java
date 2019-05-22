@@ -21,6 +21,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
@@ -71,7 +72,43 @@ public class IPFSController {
 		outputStream.writeTo(response.getOutputStream());
 	}
 
-	private IpfsStatus getIpfsStatus() throws IOException {
+	@PostMapping(value = "/image")
+	@ResponseBody
+	public ResponseEntity pinImage(@RequestParam("cid") String cid) {
+		if (!ipfsServiceIsRunning)
+			throw new ConnectionException("IPFS service was not runned!");
+
+		if (!ipfsService.pin(cid)) {
+			return ResponseEntity.ok("{\"status\":\"FAILED\"}");
+		}
+
+		return ResponseEntity.ok("{\"status\":\"OK\"}");
+	}
+
+	@DeleteMapping(value = "/image")
+	@ResponseBody
+	public ResponseEntity unpinImage(@RequestParam("cid") String cid) {
+		if (!ipfsServiceIsRunning)
+			throw new ConnectionException("IPFS service was not runned!");
+
+		if(!ipfsService.unpin(cid)) {
+			return ResponseEntity.ok("{\"status\":\"FAILED\"}");
+		}
+
+		return ResponseEntity.ok("{\"status\":\"OK\"}");
+	}
+
+	@GetMapping(value = "/image/tracked")
+	@ResponseBody
+	public ResponseEntity getTrackedFiles() {
+		if (!ipfsServiceIsRunning)
+			throw new ConnectionException("IPFS service was not runned!");
+
+		List<String> tracked = ipfsService.getTracked();
+		return ResponseEntity.ok(formatter.fullObjectToJson(tracked));
+	}
+
+	private IpfsStatus getIpfsStatus() {
 		return new IpfsStatus().setStatus("NOT CONNECTED");
 	}
 
