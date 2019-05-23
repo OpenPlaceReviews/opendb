@@ -17,11 +17,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
-import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatus;
-import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
+import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatusDTO;
 import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
+import org.openplacereviews.opendb.service.ipfs.pinning.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
-import org.openplacereviews.opendb.service.ipfs.storage.StorageService;
+import org.openplacereviews.opendb.service.ipfs.pinning.StorageService;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService.BASE_URI;
@@ -162,18 +163,52 @@ public class IPFSService implements StorageService, PinningService {
 		ipfsFileManager.removeFileFromStorage(imageDTO);
 	}
 
-	public void checkingMissingImagesInIPFS() {
+	public IpfsStatusDTO checkingMissingImagesInIPFS() {
 		List<String> pinnedImagesOnIPFS = getTracked();
 		List<String> activeObjects = dbConsensusManager.loadImageObjectsByActiveStatus(true);
 
+		AtomicBoolean status = new AtomicBoolean(true);
 		activeObjects.parallelStream().forEach(cid -> {
 			if (!pinnedImagesOnIPFS.contains(cid)) {
-				this.pin(cid);
+				status.set(false);
 			}
 		});
+
+		return IpfsStatusDTO.getMissingImageStatus(activeObjects.size() + "/" + pinnedImagesOnIPFS.size(), status.get() ? "OK" : "NOT OK");
 	}
 
-	public void removeUnusedImageObjectsFromSystemAndUnpinningThem() {
+	public IpfsStatusDTO uploadMissingImagesInIPFS() {
+		List<String> pinnedImagesOnIPFS = getTracked();
+		List<String> activeObjects = dbConsensusManager.loadImageObjectsByActiveStatus(true);
+
+		LOGGER.debug("Start pinning missing images");
+		activeObjects.forEach(cid -> {
+			LOGGER.debug("Loadded CID: " + cid);
+			if (!pinnedImagesOnIPFS.contains(cid)) {
+				try {
+					LOGGER.debug("Start reading/upload image from/to node for cid: " + cid);
+					OutputStream os = this.read(cid);
+
+					if (!os.toString().isEmpty()) {
+						LOGGER.error("Start pin cid: " + cid);
+						this.pin(cid);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+
+		return checkingMissingImagesInIPFS();
+	}
+
+	public IpfsStatusDTO statusImagesInDB() {
+		List<ImageDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeStoringUnusedObjects);
+
+		return IpfsStatusDTO.getMissingImageStatus(String.valueOf(notActiveImageObjects.size()), notActiveImageObjects.size() == 0 ? "OK" : "Images can be removed");
+	}
+
+	public IpfsStatusDTO removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
 		List<ImageDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeStoringUnusedObjects);
 
 		notActiveImageObjects.parallelStream().forEach(image -> {
@@ -182,13 +217,21 @@ public class IPFSService implements StorageService, PinningService {
 		});
 
 		dbConsensusManager.removeUnusedImageObject(timeStoringUnusedObjects);
+
+		clearIpfsRepo();
+
+		return statusImagesInDB();
 	}
 
-	public IpfsStatus getIpfsStatus() throws IOException, UnirestException {
+	private void clearIpfsRepo() throws IOException {
+		this.ipfs.repo.gc();
+	}
+
+	public IpfsStatusDTO getIpfsStatus() throws IOException, UnirestException {
 		HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", ipfs.protocol, ipfs.host, ipfs.port)).asString();
 		TreeMap objectTreeMap = new Gson().fromJson(response.getBody(), TreeMap.class);
 
-		return new IpfsStatus()
+		return new IpfsStatusDTO()
 				.setStatus("CONNECTED")
 				.setPeerId(ipfs.config.get("Identity.PeerID").toString())
 				.setVersion(objectTreeMap.get("AgentVersion").toString())
@@ -301,7 +344,8 @@ public class IPFSService implements StorageService, PinningService {
 
 			try {
 				Path filepath = ipfsFileManager.getFileByCid(imageDTO.getCid(), imageDTO.getExtension());
-				write(Files.readAllBytes(filepath));
+				String returnedCid = write(Files.readAllBytes(filepath));
+				assert returnedCid.equals(cid);
 			} catch (Exception e1) {
 				throw new TechnicalException("Execution exception while adding new file to IPFS [id: " + cid + "]", e1);
 			}

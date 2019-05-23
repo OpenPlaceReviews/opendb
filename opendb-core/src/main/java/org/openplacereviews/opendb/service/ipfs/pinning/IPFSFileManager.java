@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.service.ipfs.file;
+package org.openplacereviews.opendb.service.ipfs.pinning;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;

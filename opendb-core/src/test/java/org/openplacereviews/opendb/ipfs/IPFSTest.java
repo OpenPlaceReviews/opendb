@@ -8,7 +8,7 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.service.ipfs.file.IPFSFileManager;
+import org.openplacereviews.opendb.service.ipfs.pinning.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
 import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.springframework.mock.web.MockMultipartFile;

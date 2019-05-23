@@ -1,6 +1,4 @@
-package org.openplacereviews.opendb.service.ipfs.storage;
-
-import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
+package org.openplacereviews.opendb.service.ipfs.pinning;
 
 import java.io.InputStream;
 import java.io.OutputStream;
