@@ -68,15 +68,21 @@ public class IPFSService implements StorageService, PinningService {
 	@Autowired
 	private IPFSFileManager ipfsFileManager;
 
+	public static boolean status = false;
 	private IPFS ipfs;
 	private ExecutorService pool;
 	private RetryPolicy<Object> retryPolicy;
+
+	/**
+	 * At this moment worked with one ipfs node, maybe in future will be implemented for working with big amount of nodes
+	 */
 	private Set<PinningService> replicaSet;
 
 	public  IPFSService() {
 	}
 
 	private void generateInstance(IPFSService ipfsService, IPFS ipfs) {
+		IPFSService.status = true;
 		ipfsService.ipfs = ipfs;
 		ipfsService.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
 		ipfsService.configureThreadPool(10);

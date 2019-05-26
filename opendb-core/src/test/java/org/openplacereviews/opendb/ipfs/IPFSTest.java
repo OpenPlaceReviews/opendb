@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.ipfs;
 
+import com.google.gson.Gson;
 import io.ipfs.api.IPFS;
 import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
@@ -8,17 +9,19 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.pinning.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
-import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class IPFSTest {
 
@@ -97,5 +100,26 @@ public class IPFSTest {
 				file.getName(), "text/plain", IOUtils.toByteArray(input));
 
 		ipfsFileManager.addFileToStorage(new ImageDTO());
+	}
+
+	@Ignore
+	@Test
+	public void testJson() {
+		String json = "{\n" +
+				"\t\t\"type\"  : \"sys.role\",\n" +
+				"\t\t\"new\" : [{\n" +
+				"\t\t\t\"id\" : [\"none2\"],\n" +
+				"\t\t\t\"comment\" : \"2Owner role is a super role that nobody could change it\",\n" +
+				"\t\t\t\"owner_role\" : \"none\",\n" +
+				"\t\t\t\"picture\" :  {\"type\":\"#image\",\"hash\":\"sha256:2cfcfbce76b5c305f3939755c96b9e12283cc49f1104f92dcb82925234304c43\",\"extension\":\"jpg\",\"cid\":\"QmWyPQ7ebGAWdyjPoRXvAJEYsYiPoR8urWC65gtsS381vp\"},\n" +
+				"\t\t\t\"super_roles\": []\n" +
+				"\t\t}],\n" +
+				"\t\t\"details\": { \"profile-picture\":{\"type\":\"#image\",\"hash\":\"sha256:2cfcfbce76b5c305f3939755c96b9e12283cc49f1104f92dcb82925234304c43\",\"extension\":\"jpg\",\"cid\":\"QmWyPQ7ebGAWdyjPoRXvAJEYsYiPoR8urWC65gtsS381vp\"}}\n" +
+				"\t}";
+
+		TreeMap treeMap = new Gson().fromJson(json, TreeMap.class);
+
+		List<ImageDTO> imageDTOList = new ArrayList<>();
+		//getObject(treeMap, imageDTOList);
 	}
 }

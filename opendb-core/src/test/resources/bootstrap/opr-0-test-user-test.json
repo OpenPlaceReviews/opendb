@@ -28,7 +28,8 @@
 			"comment" : "2Owner role is a super role that nobody could change it",
 			"owner_role" : "none",
 			"super_roles": []
-		}]
+		}],
+		"details": { "profile-picture":[ {"type":"#image","hash":"sha256:2cfcfbce76b5c305f3939755c96b9e12283cc49f1104f92dcb82925234304c43","extension":"jpg","cid":"QmWyPQ7ebGAWdyjPoRXvAJEYsYiPoR8urWC65gtsS381vp"}]}
 	},
 	{
 		"type"  : "sys.role",

@@ -922,8 +922,8 @@ public class DBConsensusManager {
 		}, DateUtils.addSeconds(new Date(), -secondsOfStoring));
 	}
 
-	public void updateImageObjectToActive(ImageDTO imageDTO) {
-		jdbcTemplate.update("UPDATE " + IMAGE_TABLE + " SET active = ? WHERE hash = ?", true, imageDTO.getHash());
+	public void updateImageActiveStatus(ImageDTO imageDTO, boolean status) {
+		jdbcTemplate.update("UPDATE " + IMAGE_TABLE + " SET active = ? WHERE hash = ?", status, imageDTO.getHash());
 	}
 
 	public List<String> loadImageObjectsByActiveStatus(Boolean active) {

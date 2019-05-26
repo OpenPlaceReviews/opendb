@@ -182,8 +182,15 @@ public class BlocksManager {
 				return null;
 			}
 		}
+		candidates.forEach(operation -> {
+			if (!operation.getImages().isEmpty()) {
+				operation.getImages().forEach(imageDTO -> {
+					dataManager.updateImageActiveStatus(imageDTO, true);
+				});
+			}
+		});
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
-		
+
 		int tmNewBlock = timer.startExtra();
 		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair);
 		if(opBlock == null) {

@@ -1,12 +1,10 @@
 package org.openplacereviews.opendb.ops;
 
 import com.google.gson.*;
+import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 
 import java.lang.reflect.Type;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class OpOperation extends OpObject {
 	
@@ -25,6 +23,7 @@ public class OpOperation extends OpObject {
 	
 	private List<OpObject> newObjects = new LinkedList<OpObject>();
 	protected String type;
+	protected List<ImageDTO> images;
 	
 	public OpOperation() {
 	}
@@ -129,9 +128,15 @@ public class OpOperation extends OpObject {
 	public String getComment() {
 		return getStringValue(F_COMMENT);
 	}
-	
-	
-	
+
+	public List<ImageDTO> getImages() {
+		return images;
+	}
+
+	public void setImages(List<ImageDTO> images) {
+		this.images = images;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -182,10 +187,14 @@ public class OpOperation extends OpObject {
 			this.excludeHashAndSignature = false;
 		}
 		
-		
 		@Override
 		public OpOperation deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
+			Map treeMap = new Gson().fromJson(json, TreeMap.class);
+
+			List<ImageDTO> imageDTOList = new ArrayList<>();
+			getObject(treeMap, imageDTOList);
+
 			JsonObject jsonObj = json.getAsJsonObject();
 			OpOperation op = new OpOperation();
 			JsonElement tp = jsonObj.remove(F_TYPE);
@@ -202,7 +211,9 @@ public class OpOperation extends OpObject {
 					op.addNew(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
+
 			jsonObj.remove(F_EVAL);
+			op.images = imageDTOList;
 			op.fields = context.deserialize(jsonObj, TreeMap.class);
 			return op;
 		}
@@ -219,6 +230,42 @@ public class OpOperation extends OpObject {
 				tm.put(F_NEW, context.serialize(src.newObjects));
 			}
 			return context.serialize(tm);
+		}
+
+		private void getObject(Map map, List<ImageDTO> array) {
+			if (map.containsKey(F_TYPE) && map.get(F_TYPE).equals("#image")) {
+				array.add(ImageDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
+			} else {
+				map.keySet().forEach(key -> {
+					if (map.get(key) instanceof Map) {
+						getObject( (Map) map.get(key), array);
+					}
+					if (map.get(key) instanceof List) {
+						if (!(((List) map.get(key)).isEmpty()) && !(((List) map.get(key)).get(0).getClass().equals(String.class))) {
+							getObject( (List<Map>)map.get(key), array);
+						}
+					}
+				});
+			}
+		}
+
+		private void getObject(List<Map> list, List<ImageDTO> array) {
+			for (Map map : list) {
+				map.keySet().forEach(key -> {
+					if (key.equals(F_TYPE) && map.get(key).equals("#image")) {
+						array.add(ImageDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
+					} else {
+						if (map.get(key) instanceof Map) {
+							getObject( (Map) map.get(key), array);
+						}
+						if (map.get(key) instanceof List) {
+							if (map.get(key).getClass().equals(Map.class)) {
+								getObject((List<Map>) map.get(key), array);
+							}
+						}
+					}
+				});
+			}
 		}
 
 	}

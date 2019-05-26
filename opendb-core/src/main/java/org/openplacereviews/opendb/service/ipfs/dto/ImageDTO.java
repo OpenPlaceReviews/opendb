@@ -24,6 +24,15 @@ public class ImageDTO {
 		return imageDTO;
 	}
 
+	public static ImageDTO of(String hash, String extension, String cid) {
+		ImageDTO imageDTO = new ImageDTO();
+		imageDTO.hash = hash;
+		imageDTO.extension = extension;
+		imageDTO.cid = cid;
+
+		return imageDTO;
+	}
+
 	public String getType() {
 		return type;
 	}
