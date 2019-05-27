@@ -71,10 +71,6 @@ public class IPFSService implements StorageService, PinningService {
 	private IPFS ipfs;
 	private ExecutorService pool;
 	private RetryPolicy<Object> retryPolicy;
-
-	/**
-	 * At this moment worked with one ipfs node, maybe in future will be implemented for working with big amount of nodes
-	 */
 	private Set<PinningService> replicaSet;
 
 	public  IPFSService() {
@@ -83,9 +79,9 @@ public class IPFSService implements StorageService, PinningService {
 	private void generateInstance(IPFSService ipfsService, IPFS ipfs) {
 		IPFSService.status = true;
 		ipfsService.ipfs = ipfs;
-		ipfsService.replicaSet = Sets.newHashSet(this); // IPFSService is a PinningService
+		ipfsService.replicaSet = Sets.newHashSet(); // IPFSService is a PinningService
 		ipfsService.configureThreadPool(10);
-		ipfsService.configureRetry(2);
+		ipfsService.configureRetry(1);
 		ipfsFileManager.init();
 	}
 
@@ -217,13 +213,7 @@ public class IPFSService implements StorageService, PinningService {
 		List<ImageDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeStoringUnusedObjects);
 
 		notActiveImageObjects.parallelStream().forEach(image -> {
-			getReplicaSet().forEach(pinningService -> {
-				try {
-					pinningService.unpin(image.getCid());
-				} catch (UnirestException e) {
-					e.printStackTrace();
-				}
-			});
+			this.unpin(image.getCid());
 			removeImageObject(image);
 		});
 
@@ -259,12 +249,9 @@ public class IPFSService implements StorageService, PinningService {
 
 	@Override
 	public String write(InputStream content) {
-
 		try {
 			return this.write(IOUtils.toByteArray(content));
-
 		} catch (IOException ex) {
-			LOGGER.error("Exception converting Inputstream to byte array", ex);
 			throw new TechnicalException("Exception converting Inputstream to byte array", ex);
 		}
 	}

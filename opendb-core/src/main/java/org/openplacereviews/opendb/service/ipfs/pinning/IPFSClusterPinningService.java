@@ -7,6 +7,7 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.service.ipfs.dto.TrackedResponse;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 

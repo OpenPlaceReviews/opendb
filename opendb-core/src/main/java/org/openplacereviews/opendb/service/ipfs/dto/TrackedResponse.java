@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.service.ipfs.pinning;
+package org.openplacereviews.opendb.service.ipfs.dto;
 
 import java.util.List;
 

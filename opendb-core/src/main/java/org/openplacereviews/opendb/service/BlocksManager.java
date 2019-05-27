@@ -193,9 +193,9 @@ public class BlocksManager {
 				if (!operation.getImages().isEmpty()) {
 					operation.getImages().forEach(imageDTO -> {
 						dataManager.updateImageActiveStatus(imageDTO, true);
-						ipfsService.getReplicaSet().forEach(service -> {
+						ipfsService.getReplicaSet().forEach(cluster -> {
 							try {
-								service.pin(imageDTO.getCid());
+								cluster.pin(imageDTO.getCid());
 							} catch (UnirestException e) {
 								e.printStackTrace();
 							}

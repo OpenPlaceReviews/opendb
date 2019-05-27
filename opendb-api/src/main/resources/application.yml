@@ -11,15 +11,15 @@ server:
     max-threads: 5
 
 ipfs:
-  run: ${IPFS_RUN:false}
+  run: ${IPFS_RUN:true}
   storing:
     time: ${IPFS_STORING_TIME:86400}
-  host: ${IPFS_HOST:localhost}
+  host: ${IPFS_HOST:51.158.69.207}
   port: ${IPFS_PORT:5001}
   timeout: ${IPFS_TIMEOUT:10000}
   directory: ${IPFS_DIRECTORY:/opendb/storage/}
   cluster:
-    host: ${IPFS_CLUSTER_HOST:localhost}
+    host: ${IPFS_CLUSTER_HOST:51.158.69.207}
     port: ${IPFS_CLUSTER_PORT:9094}
 
 opendb:
