@@ -18,7 +18,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatusDTO;
-import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.service.ipfs.pinning.IPFSFileManager;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
 import org.openplacereviews.opendb.service.ipfs.pinning.StorageService;
@@ -84,7 +83,7 @@ public class IPFSService implements StorageService, PinningService {
 	private void generateInstance(IPFSService ipfsService, IPFS ipfs) {
 		IPFSService.status = true;
 		ipfsService.ipfs = ipfs;
-		ipfsService.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
+		ipfsService.replicaSet = Sets.newHashSet(this); // IPFSService is a PinningService
 		ipfsService.configureThreadPool(10);
 		ipfsService.configureRetry(2);
 		ipfsFileManager.init();
@@ -218,7 +217,13 @@ public class IPFSService implements StorageService, PinningService {
 		List<ImageDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeStoringUnusedObjects);
 
 		notActiveImageObjects.parallelStream().forEach(image -> {
-			this.unpin(image.getCid());
+			getReplicaSet().forEach(pinningService -> {
+				try {
+					pinningService.unpin(image.getCid());
+				} catch (UnirestException e) {
+					e.printStackTrace();
+				}
+			});
 			removeImageObject(image);
 		});
 
@@ -288,9 +293,6 @@ public class IPFSService implements StorageService, PinningService {
 					.onSuccess(event -> LOGGER.debug(String.format("CID %s pinned on IPFS", cid)))
 					.run(() -> {
 						Multihash hash = Multihash.fromBase58(cid);
-//				replicaSet.forEach(replica -> {
-//					replica.pin(cid);
-//				});
 						this.ipfs.pin.add(hash);
 					});
 
@@ -310,9 +312,6 @@ public class IPFSService implements StorageService, PinningService {
 					.onSuccess(event -> LOGGER.debug(String.format("CID %s unpinned on IPFS", cid)))
 					.run(() -> {
 						Multihash hash = Multihash.fromBase58(cid);
-//					replicaSet.forEach(replica -> {
-//						replica.unpin(cid);
-//					});
 						this.ipfs.pin.rm(hash);
 					});
 			return true;

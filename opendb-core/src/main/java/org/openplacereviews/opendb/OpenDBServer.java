@@ -7,6 +7,7 @@ import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBConsensusManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.ipfs.IPFSService;
+import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.util.DBConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +57,12 @@ public class OpenDBServer  {
 
 	@Value("${spring.servlet.multipart.max-request-size}")
 	public String maxRequestSize;
+
+	@Value("${ipfs.cluster.host:localhost}")
+	public String clusterHost;
+
+	@Value("${ipfs.cluster.port}")
+	public Integer clusterPort;
 
 	@Value("${ipfs.run:false}")
 	public boolean runIPFSService;
@@ -117,6 +124,7 @@ public class OpenDBServer  {
 				blocksManager.init(metadataDB, blockchain);
 				if (runIPFSService) {
 					ipfsService.connect();
+					ipfsService.addReplica(IPFSClusterPinningService.connect(clusterHost, clusterPort));
 				}
 				LOGGER.info("Application has started");
 			} catch (RuntimeException e) {

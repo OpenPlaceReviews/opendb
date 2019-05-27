@@ -18,6 +18,9 @@ ipfs:
   port: ${IPFS_PORT:5001}
   timeout: ${IPFS_TIMEOUT:10000}
   directory: ${IPFS_DIRECTORY:/opendb/storage/}
+  cluster:
+    host: ${IPFS_CLUSTER_HOST:localhost}
+    port: ${IPFS_CLUSTER_PORT:9094}
 
 opendb:
   mgmt:

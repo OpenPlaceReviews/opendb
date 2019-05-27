@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.service;
 
+import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
@@ -7,6 +8,7 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.service.ipfs.IPFSService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -36,6 +38,9 @@ public class BlocksManager {
 	
 	@Autowired
 	private DBConsensusManager dataManager;
+
+	@Autowired
+	private IPFSService ipfsService;
 	
 	protected String[] BOOTSTRAP_LIST = 
 			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"};
@@ -182,13 +187,23 @@ public class BlocksManager {
 				return null;
 			}
 		}
-		candidates.forEach(operation -> {
-			if (!operation.getImages().isEmpty()) {
-				operation.getImages().forEach(imageDTO -> {
-					dataManager.updateImageActiveStatus(imageDTO, true);
-				});
-			}
-		});
+
+		if (IPFSService.status) {
+			candidates.forEach(operation -> {
+				if (!operation.getImages().isEmpty()) {
+					operation.getImages().forEach(imageDTO -> {
+						dataManager.updateImageActiveStatus(imageDTO, true);
+						ipfsService.getReplicaSet().forEach(service -> {
+							try {
+								service.pin(imageDTO.getCid());
+							} catch (UnirestException e) {
+								e.printStackTrace();
+							}
+						});
+					});
+				}
+			});
+		}
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
 
 		int tmNewBlock = timer.startExtra();

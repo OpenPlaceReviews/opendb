@@ -42,8 +42,8 @@ public class IPFSClusterPinningService implements PinningService {
 
 	public static IPFSClusterPinningService connect(String host, Integer port, String protocol) {
 		try {
-			LOGGER.info(String.format("call GET %s://%s:%d/api/v0/id", protocol, host, port));
-			HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", protocol, host, port)).asString();
+			LOGGER.info(String.format("call GET %s://%s:%d/id", protocol, host, port));
+			HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "id", protocol, host, port)).asString();
 
 			LOGGER.info(String.format("Connected to IPFS-Cluster [protocol: %s, host: %s, port: %d]: Info %s", protocol, host, port, response.getBody()));
 			return new IPFSClusterPinningService(host, port, protocol);
@@ -59,8 +59,8 @@ public class IPFSClusterPinningService implements PinningService {
 	public boolean pin(String cid) throws UnirestException {
 		LOGGER.debug(String.format("pin CID %s on IPFS-cluster", cid));
 
-		LOGGER.debug(String.format("call POST %s://%s:%d/api/v0/pin/add?arg=%s&progress=true", protocol, host, port, cid));
-		HttpResponse<JsonNode> jsonResponse = Unirest.post(String.format(BASE_URI + "/api/v0/pin/add?arg=%s&progress=true", protocol, host, port, cid)).asJson();
+		LOGGER.debug(String.format("call POST %s://%s:%d/pins/%s", protocol, host, port, cid));
+		HttpResponse<JsonNode> jsonResponse = Unirest.post(String.format(BASE_URI + "/pins/%s", protocol, host, port, cid)).asJson();
 
 		if (jsonResponse.getStatus() == 200) {
 			LOGGER.debug(String.format("CID %s pinned on IPFS-cluster", cid));
@@ -75,8 +75,8 @@ public class IPFSClusterPinningService implements PinningService {
 	public boolean unpin(String cid) throws UnirestException {
 		LOGGER.debug(String.format("unpin CID %s on IPFS-cluster", cid));
 
-		LOGGER.debug(String.format("call DELETE %s://%s:%d/api/v0/pin/rm?arg=%s", protocol, host, port, cid));
-		HttpResponse<JsonNode> jsonResponse = Unirest.delete(String.format(BASE_URI + "api/v0/pin/rm?arg=%s", protocol, host, port, cid)).asJson();
+		LOGGER.debug(String.format("call DELETE %s://%s:%d/pins/%s", protocol, host, port, cid));
+		HttpResponse<JsonNode> jsonResponse = Unirest.delete(String.format(BASE_URI + "/pins/%s", protocol, host, port, cid)).asJson();
 
 		if (jsonResponse.getStatus() == 200) {
 			LOGGER.debug(String.format("unpin %s pinned on IPFS-cluster", cid));
@@ -93,8 +93,8 @@ public class IPFSClusterPinningService implements PinningService {
 
 		try {
 
-			LOGGER.trace(String.format("GET GET %s://%s:%d/api/v0/pin/ls", protocol, host, port));
-			HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "/api/v0/pin/ls", protocol, host, port))
+			LOGGER.trace(String.format("GET GET %s://%s:%d/pins", protocol, host, port));
+			HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "/pins", protocol, host, port))
 					.asString();
 			LOGGER.debug(String.format("response: %s", response));
 			TrackedResponse result = mapper.readValue(response.getBody(), TrackedResponse.class);
