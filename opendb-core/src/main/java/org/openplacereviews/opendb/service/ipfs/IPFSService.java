@@ -192,7 +192,13 @@ public class IPFSService implements StorageService, PinningService {
 
 					if (!os.toString().isEmpty()) {
 						LOGGER.debug("Start pin cid: " + cid);
-						this.pin(cid);
+						this.replicaSet.forEach(cluster -> {
+							try {
+								cluster.pin(cid);
+							} catch (UnirestException e) {
+								throw new TechnicalException("Execution Exception while pinning file on IPFS cluster [id: " + cid + "]", e);
+							}
+						});
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
