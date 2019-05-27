@@ -14,12 +14,12 @@ ipfs:
   run: ${IPFS_RUN:true}
   storing:
     time: ${IPFS_STORING_TIME:86400}
-  host: ${IPFS_HOST:51.158.69.207}
+  host: ${IPFS_HOST:localhost} #dev host: 51.158.69.207
   port: ${IPFS_PORT:5001}
   timeout: ${IPFS_TIMEOUT:10000}
   directory: ${IPFS_DIRECTORY:/opendb/storage/}
   cluster:
-    host: ${IPFS_CLUSTER_HOST:51.158.69.207}
+    host: ${IPFS_CLUSTER_HOST:localhost}
     port: ${IPFS_CLUSTER_PORT:9094}
 
 opendb:
