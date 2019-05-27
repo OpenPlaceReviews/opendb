@@ -1,0 +1,30 @@
+version: '3.5'
+
+  services:
+    opendb-postgres:
+      image: postgres:10
+      container_name: opendb-postgres
+      ports:
+      - 5432:5432
+      environment:
+        POSTGRES_USER: test
+        POSTGRES_PASSWORD: test
+        POSTGRES_DB: openplacereviews
+        ALLOW_IP_RANGE: 0.0.0.0/0
+      networks:
+      - opendb-network
+
+    opendb-ipfs:
+      image: ipfs/go-ipfs:latest
+      container_name: opendb_ipfs
+      hostname: ipfs_host1
+      ports:
+      - "5001:5001"
+      - "4001:4001"
+      - "8080:8080"
+      networks:
+      - opendb-network
+
+  networks:
+    opendb-network:
+      name: opendb-network
