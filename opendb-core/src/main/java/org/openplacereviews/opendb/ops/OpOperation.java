@@ -193,7 +193,7 @@ public class OpOperation extends OpObject {
 			Map treeMap = new Gson().fromJson(json, TreeMap.class);
 
 			List<ImageDTO> imageDTOList = new ArrayList<>();
-			getObject(treeMap, imageDTOList);
+			getImageObject(treeMap, imageDTOList);
 
 			JsonObject jsonObj = json.getAsJsonObject();
 			OpOperation op = new OpOperation();
@@ -232,35 +232,35 @@ public class OpOperation extends OpObject {
 			return context.serialize(tm);
 		}
 
-		private void getObject(Map map, List<ImageDTO> array) {
+		private void getImageObject(Map map, List<ImageDTO> array) {
 			if (map.containsKey(F_TYPE) && map.get(F_TYPE).equals("#image")) {
 				array.add(ImageDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
 			} else {
 				map.keySet().forEach(key -> {
 					if (map.get(key) instanceof Map) {
-						getObject( (Map) map.get(key), array);
+						getImageObject( (Map) map.get(key), array);
 					}
 					if (map.get(key) instanceof List) {
 						if (!(((List) map.get(key)).isEmpty()) && !(((List) map.get(key)).get(0).getClass().equals(String.class))) {
-							getObject( (List<Map>)map.get(key), array);
+							getImageObject( (List<Map>)map.get(key), array);
 						}
 					}
 				});
 			}
 		}
 
-		private void getObject(List<Map> list, List<ImageDTO> array) {
+		private void getImageObject(List<Map> list, List<ImageDTO> array) {
 			for (Map map : list) {
 				map.keySet().forEach(key -> {
 					if (key.equals(F_TYPE) && map.get(key).equals("#image")) {
 						array.add(ImageDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
 					} else {
 						if (map.get(key) instanceof Map) {
-							getObject( (Map) map.get(key), array);
+							getImageObject( (Map) map.get(key), array);
 						}
 						if (map.get(key) instanceof List) {
 							if (map.get(key).getClass().equals(Map.class)) {
-								getObject((List<Map>) map.get(key), array);
+								getImageObject((List<Map>) map.get(key), array);
 							}
 						}
 					}

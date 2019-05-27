@@ -62,9 +62,9 @@ public class IPFSFileManager {
 	public void removeFileFromStorage(ImageDTO imageDTO) {
 		File file = new File(getRootDirectoryPath() + generateFileName(imageDTO.getCid(), imageDTO.getExtension()));
 
-		if(file.delete()){
+		if (file.delete()) {
 			LOGGER.debug(file.getName() + " is deleted!");
-		}else{
+		} else {
 			LOGGER.error("Delete operation is failed.");
 		}
 	}
@@ -80,7 +80,7 @@ public class IPFSFileManager {
 		byte[] bytes = hash.getBytes();
 		StringBuilder fPath = new StringBuilder();
 
-		for(int i = 0; i < 12; i+=4) {
+		for (int i = 0; i < 12; i += 4) {
 			fPath.append(new String(bytes, i, 4)).append("/");
 		}
 

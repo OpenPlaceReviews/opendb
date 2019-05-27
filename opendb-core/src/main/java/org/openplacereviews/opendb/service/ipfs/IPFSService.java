@@ -86,7 +86,7 @@ public class IPFSService implements StorageService, PinningService {
 		ipfsService.ipfs = ipfs;
 		ipfsService.replicaSet = Sets.newHashSet(IPFSClusterPinningService.connect(ipfs.host, ipfs.port)); // IPFSService is a PinningService
 		ipfsService.configureThreadPool(10);
-		ipfsService.configureRetry(3);
+		ipfsService.configureRetry(2);
 		ipfsFileManager.init();
 	}
 
@@ -164,7 +164,7 @@ public class IPFSService implements StorageService, PinningService {
 		return imageDTO;
 	}
 
-	public void removeImageObject(ImageDTO imageDTO) {
+	private void removeImageObject(ImageDTO imageDTO) {
 		dbConsensusManager.removeImageObject(imageDTO);
 		ipfsFileManager.removeFileFromStorage(imageDTO);
 	}
@@ -196,7 +196,7 @@ public class IPFSService implements StorageService, PinningService {
 					OutputStream os = this.read(cid);
 
 					if (!os.toString().isEmpty()) {
-						LOGGER.error("Start pin cid: " + cid);
+						LOGGER.debug("Start pin cid: " + cid);
 						this.pin(cid);
 					}
 				} catch (Exception e) {

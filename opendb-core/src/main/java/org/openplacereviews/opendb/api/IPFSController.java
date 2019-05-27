@@ -59,7 +59,7 @@ public class IPFSController {
 
 	@GetMapping(value = "/image")
 	@ResponseBody
-	public ResponseEntity<String> getFile(@RequestParam("cid") String cid) throws IOException {
+	public ResponseEntity<String> getFile(@RequestParam("cid") String cid) {
 		if (!IPFSService.status)
 			throw new ConnectionException("IPFS service was not runned!");
 

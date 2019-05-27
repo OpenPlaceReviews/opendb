@@ -4,7 +4,7 @@ import java.util.List;
 
 public class TrackedResponse {
 
-    private List<String> pins;
+	private List<String> pins;
 
 	public List<String> getPins() {
 		return pins;

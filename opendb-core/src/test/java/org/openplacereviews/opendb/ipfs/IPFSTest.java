@@ -120,6 +120,6 @@ public class IPFSTest {
 		TreeMap treeMap = new Gson().fromJson(json, TreeMap.class);
 
 		List<ImageDTO> imageDTOList = new ArrayList<>();
-		//getObject(treeMap, imageDTOList);
+		//getImageObject(treeMap, imageDTOList);
 	}
 }
