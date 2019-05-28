@@ -900,7 +900,7 @@ public class DBConsensusManager {
 		jdbcTemplate.update("DELETE FROM " + IMAGE_TABLE + " WHERE active = false AND added < ?", DateUtils.addDays(new Date(), -secondsOfStoring));
 	}
 
-	public void removeImageObject(ImageDTO imageDTO) {
+	public void removeImageObjectFromDB(ImageDTO imageDTO) {
 		jdbcTemplate.update("DELETE FROM " + IMAGE_TABLE + " WHERE hash = ?", imageDTO.getHash());
 	}
 

@@ -79,7 +79,7 @@ public class IPFSService implements StorageService, PinningService {
 	private void generateInstance(IPFSService ipfsService, IPFS ipfs) {
 		IPFSService.status = true;
 		ipfsService.ipfs = ipfs;
-		ipfsService.replicaSet = Sets.newHashSet(); // IPFSService is a PinningService
+		ipfsService.replicaSet = Sets.newHashSet();
 		ipfsService.configureThreadPool(10);
 		ipfsService.configureRetry(1);
 		ipfsFileManager.init();
@@ -160,8 +160,8 @@ public class IPFSService implements StorageService, PinningService {
 	}
 
 	private void removeImageObject(ImageDTO imageDTO) {
-		dbConsensusManager.removeImageObject(imageDTO);
-		ipfsFileManager.removeFileFromStorage(imageDTO);
+		dbConsensusManager.removeImageObjectFromDB(imageDTO);
+		ipfsFileManager.removeImageObjectFromStorage(imageDTO);
 	}
 
 	public IpfsStatusDTO checkingMissingImagesInIPFS() {
@@ -178,7 +178,7 @@ public class IPFSService implements StorageService, PinningService {
 		return IpfsStatusDTO.getMissingImageStatus(activeObjects.size() + "/" + pinnedImagesOnIPFS.size(), status.get() ? "OK" : "NOT OK");
 	}
 
-	public IpfsStatusDTO uploadMissingImagesInIPFS() {
+	public IpfsStatusDTO uploadMissingImagesToIPFS() {
 		List<String> pinnedImagesOnIPFS = getTracked();
 		List<String> activeObjects = dbConsensusManager.loadImageObjectsByActiveStatus(true);
 
@@ -225,16 +225,16 @@ public class IPFSService implements StorageService, PinningService {
 
 		dbConsensusManager.removeUnusedImageObject(timeStoringUnusedObjects);
 
-		clearIpfsRepo();
+		clearNotPinnedImagesFromIPFSLocalStorage();
 
 		return statusImagesInDB();
 	}
 
-	private void clearIpfsRepo() throws IOException {
+	private void clearNotPinnedImagesFromIPFSLocalStorage() throws IOException {
 		this.ipfs.repo.gc();
 	}
 
-	public IpfsStatusDTO getIpfsStatus() throws IOException, UnirestException {
+	public IpfsStatusDTO getIpfsNodeInfo() throws IOException, UnirestException {
 		HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", ipfs.protocol, ipfs.host, ipfs.port)).asString();
 		TreeMap objectTreeMap = new Gson().fromJson(response.getBody(), TreeMap.class);
 

@@ -52,20 +52,20 @@ public class IPFSController {
 	@GetMapping
 	@ResponseBody
 	public ResponseEntity<String> loadIpfsStatus() throws IOException, UnirestException {
-		IpfsStatusDTO ipfsStatusDTO = IPFSService.status ? ipfsService.getIpfsStatus() : getIpfsStatus();
+		IpfsStatusDTO ipfsStatusDTO = IPFSService.status ? ipfsService.getIpfsNodeInfo() : getIpfsStatus();
 
 		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsStatusDTO));
 	}
 
 	@GetMapping(value = "/image")
 	@ResponseBody
-	public ResponseEntity<String> getFile(@RequestParam("cid") String cid) {
+	public ResponseEntity<String> getFile(@RequestParam("cid") String cid) throws IOException {
 		if (!IPFSService.status)
 			throw new ConnectionException("IPFS service was not runned!");
 
-		ByteArrayOutputStream outputStream = (ByteArrayOutputStream) ipfsService.read(cid);
-
-		return ResponseEntity.ok(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
+		try (ByteArrayOutputStream outputStream = (ByteArrayOutputStream) ipfsService.read(cid)) {
+			return ResponseEntity.ok(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
+		}
 	}
 
 	@PutMapping(value = "/image")
@@ -119,7 +119,7 @@ public class IPFSController {
 		if (!IPFSService.status)
 			throw new ConnectionException("IPFS service was not runned!");
 
-		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsService.uploadMissingImagesInIPFS()));
+		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsService.uploadMissingImagesToIPFS()));
 	}
 
 	@GetMapping(value = "/blc-status")

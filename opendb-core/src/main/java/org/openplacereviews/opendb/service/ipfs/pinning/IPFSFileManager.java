@@ -59,7 +59,7 @@ public class IPFSFileManager {
 		FileUtils.writeByteArrayToFile(file, imageDTO.getMultipartFile().getBytes());
 	}
 
-	public void removeFileFromStorage(ImageDTO imageDTO) {
+	public void removeImageObjectFromStorage(ImageDTO imageDTO) {
 		File file = new File(getRootDirectoryPath() + generateFileName(imageDTO.getCid(), imageDTO.getExtension()));
 
 		if (file.delete()) {
