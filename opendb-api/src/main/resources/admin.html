@@ -366,6 +366,7 @@ function loadStatusData() {
 }
 
 function loadIpfsStatusData() {
+    var status = false;
     $.getJSON("/api/ipfs", function ( data ) {
         $("#ipfs-status").html(data.status);
         $("#ipfs-peer-id").html(data.peerId);
@@ -374,15 +375,22 @@ function loadIpfsStatusData() {
         $("#ipfs-api").html(data.api);
         $("#ipfs-addresses").html(JSON.stringify(data.addresses));
         $("#ipfs-public-key").html(data.publicKey);
+
+        if ($("#ipfs-status").val() === "CONNECTED") {
+            this.status = true;
+        }
     });
-    $.getJSON("/api/ipfs/status", function (data) {
-        $("#ipfs-missing-status").html(data.status);
-        $("#ipfs-missing-objects").html(data.objects);
-    });
-    $.getJSON("/api/ipfs/blc-status", function (data) {
-        $("#blockchain-unactivated-images").html(data.objects);
-        $("#blockchain-missing-status").html(data.status);
-    })
+
+    if (this.status === true) {
+        $.getJSON("/api/ipfs/status", function (data) {
+            $("#ipfs-missing-status").html(data.status);
+            $("#ipfs-missing-objects").html(data.objects);
+        });
+        $.getJSON("/api/ipfs/blc-status", function (data) {
+            $("#blockchain-unactivated-images").html(data.objects);
+            $("#blockchain-missing-status").html(data.status);
+        })
+    }
 }
 
 function loadBlocksData() {
