@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
@@ -254,10 +256,48 @@ public class DBSchemaManager {
 			for(int i = 1; i <= keySize; i++) {
 				pks += ", p" +i; 
 			}
+
+			List<CustomIndex> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
+				List<CustomIndex> indexList = new ArrayList<>();
+				while (rs.next()) {
+					indexList.add(CustomIndex.of(rs.getString(1), rs.getString(2)));
+				}
+				return indexList;
+			}, type);
+
 			int update = jdbcTemplate.update(
-					"WITH moved_rows AS ( DELETE FROM " + prevTable + " a WHERE type = ? RETURNING a.*) " + 
+					"WITH moved_rows AS ( DELETE FROM " + prevTable + " a WHERE type = ? RETURNING a.*) " +
 					"INSERT INTO " + tableName + "(type, ophash, superblock, sblockid, sorder, content " + pks + ") " +
-					"SELECT type, ophash, superblock, sblockid, sorder, content " + pks + " FROM moved_rows", type);
+					"SELECT type, ophash, superblock, sblockid, sorder, content" + pks + " FROM moved_rows", type);
+
+			List<CustomIndex> customIndexList = generateCustomColumnsForTable(tableName);
+
+			StringBuilder columnsForUpdating = new StringBuilder();
+			for (CustomIndex c : customIndexList) {
+				if (columnsForUpdating.length() == 0) {
+					columnsForUpdating.append(c.getColumn()).append(" = ?");
+				} else {
+					columnsForUpdating.append(",").append(c.getColumn()).append(" = ?");
+				}
+			}
+
+			if (valuesForUpdating != null) {
+				valuesForUpdating.forEach(customIndex -> {
+					OpObject opObject = formatter.parseObject(customIndex.getContent());
+					Object[] args = new Object[customIndexList.size() + 1];
+					AtomicInteger i = new AtomicInteger();
+
+					customIndexList.forEach(indexField -> {
+						args[i.get()] = getColumnValue(indexField, opObject);
+						i.getAndIncrement();
+					});
+					args[i.get()] = SecUtils.getHashBytes(customIndex.getHash());
+
+					jdbcTemplate.update(
+							"UPDATE " + tableName + " SET " + columnsForUpdating + " WHERE ophash = ? ", args);
+				});
+			}
+
 			LOGGER.info(String.format("Migrate %d objects of type '%s'.", update, type));
 		}
 	}
@@ -277,6 +317,15 @@ public class DBSchemaManager {
 				for(String type : tps.values()) {
 					typeToTables.put(type, tableName);
 					ott.types.add(type);
+				}
+			}
+
+			LinkedHashMap<String, LinkedHashMap<String, String>> cii = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(tableName).get("columns");
+			if (cii != null) {
+				for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
+					LinkedHashMap<String, String> arrayColumns = entry.getValue();
+
+					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), false);
 				}
 			}
 		}
@@ -361,8 +410,9 @@ public class DBSchemaManager {
 		if (pkey.size() > ksize) {
 			throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
 		}
-		
-		Object[] args = new Object[6 + ksize];
+
+		List<CustomIndex> customIndexList = generateCustomColumnsForTable(table);
+		Object[] args = new Object[6 + ksize + customIndexList.size()];
 		args[0] = type;
 		String ophash = obj.getParentHash();
 		args[1] = SecUtils.getHashBytes(ophash);
@@ -378,12 +428,164 @@ public class DBSchemaManager {
 			throw new IllegalArgumentException(es);
 		}
 		args[5] = contentObj;
-		pkey.toArray(args, 6);
-		
+		AtomicInteger i = new AtomicInteger(6);
+
+		String columns = generateColumnNames(customIndexList);
+		AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
+		customIndexList.forEach(customIndex -> {
+			args[i.get()] = getColumnValue(customIndex, obj);
+			amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,");
+			i.getAndIncrement();
+		});
+
+		pkey.toArray(args, i.get());
 
 		jdbcTemplate.update("INSERT INTO " + table
-				+ "(type,ophash,superblock,sblockid,sorder,content," + generatePKString(table, "p%1$d", ",")+") "
-				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);		
+				+ "(type,ophash,superblock,sblockid,sorder,content," + columns + generatePKString(table, "p%1$d", ",") + ") "
+				+ " values(?,?,?,?,?,?," + amountValuesForCustomColumns + generatePKString(table, "?", ",")+ ")", args);
+	}
+
+	private Object getColumnValue(CustomIndex customIndex, OpObject obj) {
+		switch (customIndex.getType()) {
+			case "jsonb" : {
+				try {
+					PGobject content = new PGobject();
+					content.setType(customIndex.getType());
+					content.setValue(formatter.fullObjectToJson(obj.getObjectValue(customIndex.getField())));
+					return content;
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "text" : {
+				try {
+					return obj.getStringValue(customIndex.getField());
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "bytea" : {
+				try {
+					return SecUtils.getHashBytes(obj.getStringValue(customIndex.getField()));
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "integer" : {
+				try {
+					return obj.getIntValue(customIndex.getField(), 0);
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "bigint" : {
+				try {
+					return obj.getLongValue(customIndex.getField(), 0);
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			default: {
+				return null;
+			}
+		}
+	}
+
+	public static class CustomIndex {
+		private String column;
+		private String field;
+		private String type;
+		private String hash;
+		private String content;
+
+		private CustomIndex () {
+
+		}
+
+		public static CustomIndex of(String column, String field, String type) {
+			CustomIndex customIndex = new CustomIndex();
+			customIndex.column = column;
+			customIndex.field = field;
+			customIndex.type = type;
+
+			return customIndex;
+		}
+
+		public static CustomIndex of(String ophash, String content) {
+			CustomIndex customIndex = new CustomIndex();
+			customIndex.hash = ophash;
+			customIndex.content = content;
+
+			return customIndex;
+		}
+
+		public String getHash() {
+			return hash;
+		}
+
+		public void setHash(String hash) {
+			this.hash = hash;
+		}
+
+		public String getContent() {
+			return content;
+		}
+
+		public void setContent(String content) {
+			this.content = content;
+		}
+
+		public String getColumn() {
+			return column;
+		}
+
+		public void setColumn(String column) {
+			this.column = column;
+		}
+
+		public String getField() {
+			return field;
+		}
+
+		public void setField(String field) {
+			this.field = field;
+		}
+
+		public String getType() {
+			return type;
+		}
+
+		public void setType(String type) {
+			this.type = type;
+		}
+	}
+
+	private List<CustomIndex> generateCustomColumnsForTable(String table) {
+		List<CustomIndex> columns = new ArrayList<>();
+
+		if (table.equals(OBJS_TABLE)) {
+			return columns;
+		}
+
+		LinkedHashMap<String, LinkedHashMap<String, String>> cii = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(table).get("columns");
+		if (cii != null) {
+			for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
+				LinkedHashMap<String, String> arrayColumns = entry.getValue();
+
+				columns.add(CustomIndex.of(arrayColumns.get("name"), arrayColumns.get("field"), arrayColumns.get("type")));
+			}
+		}
+
+		return columns;
+	}
+
+	private String generateColumnNames(List<CustomIndex> columns) {
+		AtomicReference<String> customColumns = new AtomicReference<>("");
+		columns.forEach(column -> {
+			customColumns.set(customColumns.get() + column.getColumn() + ", ");
+		});
+
+		return customColumns.get();
 	}
 	
 	

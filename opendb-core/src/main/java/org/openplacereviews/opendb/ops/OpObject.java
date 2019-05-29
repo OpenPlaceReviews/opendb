@@ -192,6 +192,10 @@ public class OpObject {
 		}
 		return (List<String>) o;
 	}
+
+	public Object getObjectValue(String field) {
+		return fields.get(field);
+	}
 	
 	public void putStringValue(String key, String value) {
 		checkNotImmutable();
