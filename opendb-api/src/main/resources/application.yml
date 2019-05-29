@@ -32,7 +32,7 @@ opendb:
     url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/}
   db:
     compactCoefficient: ${OPENDB_DB_CF:1.0}
-    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:1}
+    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
   db-schema:
     objtables:
       obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
