@@ -23,6 +23,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.*;
+
+
 @Service
 @ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
 public class DBSchemaManager {
@@ -63,14 +66,18 @@ public class DBSchemaManager {
 	}
 	
 	// SCHEMA DEFINITION
+	public enum IndexType {
+		NOT_INDEXED, INDEXED, GIN, GIST
+	}
 	private static class ColumnDef {
 		String tableName;
 		String colName;
 		String colType;
-		boolean index;
+		IndexType index;
+		String indexedField;
 	}
 
-	private static void registerColumn(String tableName, String colName, String colType, boolean index) {
+	private static void registerColumn(String tableName, String colName, String colType, IndexType indexType) {
 		List<ColumnDef> lst = schema.get(tableName);
 		if (lst == null) {
 			lst = new ArrayList<ColumnDef>();
@@ -80,66 +87,88 @@ public class DBSchemaManager {
 		cd.tableName = tableName;
 		cd.colName = colName;
 		cd.colType = colType;
-		cd.index = index;
+		cd.index = indexType;
+		lst.add(cd);
+	}
+
+	private static void registerColumn(String tableName, String colName, String colType, List<CustomIndexDto> customIndices, IndexType basicIndexType) {
+		List<ColumnDef> lst = schema.get(tableName);
+		if (lst == null) {
+			lst = new ArrayList<ColumnDef>();
+			schema.put(tableName, lst);
+		}
+		ColumnDef cd = new ColumnDef();
+		cd.tableName = tableName;
+		cd.colName = colName;
+		cd.colType = colType;
+		cd.index = basicIndexType;
+
+		if (customIndices != null) {
+			CustomIndexDto indexInfo = getIndexInfoByColumnName(colName, customIndices);
+			if (indexInfo != null) {
+				cd.index = getIndexTypeByNameColumn(indexInfo, basicIndexType);
+				cd.indexedField = indexInfo.field;
+			}
+		}
 		lst.add(cd);
 	}
 
 	static {
-		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", true);
-		registerColumn(SETTINGS_TABLE, "value", "text", false);
-		registerColumn(SETTINGS_TABLE, "content", "jsonb", false);
+		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", INDEXED);
+		registerColumn(SETTINGS_TABLE, "value", "text", NOT_INDEXED);
+		registerColumn(SETTINGS_TABLE, "content", "jsonb", NOT_INDEXED);
 		
-		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(BLOCKS_TABLE, "phash", "bytea", false);
-		registerColumn(BLOCKS_TABLE, "blockid", "int", true);
-		registerColumn(BLOCKS_TABLE, "superblock", "bytea", true);
-		registerColumn(BLOCKS_TABLE, "header", "jsonb", false);
-		registerColumn(BLOCKS_TABLE, "content", "jsonb", false);
+		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(BLOCKS_TABLE, "phash", "bytea", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "blockid", "int", INDEXED);
+		registerColumn(BLOCKS_TABLE, "superblock", "bytea", INDEXED);
+		registerColumn(BLOCKS_TABLE, "header", "jsonb", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", false);
-		registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", true);
-		registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", false);
-		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", false);
+		registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", NOT_INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
-		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", true);
-		registerColumn(OPERATIONS_TABLE, "sblockid", "int", true);
-		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
-		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
-		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
+		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", NOT_INDEXED);
+		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "sblockid", "int", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "sorder", "int", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", NOT_INDEXED);
+		registerColumn(OPERATIONS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", true);
-		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", true);
-		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", false);
-		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", false);
+		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OP_DELETED_TABLE, "hash", "bytea", true);
-		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", true);
-		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
-		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
+		registerColumn(OP_DELETED_TABLE, "hash", "bytea", INDEXED);
+		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", INDEXED);
+		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", NOT_INDEXED);
+		registerColumn(OP_DELETED_TABLE, "mask", "bigint", NOT_INDEXED);
 
-		registerColumn(IMAGE_TABLE, "hash", "text PRIMARY KEY", true);
-		registerColumn(IMAGE_TABLE, "extension", "text", false);
-		registerColumn(IMAGE_TABLE, "cid", "text", false);
-		registerColumn(IMAGE_TABLE, "active", "bool", false);
-		registerColumn(IMAGE_TABLE, "added", "timestamp", false);
+		registerColumn(IMAGE_TABLE, "hash", "text PRIMARY KEY", INDEXED);
+		registerColumn(IMAGE_TABLE, "extension", "text", NOT_INDEXED);
+		registerColumn(IMAGE_TABLE, "cid", "text", NOT_INDEXED);
+		registerColumn(IMAGE_TABLE, "active", "bool", NOT_INDEXED);
+		registerColumn(IMAGE_TABLE, "added", "timestamp", NOT_INDEXED);
 
-		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
+		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE, null);
 
 	}
 
-	private static void registerObjTable(String tbName, int maxKeySize) {
-		registerColumn(tbName, "type", "text", true);
+	private static void registerObjTable(String tbName, int maxKeySize, List<CustomIndexDto> customIndexDtoList) {
+		registerColumn(tbName, "type", "text", customIndexDtoList, INDEXED);
 		for (int i = 1; i <= maxKeySize; i++) {
-			registerColumn(tbName, "p" + i, "text", true);
+			registerColumn(tbName, "p" + i, "text", customIndexDtoList, INDEXED);
 		}
-		registerColumn(tbName, "ophash", "bytea", true);
-		registerColumn(tbName, "superblock", "bytea", true);
-		registerColumn(tbName, "sblockid", "int", true);
-		registerColumn(tbName, "sorder", "int", true);
-		registerColumn(tbName, "content", "jsonb", false);
+		registerColumn(tbName, "ophash", "bytea", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "superblock", "bytea", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "sblockid", "int", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "sorder", "int", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "content", "jsonb", customIndexDtoList, NOT_INDEXED);
 	}
 
 	public TreeMap<String, Map<String, Object>> getObjtables() {
@@ -257,10 +286,10 @@ public class DBSchemaManager {
 				pks += ", p" +i; 
 			}
 
-			List<CustomIndex> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
-				List<CustomIndex> indexList = new ArrayList<>();
+			List<CustomIndexDto> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
+				List<CustomIndexDto> indexList = new ArrayList<>();
 				while (rs.next()) {
-					indexList.add(CustomIndex.of(rs.getString(1), rs.getString(2)));
+					indexList.add(CustomIndexDto.of(rs.getString(1), rs.getString(2)));
 				}
 				return indexList;
 			}, type);
@@ -270,28 +299,28 @@ public class DBSchemaManager {
 					"INSERT INTO " + tableName + "(type, ophash, superblock, sblockid, sorder, content " + pks + ") " +
 					"SELECT type, ophash, superblock, sblockid, sorder, content" + pks + " FROM moved_rows", type);
 
-			List<CustomIndex> customIndexList = generateCustomColumnsForTable(tableName);
+			List<CustomIndexDto> customIndexDtoList = generateCustomColumnsForTable(tableName);
 
 			StringBuilder columnsForUpdating = new StringBuilder();
-			for (CustomIndex c : customIndexList) {
+			for (CustomIndexDto c : customIndexDtoList) {
 				if (columnsForUpdating.length() == 0) {
-					columnsForUpdating.append(c.getColumn()).append(" = ?");
+					columnsForUpdating.append(c.column).append(" = ?");
 				} else {
-					columnsForUpdating.append(",").append(c.getColumn()).append(" = ?");
+					columnsForUpdating.append(",").append(c.column).append(" = ?");
 				}
 			}
 
 			if (valuesForUpdating != null) {
-				valuesForUpdating.forEach(customIndex -> {
-					OpObject opObject = formatter.parseObject(customIndex.getContent());
-					Object[] args = new Object[customIndexList.size() + 1];
+				valuesForUpdating.forEach(customIndexDto -> {
+					OpObject opObject = formatter.parseObject(customIndexDto.content);
+					Object[] args = new Object[customIndexDtoList.size() + 1];
 					AtomicInteger i = new AtomicInteger();
 
-					customIndexList.forEach(indexField -> {
+					customIndexDtoList.forEach(indexField -> {
 						args[i.get()] = getColumnValue(indexField, opObject);
 						i.getAndIncrement();
 					});
-					args[i.get()] = SecUtils.getHashBytes(customIndex.getHash());
+					args[i.get()] = SecUtils.getHashBytes(customIndexDto.hash);
 
 					jdbcTemplate.update(
 							"UPDATE " + tableName + " SET " + columnsForUpdating + " WHERE ophash = ? ", args);
@@ -309,9 +338,21 @@ public class DBSchemaManager {
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
+
+			List<CustomIndexDto> indices = null;
+			LinkedHashMap<String, LinkedHashMap<String, String>> indexMap = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(tableName).get("indices");
+			if (indexMap != null) {
+				indices = new ArrayList<>();
+				for (Map.Entry<String, LinkedHashMap<String, String>> entry : indexMap.entrySet()) {
+					LinkedHashMap<String, String> index = entry.getValue();
+
+					indices.add(CustomIndexDto.of(index.get("column"), index.get("field"), index.get("type")));
+				}
+			}
+
 			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
 			objTableDefs.put(tableName, ott);
-			registerObjTable(tableName, i);
+			registerObjTable(tableName, i, indices);
 			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
 			if(tps != null) {
 				for(String type : tps.values()) {
@@ -325,11 +366,35 @@ public class DBSchemaManager {
 				for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
 					LinkedHashMap<String, String> arrayColumns = entry.getValue();
 
-					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), false);
+					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), indices, NOT_INDEXED);
 				}
 			}
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
+	}
+
+	private static CustomIndexDto getIndexInfoByColumnName(String columnName, List<CustomIndexDto> customIndexDtoList) {
+		for (CustomIndexDto indexInfo : customIndexDtoList) {
+			if (indexInfo.column.equals(columnName)) {
+				return indexInfo;
+			}
+		}
+		return null;
+	}
+
+	private static IndexType getIndexTypeByNameColumn(CustomIndexDto customIndexDTO, IndexType basicIndexType) {
+		IndexType indexType = basicIndexType;
+		switch (customIndexDTO.type) {
+			case "GIN": {
+				indexType = GIN;
+				break;
+			}
+			case "GIST": {
+				indexType = GIST;
+				break;
+			}
+		}
+		return indexType;
 	}
 
 	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
@@ -342,9 +407,8 @@ public class DBSchemaManager {
 					clb.append(", ");
 				}
 				clb.append(c.colName).append(" ").append(c.colType);
-				if (c.index) {
-					indx.add(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-							c.tableName, c.colName));
+				if(c.index != NOT_INDEXED) {
+					indx.add(generateIndexQuery(c));
 				}
 			}
 			String createTable = String.format("create table %s (%s)", tableName, clb.toString());
@@ -367,6 +431,26 @@ public class DBSchemaManager {
 				}
 			}
 		}
+	}
+
+	private String generateIndexQuery(ColumnDef c) {
+		if (c.index.equals(INDEXED)) {
+			return String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
+					c.tableName, c.colName);
+		} else if (c.index.equals(GIN)) {
+			if (c.indexedField == null || c.indexedField.isEmpty()) {
+				return String.format("create index %s_%s_gin_ind on %s using gin (to_tsvector('english', %s));\n", c.tableName, c.colName,
+						c.tableName, c.colName);
+			} else  {
+				return String.format("create index %s_%s_gin_ind on %s using gin ((%s->'%s'));\n", c.tableName, c.colName,
+						c.tableName, c.colName, c.indexedField);
+			}
+		} else if (c.index.equals(GIST)) {
+			//TODO implement
+			return "";
+		}
+
+		return null;
 	}
 
 	private boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
@@ -411,8 +495,8 @@ public class DBSchemaManager {
 			throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
 		}
 
-		List<CustomIndex> customIndexList = generateCustomColumnsForTable(table);
-		Object[] args = new Object[6 + ksize + customIndexList.size()];
+		List<CustomIndexDto> customIndexDtoList = generateCustomColumnsForTable(table);
+		Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
 		args[0] = type;
 		String ophash = obj.getParentHash();
 		args[1] = SecUtils.getHashBytes(ophash);
@@ -430,10 +514,10 @@ public class DBSchemaManager {
 		args[5] = contentObj;
 		AtomicInteger i = new AtomicInteger(6);
 
-		String columns = generateColumnNames(customIndexList);
+		String columns = generateColumnNames(customIndexDtoList);
 		AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
-		customIndexList.forEach(customIndex -> {
-			args[i.get()] = getColumnValue(customIndex, obj);
+		customIndexDtoList.forEach(customIndexDto -> {
+			args[i.get()] = getColumnValue(customIndexDto, obj);
 			amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,");
 			i.getAndIncrement();
 		});
@@ -445,13 +529,13 @@ public class DBSchemaManager {
 				+ " values(?,?,?,?,?,?," + amountValuesForCustomColumns + generatePKString(table, "?", ",")+ ")", args);
 	}
 
-	private Object getColumnValue(CustomIndex customIndex, OpObject obj) {
-		switch (customIndex.getType()) {
+	private Object getColumnValue(CustomIndexDto customIndexDTO, OpObject obj) {
+		switch (customIndexDTO.field) {
 			case "jsonb" : {
 				try {
 					PGobject content = new PGobject();
-					content.setType(customIndex.getType());
-					content.setValue(formatter.fullObjectToJson(obj.getObjectValue(customIndex.getField())));
+					content.setType(customIndexDTO.field);
+					content.setValue(formatter.fullObjectToJson(obj.getObjectValue(customIndexDTO.field)));
 					return content;
 				} catch (Exception e) {
 					return null;
@@ -459,28 +543,28 @@ public class DBSchemaManager {
 			}
 			case "text" : {
 				try {
-					return obj.getStringValue(customIndex.getField());
+					return obj.getStringValue(customIndexDTO.field);
 				} catch (Exception e) {
 					return null;
 				}
 			}
 			case "bytea" : {
 				try {
-					return SecUtils.getHashBytes(obj.getStringValue(customIndex.getField()));
+					return SecUtils.getHashBytes(obj.getStringValue(customIndexDTO.field));
 				} catch (Exception e) {
 					return null;
 				}
 			}
 			case "integer" : {
 				try {
-					return obj.getIntValue(customIndex.getField(), 0);
+					return obj.getIntValue(customIndexDTO.field, 0);
 				} catch (Exception e) {
 					return null;
 				}
 			}
 			case "bigint" : {
 				try {
-					return obj.getLongValue(customIndex.getField(), 0);
+					return obj.getLongValue(customIndexDTO.field, 0);
 				} catch (Exception e) {
 					return null;
 				}
@@ -491,77 +575,37 @@ public class DBSchemaManager {
 		}
 	}
 
-	public static class CustomIndex {
+	public static class CustomIndexDto {
 		private String column;
 		private String field;
 		private String type;
 		private String hash;
 		private String content;
 
-		private CustomIndex () {
+		private CustomIndexDto() {
 
 		}
 
-		public static CustomIndex of(String column, String field, String type) {
-			CustomIndex customIndex = new CustomIndex();
-			customIndex.column = column;
-			customIndex.field = field;
-			customIndex.type = type;
+		public static CustomIndexDto of(String column, String field, String type) {
+			CustomIndexDto customIndexDTO = new CustomIndexDto();
+			customIndexDTO.column = column;
+			customIndexDTO.field = field;
+			customIndexDTO.type = type;
 
-			return customIndex;
+			return customIndexDTO;
 		}
 
-		public static CustomIndex of(String ophash, String content) {
-			CustomIndex customIndex = new CustomIndex();
-			customIndex.hash = ophash;
-			customIndex.content = content;
+		public static CustomIndexDto of(String ophash, String content) {
+			CustomIndexDto customIndexDTO = new CustomIndexDto();
+			customIndexDTO.hash = ophash;
+			customIndexDTO.content = content;
 
-			return customIndex;
-		}
-
-		public String getHash() {
-			return hash;
-		}
-
-		public void setHash(String hash) {
-			this.hash = hash;
-		}
-
-		public String getContent() {
-			return content;
-		}
-
-		public void setContent(String content) {
-			this.content = content;
-		}
-
-		public String getColumn() {
-			return column;
-		}
-
-		public void setColumn(String column) {
-			this.column = column;
-		}
-
-		public String getField() {
-			return field;
-		}
-
-		public void setField(String field) {
-			this.field = field;
-		}
-
-		public String getType() {
-			return type;
-		}
-
-		public void setType(String type) {
-			this.type = type;
+			return customIndexDTO;
 		}
 	}
 
-	private List<CustomIndex> generateCustomColumnsForTable(String table) {
-		List<CustomIndex> columns = new ArrayList<>();
+	private List<CustomIndexDto> generateCustomColumnsForTable(String table) {
+		List<CustomIndexDto> columns = new ArrayList<>();
 
 		if (table.equals(OBJS_TABLE)) {
 			return columns;
@@ -572,17 +616,17 @@ public class DBSchemaManager {
 			for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
 				LinkedHashMap<String, String> arrayColumns = entry.getValue();
 
-				columns.add(CustomIndex.of(arrayColumns.get("name"), arrayColumns.get("field"), arrayColumns.get("type")));
+				columns.add(CustomIndexDto.of(arrayColumns.get("name"), arrayColumns.get("field"), arrayColumns.get("type")));
 			}
 		}
 
 		return columns;
 	}
 
-	private String generateColumnNames(List<CustomIndex> columns) {
+	private String generateColumnNames(List<CustomIndexDto> columns) {
 		AtomicReference<String> customColumns = new AtomicReference<>("");
 		columns.forEach(column -> {
-			customColumns.set(customColumns.get() + column.getColumn() + ", ");
+			customColumns.set(customColumns.get() + column.column + ", ");
 		});
 
 		return customColumns.get();
@@ -608,7 +652,7 @@ public class DBSchemaManager {
 					clb.append(", ");
 				}
 				clb.append(c.colName).append(" ").append(c.colType);
-				if (c.index) {
+				if (c.index.equals(INDEXED)) {
 					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
 							c.tableName, c.colName));
 				}
