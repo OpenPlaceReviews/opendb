@@ -213,7 +213,7 @@ public class DBConsensusManager {
 					+ "  FULL OUTER JOIN " 
 					+ " (select * from " + objTable +" where superblock = ? ) r2 "
 					+ " ON r1.type = r2.type and " + dbSchema.generatePKString(objTable, "r1.p%1$d is not distinct from r2.p%1$d", " and ");
-				jdbcTemplate.update(queryIns, sbHashNew, sbHashCurrent, sbHashParent);
+				jdbcTemplate.update(queryIns, sbHashNew, sbHashCurrent, sbHashParent);	
 				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashParent);
 				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashCurrent);
 			}
@@ -221,7 +221,7 @@ public class DBConsensusManager {
 			res = new OpBlockChain(blc.getParent().getParent(), 
 					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
 			jdbcTemplate.execute("COMMIT");
-			txRollback = true;
+			txRollback = false;
 		} finally {
 			if (txRollback) {
 				try {
