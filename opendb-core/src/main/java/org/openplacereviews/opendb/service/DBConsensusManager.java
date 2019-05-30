@@ -205,17 +205,8 @@ public class DBConsensusManager {
 			jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashCurrent);
 			
 			for(String objTable : dbSchema.getObjectTables()) {
-				String queryIns = "INSERT INTO " + objTable + "(type, "+ dbSchema.generatePKString(objTable, "p%1$d", ", ") + ", ophash, superblock, sblockid, sorder, content) "
-					+ " SELECT coalesce(r1.type, r2.type), " + dbSchema.generatePKString(objTable, "coalesce(r1.p%1$d, r2.p%1$d)", ", ") + ", " 
-					+ "     coalesce(r1.ophash, r2.ophash), ?, coalesce(r1.sblockid, r2.sblockid), coalesce(r1.sorder, r2.sorder), coalesce(r1.content, r2.content) " 
-					+ " FROM "
-					+ " (select * from " + objTable +" where superblock = ? ) r1 "
-					+ "  FULL OUTER JOIN " 
-					+ " (select * from " + objTable +" where superblock = ? ) r2 "
-					+ " ON r1.type = r2.type and " + dbSchema.generatePKString(objTable, "r1.p%1$d is not distinct from r2.p%1$d", " and ");
-				jdbcTemplate.update(queryIns, sbHashNew, sbHashCurrent, sbHashParent);	
-				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashParent);
-				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashCurrent);
+				jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+				jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashParent);
 			}
 
 			res = new OpBlockChain(blc.getParent().getParent(), 
@@ -283,8 +274,9 @@ public class DBConsensusManager {
 					throw new UnsupportedOperationException();
 				}
 				String s = "select content, type, ophash from " + table +  
-							" where superblock = ? and type = ? and " +
-						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz);
+						   " where superblock = ? and type = ? and " +
+						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) + 
+						   " order by blockid desc";
 				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
 
 					@Override
@@ -320,8 +312,9 @@ public class DBConsensusManager {
 				
 				String objTable = dbSchema.getTableByType(type);
 				final int keySize = dbSchema.getKeySizeByType(type);
+				// blockid asc cause it is possible to have dduplciates and they should be retrieved last
 				String sql = "select content, type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
-						+ "  from " + objTable + " where superblock = ? and type = ? ";
+						+ "  from " + objTable + " where superblock = ? and type = ? order by blockid asc ";
 				if(limit > 0) {
 					sql = sql + " limit " + limit;
 				}
@@ -371,7 +364,6 @@ public class DBConsensusManager {
 						if(ls != null) {
 							od.deletedOpHashes = new ArrayList<String>();
 							for(int k = 0; k < ls.length; k++) {
-								System.out.println("TODO VALIDATION hash dex format !!! : " + ls[k].getValue());
 								od.deletedOpHashes.add(ls[k].getValue());
 							}
 						}
