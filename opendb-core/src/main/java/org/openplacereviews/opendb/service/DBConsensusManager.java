@@ -850,10 +850,10 @@ public class DBConsensusManager {
 		return blc;
 	}
 
-	public ResourceDTO storeImageObject(ResourceDTO imageDTO) throws IOException {
+	public ResourceDTO storeResourceObject(ResourceDTO imageDTO) throws IOException {
 		imageDTO.setHash(SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, imageDTO.getMultipartFile().getBytes()));
 
-		if (imageObjectIsExist(imageDTO) == null) {
+		if (getResourceObjectIfExists(imageDTO) == null) {
 			imageDTO.setAdded(new Date());
 			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
 					imageDTO.getHash(), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
@@ -862,23 +862,8 @@ public class DBConsensusManager {
 		return imageDTO;
 	}
 
-	public ResourceDTO imageObjectIsExist(ResourceDTO imageDTO) {
-		return jdbcTemplate.query("SELECT added, active FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
-
-			@Override
-			public ResourceDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
-				if (rs.next()) {
-					imageDTO.setAdded(rs.getTimestamp(1));
-					imageDTO.setActive(rs.getBoolean(2));
-					return imageDTO;
-				}
-				return null;
-			}
-		}, imageDTO.getHash());
-	}
-
-	public ResourceDTO loadResourceObjectIfExist(String cid) {
-		return jdbcTemplate.query("SELECT hash, extension, cid, active, added FROM " + EXT_RESOURCE_TABLE + " WHERE cid = ?", new ResultSetExtractor<ResourceDTO>() {
+	public ResourceDTO getResourceObjectIfExists(ResourceDTO imageDTO) {
+		return jdbcTemplate.query("SELECT hash, extension, cid, active, added FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
 
 			@Override
 			public ResourceDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -893,15 +878,11 @@ public class DBConsensusManager {
 				}
 				return null;
 			}
-		}, cid);
+		}, imageDTO.getHash());
 	}
 
-	public void removeUnusedImageObject(int secondsOfStoring) {
-		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE active = false AND added < ?", DateUtils.addDays(new Date(), -secondsOfStoring));
-	}
-
-	public void removeImageObjectFromDB(ResourceDTO imageDTO) {
-		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", imageDTO.getHash());
+	public void removeUnusedImageObject(int secondsToKeepUnusedObjects) {
+		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE active = false AND added < ?", DateUtils.addDays(new Date(), -secondsToKeepUnusedObjects));
 	}
 
 	public List<ResourceDTO> loadUnusedImageObject(int secondsToKeepUnusedObjects) {
@@ -916,29 +897,20 @@ public class DBConsensusManager {
 					imageDTO.setExtension(rs.getString(3));
 					activeImageObjects.add(imageDTO);
 				}
-
 				return activeImageObjects;
 			}
 		}, DateUtils.addSeconds(new Date(), -secondsToKeepUnusedObjects));
+	}
+	
+
+	public void removeResObjectFromDB(ResourceDTO resDTO) {
+		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", resDTO.getHash());
 	}
 
 	public void updateImageActiveStatus(ResourceDTO imageDTO, boolean status) {
 		jdbcTemplate.update("UPDATE " + EXT_RESOURCE_TABLE + " SET active = ? WHERE hash = ?", status, imageDTO.getHash());
 	}
 
-	public List<String> loadImageObjectsByActiveStatus(Boolean active) {
-		return jdbcTemplate.query("SELECT cid FROM " + EXT_RESOURCE_TABLE + " WHERE active = ?", new ResultSetExtractor<List<String>>() {
-			@Override
-			public List<String> extractData(ResultSet rs) throws SQLException, DataAccessException {
-				List<String> activeImageObjects = new LinkedList<>();
-				while (rs.next()) {
-					activeImageObjects.add(rs.getString(1));
-				}
-
-				return activeImageObjects;
-			}
-		}, active);
-	}
 	
 	public boolean validateExistingOperation(OpOperation op) {
 		String js = formatter.opToJson(op);

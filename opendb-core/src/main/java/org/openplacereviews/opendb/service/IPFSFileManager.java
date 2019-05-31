@@ -5,6 +5,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.dto.IpfsStatusDTO;
 import org.openplacereviews.opendb.dto.ResourceDTO;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
@@ -17,11 +18,13 @@ import net.jodah.failsafe.FailsafeException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,6 +33,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class IPFSFileManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(IPFSFileManager.class);
+
+	private static final int SPLIT_FOLDERS_DEPTH = 3;
+	private static final int FOLDER_LENGTH = 4;
 
 	@Value("${opendb.storage.local-storage:}")
 	private String directory;
@@ -68,84 +74,28 @@ public class IPFSFileManager {
 	}
 	
 	public ResourceDTO addFile(ResourceDTO resourceDTO) throws IOException {
+		// TODO calculate Hash of local file (sha256? or md5?)
+		resourceDTO.calculateHash();
 		if(ipfsService.isRunning()) {
 			resourceDTO.setCid(ipfsService.writeContent(resourceDTO.getMultipartFile().getBytes()));
 		}
-		FileUtils.writeByteArrayToFile(getFile(resourceDTO), resourceDTO.getMultipartFile().getBytes());
-		dbManager.storeImageObject(resourceDTO);
+		File f = getFileByHash(resourceDTO.getHash(), resourceDTO.getExtension());
+		f.getParentFile().mkdirs();
+		FileUtils.writeByteArrayToFile(f, resourceDTO.getMultipartFile().getBytes());
+		dbManager.storeResourceObject(resourceDTO);
 		return resourceDTO;
 	}
 
-	private void removeImageObject(ResourceDTO imageDTO) {
-		dbManager.removeImageObjectFromDB(imageDTO);
-		File file = getFile(imageDTO);
-		if (file.delete()) {
-			LOGGER.info(String.format("File %s is deleted", file.getName()));
-		} else {
-			LOGGER.error(String.format("Deleteing %s has failed", file.getAbsolutePath()));
-		}
-	}
 
-	private OutputStream read(String cid) {
-		try {
-			return read(cid, new ByteArrayOutputStream());
-		} catch (FailsafeException e) {
-			ResourceDTO resourceDTO = dbManager.loadResourceObjectIfExist(cid);
-			if (resourceDTO == null) {
-				throw new TechnicalException(e.getMessage(), e);
-			}
-
-			try {
-				Path filepath = ipfsFileManager.getFileByCid(resourceDTO.getCid(), resourceDTO.getExtension());
-				String returnedCid = write(Files.readAllBytes(filepath));
-				assert returnedCid.equals(cid);
-			} catch (Exception e1) {
-				throw new TechnicalException("Execution exception while adding new file to IPFS [id: " + cid + "]", e1);
-			}
-
-			return read(cid, new ByteArrayOutputStream());
-		}
+	public File getFileByHash(String hash, String extension) {
+		// TODO optionally if extension = null, scan folder to find proper extension
+		return getFileByHashImpl(hash, extension);
 	}
 	
-	private void getImageObject(Map map, List<ResourceDTO> array) {
-		if (map.containsKey(F_TYPE) && map.get(F_TYPE).equals("#image")) {
-			array.add(ResourceDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
-		} else {
-			map.keySet().forEach(key -> {
-				if (map.get(key) instanceof Map) {
-					getImageObject( (Map) map.get(key), array);
-				}
-				if (map.get(key) instanceof List) {
-					if (!(((List) map.get(key)).isEmpty()) && !(((List) map.get(key)).get(0).getClass().equals(String.class))) {
-						getImageObject( (List<Map>)map.get(key), array);
-					}
-				}
-			});
-		}
-	}
 
-	private void getImageObject(List<Map> list, List<ResourceDTO> array) {
-		for (Map map : list) {
-			map.keySet().forEach(key -> {
-				if (key.equals(F_TYPE) && map.get(key).equals("#image")) {
-					array.add(ResourceDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
-				} else {
-					if (map.get(key) instanceof Map) {
-						getImageObject( (Map) map.get(key), array);
-					}
-					if (map.get(key) instanceof List) {
-						if (map.get(key).getClass().equals(Map.class)) {
-							getImageObject((List<Map>) map.get(key), array);
-						}
-					}
-				}
-			});
-		}
-	}
-	
 
 	public IpfsStatusDTO checkingMissingImagesInIPFS() {
-		List<String> pinnedImagesOnIPFS = getTrackedResources();
+		List<String> pinnedImagesOnIPFS = ipfsService.getPinnedResources();
 		List<String> activeObjects = dbManager.loadImageObjectsByActiveStatus(true);
 
 		AtomicBoolean status = new AtomicBoolean(true);
@@ -159,7 +109,7 @@ public class IPFSFileManager {
 	}
 
 	public IpfsStatusDTO uploadMissingResourcesToIPFS() {
-		List<String> pinnedImagesOnIPFS = getTrackedResources();
+		List<String> pinnedImagesOnIPFS = ipfsService.getTrackedResources();
 		List<String> activeObjects = dbManager.loadImageObjectsByActiveStatus(true);
 
 		LOGGER.debug("Start pinning missing images");
@@ -182,87 +132,97 @@ public class IPFSFileManager {
 		return checkingMissingImagesInIPFS();
 	}
 
+
+	public IpfsStatusDTO removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
+		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
+		notActiveImageObjects.parallelStream().forEach(res -> {
+			removeImageObject(res);
+		});
+		ipfsService.clearNotPinnedImagesFromIPFSLocalStorage();
+		return statusImagesInDB();
+	}
+	
+	private void removeImageObject(ResourceDTO resourceDTO) {
+		ipfsService.unpin(resourceDTO.getCid());
+		dbManager.removeResObjectFromDB(resourceDTO);
+		File file = getFileByHash(resourceDTO.getHash(), resourceDTO.getExtension());
+		if (file.delete()) {
+			LOGGER.info(String.format("File %s is deleted", file.getName()));
+		} else {
+			LOGGER.error(String.format("Deleteing %s has failed", file.getAbsolutePath()));
+		}
+	}
+
 	public IpfsStatusDTO statusImagesInDB() {
 		// TODO display count active objects, pending objects (objects to gc)
 		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
 		return IpfsStatusDTO.getMissingImageStatus(String.valueOf(notActiveImageObjects.size()), notActiveImageObjects.size() == 0 ? "OK" : "Images can be removed");
 	}
-
-	public IpfsStatusDTO removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
-		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
-
-		notActiveImageObjects.parallelStream().forEach(image -> {
-			this.unpin(image.getCid());
-			removeImageObject(image);
-		});
-
-		dbManager.removeUnusedImageObject(timeToStoreUnusedObjectsSeconds);
-
-		clearNotPinnedImagesFromIPFSLocalStorage();
-
-		return statusImagesInDB();
-	}
-
-
 	
 	public void processOperations(List<OpOperation> candidates) {
+		// TODO mark operation hash where image was used and store in db !
+		List<ResourceDTO> array = new ArrayList<ResourceDTO>();
 		candidates.forEach(operation -> {
-			if (!operation.getImages().isEmpty()) {
-				operation.getImages().forEach(imageDTO -> {
-					dbConsensusManager.updateImageActiveStatus(imageDTO, true);
-					pin
-					getReplicaSet().forEach(cluster -> {
-						try {
-							cluster.pin(imageDTO.getCid());
-						} catch (UnirestException e) {
-							LOGGER.error(e.getMessage(), e);
-						}
-					});
+			List<OpObject> nw = operation.getNew();
+			for(OpObject o : nw) {
+				array.clear();
+				getImageObject(o.getRawOtherFields(), array);
+				array.forEach ( resDTO -> {
+					resDTO.setOpHash(operation.getRawHash());
+					dbManager.updateImageActiveStatus(resDTO, true);
+					ipfsService.pin(resDTO.getCid());
 				});
 			}
 		});		
 	}
-
-	public Path getFileByCid(String cid, String extension) throws FileNotFoundException {
-		String filePath = getRootDirectoryPath() + generateFileName(cid, extension);
-
-		if (Files.exists(Paths.get(filePath))) {
-			return Paths.get(filePath);
+	
+	@SuppressWarnings("unchecked")
+	private void getImageObjectFromList(List<?> l, List<ResourceDTO> array) {
+		for(Object o : l ) {
+			if(o instanceof Map) {
+				getImageObject((Map<String, ?>) o, array);
+			}
+			if(o instanceof List) {
+				getImageObjectFromList((List<?>) o, array);
+			}
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void getImageObject(Map<String, ?> map, List<ResourceDTO> array) {
+		if (map.containsKey(OpOperation.F_TYPE) && map.get(OpOperation.F_TYPE).equals("#image")) {
+			array.add(ResourceDTO.of(map.get("hash").toString(), map.get("extension").toString(), map.get("cid").toString()));
 		} else {
-			throw new FileNotFoundException();
+			map.entrySet().forEach(e -> {
+				if (e.getValue() instanceof Map) {
+					getImageObject( (Map<String, ?>) e.getValue(), array);
+				}
+				if (e.getValue() instanceof List) {
+					getImageObjectFromList( (List<?>) e.getValue(), array);
+				}
+			});
 		}
 	}
 
-
-	private File getFile(ResourceDTO resDTO) {
-		File file = new File(folder + generateFileName(resDTO.getCid(), resDTO.getExtension()));
+	private File getFileByHashImpl(String hash, String extension){
+		String fname = generateFileName(hash, extension);
+		File file = new File(folder, fname);
+		file.getParentFile().mkdirs();
 		return file;
-	
 	}
 
-	private String generateFileName(String hash, String ext) {
-		StringBuilder fPath = generateDirectoryHierarchy(hash);
-		fPath.append(hash).append(".").append(ext);
 
+	private String generateFileName(String hash, String ext) {
+		StringBuilder fPath = new StringBuilder();
+		int splitF = SPLIT_FOLDERS_DEPTH;
+		while(splitF > 0 && hash.length() > FOLDER_LENGTH) {
+			fPath.append(hash.substring(0, FOLDER_LENGTH)).append("/");
+			hash = hash.substring(FOLDER_LENGTH);
+			splitF--;
+		}
+		fPath.append(hash).append(".").append(ext);
 		return fPath.toString();
 	}
 
-	private StringBuilder generateDirectoryHierarchy(String hash) {
-		byte[] bytes = hash.getBytes();
-		StringBuilder fPath = new StringBuilder();
-
-		for (int i = 0; i < 12; i += 4) {
-			fPath.append(new String(bytes, i, 4)).append("/");
-		}
-
-		try {
-			Files.createDirectories(Paths.get(getRootDirectoryPath() + fPath.toString()));
-			LOGGER.debug("Image directory for cid : " + hash + " was created");
-		} catch (IOException e) {
-			e.printStackTrace();
-			LOGGER.error("Image directory was not created");
-		}
-		return fPath;
-	}
 
 }

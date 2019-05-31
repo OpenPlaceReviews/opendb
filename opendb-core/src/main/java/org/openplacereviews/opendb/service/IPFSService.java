@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -164,7 +165,6 @@ public class IPFSService {
 
 	
 	public List<String> getPinnedResources() {
-		LOGGER.debug("Get pinned files on IPFS");
 		return Failsafe.with(retryPolicy)
 				.onFailure(event -> LOGGER.error(String.format("Exception getting pinned files on IPFS after %d attemps", event.getAttemptCount())))
 				.onSuccess(event -> LOGGER.debug(String.format("Get pinned files on IPFS: %s", event.getResult())))
@@ -174,6 +174,11 @@ public class IPFSService {
 							.map(e-> e.getKey().toBase58())
 							.collect(Collectors.toList());
 				});
+	}
+	
+	public List<String> getTrackedResources() {
+		// TODO return list of tracked resources so the files could be reuploaded
+		return new ArrayList<String>();
 	}
 
 

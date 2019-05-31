@@ -10,6 +10,7 @@ import org.openplacereviews.opendb.service.IPFSService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -53,11 +54,21 @@ public class IPFSController {
 		return ResponseEntity.ok(formatter.imageObjectToJson(imageDTO));
 	}
 
+
+	@GetMapping(value = "/image")
+	@ResponseBody
+	public ResponseEntity<FileSystemResource> getFile(@RequestParam("hash") String hash, 
+			@RequestParam(value="ext", required=false) String ext) throws IOException {
+		checkIPFSRunning();
+		return ResponseEntity.ok().//headers(headers).
+				body(new FileSystemResource(externalResourcesManager.getFileByHash(hash, ext)));
+	}
+	
 	@ResponseBody
 	@GetMapping("status")
 	public ResponseEntity<String> loadIpfsStatus() throws IOException, UnirestException {
 		// TODO return json with all information
-		// TODO add parameter full and display all counts of pending, in blockchain objects etc
+		// TODO add parameter full and display all counts of inserted, pending and missing in blockchain resources 
 		IpfsStatusDTO ipfsStatusDTO ;
 		if(!externalResourcesManager.isRunning()) {
 			ipfsStatusDTO = new IpfsStatusDTO().setStatus("NOT CONNECTED");
@@ -68,42 +79,11 @@ public class IPFSController {
 	}
 	
 
-	@GetMapping(value = "/image")
-	@ResponseBody
-	public ResponseEntity<String> getFile(@RequestParam("cid") String cid) throws IOException {
-		checkIPFSRunning();
-		try (ByteArrayOutputStream outputStream = (ByteArrayOutputStream) externalResourcesManager.read(cid)) {
-			return ResponseEntity.ok(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
-		}
-	}
-
-	@GetMapping(value = "/image/tracked")
-	@ResponseBody
-	public ResponseEntity<String> getTrackedFiles() {
-		checkIPFSRunning();
-		List<String> tracked = externalResourcesManager.getPinnedResources();
-		return ResponseEntity.ok(formatter.fullObjectToJson(tracked));
-	}
-
-	@GetMapping(value = "/status")
-	@ResponseBody
-	public ResponseEntity<String> getStatusCheckingMissingImagesInIPFS() {
-		checkIPFSRunning();
-		return ResponseEntity.ok(formatter.fullObjectToJson(externalResourcesManager.checkingMissingImagesInIPFS()));
-	}
-
 	@PostMapping(value = "/mgmt/ipfs-maintenance")
 	@ResponseBody
 	public ResponseEntity<String> uploadMissingImagesToIPFS() {
 		checkIPFSRunning();
 		return ResponseEntity.ok(formatter.fullObjectToJson(externalResourcesManager.uploadMissingResourcesToIPFS()));
-	}
-
-	@GetMapping(value = "/mgmt/ipfs-status")
-	@ResponseBody
-	public ResponseEntity<String> getStatusCheckingMissingImagesInBlockchain() {
-		checkIPFSRunning();
-		return ResponseEntity.ok(formatter.fullObjectToJson(externalResourcesManager.statusImagesInDB()));
 	}
 
 	@PostMapping(value = "/mgmt/clean-deprecated-ipfs")
