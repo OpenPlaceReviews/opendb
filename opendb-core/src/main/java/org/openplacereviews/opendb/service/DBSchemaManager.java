@@ -36,7 +36,7 @@ public class DBSchemaManager {
 	protected static String OBJS_TABLE = "objs";
 	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
 	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
-	protected static String IMAGE_TABLE = "image";
+	protected static String EXT_RESOURCE_TABLE = "resources";
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
@@ -118,11 +118,11 @@ public class DBSchemaManager {
 		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
 		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
 
-		registerColumn(IMAGE_TABLE, "hash", "text PRIMARY KEY", true);
-		registerColumn(IMAGE_TABLE, "extension", "text", false);
-		registerColumn(IMAGE_TABLE, "cid", "text", false);
-		registerColumn(IMAGE_TABLE, "active", "bool", false);
-		registerColumn(IMAGE_TABLE, "added", "timestamp", false);
+		registerColumn(EXT_RESOURCE_TABLE, "hash", "text PRIMARY KEY", true);
+		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", false);
+		registerColumn(EXT_RESOURCE_TABLE, "cid", "text", false);
+		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", false);
+		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", false);
 
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
 

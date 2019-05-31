@@ -1,13 +1,22 @@
 package org.openplacereviews.opendb;
 
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import javax.servlet.MultipartConfigElement;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBConsensusManager;
+import org.openplacereviews.opendb.service.IPFSFileManager;
 import org.openplacereviews.opendb.service.LogOperationService;
-import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.service.ipfs.pinning.IPFSClusterPinningService;
 import org.openplacereviews.opendb.util.DBConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,15 +29,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
-
-import javax.servlet.MultipartConfigElement;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 @EnableScheduling
 @EnableJpaAuditing
@@ -50,22 +50,13 @@ public class OpenDBServer  {
 	LogOperationService logOperationService;
 
 	@Autowired
-	IPFSService ipfsService;
+	IPFSFileManager externalResourcesService;
 
 	@Value("${spring.servlet.multipart.max-file-size}")
 	public String maxUploadSize;
 
 	@Value("${spring.servlet.multipart.max-request-size}")
 	public String maxRequestSize;
-
-	@Value("${ipfs.cluster.host:localhost}")
-	public String clusterHost;
-
-	@Value("${ipfs.cluster.port}")
-	public Integer clusterPort;
-
-	@Value("${ipfs.run:false}")
-	public boolean runIPFSService;
 
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
@@ -122,10 +113,7 @@ public class OpenDBServer  {
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
-				if (runIPFSService) {
-					ipfsService.connect();
-					ipfsService.addReplica(IPFSClusterPinningService.connect(clusterHost, clusterPort));
-				}
+				externalResourcesService.init();
 				LOGGER.info("Application has started");
 			} catch (RuntimeException e) {
 				LOGGER.error(e.getMessage(), e);

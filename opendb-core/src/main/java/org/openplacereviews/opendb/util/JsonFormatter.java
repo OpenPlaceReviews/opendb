@@ -1,10 +1,11 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
+
+import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.springframework.stereotype.Component;
 
 import java.io.Reader;
@@ -123,8 +124,8 @@ public class JsonFormatter {
 		return gson.fromJson(json, classOfT);
 	}
 
-	public String imageObjectToJson(ImageDTO imageDTO) {
-		return gson.toJson(imageDTO, ImageDTO.class);
+	public String imageObjectToJson(ResourceDTO imageDTO) {
+		return gson.toJson(imageDTO, ResourceDTO.class);
 	}
 	
 	

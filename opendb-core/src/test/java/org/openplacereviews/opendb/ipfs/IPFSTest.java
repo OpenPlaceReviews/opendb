@@ -8,9 +8,9 @@ import io.ipfs.multihash.Multihash;
 import org.apache.commons.io.IOUtils;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
-import org.openplacereviews.opendb.service.ipfs.pinning.IPFSFileManager;
+import org.openplacereviews.opendb.dto.ResourceDTO;
+import org.openplacereviews.opendb.service.IPFSFileManager;
+import org.openplacereviews.opendb.service.IPFSService;
 import org.openplacereviews.opendb.service.ipfs.pinning.PinningService;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,7 +54,7 @@ public class IPFSTest {
 
 		String cid = ipfsService.write(file1.getInputStream());
 
-		List<String> list = ipfsService.getTracked();
+		List<String> list = ipfsService.getPinnedResources();
 		Set<PinningService> set = ipfsService.getReplicaSet();
 		OutputStream outputStream = ipfsService.read(cid);
 
@@ -78,11 +78,11 @@ public class IPFSTest {
 
 		ipfsService.pin(cid);
 
-		List<String> set = ipfsService.getTracked();
+		List<String> set = ipfsService.getPinnedResources();
 
 		ipfsService.unpin(cid);
 
-		set = ipfsService.getTracked();
+		set = ipfsService.getPinnedResources();
 	}
 
 	@Ignore
@@ -99,7 +99,7 @@ public class IPFSTest {
 		MultipartFile multipartFile = new MockMultipartFile("file",
 				file.getName(), "text/plain", IOUtils.toByteArray(input));
 
-		ipfsFileManager.addFileToStorage(new ImageDTO());
+		ipfsFileManager.addFileToStorage(new ResourceDTO());
 	}
 
 	@Ignore
@@ -119,7 +119,7 @@ public class IPFSTest {
 
 		TreeMap treeMap = new Gson().fromJson(json, TreeMap.class);
 
-		List<ImageDTO> imageDTOList = new ArrayList<>();
+		List<ResourceDTO> imageDTOList = new ArrayList<>();
 		//getImageObject(treeMap, imageDTOList);
 	}
 }

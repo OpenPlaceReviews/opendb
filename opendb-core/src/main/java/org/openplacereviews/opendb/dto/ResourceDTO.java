@@ -1,11 +1,11 @@
-package org.openplacereviews.opendb.service.ipfs.dto;
+package org.openplacereviews.opendb.dto;
 
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 
-public class ImageDTO {
+public class ResourceDTO {
 
 	private String type = "#image";
 	private String hash;
@@ -16,16 +16,16 @@ public class ImageDTO {
 
 	private transient MultipartFile multipartFile;
 
-	public static ImageDTO of(MultipartFile multipartFile) {
-		ImageDTO imageDTO = new ImageDTO();
+	public static ResourceDTO of(MultipartFile multipartFile) {
+		ResourceDTO imageDTO = new ResourceDTO();
 		imageDTO.extension = FilenameUtils.getExtension(multipartFile.getOriginalFilename());
 		imageDTO.multipartFile = multipartFile;
 
 		return imageDTO;
 	}
 
-	public static ImageDTO of(String hash, String extension, String cid) {
-		ImageDTO imageDTO = new ImageDTO();
+	public static ResourceDTO of(String hash, String extension, String cid) {
+		ResourceDTO imageDTO = new ResourceDTO();
 		imageDTO.hash = hash;
 		imageDTO.extension = extension;
 		imageDTO.cid = cid;

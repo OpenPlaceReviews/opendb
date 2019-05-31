@@ -4,13 +4,13 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
+import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
-import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
@@ -850,23 +850,23 @@ public class DBConsensusManager {
 		return blc;
 	}
 
-	public ImageDTO storeImageObject(ImageDTO imageDTO) throws IOException {
+	public ResourceDTO storeImageObject(ResourceDTO imageDTO) throws IOException {
 		imageDTO.setHash(SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, imageDTO.getMultipartFile().getBytes()));
 
 		if (imageObjectIsExist(imageDTO) == null) {
 			imageDTO.setAdded(new Date());
-			jdbcTemplate.update("INSERT INTO " + IMAGE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
+			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
 					imageDTO.getHash(), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
 		}
 
 		return imageDTO;
 	}
 
-	public ImageDTO imageObjectIsExist(ImageDTO imageDTO) {
-		return jdbcTemplate.query("SELECT added, active FROM " + IMAGE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ImageDTO>() {
+	public ResourceDTO imageObjectIsExist(ResourceDTO imageDTO) {
+		return jdbcTemplate.query("SELECT added, active FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
 
 			@Override
-			public ImageDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
+			public ResourceDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
 				if (rs.next()) {
 					imageDTO.setAdded(rs.getTimestamp(1));
 					imageDTO.setActive(rs.getBoolean(2));
@@ -877,13 +877,13 @@ public class DBConsensusManager {
 		}, imageDTO.getHash());
 	}
 
-	public ImageDTO loadImageObjectIfExist(String cid) {
-		return jdbcTemplate.query("SELECT hash, extension, cid, active, added FROM " + IMAGE_TABLE + " WHERE cid = ?", new ResultSetExtractor<ImageDTO>() {
+	public ResourceDTO loadResourceObjectIfExist(String cid) {
+		return jdbcTemplate.query("SELECT hash, extension, cid, active, added FROM " + EXT_RESOURCE_TABLE + " WHERE cid = ?", new ResultSetExtractor<ResourceDTO>() {
 
 			@Override
-			public ImageDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
+			public ResourceDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
 				if (rs.next()) {
-					ImageDTO imageDTO = new ImageDTO();
+					ResourceDTO imageDTO = new ResourceDTO();
 					imageDTO.setHash(rs.getString(1));
 					imageDTO.setExtension(rs.getString(2));
 					imageDTO.setCid(rs.getString(3));
@@ -897,20 +897,20 @@ public class DBConsensusManager {
 	}
 
 	public void removeUnusedImageObject(int secondsOfStoring) {
-		jdbcTemplate.update("DELETE FROM " + IMAGE_TABLE + " WHERE active = false AND added < ?", DateUtils.addDays(new Date(), -secondsOfStoring));
+		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE active = false AND added < ?", DateUtils.addDays(new Date(), -secondsOfStoring));
 	}
 
-	public void removeImageObjectFromDB(ImageDTO imageDTO) {
-		jdbcTemplate.update("DELETE FROM " + IMAGE_TABLE + " WHERE hash = ?", imageDTO.getHash());
+	public void removeImageObjectFromDB(ResourceDTO imageDTO) {
+		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", imageDTO.getHash());
 	}
 
-	public List<ImageDTO> loadUnusedImageObject(int secondsOfStoring) {
-		return jdbcTemplate.query("SELECT cid, hash, extension FROM " + IMAGE_TABLE + " WHERE active = false AND added < ?", new ResultSetExtractor<List<ImageDTO>>() {
+	public List<ResourceDTO> loadUnusedImageObject(int secondsToKeepUnusedObjects) {
+		return jdbcTemplate.query("SELECT cid, hash, extension FROM " + EXT_RESOURCE_TABLE + " WHERE active = false AND added < ?", new ResultSetExtractor<List<ResourceDTO>>() {
 			@Override
-			public List<ImageDTO> extractData(ResultSet rs) throws SQLException, DataAccessException {
-				List<ImageDTO> activeImageObjects = new LinkedList<>();
+			public List<ResourceDTO> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				List<ResourceDTO> activeImageObjects = new LinkedList<>();
 				while (rs.next()) {
-					ImageDTO imageDTO = new ImageDTO();
+					ResourceDTO imageDTO = new ResourceDTO();
 					imageDTO.setCid(rs.getString(1));
 					imageDTO.setHash(rs.getString(2));
 					imageDTO.setExtension(rs.getString(3));
@@ -919,15 +919,15 @@ public class DBConsensusManager {
 
 				return activeImageObjects;
 			}
-		}, DateUtils.addSeconds(new Date(), -secondsOfStoring));
+		}, DateUtils.addSeconds(new Date(), -secondsToKeepUnusedObjects));
 	}
 
-	public void updateImageActiveStatus(ImageDTO imageDTO, boolean status) {
-		jdbcTemplate.update("UPDATE " + IMAGE_TABLE + " SET active = ? WHERE hash = ?", status, imageDTO.getHash());
+	public void updateImageActiveStatus(ResourceDTO imageDTO, boolean status) {
+		jdbcTemplate.update("UPDATE " + EXT_RESOURCE_TABLE + " SET active = ? WHERE hash = ?", status, imageDTO.getHash());
 	}
 
 	public List<String> loadImageObjectsByActiveStatus(Boolean active) {
-		return jdbcTemplate.query("SELECT cid FROM " + IMAGE_TABLE + " WHERE active = ?", new ResultSetExtractor<List<String>>() {
+		return jdbcTemplate.query("SELECT cid FROM " + EXT_RESOURCE_TABLE + " WHERE active = ?", new ResultSetExtractor<List<String>>() {
 			@Override
 			public List<String> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				List<String> activeImageObjects = new LinkedList<>();
