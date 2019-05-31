@@ -530,11 +530,11 @@ public class DBSchemaManager {
 	}
 
 	private Object getColumnValue(CustomIndexDto customIndexDTO, OpObject obj) {
-		switch (customIndexDTO.field) {
+		switch (customIndexDTO.type) {
 			case "jsonb" : {
 				try {
 					PGobject content = new PGobject();
-					content.setType(customIndexDTO.field);
+					content.setType("jsonb");
 					content.setValue(formatter.fullObjectToJson(obj.getObjectValue(customIndexDTO.field)));
 					return content;
 				} catch (Exception e) {
