@@ -446,8 +446,8 @@ public class DBSchemaManager {
 						c.tableName, c.colName, c.indexedField);
 			}
 		} else if (c.index.equals(GIST)) {
-			//TODO implement
-			return "";
+				return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
+						c.tableName, c.colName);
 		}
 
 		return null;
