@@ -1,30 +1,33 @@
 package org.openplacereviews.opendb.api;
 
-import com.mashape.unirest.http.exceptions.UnirestException;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
+
+import java.io.IOException;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.dto.IpfsStatusDTO;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.service.IPFSFileManager;
-import org.openplacereviews.opendb.service.IPFSService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.List;
-
-import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
+import com.mashape.unirest.http.exceptions.UnirestException;
 
 @Controller
 @RequestMapping("/api/ipfs")
@@ -66,14 +69,13 @@ public class IPFSController {
 	
 	@ResponseBody
 	@GetMapping("status")
-	public ResponseEntity<String> loadIpfsStatus() throws IOException, UnirestException {
-		// TODO return json with all information
-		// TODO add parameter full and display all counts of inserted, pending and missing in blockchain resources 
-		IpfsStatusDTO ipfsStatusDTO ;
-		if(!externalResourcesManager.isRunning()) {
+	public ResponseEntity<String> loadIpfsStatus(@RequestParam(value = "full", required = false) boolean full)
+			throws IOException, UnirestException {
+		IpfsStatusDTO ipfsStatusDTO;
+		if (!externalResourcesManager.isRunning()) {
 			ipfsStatusDTO = new IpfsStatusDTO().setStatus("NOT CONNECTED");
 		} else {
-			ipfsStatusDTO = externalResourcesManager.getIpfsNodeInfo(); 
+			ipfsStatusDTO = externalResourcesManager.getCurrentStatus(full);
 		}
 		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsStatusDTO));
 	}

@@ -17,6 +17,7 @@ import net.jodah.failsafe.FailsafeException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -94,52 +95,62 @@ public class IPFSFileManager {
 	
 
 
-	public IpfsStatusDTO checkingMissingImagesInIPFS() {
-		List<String> pinnedImagesOnIPFS = ipfsService.getPinnedResources();
-		List<String> activeObjects = dbManager.loadImageObjectsByActiveStatus(true);
-
-		AtomicBoolean status = new AtomicBoolean(true);
-		activeObjects.parallelStream().forEach(cid -> {
-			if (!pinnedImagesOnIPFS.contains(cid)) {
-				status.set(false);
-			}
-		});
-
-		return IpfsStatusDTO.getMissingImageStatus(activeObjects.size() + "/" + pinnedImagesOnIPFS.size(), status.get() ? "OK" : "NOT OK");
-	}
-
-	public IpfsStatusDTO uploadMissingResourcesToIPFS() {
+	public List<ResourceDTO> getMissingImagesInIPFS() {
+		// TODO get tracked or get pinned ?
 		List<String> pinnedImagesOnIPFS = ipfsService.getTrackedResources();
-		List<String> activeObjects = dbManager.loadImageObjectsByActiveStatus(true);
-
-		LOGGER.debug("Start pinning missing images");
-		activeObjects.forEach(cid -> {
-			LOGGER.debug("Loadded CID: " + cid);
-			if (!pinnedImagesOnIPFS.contains(cid)) {
-				try {
-					LOGGER.debug("Start reading/upload image from/to node for cid: " + cid);
-					OutputStream os = read(cid);
-					if (!os.toString().isEmpty()) {
-						LOGGER.debug("Start pin cid: " + cid);
-						pin(cid);
-					}
-				} catch (Exception e) {
-					LOGGER.error(e.getMessage(), e);
-				}
+		List<ResourceDTO> activeResources = dbManager.getResources(true, 0);
+		List<ResourceDTO> missingResources = new ArrayList<ResourceDTO>(); 
+		activeResources.forEach(r -> {
+			if (!pinnedImagesOnIPFS.contains(r.getCid())) {
+				missingResources.add(r);
 			}
 		});
+		return missingResources;
+	}
+	
+	
+	public IpfsStatusDTO getCurrentStatus(boolean full) {
+		IpfsStatusDTO stat = ipfsService.getIpfsNodeInfo();
+		// TODO return json with all information
+		// TODO Augment with db objects data (disk space?)
+		// TODO missing images in ipfs
+		// TODO return info about path and ipfs 
+		TODO;
+		return stat;
+	}
 
-		return checkingMissingImagesInIPFS();
+	public List<ResourceDTO> uploadMissingResourcesToIPFS() {
+		List<ResourceDTO> missingResources = getMissingImagesInIPFS();
+		missingResources.forEach(r -> {
+				try {
+					LOGGER.info("Start uploading image from/to node for cid: " + r.getCid() + " " + r.getHash());
+					File f = getFileByHash(r.getHash(), r.getExtension());
+					FileInputStream fis = new FileInputStream(f);
+					String newCid = ipfsService.writeContent(fis);
+					fis.close();
+					LOGGER.info("Uploaded with cid: " + newCid);
+					if(!OUtils.equals(newCid, r.getCid())) {
+						// ?????
+						LOGGER.error(String.format("CID mismatch ! %s != %s for %s." , newCid, r.getCid(), r.getHash()));
+					}
+					ipfsService.pin(newCid);
+				} catch (Exception e) {
+					LOGGER.error(String.format("Error while pinning missing object [hash: %s, cid: %s] : %s",
+							r.getCid(), r.getHash(), e.getMessage()), e);
+				}
+		});
+
+		return missingResources;
 	}
 
 
-	public IpfsStatusDTO removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
-		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
+	public List<ResourceDTO> removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
+		List<ResourceDTO> notActiveImageObjects = dbManager.getResources(false, timeToStoreUnusedObjectsSeconds);
 		notActiveImageObjects.parallelStream().forEach(res -> {
 			removeImageObject(res);
 		});
 		ipfsService.clearNotPinnedImagesFromIPFSLocalStorage();
-		return statusImagesInDB();
+		return notActiveImageObjects;
 	}
 	
 	private void removeImageObject(ResourceDTO resourceDTO) {
@@ -153,12 +164,6 @@ public class IPFSFileManager {
 		}
 	}
 
-	public IpfsStatusDTO statusImagesInDB() {
-		// TODO display count active objects, pending objects (objects to gc)
-		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
-		return IpfsStatusDTO.getMissingImageStatus(String.valueOf(notActiveImageObjects.size()), notActiveImageObjects.size() == 0 ? "OK" : "Images can be removed");
-	}
-	
 	public void processOperations(List<OpOperation> candidates) {
 		// TODO mark operation hash where image was used and store in db !
 		List<ResourceDTO> array = new ArrayList<ResourceDTO>();

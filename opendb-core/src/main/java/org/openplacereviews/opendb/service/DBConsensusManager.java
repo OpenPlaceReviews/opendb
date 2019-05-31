@@ -861,7 +861,8 @@ public class DBConsensusManager {
 
 		return imageDTO;
 	}
-
+	
+	
 	public ResourceDTO getResourceObjectIfExists(ResourceDTO imageDTO) {
 		return jdbcTemplate.query("SELECT hash, extension, cid, active, added FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
 
@@ -885,7 +886,7 @@ public class DBConsensusManager {
 		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE active = false AND added < ?", DateUtils.addDays(new Date(), -secondsToKeepUnusedObjects));
 	}
 
-	public List<ResourceDTO> loadUnusedImageObject(int secondsToKeepUnusedObjects) {
+	public List<ResourceDTO> getResources(boolean status, int addedMoreThanSecondsAgo) {
 		return jdbcTemplate.query("SELECT cid, hash, extension FROM " + EXT_RESOURCE_TABLE + " WHERE active = false AND added < ?", new ResultSetExtractor<List<ResourceDTO>>() {
 			@Override
 			public List<ResourceDTO> extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -899,7 +900,7 @@ public class DBConsensusManager {
 				}
 				return activeImageObjects;
 			}
-		}, DateUtils.addSeconds(new Date(), -secondsToKeepUnusedObjects));
+		}, DateUtils.addSeconds(new Date(), -addedMoreThanSecondsAgo));
 	}
 	
 
@@ -949,6 +950,7 @@ public class DBConsensusManager {
 		});
 		return res[0];
 	}
+
 	
 	
 
