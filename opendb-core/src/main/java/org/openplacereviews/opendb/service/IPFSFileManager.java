@@ -68,22 +68,29 @@ public class IPFSFileManager {
 	}
 	
 	public ResourceDTO addFile(ResourceDTO resourceDTO) throws IOException {
-		resourceDTO.setCid(write(resourceDTO.getMultipartFile().getBytes()));
-		ipfsFileManager.addFileToStorage(resourceDTO);
-		dbConsensusManager.storeImageObject(resourceDTO);
+		if(ipfsService.isRunning()) {
+			resourceDTO.setCid(ipfsService.writeContent(resourceDTO.getMultipartFile().getBytes()));
+		}
+		FileUtils.writeByteArrayToFile(getFile(resourceDTO), resourceDTO.getMultipartFile().getBytes());
+		dbManager.storeImageObject(resourceDTO);
 		return resourceDTO;
 	}
 
 	private void removeImageObject(ResourceDTO imageDTO) {
-		dbConsensusManager.removeImageObjectFromDB(imageDTO);
-		ipfsFileManager.removeImageObjectFromStorage(imageDTO);
+		dbManager.removeImageObjectFromDB(imageDTO);
+		File file = getFile(imageDTO);
+		if (file.delete()) {
+			LOGGER.info(String.format("File %s is deleted", file.getName()));
+		} else {
+			LOGGER.error(String.format("Deleteing %s has failed", file.getAbsolutePath()));
+		}
 	}
 
 	private OutputStream read(String cid) {
 		try {
 			return read(cid, new ByteArrayOutputStream());
 		} catch (FailsafeException e) {
-			ResourceDTO resourceDTO = dbConsensusManager.loadResourceObjectIfExist(cid);
+			ResourceDTO resourceDTO = dbManager.loadResourceObjectIfExist(cid);
 			if (resourceDTO == null) {
 				throw new TechnicalException(e.getMessage(), e);
 			}
@@ -139,7 +146,7 @@ public class IPFSFileManager {
 
 	public IpfsStatusDTO checkingMissingImagesInIPFS() {
 		List<String> pinnedImagesOnIPFS = getTrackedResources();
-		List<String> activeObjects = dbConsensusManager.loadImageObjectsByActiveStatus(true);
+		List<String> activeObjects = dbManager.loadImageObjectsByActiveStatus(true);
 
 		AtomicBoolean status = new AtomicBoolean(true);
 		activeObjects.parallelStream().forEach(cid -> {
@@ -153,7 +160,7 @@ public class IPFSFileManager {
 
 	public IpfsStatusDTO uploadMissingResourcesToIPFS() {
 		List<String> pinnedImagesOnIPFS = getTrackedResources();
-		List<String> activeObjects = dbConsensusManager.loadImageObjectsByActiveStatus(true);
+		List<String> activeObjects = dbManager.loadImageObjectsByActiveStatus(true);
 
 		LOGGER.debug("Start pinning missing images");
 		activeObjects.forEach(cid -> {
@@ -177,19 +184,19 @@ public class IPFSFileManager {
 
 	public IpfsStatusDTO statusImagesInDB() {
 		// TODO display count active objects, pending objects (objects to gc)
-		List<ResourceDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
+		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
 		return IpfsStatusDTO.getMissingImageStatus(String.valueOf(notActiveImageObjects.size()), notActiveImageObjects.size() == 0 ? "OK" : "Images can be removed");
 	}
 
 	public IpfsStatusDTO removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
-		List<ResourceDTO> notActiveImageObjects = dbConsensusManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
+		List<ResourceDTO> notActiveImageObjects = dbManager.loadUnusedImageObject(timeToStoreUnusedObjectsSeconds);
 
 		notActiveImageObjects.parallelStream().forEach(image -> {
 			this.unpin(image.getCid());
 			removeImageObject(image);
 		});
 
-		dbConsensusManager.removeUnusedImageObject(timeToStoreUnusedObjectsSeconds);
+		dbManager.removeUnusedImageObject(timeToStoreUnusedObjectsSeconds);
 
 		clearNotPinnedImagesFromIPFSLocalStorage();
 
@@ -216,13 +223,6 @@ public class IPFSFileManager {
 		});		
 	}
 
-	/**
-	 * @return root directory for images.
-	 */
-	private String getRootDirectoryPath() {
-		return System.getProperty("user.home") + "/" + directory;
-	}
-
 	public Path getFileByCid(String cid, String extension) throws FileNotFoundException {
 		String filePath = getRootDirectoryPath() + generateFileName(cid, extension);
 
@@ -233,20 +233,11 @@ public class IPFSFileManager {
 		}
 	}
 
-	public void addFileToStorage(ResourceDTO imageDTO) throws IOException {
-		File file = new File(getRootDirectoryPath() + generateFileName(imageDTO.getCid(), imageDTO.getExtension()));
 
-		FileUtils.writeByteArrayToFile(file, imageDTO.getMultipartFile().getBytes());
-	}
-
-	public void removeImageObjectFromStorage(ResourceDTO imageDTO) {
-		File file = new File(getRootDirectoryPath() + generateFileName(imageDTO.getCid(), imageDTO.getExtension()));
-
-		if (file.delete()) {
-			LOGGER.debug(file.getName() + " is deleted!");
-		} else {
-			LOGGER.error("Delete operation is failed.");
-		}
+	private File getFile(ResourceDTO resDTO) {
+		File file = new File(folder + generateFileName(resDTO.getCid(), resDTO.getExtension()));
+		return file;
+	
 	}
 
 	private String generateFileName(String hash, String ext) {
@@ -271,7 +262,6 @@ public class IPFSFileManager {
 			e.printStackTrace();
 			LOGGER.error("Image directory was not created");
 		}
-
 		return fPath;
 	}
 

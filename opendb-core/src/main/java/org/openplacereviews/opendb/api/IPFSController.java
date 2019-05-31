@@ -48,10 +48,8 @@ public class IPFSController {
 	public ResponseEntity<String> uploadImage(
 			@RequestPart(name = "file") @Valid @NotNull @NotEmpty MultipartFile file) throws IOException {
 		checkIPFSRunning();
-		// TODO add to file system and to ipfs
 		ResourceDTO imageDTO = ResourceDTO.of(file);
 		imageDTO = externalResourcesManager.addFile(imageDTO);
-
 		return ResponseEntity.ok(formatter.imageObjectToJson(imageDTO));
 	}
 
@@ -77,29 +75,6 @@ public class IPFSController {
 		try (ByteArrayOutputStream outputStream = (ByteArrayOutputStream) externalResourcesManager.read(cid)) {
 			return ResponseEntity.ok(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
 		}
-	}
-
-	@PutMapping(value = "/image")
-	@ResponseBody
-	public ResponseEntity<String> pinImage(@RequestParam("cid") String cid) {
-		checkIPFSRunning();
-		if (!externalResourcesManager.pin(cid)) {
-			return ResponseEntity.ok("{\"status\":\"FAILED\"}");
-		}
-
-		return ResponseEntity.ok("{\"status\":\"OK\"}");
-	}
-	
-
-	@DeleteMapping(value = "/image")
-	@ResponseBody
-	public ResponseEntity<String> unpinImage(@RequestParam("cid") String cid) {
-		checkIPFSRunning();
-		if(!externalResourcesManager.unpin(cid)) {
-			return ResponseEntity.ok("{\"status\":\"FAILED\"}");
-		}
-
-		return ResponseEntity.ok("{\"status\":\"OK\"}");
 	}
 
 	@GetMapping(value = "/image/tracked")
