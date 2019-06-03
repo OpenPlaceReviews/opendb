@@ -64,8 +64,6 @@ public class OpBlockChain {
 	// 4. stores information about last object by name in this blockchain
 	private final Map<String, OpPrivateObjectInstancesById> objByName = new ConcurrentHashMap<>();
 	
-	
-	
 	private OpBlockChain(boolean nullParent) {
 		this.nullObject = true;
 		this.rules = null;
@@ -254,7 +252,7 @@ public class OpBlockChain {
 		try {
 			for (OpOperation o : block.getOperations()) {
 				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash());
-				validateAndPrepareOperation(o, validationCtx);
+				validateAndPrepareOperation(o, validationCtx, false);
 				atomicAddOperationAfterPrepare(o, validationCtx);
 			}
 			atomicCreateBlockFromAllOps(block);
@@ -324,22 +322,26 @@ public class OpBlockChain {
 		return true;
 		
 	}
-	
+
+	public boolean unsafeAddOperation(OpOperation op) {
+		return addOperation(op, false, true);
+	}
+
 	public boolean addOperation(OpOperation op) {
-		return addOperation(op, false);
+		return addOperation(op, false, false);
 	}
 	
 	public boolean validateOperation(OpOperation op) {
-		return addOperation(op, true);
+		return addOperation(op, true, false);
 	}
 	/**
 	 * Adds operation and validates it to block chain
 	 */
-	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate) {
+	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, boolean unsafeImportMode) {
 		op.checkImmutable();
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx("");
-		boolean valid = validateAndPrepareOperation(op, validationCtx);
+		boolean valid = validateAndPrepareOperation(op, validationCtx, unsafeImportMode);
 		if(!valid || onlyValidate) {
 			return valid;
 		}
@@ -797,8 +799,7 @@ public class OpBlockChain {
 		return pdi;
 	}
 
-	
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
+	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, boolean unsafeImportMode) {
 		ValidationTimer vld = new ValidationTimer().start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
@@ -813,11 +814,14 @@ public class OpBlockChain {
 		if(!valid) {
 			return false;
 		}
-		// should be called after prepareDeletedObjects (so cache is prepared)
-		valid = prepareNoNewDuplicatedObjects(u, ctx);
-		if(!valid) {
-			return false;
+		if (!unsafeImportMode) {
+			// should be called after prepareDeletedObjects (so cache is prepared)
+			valid = prepareNoNewDuplicatedObjects(u, ctx);
+			if(!valid) {
+				return false;
+			}
 		}
+
 		valid = prepareReferencedObjects(u, ctx);
 		if(!valid) {
 			return valid;
@@ -832,6 +836,7 @@ public class OpBlockChain {
 		if(u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {
 			u.putCacheObject(OpObject.F_TIMESTAMP_ADDED, System.currentTimeMillis());
 		}
+
 		return true;
 	}
 	

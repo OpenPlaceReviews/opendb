@@ -51,6 +51,10 @@ public class BlocksManager {
 	
 	@Value("${opendb.mgmt.publicKey}")
 	private String serverPublicKey;
+
+	@Value("${mode.unsafe.import}")
+	private Boolean unsafeImportMode = false;
+
 	private KeyPair serverKeyPair;
 	
 	private BlockchainMgmtStatus mgmtStatus = BlockchainMgmtStatus.BLOCK_CREATION; 
@@ -154,7 +158,7 @@ public class BlocksManager {
 		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
-		boolean added = blockchain.addOperation(op);
+		boolean added = (!unsafeImportMode) ? blockchain.addOperation(op) : blockchain.unsafeAddOperation(op);
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
 		if(!existing) {
@@ -162,24 +166,30 @@ public class BlocksManager {
 		}
 		return added;
 	}
-	
+
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
-		
+
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
 		ValidationTimer timer = new ValidationTimer();
 		timer.start();
-		
+
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getQueueOperations());
 		
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		for (OpOperation o : candidates) {
-			if(!blc.addOperation(o)) {
-				return null;
+			if (!unsafeImportMode) {
+				if(!blc.addOperation(o)) {
+					return null;
+				}
+			} else {
+				if(!blc.unsafeAddOperation(o)) {
+					return null;
+				}
 			}
 		}
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);

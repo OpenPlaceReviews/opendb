@@ -5,10 +5,12 @@ logging:
 
 server:
   port: ${OPENDB_PORT:6463}
-  connection-timeout: 120000
+  connection-timeout: 30000
   tomcat:
     max-http-post-size: 4096
     max-threads: 5
+    threshold: 30000
+    interrupt-thread-threshold: 30000
 
 ipfs:
   run: ${IPFS_RUN:false}
@@ -32,19 +34,25 @@ opendb:
     objtables:
       obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
       obj_grants: { "types" : ["sys.grant"], "keysize":2 }
-      obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
+      obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1, "columns": [{"osm_id" : "jsonb"}] }
+
   files-backup:
     directory: ${FILE_BLOCKS_DIR:blocks}
   block-create:
     minSecondsInterval: 120
-    minQueueSize: 10
-    maxSecondsInterval: 3600
+    minQueueSize: 16
+    maxSecondsInterval: 1200
 
 management:
   endpoints:
     web:
       exposure:
         include: "*"
+
+mode:
+  unsafe:
+    import: true
+
 spring:
   servlet:
     multipart:
@@ -65,6 +73,11 @@ spring:
 spring.jpa.hibernate.ddl-auto: validate
 spring:
   profiles: productions
+  datasource:
+    maximumPoolSize: 10
+    hikari:
+      connectionTimeout: 30000
+      maximumPoolSize: 10
 
 logging:
   config: classpath:logback-spring.xml
@@ -79,4 +92,3 @@ server:
       enabled: true
       rotate: false
       pattern: '%h %l %u %t "%r" %s %b %D "%{Referer}i" "%{User-Agent}i"'
-
