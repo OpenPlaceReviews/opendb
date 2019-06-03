@@ -497,16 +497,23 @@ $( document ).ready(function() {
     });
     $("#sign-add-btn").click(function() {
       var obj = {
-        "json":$("#sign-json").val(),
         "name":$("#sign-name").val(),
         "pwd":$("#sign-pwd").val(),
         "privateKey":$("#sign-pk").val(),
         "addToQueue" : "true",
         "dontSignByServer":$("#sign-by-server").is(':checked')
       };
-      $.post("/api/auth/process-operation", obj)
-          .done(function(data){  $("#result").html(data); loadData();})
+      var params = $.param(obj);
+      var json = $("#sign-json").val();
+      $.ajax({
+          url: '/api/auth/process-operation?' + params,
+          type: 'POST',
+          data: json,
+          contentType: 'application/json; charset=utf-8'
+      }).done(function(data){  $("#result").html(data); loadData();})
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+
+        // $.post("/api/auth/process-operation", obj)
     });
     $("#login-btn").click(function() {
       var obj = {
