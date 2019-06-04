@@ -1,23 +1,17 @@
 package org.openplacereviews.opendb.service;
 
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
+import io.ipfs.api.IPFS;
+import io.ipfs.api.MerkleNode;
+import io.ipfs.api.NamedStreamable;
+import io.ipfs.multihash.Multihash;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,31 +21,29 @@ import org.openplacereviews.opendb.util.exception.TechnicalException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.google.gson.Gson;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
-import io.ipfs.api.IPFS;
-import io.ipfs.api.MerkleNode;
-import io.ipfs.api.NamedStreamable;
-import io.ipfs.multihash.Multihash;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import static io.ipfs.api.IPFS.PinType.recursive;
 
 @Service
 public class IPFSService {
 
-	protected static final Log LOGGER = LogFactory.getLog(IPFSService.class);
-	
 	public static final String BASE_URI = "%s://%s:%s/";
-
+	protected static final Log LOGGER = LogFactory.getLog(IPFSService.class);
 	@Value("${opendb.storage.ipfs.node.host:}")
 	public String ipfsHost;
 
 	@Value("${opendb.storage.ipfs.node.port:5001}")
 	public int ipfsPort;
-	
+
 	@Value("${opendb.storage.ipfs.node.readTimeoutMs:10000}")
 	public int ipfsReadTimeoutMs;
 
@@ -73,7 +65,7 @@ public class IPFSService {
 		this.pool = Executors.newFixedThreadPool(poolSize);
 		return this;
 	}
-	
+
 
 	public IPFSService configureRetry(Integer maxRetry, Duration delay) {
 		this.retryPolicy = new RetryPolicy<>()
@@ -84,12 +76,12 @@ public class IPFSService {
 				.withMaxRetries(maxRetry);
 		return this;
 	}
-	
+
 	public boolean isRunning() {
 		return ipfs != null;
 	}
-	
-	
+
+
 	public void clearNotPinnedImagesFromIPFSLocalStorage() throws IOException {
 		this.ipfs.repo.gc();
 	}
@@ -97,8 +89,9 @@ public class IPFSService {
 	@SuppressWarnings("rawtypes")
 	public IpfsStatusDTO getIpfsNodeInfo() throws IOException, UnirestException {
 		HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", ipfs.protocol, ipfs.host, ipfs.port)).asString();
-		TreeMap objectTreeMap = new Gson().fromJson(response.getBody(), TreeMap.class);
-		return new IpfsStatusDTO()
+		Gson gson = new Gson();
+		TreeMap objectTreeMap = gson.fromJson(response.getBody(), TreeMap.class);
+		IpfsStatusDTO ipfsStatusDTO = new IpfsStatusDTO()
 				.setStatus("CONNECTED")
 				.setPeerId(ipfs.config.get("Identity.PeerID").toString())
 				.setVersion(objectTreeMap.get("AgentVersion").toString())
@@ -106,6 +99,26 @@ public class IPFSService {
 				.setApi(ipfs.config.get("Addresses.API").toString())
 				.setAddresses(objectTreeMap.get("Addresses").toString())
 				.setPublicKey(objectTreeMap.get("PublicKey").toString());
+
+		response = Unirest.get(String.format(BASE_URI + "api/v0/repo/stat", ipfs.protocol, ipfs.host, ipfs.port)).asString();
+		JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+		ipfsStatusDTO
+				.setRepoSize(jsonObject.get("RepoSize").getAsBigDecimal())
+				.setStorageMax(jsonObject.get("StorageMax").getAsBigDecimal())
+				.setAmountIpfsResources(jsonObject.get("NumObjects").getAsBigDecimal())
+				.setRepoPath(jsonObject.get("RepoPath").getAsString());
+
+		response = Unirest.get(String.format(BASE_URI + "api/v0/diag/sys", ipfs.protocol, ipfs.host, ipfs.port)).asString();
+		jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+		ipfsStatusDTO
+				.setDiskInfo(jsonObject.get("diskinfo").toString())
+				.setMemory(jsonObject.get("memory").toString())
+				.setRuntime(jsonObject.get("runtime").toString())
+				.setNetwork(jsonObject.get("net").toString());
+
+		ipfsStatusDTO.setAmountPinnedIpfsResources(ipfs.pin.ls(recursive).size());
+
+		return ipfsStatusDTO;
 	}
 
 	public String writeContent(InputStream content) {
@@ -163,25 +176,18 @@ public class IPFSService {
 
 	}
 
-	
+
 	public List<String> getPinnedResources() {
 		return Failsafe.with(retryPolicy)
 				.onFailure(event -> LOGGER.error(String.format("Exception getting pinned files on IPFS after %d attemps", event.getAttemptCount())))
 				.onSuccess(event -> LOGGER.debug(String.format("Get pinned files on IPFS: %s", event.getResult())))
 				.get(() -> {
-					Map<Multihash, Object> cids = this.ipfs.pin.ls(IPFS.PinType.recursive);
+					Map<Multihash, Object> cids = this.ipfs.pin.ls(recursive);
 					return cids.entrySet().stream()
-							.map(e-> e.getKey().toBase58())
+							.map(e -> e.getKey().toBase58())
 							.collect(Collectors.toList());
 				});
 	}
-	
-	public List<String> getTrackedResources() {
-		// TODO return list of tracked resources so the files could be reuploaded
-		return new ArrayList<String>();
-	}
-
-
 
 	public OutputStream read(String id, OutputStream output) {
 		LOGGER.debug(String.format("Read file on IPFS [id: %s]", id));

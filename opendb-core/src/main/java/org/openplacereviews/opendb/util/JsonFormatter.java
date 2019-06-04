@@ -124,8 +124,8 @@ public class JsonFormatter {
 		return gson.fromJson(json, classOfT);
 	}
 
-	public String imageObjectToJson(ResourceDTO imageDTO) {
-		return gson.toJson(imageDTO, ResourceDTO.class);
+	public String imageObjectToJson(ResourceDTO resourceDTO) {
+		return gson.toJson(resourceDTO, ResourceDTO.class);
 	}
 	
 	

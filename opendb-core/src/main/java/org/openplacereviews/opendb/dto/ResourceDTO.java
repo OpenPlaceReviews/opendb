@@ -9,7 +9,6 @@ public class ResourceDTO {
 
 	private String type = "#image";
 	private String hash;
-	private String opHash;
 	private String extension;
 	private String cid;
 	private transient boolean active = false;
@@ -47,15 +46,7 @@ public class ResourceDTO {
 	}
 
 	public void setHash(String hash) {
-		this.hash = hash;
-	}
-	
-	public String getOpHash() {
-		return opHash;
-	}
-	
-	public void setOpHash(String opHash) {
-		this.opHash = opHash;
+		this.hash = hash.substring(hash.lastIndexOf(':') + 1);
 	}
 
 	public String getExtension() {

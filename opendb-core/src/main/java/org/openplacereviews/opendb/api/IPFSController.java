@@ -1,13 +1,6 @@
 package org.openplacereviews.opendb.api;
 
-import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
-
-import java.io.IOException;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-
+import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.dto.IpfsStatusDTO;
@@ -17,17 +10,20 @@ import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mashape.unirest.http.exceptions.UnirestException;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import java.io.File;
+import java.io.IOException;
+
+import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @Controller
 @RequestMapping("/api/ipfs")
@@ -42,7 +38,7 @@ public class IPFSController {
 	private JsonFormatter formatter;
 	
 	private void checkIPFSRunning() {
-		if(!externalResourcesManager.isRunning()) {
+		if(!externalResourcesManager.isIPFSRunning()) {
 			throw new ConnectionException("IPFS service is not running.");
 		}
 	}
@@ -52,9 +48,9 @@ public class IPFSController {
 	public ResponseEntity<String> uploadImage(
 			@RequestPart(name = "file") @Valid @NotNull @NotEmpty MultipartFile file) throws IOException {
 		checkIPFSRunning();
-		ResourceDTO imageDTO = ResourceDTO.of(file);
-		imageDTO = externalResourcesManager.addFile(imageDTO);
-		return ResponseEntity.ok(formatter.imageObjectToJson(imageDTO));
+		ResourceDTO resourceDTO = ResourceDTO.of(file);
+		resourceDTO = externalResourcesManager.addFile(resourceDTO);
+		return ResponseEntity.ok(formatter.imageObjectToJson(resourceDTO));
 	}
 
 
@@ -63,8 +59,16 @@ public class IPFSController {
 	public ResponseEntity<FileSystemResource> getFile(@RequestParam("hash") String hash, 
 			@RequestParam(value="ext", required=false) String ext) throws IOException {
 		checkIPFSRunning();
-		return ResponseEntity.ok().//headers(headers).
-				body(new FileSystemResource(externalResourcesManager.getFileByHash(hash, ext)));
+		File file = externalResourcesManager.getFileByHash(hash, ext);
+
+		HttpHeaders httpHeaders = new HttpHeaders();
+		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());
+		httpHeaders.add("Content-Length", String.valueOf(file.length()));
+
+		return ResponseEntity.ok()
+				.contentType(APPLICATION_OCTET_STREAM)
+				.headers(httpHeaders)
+				.body(new FileSystemResource(file));
 	}
 	
 	@ResponseBody
@@ -72,7 +76,7 @@ public class IPFSController {
 	public ResponseEntity<String> loadIpfsStatus(@RequestParam(value = "full", required = false) boolean full)
 			throws IOException, UnirestException {
 		IpfsStatusDTO ipfsStatusDTO;
-		if (!externalResourcesManager.isRunning()) {
+		if (!externalResourcesManager.isIPFSRunning()) {
 			ipfsStatusDTO = new IpfsStatusDTO().setStatus("NOT CONNECTED");
 		} else {
 			ipfsStatusDTO = externalResourcesManager.getCurrentStatus(full);

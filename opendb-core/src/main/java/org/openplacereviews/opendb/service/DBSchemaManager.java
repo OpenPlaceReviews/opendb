@@ -118,7 +118,7 @@ public class DBSchemaManager {
 		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", false);
 		registerColumn(OP_DELETED_TABLE, "mask", "bigint", false);
 
-		registerColumn(EXT_RESOURCE_TABLE, "hash", "text PRIMARY KEY", true);
+		registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", true);
 		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", false);
 		registerColumn(EXT_RESOURCE_TABLE, "cid", "text", false);
 		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", false);

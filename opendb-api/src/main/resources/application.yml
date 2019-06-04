@@ -10,14 +10,6 @@ server:
     max-http-post-size: 4096
     max-threads: 5
 
-storage:
-  ipfs.node:
-    host: ${IPFS_HOST:}
-    port: ${IPFS_PORT:5001}
-    readTimeoutMs: ${IPFS_READ_TIMEOUT_MS:10000}
-  local-storage: ${EXT_RES_DIRECTORY:}
-  timeToStoreUnusedSec: ${EXT_RES_STORE_UNUSED:86400}
-
 opendb:
   mgmt:
     user: ${OPENDB_LOGIN:openplacereviews:test_1}
