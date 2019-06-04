@@ -12,6 +12,7 @@ More technical information is provided at https://github.com/OpenPlaceReviews/op
 # Requirements
 1. JDK minimum 8
 2. Postgresql with empty database (default db: opengeoreviews, user: test, pwd: test)
+3. IPFS server optional
 
 Create database psql
 ```
@@ -22,6 +23,25 @@ Quick command to recreate schema from scratch
 ```
 drop schema public cascade; create schema public; grant all on schema public to test;
 ```
+# How to run IPFS
+Start container
+```
+docker run -d --name ipfs_host -v $ipfs_staging:/export -v $ipfs_data:/data/ipfs -p 4001:4001 -p 127.0.0.1:8080:8080 -p 127.0.0.1:5001:5001 ipfs/go-ipfs:latest
+```
+Configure ipfs in application.yml
+```
+ipfs:
+  run: ${IPFS_RUN:true}
+  storing:
+    time: ${IPFS_STORING_TIME:86400}
+  host: ${IPFS_HOST:localhost} #dev host: 51.158.69.207
+  port: ${IPFS_PORT:5001}
+  timeout: ${IPFS_TIMEOUT:10000}
+  directory: ${IPFS_DIRECTORY:/opendb/storage/}
+  cluster:
+    host: ${IPFS_CLUSTER_HOST:localhost}
+    port: ${IPFS_CLUSTER_PORT:9094}
+````
 
 # How to build & run
 

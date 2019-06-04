@@ -36,12 +36,12 @@
 	{
 		"type"  : "sys.role",
 		"new" : [{
-			"id" : ["none2"],
+			"id" : ["none3"],
 			"comment" : "2Owner role is a super role that nobody could change it",
 			"owner_role" : "none",
-			"super_roles": []
-		}],
-		"details": { "profile-picture":[ {"type":"#image","hash":"sha256:2cfcfbce76b5c305f3939755c96b9e12283cc49f1104f92dcb82925234304c43","extension":"jpg","cid":"QmWyPQ7ebGAWdyjPoRXvAJEYsYiPoR8urWC65gtsS381vp"}]}
+			"super_roles": [],
+			"image": {"type":"#image","hash":"b8b2580ee9ac30c3ace5dc1dfeb8e4d141a19e803a8f8237b12bf79bebd04862","extension":"jpg","cid":"QmXh3zuuubDKtrJBw76P4PQENWhnKXnecTRVg2mthYVRpi"}
+		}]
 	},
 	{
 		"type"  : "sys.role",

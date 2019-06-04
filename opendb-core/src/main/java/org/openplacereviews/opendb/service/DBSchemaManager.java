@@ -41,7 +41,7 @@ public class DBSchemaManager {
 	protected static String OBJS_TABLE = "objs";
 	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
 	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
-	protected static String IMAGE_TABLE = "image";
+	protected static String EXT_RESOURCE_TABLE = "resources";
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
@@ -117,7 +117,7 @@ public class DBSchemaManager {
 		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", INDEXED);
 		registerColumn(SETTINGS_TABLE, "value", "text", NOT_INDEXED);
 		registerColumn(SETTINGS_TABLE, "content", "jsonb", NOT_INDEXED);
-		
+
 		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
 		registerColumn(BLOCKS_TABLE, "phash", "bytea", NOT_INDEXED);
 		registerColumn(BLOCKS_TABLE, "blockid", "int", INDEXED);
@@ -149,11 +149,11 @@ public class DBSchemaManager {
 		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", NOT_INDEXED);
 		registerColumn(OP_DELETED_TABLE, "mask", "bigint", NOT_INDEXED);
 
-		registerColumn(IMAGE_TABLE, "hash", "text PRIMARY KEY", INDEXED);
-		registerColumn(IMAGE_TABLE, "extension", "text", NOT_INDEXED);
-		registerColumn(IMAGE_TABLE, "cid", "text", NOT_INDEXED);
-		registerColumn(IMAGE_TABLE, "active", "bool", NOT_INDEXED);
-		registerColumn(IMAGE_TABLE, "added", "timestamp", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "cid", "text", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
 
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE, null);
 

@@ -13,6 +13,7 @@ public class ValidationTimer {
 	
 	public static final String BLC_REBASE = "blc_rebase";
 	public static final String BLC_ADD_OPERATIONS = "blc_add_operations";
+	public static final String BLC_PROCESS_RESOURCES = "blc_process_resources";
 	public static final String BLC_NEW_BLOCK = "blc_new_block";
 	public static final String BLC_COMPACT = "blc_compact";
 	public static final String BLC_TOTAL_BLOCK = "blc_total_block";

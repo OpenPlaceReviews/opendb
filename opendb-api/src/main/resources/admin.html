@@ -104,19 +104,41 @@
         <p><b>PUBLIC KEY</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
       </div>
 
-      <h3>IPFS image missing status</h3>
+      <h3>IPFS storage info</h3>
       <div>
-        <p><b>Amount activated images in db and pinned on ipfs</b> &nbsp;&nbsp;<span id="ipfs-missing-objects"></span></p>
-        <p><b>Status: </b> &nbsp;&nbsp;<span id="ipfs-missing-status"></span></p>
-        <input type="submit" value="Upload/Pin images to IPFS" id="fix-ipfs-missing-images">
+        <p><b>REPO SIZE:</b> &nbsp;&nbsp;<span id="ipfs-repo-size"></span></p>
+        <p><b>STORAGE MAX:</b> &nbsp;&nbsp;<span id="ipfs-max-storage-size"></span></p>
+        <p><b>REPO PATH</b> &nbsp;&nbsp;<span id="ipfs-repo-path"></span></p>
       </div>
 
-      <h3>Blockchain image missing status</h3>
+      <h3>IPFS system info</h3>
       <div>
-        <p><b>Amount unactivated images which can to be deleted</b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
-        <p><b>Status images in db and blockchain</b> &nbsp;&nbsp;<span id="blockchain-missing-status"></span></p>
-        <br>
-        <input type="submit" value="Remove/Unpin images from DB" id="fix-blc-missing-images">
+        <p><b>DISK INFO:</b> &nbsp;&nbsp;<span id="system-info"></span></p>
+        <p><b>MEMORY:</b> &nbsp;&nbsp;<span id="system-memory"></span></p>
+        <p><b>RUNTIME:</b> &nbsp;&nbsp;<span id="system-runtime"></span></p>
+        <p><b>NETWORK</b> &nbsp;&nbsp;<span id="system-network"></span></p>
+      </div>
+
+      <h3>STATISTIC</h3>
+      <div>
+        <p><b>AMOUNT ALL IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-all-ipfs-objects"></span></p>
+        <p><b>AMOUNT PINNED IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-pinned-ipfs-objects"></span></p>
+        <p><b>AMOUNT MISSING IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-missing-ipfs-objects"></span></p>
+        <p><b>AMOUNT DB OBJECTS:</b> &nbsp;&nbsp;<span id="amount-db-objects"></span></p>
+        <p><b>AMOUNT UNACTIVATED OBJECTS:</b> &nbsp;&nbsp;<span id="amount-unactivated-objects"></span></p>
+        <input type="submit" value="Load full stats" id="laod-full-stats-btn">
+      </div>
+
+      <h3>IPFS missing resources</h3>
+      <div>
+        <p><b>List of missing resources</b> &nbsp;&nbsp;<span id="ipfs-missing-objects"></span></p>
+        <input type="submit" value="Upload missing images to IPFS" id="fix-ipfs-missing-images-btn">
+      </div>
+
+      <h3>Unactivated images</h3>
+      <div>
+        <p><b>List unactivated images: </b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
+        <input type="submit" value="Remove unactivated images" id="fix-blc-missing-images-btn">
       </div>
 
       <h3>Add Image</h3>
@@ -126,27 +148,6 @@
           <input type="submit" value="Add File" id="add-file-btn">
         <br>
           <p><b>Result: </b> &nbsp;&nbsp;<span id="result-add-image"></span></p>
-      </div>
-
-      <h3>Pin image</h3>
-      <div>
-        1. Cid of image: <input type="text" id="pin-cid">
-        <br>
-        <input type="submit" value="Pin image" id="pin-image-btn">
-      </div>
-
-      <h3>Unpin image</h3>
-      <div>
-        1. Cid of image: <input type="text" id="unpin-cid">
-        <br>
-        <input type="submit" value="Unpin image" id="unpin-image-btn">
-      </div>
-
-      <h3>Tracked images</h3>
-      <div>
-        <input type="submit" value="Get tracked images" id="tracked-image-btn">
-        <br>
-        <p><b>Result: </b> &nbsp;&nbsp;<span id="result-tracked-images"></span></p>
       </div>
 
       <h3>Get file</h3>
@@ -366,8 +367,7 @@ function loadStatusData() {
 }
 
 function loadIpfsStatusData() {
-    var status = false;
-    $.getJSON("/api/ipfs", function ( data ) {
+    $.getJSON("/api/ipfs/status?full=false", function ( data ) {
         $("#ipfs-status").html(data.status);
         $("#ipfs-peer-id").html(data.peerId);
         $("#ipfs-version").html(data.version);
@@ -376,21 +376,21 @@ function loadIpfsStatusData() {
         $("#ipfs-addresses").html(JSON.stringify(data.addresses));
         $("#ipfs-public-key").html(data.publicKey);
 
-        if ($("#ipfs-status").val() === "CONNECTED") {
-            this.status = true;
-        }
-    });
+        // IPFS STORAGE
+        $("#ipfs-repo-size").html(data.repoSize);
+        $("#ipfs-max-storage-size").html(data.storageMax);
+        $("#ipfs-repo-path").html(data.repoPath);
 
-    if (this.status === true) {
-        $.getJSON("/api/ipfs/status", function (data) {
-            $("#ipfs-missing-status").html(data.status);
-            $("#ipfs-missing-objects").html(data.objects);
-        });
-        $.getJSON("/api/ipfs/blc-status", function (data) {
-            $("#blockchain-unactivated-images").html(data.objects);
-            $("#blockchain-missing-status").html(data.status);
-        })
-    }
+        // IPFS SYSTEM INFO
+        $("#system-info").html(data.diskInfo);
+        $("#system-memory").html(data.memory);
+        $("#system-runtime").html(data.runtime);
+        $("#system-network").html(data.network);
+
+        // IPFS STATS
+        $("#amount-all-ipfs-objects").html(data.amountIpfsResources);
+        $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
+    });
 }
 
 function loadBlocksData() {
@@ -425,6 +425,24 @@ function loadBlocksData() {
   });
 }
 
+function loadFullIpfsStatus() {
+    $(document).ready(function () {
+        $.getJSON("/api/ipfs/status?full=true", function (data) {
+            $("#result").html("SUCCESS: " + data);
+            $("#amount-missing-ipfs-objects").html(data.missingResources.length);
+            $("#amount-db-objects").html(data.amountDBResources);
+            $("#amount-unactivated-objects").html(data.deprecatedResources.length);
+
+            console.log("tsts");
+            for(var i = 0; i < data.missingResources.length; i++)  {
+                $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
+            };
+            for(var i = 0; i < data.deprecatedResources.length; i++)  {
+                $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
+            };
+        });
+    });
+}
 function loadQueueData() {
   $.getJSON( "/api/queue", function( data ) {
       var items = "";
@@ -581,66 +599,37 @@ $( document ).ready(function() {
         });
     });
 
-    $("#pin-image-btn").click(function () {
-        var obj = {
-            "cid":$("#pin-cid").val()
-        };
-        $.ajax({
-            url:"/api/ipfs/image",
-            data: obj,
-            type: 'PUT',
-            success: function (data) { $("#result").html(data); loadData() },
-            error: function (xhr, status, error) { $("#result").html("ERROR: " + error); }
-        });
-    });
-
-    $("#unpin-image-btn").click(function () {
-        var obj = {
-            "cid":$("#unpin-cid").val(),
-            "_method":"delete"
-        };
-        $.post("/api/ipfs/image", obj)
-            .done(function (data) { $("#result").html(data); loadData(); })
-            .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
-    });
-
-    $("#tracked-image-btn").click(function () {
-       $.get("/api/ipfs/image/tracked")
-           .done(function (data) { $("#result-tracked-images").html(data); loadData(); })
-           .fail(function (xhr, status, error) { $("#result-tracked-images").html("ERROR: " + error); })
-    });
-
     $("#get-image-btn").click(function () {
         var obj = {
-            "cid": $("#get-image").val()
+            "hash": $("#get-image").val()
         };
+        //TODO generate image from response
        $.get("/api/ipfs/image", obj)
-           .done(function (data) { $("#image-preview").attr("src", "data:image/png;base64, " + data); })
+           .done(function (data) {
+               $("#image-preview").attr("src", "data:image/png;base64," + data); })
            .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
     });
 
-    $("#fix-ipfs-missing-images").click(function () {
-       $.ajax({
-           url:"/api/ipfs/upload",
-           type: 'PUT',
-           success: function (data) { $("#ipfs-missing-status").html(data.status); $("#ipfs-missing-objects").html(data.objects); loadData(); },
-           error: function (xhr, status, error) { $("#result").html("ERROR: " + error); }
-       });
+    $("#fix-ipfs-missing-images-btn").click(function () {
+       $.post("/api/ipfs/mgmt/ipfs-maintenance")
+           .done(function (data) {$("#result").html("SUCCESS: " + data); loadData(); loadFullIpfsStatus(); })
+           .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
     });
 
-    $("#fix-blc-missing-images").click(function () {
-        var obj = {
-            "_method":"delete"
-        };
-        $.post("/api/ipfs/blc-images", obj)
+    $("#fix-blc-missing-images-btn").click(function () {
+        $.post("/api/ipfs/mgmt/clean-deprecated-ipfs")
             .done(function (data) {
-                $("#blockchain-unactivated-images").html(data.objects);
-                $("#blockchain-missing-status").html(data.status);
+                $("#result").html("SUCCESS: " + data);
                 loadData();
+                loadFullIpfsStatus();
             })
             .fail(function (xhr, status, error) {
                 $("#result").html("ERROR: " + error);
             });
+    });
+
+    $("#laod-full-stats-btn").click(function () {
+        loadFullIpfsStatus();
     });
 
     $("#signup-btn").click(function() {

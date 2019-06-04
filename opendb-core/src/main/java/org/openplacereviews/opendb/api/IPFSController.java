@@ -3,12 +3,14 @@ package org.openplacereviews.opendb.api;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.service.ipfs.dto.ImageDTO;
-import org.openplacereviews.opendb.service.ipfs.dto.IpfsStatusDTO;
+import org.openplacereviews.opendb.dto.IpfsStatusDTO;
+import org.openplacereviews.opendb.dto.ResourceDTO;
+import org.openplacereviews.opendb.service.IPFSFileManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -17,11 +19,10 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
-import java.util.Base64;
-import java.util.List;
 
+import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @Controller
@@ -31,117 +32,71 @@ public class IPFSController {
 	protected static final Log LOGGER = LogFactory.getLog(IPFSController.class);
 
 	@Autowired
-	private IPFSService ipfsService;
+	private IPFSFileManager externalResourcesManager;
 
 	@Autowired
 	private JsonFormatter formatter;
+	
+	private void checkIPFSRunning() {
+		if(!externalResourcesManager.isIPFSRunning()) {
+			throw new ConnectionException("IPFS service is not running.");
+		}
+	}
 
 	@PostMapping(value = "/image", consumes = MULTIPART_FORM_DATA_VALUE, produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> uploadImage(
 			@RequestPart(name = "file") @Valid @NotNull @NotEmpty MultipartFile file) throws IOException {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		ImageDTO imageDTO = ImageDTO.of(file);
-		imageDTO = ipfsService.addFile(imageDTO);
-
-		return ResponseEntity.ok(formatter.imageObjectToJson(imageDTO));
+		checkIPFSRunning();
+		ResourceDTO resourceDTO = ResourceDTO.of(file);
+		resourceDTO = externalResourcesManager.addFile(resourceDTO);
+		return ResponseEntity.ok(formatter.imageObjectToJson(resourceDTO));
 	}
 
-	@GetMapping
-	@ResponseBody
-	public ResponseEntity<String> loadIpfsStatus() throws IOException, UnirestException {
-		IpfsStatusDTO ipfsStatusDTO = IPFSService.status ? ipfsService.getIpfsNodeInfo() : getIpfsStatus();
-
-		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsStatusDTO));
-	}
 
 	@GetMapping(value = "/image")
 	@ResponseBody
-	public ResponseEntity<String> getFile(@RequestParam("cid") String cid) throws IOException {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
+	public ResponseEntity<FileSystemResource> getFile(@RequestParam("hash") String hash, 
+			@RequestParam(value="ext", required=false) String ext) throws IOException {
+		checkIPFSRunning();
+		File file = externalResourcesManager.getFileByHash(hash, ext);
 
-		try (ByteArrayOutputStream outputStream = (ByteArrayOutputStream) ipfsService.read(cid)) {
-			return ResponseEntity.ok(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
+		HttpHeaders httpHeaders = new HttpHeaders();
+		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());
+		httpHeaders.add("Content-Length", String.valueOf(file.length()));
+
+		return ResponseEntity.ok()
+				.contentType(APPLICATION_OCTET_STREAM)
+				.headers(httpHeaders)
+				.body(new FileSystemResource(file));
+	}
+	
+	@ResponseBody
+	@GetMapping("status")
+	public ResponseEntity<String> loadIpfsStatus(@RequestParam(value = "full", required = false) boolean full)
+			throws IOException, UnirestException {
+		IpfsStatusDTO ipfsStatusDTO;
+		if (!externalResourcesManager.isIPFSRunning()) {
+			ipfsStatusDTO = new IpfsStatusDTO().setStatus("NOT CONNECTED");
+		} else {
+			ipfsStatusDTO = externalResourcesManager.getCurrentStatus(full);
 		}
+		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsStatusDTO));
 	}
+	
 
-	@PutMapping(value = "/image")
+	@PostMapping(value = "/mgmt/ipfs-maintenance")
 	@ResponseBody
-	public ResponseEntity<String> pinImage(@RequestParam("cid") String cid) {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		if (!ipfsService.pin(cid)) {
-			return ResponseEntity.ok("{\"status\":\"FAILED\"}");
-		}
-
-		return ResponseEntity.ok("{\"status\":\"OK\"}");
+	public ResponseEntity<String> uploadMissingImagesToIPFS() {
+		checkIPFSRunning();
+		return ResponseEntity.ok(formatter.fullObjectToJson(externalResourcesManager.uploadMissingResourcesToIPFS()));
 	}
 
-	@DeleteMapping(value = "/image")
-	@ResponseBody
-	public ResponseEntity<String> unpinImage(@RequestParam("cid") String cid) {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		if(!ipfsService.unpin(cid)) {
-			return ResponseEntity.ok("{\"status\":\"FAILED\"}");
-		}
-
-		return ResponseEntity.ok("{\"status\":\"OK\"}");
-	}
-
-	@GetMapping(value = "/image/tracked")
-	@ResponseBody
-	public ResponseEntity<String> getTrackedFiles() {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		List<String> tracked = ipfsService.getTracked();
-		return ResponseEntity.ok(formatter.fullObjectToJson(tracked));
-	}
-
-	@GetMapping(value = "/status")
-	@ResponseBody
-	public ResponseEntity<String> getStatusCheckingMissingImagesInIPFS() {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsService.checkingMissingImagesInIPFS()));
-	}
-
-	@PutMapping(value = "/upload")
-	@ResponseBody
-	public ResponseEntity<String> loadMissingImagesToIpfs() {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsService.uploadMissingImagesToIPFS()));
-	}
-
-	@GetMapping(value = "/blc-status")
-	@ResponseBody
-	public ResponseEntity<String> getStatusCheckingMissingImagesInBlockchain() {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsService.statusImagesInDB()));
-	}
-
-	@DeleteMapping(value = "/blc-images")
+	@PostMapping(value = "/mgmt/clean-deprecated-ipfs")
 	@ResponseBody
 	public ResponseEntity<String> removeUnactivatedAndTimeoutImages() throws IOException {
-		if (!IPFSService.status)
-			throw new ConnectionException("IPFS service was not runned!");
-
-		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsService.removeUnusedImageObjectsFromSystemAndUnpinningThem()));
-	}
-
-	private IpfsStatusDTO getIpfsStatus() {
-		return new IpfsStatusDTO().setStatus("NOT CONNECTED");
+		checkIPFSRunning();
+		return ResponseEntity.ok(formatter.fullObjectToJson(externalResourcesManager.removeUnusedImageObjectsFromSystemAndUnpinningThem()));
 	}
 
 }

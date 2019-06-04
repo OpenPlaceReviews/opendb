@@ -1,28 +1,41 @@
 package org.openplacereviews.opendb.service;
 
-import com.mashape.unirest.http.exceptions.UnirestException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
-import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.ops.*;
-import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
-import org.openplacereviews.opendb.service.ipfs.IPFSService;
-import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyPair;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.api.MgmtController;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.ValidationTimer;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 
 @Service
@@ -40,7 +53,7 @@ public class BlocksManager {
 	private DBConsensusManager dataManager;
 
 	@Autowired
-	private IPFSService ipfsService;
+	private IPFSFileManager extResourceService;
 	
 	protected String[] BOOTSTRAP_LIST = 
 			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"};
@@ -187,24 +200,10 @@ public class BlocksManager {
 				return null;
 			}
 		}
-
-		if (IPFSService.status) {
-			candidates.forEach(operation -> {
-				if (!operation.getImages().isEmpty()) {
-					operation.getImages().forEach(imageDTO -> {
-						dataManager.updateImageActiveStatus(imageDTO, true);
-						ipfsService.getReplicaSet().forEach(cluster -> {
-							try {
-								cluster.pin(imageDTO.getCid());
-							} catch (UnirestException e) {
-								e.printStackTrace();
-							}
-						});
-					});
-				}
-			});
-		}
 		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
+		
+		extResourceService.processOperations(candidates);
+		timer.measure(tmAddOps, ValidationTimer.BLC_PROCESS_RESOURCES);
 
 		int tmNewBlock = timer.startExtra();
 		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair);
