@@ -385,9 +385,16 @@ public class DBSchemaManager {
 				+ "(type,ophash,superblock,sblockid,sorder,content," + generatePKString(table, "p%1$d", ",")+") "
 				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);		
 	}
-	
-	
-	
+
+	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {
+		jdbcTemplate.batchUpdate("INSERT INTO " + table
+				+ "(type,ophash,superblock,sblockid,sorder,content," + generatePKString(table, "p%1$d", ",")+") "
+				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);
+	}
+
+
+
+
 
 	// Query / insert values
 	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';

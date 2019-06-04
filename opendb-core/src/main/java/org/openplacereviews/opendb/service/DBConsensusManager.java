@@ -485,16 +485,9 @@ public class DBConsensusManager {
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
-				Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
-				while (it.hasNext()) {
-					Entry<CompoundKey, OpObject> e = it.next();
-					CompoundKey pkey = e.getKey();
-					OpObject obj = e.getValue();
-					long l = opsId.get(obj.getParentHash());
-					int sblockid = OUtils.first(l);
-					int sorder = OUtils.second(l);
-					dbSchema.insertObjIntoTable(type, pkey, obj, superBlockHash, sblockid, sorder, jdbcTemplate);
-				}
+				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId);
+				String table = dbSchema.getTableByType(type);
+				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate);
 			}
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 					blc.getRules());
@@ -509,6 +502,48 @@ public class DBConsensusManager {
 			}
 		}
 		return dbchain;
+	}
+
+	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
+												   byte[] superBlockHash, Map<String, Long> opsId) {
+
+		List<Object[]> insertBatch = new ArrayList<>(objects.size());
+		int ksize = dbSchema.getKeySizeByType(type);
+		Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
+		while (it.hasNext()) {
+			Entry<CompoundKey, OpObject> e = it.next();
+			CompoundKey pkey = e.getKey();
+			OpObject obj = e.getValue();
+			long l = opsId.get(obj.getParentHash());
+			int sblockid = OUtils.first(l);
+			int sorder = OUtils.second(l);
+
+			if (pkey.size() > ksize) {
+				throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+			}
+
+			Object[] args = new Object[6 + ksize];
+			args[0] = type;
+			String ophash = obj.getParentHash();
+			args[1] = SecUtils.getHashBytes(ophash);
+			args[2] = superBlockHash;
+
+			args[3] = sblockid;
+			args[4] = sorder;
+			PGobject contentObj = new PGobject();
+			contentObj.setType("jsonb");
+			try {
+				contentObj.setValue(formatter.objToJson(obj));
+			} catch (SQLException es) {
+				throw new IllegalArgumentException(es);
+			}
+			args[5] = contentObj;
+			pkey.toArray(args, 6);
+
+			insertBatch.add(args);
+		}
+
+		return insertBatch;
 	}
 
 	public synchronized OpBlockChain compact(int prevSize, OpBlockChain blc, boolean db) {

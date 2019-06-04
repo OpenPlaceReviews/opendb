@@ -159,7 +159,6 @@ public class OpBlock extends OpObject {
 		public JsonElement serialize(OpBlock src, Type typeOfSrc, JsonSerializationContext context) {
 			TreeMap<String, Object> tm = new TreeMap<>(
 					fullOutput ? src.getMixedFieldsAndCacheMap() : src.fields);
-			tm.put(F_OPERATIONS, src.operations);
 			return context.serialize(tm);
 		}
 
