@@ -6,7 +6,6 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
@@ -485,51 +484,7 @@ public class DBSchemaManager {
 		return s;
 	}
 
-	
-	
-	public void insertObjIntoTable(String type, CompoundKey pkey, OpObject obj, byte[] superBlockHash, 
-			int sblockid, int sorder, JdbcTemplate jdbcTemplate) {
-		String table = getTableByType(type);
-		int ksize = getKeySizeByType(type);
-		if (pkey.size() > ksize) {
-			throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
-		}
-
-		List<CustomIndexDto> customIndexDtoList = generateCustomColumnsForTable(table);
-		Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
-		args[0] = type;
-		String ophash = obj.getParentHash();
-		args[1] = SecUtils.getHashBytes(ophash);
-		args[2] = superBlockHash;
-		
-		args[3] = sblockid;
-		args[4] = sorder;
-		PGobject contentObj = new PGobject();
-		contentObj.setType("jsonb");
-		try {
-			contentObj.setValue(formatter.objToJson(obj));
-		} catch (SQLException es) {
-			throw new IllegalArgumentException(es);
-		}
-		args[5] = contentObj;
-		AtomicInteger i = new AtomicInteger(6);
-
-		String columns = generateColumnNames(customIndexDtoList);
-		AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
-		customIndexDtoList.forEach(customIndexDto -> {
-			args[i.get()] = getColumnValue(customIndexDto, obj);
-			amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,");
-			i.getAndIncrement();
-		});
-
-		pkey.toArray(args, i.get());
-
-		jdbcTemplate.update("INSERT INTO " + table
-				+ "(type,ophash,superblock,sblockid,sorder,content," + columns + generatePKString(table, "p%1$d", ",") + ") "
-				+ " values(?,?,?,?,?,?," + amountValuesForCustomColumns + generatePKString(table, "?", ",")+ ")", args);
-	}
-
-	private Object getColumnValue(CustomIndexDto customIndexDTO, OpObject obj) {
+	public Object getColumnValue(CustomIndexDto customIndexDTO, OpObject obj) {
 		switch (customIndexDTO.type) {
 			case "jsonb" : {
 				try {
@@ -576,7 +531,7 @@ public class DBSchemaManager {
 	}
 
 	public static class CustomIndexDto {
-		private String column;
+		public String column;
 		private String field;
 		private String type;
 		private String hash;
@@ -604,7 +559,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	private List<CustomIndexDto> generateCustomColumnsForTable(String table) {
+	public List<CustomIndexDto> generateCustomColumnsForTable(String table) {
 		List<CustomIndexDto> columns = new ArrayList<>();
 
 		if (table.equals(OBJS_TABLE)) {
@@ -623,17 +578,24 @@ public class DBSchemaManager {
 		return columns;
 	}
 
-	private String generateColumnNames(List<CustomIndexDto> columns) {
+	public String generateColumnNames(List<CustomIndexDto> columns) {
 		AtomicReference<String> customColumns = new AtomicReference<>("");
 		columns.forEach(column -> {
-			customColumns.set(customColumns.get() + column.column + ", ");
+			if (customColumns.get().isEmpty()) {
+				customColumns.set(customColumns.get() + column.column);
+			} else {
+				customColumns.set(customColumns.get() + ", " + column.column);
+			}
 		});
 
 		return customColumns.get();
 	}
-	
-	
-	
+
+	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, String columns, AtomicReference<String> amountValuesForCustomColumns) {
+		jdbcTemplate.batchUpdate("INSERT INTO " + table
+				+ "(type,ophash,superblock,sblockid,sorder,content" + (columns.isEmpty() ? "," : "," + columns + ",") + generatePKString(table, "p%1$d", ",")+") "
+				+ " values(?,?,?,?,?,?," + amountValuesForCustomColumns + generatePKString(table, "?", ",")+ ")", args);
+	}
 
 	// Query / insert values
 	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';

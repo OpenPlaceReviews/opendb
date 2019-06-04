@@ -76,15 +76,20 @@ public class OpApiController {
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
     			.body("{\"status\":\"ERROR\"}");
 	}
-    
-    @PostMapping(path = "/process-operation")
-    @ResponseBody
-    public ResponseEntity<String> processOperation(HttpSession session, 
-    		@RequestParam(required = true) String json, @RequestParam(required = false) String name, 
-    		@RequestParam(required = false) String pwd, @RequestParam(required = false) String privateKey, 
-    		@RequestParam(required = false, defaultValue = "false") boolean dontSignByServer,
-    		@RequestParam(required = false, defaultValue = "false") boolean addToQueue,
-    		@RequestParam(required = false, defaultValue = "false") boolean validate)
+
+	@PostMapping(path = "/process-operation")
+	@ResponseBody
+	public ResponseEntity<String> processOperation(HttpSession session,
+												   @RequestBody(required = true) String json,
+												   @RequestParam(required = false) String name,
+												   @RequestParam(required = false) String pwd,
+												   @RequestParam(required = false) String privateKey,
+												   @RequestParam(required = false, defaultValue = "false")
+														   boolean dontSignByServer,
+												   @RequestParam(required = false, defaultValue = "false")
+														   boolean addToQueue,
+												   @RequestParam(required = false, defaultValue = "false")
+														   boolean validate)
 			throws FailedVerificationException {
     	if(!validateServerLogin(session)) {
     		return unauthorizedByServer();

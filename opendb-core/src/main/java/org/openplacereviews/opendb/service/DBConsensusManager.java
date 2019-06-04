@@ -26,6 +26,8 @@ import java.util.*;
 import java.util.Date;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -204,9 +206,13 @@ public class DBConsensusManager {
 			jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashCurrent);
 
 			for (String objTable : dbSchema.getObjectTables()) {
-				String queryIns = "INSERT INTO " + objTable + "(type, " + dbSchema.generatePKString(objTable, "p%1$d", ", ") + ", ophash, superblock, sblockid, sorder, content) "
+				List<CustomIndexDto> customIndexDtoList = dbSchema.generateCustomColumnsForTable(objTable);
+				String columns = dbSchema.generateColumnNames(customIndexDtoList);
+				String coalesceForCustomField = generateCoalesceQueryForCustomFields(customIndexDtoList);
+
+				String queryIns = "INSERT INTO " + objTable + "(type, " + dbSchema.generatePKString(objTable, "p%1$d", ", ") + ", ophash, superblock, sblockid, sorder, content" + (columns.isEmpty() ? "" : "," + columns) + ") "
 						+ " SELECT coalesce(r1.type, r2.type), " + dbSchema.generatePKString(objTable, "coalesce(r1.p%1$d, r2.p%1$d)", ", ") + ", "
-						+ "     coalesce(r1.ophash, r2.ophash), ?, coalesce(r1.sblockid, r2.sblockid), coalesce(r1.sorder, r2.sorder), coalesce(r1.content, r2.content) "
+						+ "     coalesce(r1.ophash, r2.ophash), ?, coalesce(r1.sblockid, r2.sblockid), coalesce(r1.sorder, r2.sorder), coalesce(r1.content, r2.content) " + coalesceForCustomField
 						+ " FROM "
 						+ " (select * from " + objTable + " where superblock = ? ) r1 "
 						+ "  FULL OUTER JOIN "
@@ -236,6 +242,14 @@ public class DBConsensusManager {
 		return res;
 	}
 
+	private String generateCoalesceQueryForCustomFields(List<CustomIndexDto> customIndexDtoList) {
+		StringBuilder str = new StringBuilder();
+		for (CustomIndexDto c: customIndexDtoList) {
+			str.append(", coalesce(r1.").append(c.column).append(", r2.").append(c.column).append(")");
+		}
+
+		return str.toString();
+	}
 	protected BlockDbAccessInterface createDbAccess(String superblock, Collection<OpBlock> blockHeaders) {
 		return new SuperblockDbAccess(superblock, blockHeaders);
 	}
@@ -485,16 +499,14 @@ public class DBConsensusManager {
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
-				Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
-				while (it.hasNext()) {
-					Entry<CompoundKey, OpObject> e = it.next();
-					CompoundKey pkey = e.getKey();
-					OpObject obj = e.getValue();
-					long l = opsId.get(obj.getParentHash());
-					int sblockid = OUtils.first(l);
-					int sorder = OUtils.second(l);
-					dbSchema.insertObjIntoTable(type, pkey, obj, superBlockHash, sblockid, sorder, jdbcTemplate);
-				}
+				String table = dbSchema.getTableByType(type);
+				List<CustomIndexDto> customIndexDtoList = dbSchema.generateCustomColumnsForTable(table);
+				String columns = dbSchema.generateColumnNames(customIndexDtoList);
+				AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
+				customIndexDtoList.forEach(customIndexDto -> amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,"));
+
+				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, customIndexDtoList);
+				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, columns, amountValuesForCustomColumns);
 			}
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 					blc.getRules());
@@ -509,6 +521,55 @@ public class DBConsensusManager {
 			}
 		}
 		return dbchain;
+	}
+
+	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
+												   byte[] superBlockHash, Map<String, Long> opsId, List<CustomIndexDto> customIndexDtoList) {
+
+		List<Object[]> insertBatch = new ArrayList<>(objects.size());
+		int ksize = dbSchema.getKeySizeByType(type);
+		Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
+		while (it.hasNext()) {
+			Entry<CompoundKey, OpObject> e = it.next();
+			CompoundKey pkey = e.getKey();
+			OpObject obj = e.getValue();
+			long l = opsId.get(obj.getParentHash());
+			int sblockid = OUtils.first(l);
+			int sorder = OUtils.second(l);
+
+			if (pkey.size() > ksize) {
+				throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+			}
+
+			Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
+			args[0] = type;
+			String ophash = obj.getParentHash();
+			args[1] = SecUtils.getHashBytes(ophash);
+			args[2] = superBlockHash;
+
+			args[3] = sblockid;
+			args[4] = sorder;
+			PGobject contentObj = new PGobject();
+			contentObj.setType("jsonb");
+			try {
+				contentObj.setValue(formatter.objToJson(obj));
+			} catch (SQLException es) {
+				throw new IllegalArgumentException(es);
+			}
+			args[5] = contentObj;
+
+			AtomicInteger i = new AtomicInteger(6);
+			customIndexDtoList.forEach(customIndexDto -> {
+				args[i.get()] = dbSchema.getColumnValue(customIndexDto, obj);
+				i.getAndIncrement();
+			});
+
+			pkey.toArray(args, i.get());
+
+			insertBatch.add(args);
+		}
+
+		return insertBatch;
 	}
 
 	public synchronized OpBlockChain compact(int prevSize, OpBlockChain blc, boolean db) {
