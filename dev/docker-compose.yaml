@@ -1,0 +1,56 @@
+version: '3.5'
+
+networks:
+  opendb-network:
+    name: opendb-network
+  ipfs-network:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 10.5.0.0/16
+
+services:
+  opendb-postgres:
+    image: postgres:10
+    container_name: opendb-postgres
+    ports:
+    - 5432:5432
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: openplacereviews
+      ALLOW_IP_RANGE: 0.0.0.0/0
+    networks:
+    - opendb-network
+
+  ipfs0:
+    container_name: ipfs0
+    image: ipfs/go-ipfs:latest
+    ports:
+    - "4001:4001"
+    - "127.0.0.1:5001:5001"
+    - "8080:8080"
+    volumes:
+    - "/tmp/ipfs-docker-data:/data/ipfs/"
+    - "/tmp/ipfs-docker-staging:/export"
+    networks:
+      ipfs-network:
+        ipv4_address: 10.5.0.5
+
+  cluster0:
+    container_name: cluster0
+    image: ipfs/ipfs-cluster:latest
+    depends_on:
+    - ipfs0
+    environment:
+      CLUSTER_SECRET: "77071ee233816f4977758f0f8cfb5e84b08a586b6f5705784c8aa20bbddf1675"
+      IPFS_API: /ip4/10.5.0.5/tcp/5001
+    ports:
+    - "9094:9094"
+    - "9095:9095"
+    - "9096:9096"
+    networks:
+      ipfs-network:
+        ipv4_address: 10.5.0.6
+    volumes:
+    - "/tmp/ipfs-claster-data:/data/ipfs-cluster/"

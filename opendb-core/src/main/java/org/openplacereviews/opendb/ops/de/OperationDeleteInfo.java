@@ -1,8 +1,8 @@
 package org.openplacereviews.opendb.ops.de;
 
-import java.util.List;
-
 import org.openplacereviews.opendb.ops.OpOperation;
+
+import java.util.List;
 
 public class OperationDeleteInfo {
 	public OpOperation op;

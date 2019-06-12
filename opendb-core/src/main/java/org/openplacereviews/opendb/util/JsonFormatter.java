@@ -1,29 +1,16 @@
 package org.openplacereviews.opendb.util;
 
-import java.io.Reader;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.gson.*;
 
+import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.ipfs.storage.ImageDTO;
 import org.springframework.stereotype.Component;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSyntaxException;
+import java.io.Reader;
+import java.lang.reflect.Type;
+import java.util.*;
 
 @Component
 public class JsonFormatter {
@@ -137,8 +124,8 @@ public class JsonFormatter {
 		return gson.fromJson(json, classOfT);
 	}
 
-	public String imageObjectToJson(ImageDTO imageDTO) {
-		return gson.toJson(imageDTO, ImageDTO.class);
+	public String imageObjectToJson(ResourceDTO resourceDTO) {
+		return gson.toJson(resourceDTO, ResourceDTO.class);
 	}
 	
 	

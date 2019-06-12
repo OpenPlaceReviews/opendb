@@ -18,6 +18,7 @@
       <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
       <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
       <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
+      <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
       <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
   </ul>
   <div class="tab-content">
@@ -84,13 +85,83 @@
 
     </div>
 
-
     <div id="errors" class="tab-pane fade">
       <h3>Log</h3>
         <ul id="errors-list">
         </ul>
 
     </div>
+
+    <div id="ipfs" class="tab-pane fade">
+      <h3>IPFS info</h3>
+      <div>
+        <p><b>IPFS STATUS:</b> &nbsp;&nbsp;<span id="ipfs-status"></span></p>
+        <p><b>PEER ID:</b> &nbsp;&nbsp;<span id="ipfs-peer-id"></span></p>
+        <p><b>VERSION:</b> &nbsp;&nbsp;<span id="ipfs-version"></span></p>
+        <p><b>GATEWAY</b> &nbsp;&nbsp;<span id="ipfs-gateway"></span></p>
+        <p><b>API</b> &nbsp;&nbsp;<span id="ipfs-api"></span></p>
+        <p><b>ADDRESSES</b> &nbsp;&nbsp;<span id="ipfs-addresses"></span></p>
+        <p><b>PUBLIC KEY</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
+      </div>
+
+      <h3>IPFS storage info</h3>
+      <div>
+        <p><b>REPO SIZE:</b> &nbsp;&nbsp;<span id="ipfs-repo-size"></span></p>
+        <p><b>STORAGE MAX:</b> &nbsp;&nbsp;<span id="ipfs-max-storage-size"></span></p>
+        <p><b>REPO PATH</b> &nbsp;&nbsp;<span id="ipfs-repo-path"></span></p>
+      </div>
+
+      <h3>IPFS system info</h3>
+      <div>
+        <p><b>DISK INFO:</b> &nbsp;&nbsp;<span id="system-info"></span></p>
+        <p><b>MEMORY:</b> &nbsp;&nbsp;<span id="system-memory"></span></p>
+        <p><b>RUNTIME:</b> &nbsp;&nbsp;<span id="system-runtime"></span></p>
+        <p><b>NETWORK</b> &nbsp;&nbsp;<span id="system-network"></span></p>
+      </div>
+
+      <h3>STATISTIC</h3>
+      <div>
+        <p><b>AMOUNT ALL IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-all-ipfs-objects"></span></p>
+        <p><b>AMOUNT PINNED IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-pinned-ipfs-objects"></span></p>
+        <p><b>AMOUNT MISSING IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-missing-ipfs-objects"></span></p>
+        <p><b>AMOUNT DB OBJECTS:</b> &nbsp;&nbsp;<span id="amount-db-objects"></span></p>
+        <p><b>AMOUNT UNACTIVATED OBJECTS:</b> &nbsp;&nbsp;<span id="amount-unactivated-objects"></span></p>
+        <input type="submit" value="Load full stats" id="laod-full-stats-btn">
+      </div>
+
+      <h3>IPFS missing resources</h3>
+      <div>
+        <p><b>List of missing resources</b> &nbsp;&nbsp;<span id="ipfs-missing-objects"></span></p>
+        <input type="submit" value="Upload missing images to IPFS" id="fix-ipfs-missing-images-btn">
+      </div>
+
+      <h3>Unactivated images</h3>
+      <div>
+        <p><b>List unactivated images: </b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
+        <input type="submit" value="Remove unactivated images" id="fix-blc-missing-images-btn">
+      </div>
+
+      <h3>Add Image</h3>
+      <div>
+          1. File: <input type="file" id="image-file">
+        <br>
+          <input type="submit" value="Add File" id="add-file-btn">
+        <br>
+          <p><b>Result: </b> &nbsp;&nbsp;<span id="result-add-image"></span></p>
+      </div>
+
+      <h3>Get file</h3>
+      <div>
+        1. Cid of image: <input type="text" id="get-image">
+        <br>
+        <a href="" id="image-link" download>
+        <input type="submit" value="Get image" id="get-image-btn">
+        </a>
+        <br>
+        </div>
+
+    </div>
+
 
     <div id="reg" class="tab-pane fade">
       <h3>Signup</h3>
@@ -176,7 +247,7 @@ function loadAllData() {
   loadObjectsData();
   loadBlocksData();
   loadErrorsData();
-
+  loadIpfsStatusData();
 }
 
 function refreshUser() {
@@ -186,11 +257,13 @@ function refreshUser() {
     $("#admin-login-div").hide();
     $("#reg").show();
     $("#reg-tab").show();
+    $("#ipfs-tab").show();
   } else {
     $("#admin-actions").hide();
     $("#admin-login-div").show();
     $("#reg-tab").hide();
     $("#reg").hide();
+    $("#ipfs-tab").hide();
   }
   
 }
@@ -294,6 +367,33 @@ function loadStatusData() {
   });
 }
 
+function loadIpfsStatusData() {
+    $.getJSON("/api/ipfs/status?full=false", function ( data ) {
+        $("#ipfs-status").html(data.status);
+        $("#ipfs-peer-id").html(data.peerId);
+        $("#ipfs-version").html(data.version);
+        $("#ipfs-gateway").html(data.gateway);
+        $("#ipfs-api").html(data.api);
+        $("#ipfs-addresses").html(JSON.stringify(data.addresses));
+        $("#ipfs-public-key").html(data.publicKey);
+
+        // IPFS STORAGE
+        $("#ipfs-repo-size").html(data.repoSize);
+        $("#ipfs-max-storage-size").html(data.storageMax);
+        $("#ipfs-repo-path").html(data.repoPath);
+
+        // IPFS SYSTEM INFO
+        $("#system-info").html(data.diskInfo);
+        $("#system-memory").html(data.memory);
+        $("#system-runtime").html(data.runtime);
+        $("#system-network").html(data.network);
+
+        // IPFS STATS
+        $("#amount-all-ipfs-objects").html(data.amountIpfsResources);
+        $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
+    });
+}
+
 function loadBlocksData() {
   $.getJSON( "/api/blocks", function( data ) {
       var items = "";
@@ -326,6 +426,24 @@ function loadBlocksData() {
   });
 }
 
+function loadFullIpfsStatus() {
+    $(document).ready(function () {
+        $.getJSON("/api/ipfs/status?full=true", function (data) {
+            $("#result").html("SUCCESS: " + data);
+            $("#amount-missing-ipfs-objects").html(data.missingResources.length);
+            $("#amount-db-objects").html(data.amountDBResources);
+            $("#amount-unactivated-objects").html(data.deprecatedResources.length);
+
+            console.log("tsts");
+            for(var i = 0; i < data.missingResources.length; i++)  {
+                $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
+            };
+            for(var i = 0; i < data.deprecatedResources.length; i++)  {
+                $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
+            };
+        });
+    });
+}
 function loadQueueData() {
   $.getJSON( "/api/queue", function( data ) {
       var items = "";
@@ -461,7 +579,54 @@ $( document ).ready(function() {
           .done(function(data){  $("#result").html(data); loadData(); })
           .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
     });
-    
+
+    $("#add-file-btn").click(function () {
+        var formData = new FormData();
+        formData.append("file", $("#image-file")[0].files[0]);
+
+        $.ajax({
+            url: '/api/ipfs/image',
+            data: formData,
+            processData: false,
+            contentType: false,
+            type: 'POST',
+            success: function(data) {
+                $("#result-add-image").html(data.toString());
+                loadData();
+            },
+            error: function (xhr, status, error) {
+                $("#result-add-image").html("ERROR: " + error);
+            }
+        });
+    });
+
+    $("#get-image-btn").click(function () {
+        $("#image-link").attr("href", "/api/ipfs/image?hash=" + $("#get-image").val());
+        $("#image-link").click();
+    });
+
+    $("#fix-ipfs-missing-images-btn").click(function () {
+       $.post("/api/ipfs/mgmt/ipfs-maintenance")
+           .done(function (data) {$("#result").html("SUCCESS: " + data); loadData(); loadFullIpfsStatus(); })
+           .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
+    });
+
+    $("#fix-blc-missing-images-btn").click(function () {
+        $.post("/api/ipfs/mgmt/clean-deprecated-ipfs")
+            .done(function (data) {
+                $("#result").html("SUCCESS: " + data);
+                loadData();
+                loadFullIpfsStatus();
+            })
+            .fail(function (xhr, status, error) {
+                $("#result").html("ERROR: " + error);
+            });
+    });
+
+    $("#laod-full-stats-btn").click(function () {
+        loadFullIpfsStatus();
+    });
+
     $("#signup-btn").click(function() {
       var obj = {
         "pwd":$("#signup-pwd").val(),

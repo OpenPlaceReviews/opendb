@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -136,9 +137,7 @@ public class OpOperation extends OpObject {
 	public String getComment() {
 		return getStringValue(F_COMMENT);
 	}
-	
-	
-	
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -189,10 +188,10 @@ public class OpOperation extends OpObject {
 			this.excludeHashAndSignature = false;
 		}
 		
-		
 		@Override
 		public OpOperation deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
+			Map treeMap = new Gson().fromJson(json, TreeMap.class);
 			JsonObject jsonObj = json.getAsJsonObject();
 			OpOperation op = new OpOperation();
 			JsonElement tp = jsonObj.remove(F_TYPE);
@@ -209,6 +208,7 @@ public class OpOperation extends OpObject {
 					op.addNew(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
+
 			jsonObj.remove(F_EVAL);
 			op.fields = context.deserialize(jsonObj, TreeMap.class);
 			return op;
@@ -227,6 +227,8 @@ public class OpOperation extends OpObject {
 			}
 			return context.serialize(tm);
 		}
+
+		
 
 	}
 }

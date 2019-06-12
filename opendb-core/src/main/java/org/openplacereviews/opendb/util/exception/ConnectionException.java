@@ -8,4 +8,8 @@ public class ConnectionException extends TechnicalException {
         super(message, cause);
     }
 
+    public ConnectionException(String message) {
+        super(message);
+    }
+
 }

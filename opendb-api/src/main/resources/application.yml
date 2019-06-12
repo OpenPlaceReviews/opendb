@@ -10,13 +10,6 @@ server:
     max-http-post-size: 4096
     max-threads: 5
 
-ipfs:
-  run: ${IPFS_RUN:false}
-  host: ${IPFS_HOST:localhost}
-  port: ${IPFS_PORT:5001}
-  timeout: ${IPFS_TIMEOUT:10000}
-  directory: ${IPFS_DIRECTORY:/opendb/storage/}
-
 opendb:
   mgmt:
     user: ${OPENDB_LOGIN:openplacereviews:test_1}
@@ -28,6 +21,13 @@ opendb:
   db:
     compactCoefficient: ${OPENDB_DB_CF:1.0}
     dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
+  storage:
+    ipfs.node:
+      host: ${IPFS_HOST:}
+      port: ${IPFS_PORT:5001}
+      readTimeoutMs: ${IPFS_READ_TIMEOUT_MS:10000}
+    local-storage: ${EXT_RES_DIRECTORY:}
+    timeToStoreUnusedSec: ${EXT_RES_STORE_UNUSED:86400}
   db-schema:
     objtables:
       obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }

@@ -1,12 +1,12 @@
 package org.openplacereviews.opendb.ops;
 
+import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-
-import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 
 public class OpPrivateBlocksList {
 

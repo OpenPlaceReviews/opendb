@@ -1,19 +1,12 @@
 package org.openplacereviews.opendb.ops;
 
+import com.google.gson.*;
+
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.TreeMap;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 
 public class OpBlock extends OpObject {
 	
@@ -166,6 +159,7 @@ public class OpBlock extends OpObject {
 		public JsonElement serialize(OpBlock src, Type typeOfSrc, JsonSerializationContext context) {
 			TreeMap<String, Object> tm = new TreeMap<>(
 					fullOutput ? src.getMixedFieldsAndCacheMap() : src.fields);
+			tm.put(F_OPERATIONS, src.operations);
 			return context.serialize(tm);
 		}
 
