@@ -41,15 +41,6 @@
 		}]
 	},
 	{
-		"type"  : "sys.role",
-		"new" : [{
-			"id" : ["none3"],
-			"comment" : "3Owner role is a super role that nobody could change it",
-			"owner_role" : "none",
-			"super_roles": []
-		}]
-	},
-	{
 		"type" : "sys.grant",
 		"ref" : {
 			"s" : ["sys.signup","openplacereviewsPWD"]
