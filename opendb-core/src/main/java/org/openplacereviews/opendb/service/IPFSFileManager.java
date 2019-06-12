@@ -54,7 +54,6 @@ public class IPFSFileManager {
 				LOGGER.info(String.format("Init directory to store external images at %s", folder.getAbsolutePath()));
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
 			LOGGER.error("IPFS directory for images was not created");
 		}
 	}
@@ -138,7 +137,7 @@ public class IPFSFileManager {
 			try {
 				removeImageObject(res);
 			} catch (FileNotFoundException e) {
-				e.printStackTrace();
+				LOGGER.error("File with hash " + res.getHash() + " was not found", e);
 			}
 		});
 		ipfsService.clearNotPinnedImagesFromIPFSLocalStorage();

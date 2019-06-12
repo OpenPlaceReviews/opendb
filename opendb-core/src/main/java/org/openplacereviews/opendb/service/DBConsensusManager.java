@@ -250,6 +250,194 @@ public class DBConsensusManager {
 
 		return str.toString();
 	}
+
+
+	protected class SuperblockDbAccess implements BlockDbAccessInterface {
+
+		protected final String superBlockHash;
+		protected final List<OpBlock> blockHeaders;
+		private final ReentrantReadWriteLock readWriteLock;
+		private final ReadLock readLock;
+		private final byte[] sbhash;
+		private volatile boolean staleAccess;
+
+		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders) {
+			this.superBlockHash = superBlockHash;
+			sbhash = SecUtils.getHashBytes(superBlockHash);
+			this.blockHeaders = new ArrayList<OpBlock>(blockHeaders);
+			this.readWriteLock = new ReentrantReadWriteLock();
+			readLock = this.readWriteLock.readLock();
+			dbSuperBlocks.put(superBlockHash, this);
+		}
+
+		public boolean markAsStale(boolean stale) {
+			WriteLock lock = readWriteLock.writeLock();
+			lock.lock();
+			try {
+				staleAccess = stale;
+				return true;
+			} finally {
+				lock.unlock();
+			}
+		}
+
+		@Override
+		public OpObject getObjectById(String type, CompoundKey k) {
+			readLock.lock();
+			try {
+				if (staleAccess) {
+					throw new UnsupportedOperationException();
+				}
+				int sz = k.size();
+				Object[] o = new Object[sz + 2];
+				o[0] = sbhash;
+				o[1] = type;
+				k.toArray(o, 2);
+				String table = dbSchema.getTableByType(type);
+				if (sz > dbSchema.getKeySizeByType(type)) {
+					throw new UnsupportedOperationException();
+				}
+				String s = "select content, type, ophash from " + table +
+						" where superblock = ? and type = ? and " +
+						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz);
+				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
+
+					@Override
+					public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
+						if (!rs.next()) {
+							return null;
+						}
+						OpObject obj = formatter.parseObject(rs.getString(1));
+						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
+						return obj;
+					}
+				});
+			} finally {
+				readLock.unlock();
+			}
+		}
+
+
+		@Override
+		public Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request) {
+			int limit = request.limit - request.result.size();
+			if (limit <= 0 && request.limit >= 0) {
+				return Collections.emptyMap();
+			}
+			readLock.lock();
+			try {
+				if (staleAccess) {
+					throw new UnsupportedOperationException();
+				}
+				Object[] o = new Object[2];
+				o[0] = sbhash;
+				o[1] = type;
+
+				String objTable = dbSchema.getTableByType(type);
+				final int keySize = dbSchema.getKeySizeByType(type);
+				String sql = "select content, type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
+						+ "  from " + objTable + " where superblock = ? and type = ? ";
+				if (limit > 0) {
+					sql = sql + " limit " + limit;
+				}
+				Map<CompoundKey, OpObject> res = new LinkedHashMap<CompoundKey, OpObject>();
+				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
+					List<String> ls = new ArrayList<String>(5);
+
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						ls.clear();
+						for (int i = 0; i < keySize; i++) {
+							ls.add(rs.getString(i + 4));
+						}
+						CompoundKey k = new CompoundKey(0, ls);
+						OpObject obj = formatter.parseObject(rs.getString(1));
+						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
+						res.put(k, obj);
+					}
+				});
+				return res;
+			} finally {
+				readLock.unlock();
+			}
+		}
+
+		@Override
+		public OperationDeleteInfo getOperationInfo(String rawHash) {
+			readLock.lock();
+			try {
+				if (staleAccess) {
+					throw new UnsupportedOperationException();
+				}
+				Object[] o = new Object[2];
+				o[0] = sbhash;
+				o[1] = SecUtils.getHashBytes(rawHash);
+				String sql = "select d.mask, d.shash, o.content from " + OP_DELETED_TABLE + " d join " + OPERATIONS_TABLE + " o on o.hash = d.hash "
+						+ " where d.superblock = ? and d.hash = ? ";
+				final OperationDeleteInfo od = new OperationDeleteInfo();
+				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
+
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						long bigInt = rs.getLong(1);
+						od.create = bigInt % 2 == 0;
+						BitSet bs = BitSet.valueOf(new long[]{bigInt >> 1});
+						Array ar = rs.getArray(2);
+						PGobject[] ls = (PGobject[]) (ar == null ? null : ar.getArray());
+						if (ls != null) {
+							od.deletedOpHashes = new ArrayList<String>();
+							for (int k = 0; k < ls.length; k++) {
+								System.out.println("TODO VALIDATION hash dex format !!! : " + ls[k].getValue());
+								od.deletedOpHashes.add(ls[k].getValue());
+							}
+						}
+						od.deletedObjects = new boolean[bs.length()];
+						for (int i = 0; i < od.deletedObjects.length; i++) {
+							od.deletedObjects[i] = bs.get(i);
+						}
+						od.op = formatter.parseOperation(rs.getString(3));
+					}
+				});
+				if (od.op == null) {
+					return null;
+				}
+				return od;
+			} finally {
+				readLock.unlock();
+			}
+		}
+
+		@Override
+		public Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) {
+			boolean isSuperblockReferenceActive = false;
+			readLock.lock();
+			try {
+				isSuperblockReferenceActive = !staleAccess;
+			} finally {
+				readLock.unlock();
+			}
+			if (isSuperblockReferenceActive) {
+				// to do faster to load by superblock reference, so it could be 1 sql
+			}
+			LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
+			for (OpBlock b : blockHeaders) {
+				OpBlock lb = loadBlock(b.getRawHash());
+				if (lb == null) {
+					throw new IllegalStateException(String.format("Couldn't load '%s' block from db", b.getRawHash()));
+				}
+				blocks.add(lb);
+			}
+			return blocks;
+		}
+
+		@Override
+		public OpBlock getBlockByHash(String rawHash) {
+			return loadBlock(rawHash);
+		}
+
+
+	}
+
 	protected BlockDbAccessInterface createDbAccess(String superblock, Collection<OpBlock> blockHeaders) {
 		return new SuperblockDbAccess(superblock, blockHeaders);
 	}
@@ -821,192 +1009,6 @@ public class DBConsensusManager {
 			}
 		});
 		return res[0];
-	}
-
-	protected class SuperblockDbAccess implements BlockDbAccessInterface {
-
-		protected final String superBlockHash;
-		protected final List<OpBlock> blockHeaders;
-		private final ReentrantReadWriteLock readWriteLock;
-		private final ReadLock readLock;
-		private final byte[] sbhash;
-		private volatile boolean staleAccess;
-
-		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders) {
-			this.superBlockHash = superBlockHash;
-			sbhash = SecUtils.getHashBytes(superBlockHash);
-			this.blockHeaders = new ArrayList<OpBlock>(blockHeaders);
-			this.readWriteLock = new ReentrantReadWriteLock();
-			readLock = this.readWriteLock.readLock();
-			dbSuperBlocks.put(superBlockHash, this);
-		}
-
-		public boolean markAsStale(boolean stale) {
-			WriteLock lock = readWriteLock.writeLock();
-			lock.lock();
-			try {
-				staleAccess = stale;
-				return true;
-			} finally {
-				lock.unlock();
-			}
-		}
-
-		@Override
-		public OpObject getObjectById(String type, CompoundKey k) {
-			readLock.lock();
-			try {
-				if (staleAccess) {
-					throw new UnsupportedOperationException();
-				}
-				int sz = k.size();
-				Object[] o = new Object[sz + 2];
-				o[0] = sbhash;
-				o[1] = type;
-				k.toArray(o, 2);
-				String table = dbSchema.getTableByType(type);
-				if (sz > dbSchema.getKeySizeByType(type)) {
-					throw new UnsupportedOperationException();
-				}
-				String s = "select content, type, ophash from " + table +
-						" where superblock = ? and type = ? and " +
-						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz);
-				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
-
-					@Override
-					public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
-						if (!rs.next()) {
-							return null;
-						}
-						OpObject obj = formatter.parseObject(rs.getString(1));
-						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
-						return obj;
-					}
-				});
-			} finally {
-				readLock.unlock();
-			}
-		}
-
-
-		@Override
-		public Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request) {
-			int limit = request.limit - request.result.size();
-			if (limit <= 0 && request.limit >= 0) {
-				return Collections.emptyMap();
-			}
-			readLock.lock();
-			try {
-				if (staleAccess) {
-					throw new UnsupportedOperationException();
-				}
-				Object[] o = new Object[2];
-				o[0] = sbhash;
-				o[1] = type;
-
-				String objTable = dbSchema.getTableByType(type);
-				final int keySize = dbSchema.getKeySizeByType(type);
-				String sql = "select content, type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
-						+ "  from " + objTable + " where superblock = ? and type = ? ";
-				if (limit > 0) {
-					sql = sql + " limit " + limit;
-				}
-				Map<CompoundKey, OpObject> res = new LinkedHashMap<CompoundKey, OpObject>();
-				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
-					List<String> ls = new ArrayList<String>(5);
-
-					@Override
-					public void processRow(ResultSet rs) throws SQLException {
-						ls.clear();
-						for (int i = 0; i < keySize; i++) {
-							ls.add(rs.getString(i + 4));
-						}
-						CompoundKey k = new CompoundKey(0, ls);
-						OpObject obj = formatter.parseObject(rs.getString(1));
-						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
-						res.put(k, obj);
-					}
-				});
-				return res;
-			} finally {
-				readLock.unlock();
-			}
-		}
-
-		@Override
-		public OperationDeleteInfo getOperationInfo(String rawHash) {
-			readLock.lock();
-			try {
-				if (staleAccess) {
-					throw new UnsupportedOperationException();
-				}
-				Object[] o = new Object[2];
-				o[0] = sbhash;
-				o[1] = SecUtils.getHashBytes(rawHash);
-				String sql = "select d.mask, d.shash, o.content from " + OP_DELETED_TABLE + " d join " + OPERATIONS_TABLE + " o on o.hash = d.hash "
-						+ " where d.superblock = ? and d.hash = ? ";
-				final OperationDeleteInfo od = new OperationDeleteInfo();
-				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
-
-					@Override
-					public void processRow(ResultSet rs) throws SQLException {
-						long bigInt = rs.getLong(1);
-						od.create = bigInt % 2 == 0;
-						BitSet bs = BitSet.valueOf(new long[]{bigInt >> 1});
-						Array ar = rs.getArray(2);
-						PGobject[] ls = (PGobject[]) (ar == null ? null : ar.getArray());
-						if (ls != null) {
-							od.deletedOpHashes = new ArrayList<String>();
-							for (int k = 0; k < ls.length; k++) {
-								System.out.println("TODO VALIDATION hash dex format !!! : " + ls[k].getValue());
-								od.deletedOpHashes.add(ls[k].getValue());
-							}
-						}
-						od.deletedObjects = new boolean[bs.length()];
-						for (int i = 0; i < od.deletedObjects.length; i++) {
-							od.deletedObjects[i] = bs.get(i);
-						}
-						od.op = formatter.parseOperation(rs.getString(3));
-					}
-				});
-				if (od.op == null) {
-					return null;
-				}
-				return od;
-			} finally {
-				readLock.unlock();
-			}
-		}
-
-		@Override
-		public Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) {
-			boolean isSuperblockReferenceActive = false;
-			readLock.lock();
-			try {
-				isSuperblockReferenceActive = !staleAccess;
-			} finally {
-				readLock.unlock();
-			}
-			if (isSuperblockReferenceActive) {
-				// to do faster to load by superblock reference, so it could be 1 sql
-			}
-			LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
-			for (OpBlock b : blockHeaders) {
-				OpBlock lb = loadBlock(b.getRawHash());
-				if (lb == null) {
-					throw new IllegalStateException(String.format("Couldn't load '%s' block from db", b.getRawHash()));
-				}
-				blocks.add(lb);
-			}
-			return blocks;
-		}
-
-		@Override
-		public OpBlock getBlockByHash(String rawHash) {
-			return loadBlock(rawHash);
-		}
-
-
 	}
 
 

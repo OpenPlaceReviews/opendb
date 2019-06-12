@@ -154,10 +154,11 @@
       <div>
         1. Cid of image: <input type="text" id="get-image">
         <br>
+        <a href="" id="image-link" download>
         <input type="submit" value="Get image" id="get-image-btn">
+        </a>
         <br>
-        <img id="image-preview" src="" />
-      </div>
+        </div>
 
     </div>
 
@@ -600,14 +601,8 @@ $( document ).ready(function() {
     });
 
     $("#get-image-btn").click(function () {
-        var obj = {
-            "hash": $("#get-image").val()
-        };
-        //TODO generate image from response
-       $.get("/api/ipfs/image", obj)
-           .done(function (data) {
-               $("#image-preview").attr("src", "data:image/png;base64," + data); })
-           .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
+        $("#image-link").attr("href", "/api/ipfs/image?hash=" + $("#get-image").val());
+        $("#image-link").click();
     });
 
     $("#fix-ipfs-missing-images-btn").click(function () {

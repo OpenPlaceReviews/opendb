@@ -62,3 +62,16 @@ DB_PWD=test
 ```
 
 Other variables are customizable could be found https://github.com/OpenPlaceReviews/opendb/blob/master/java/opendb-api/src/main/resources/application.yml
+
+## IPFS config (development)
+Run ipfs
+```
+#!/bin/bash
+docker run -d --name ipfs_host1 -v /ipfs/ipfs-docker-staging:/export -v /ipfs/ipfs-docker-data:/data/ipfs -p 4001:4001 -p 127.0.0.1:8080:8080 -p 5001:5001 ipfs/go-ipfs:latest
+```
+Put ipfs behind proxy: run commands in bash and recreate container
+```
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://dev.openplacereviews.org:5000", "http://127.0.0.1:5001"]'
+ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+/ip4/dev.openplacereviews.org/tcp/5000/
+```
