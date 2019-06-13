@@ -158,7 +158,7 @@ public class IPFSFileManager {
 	public void processOperations(List<OpOperation> candidates) {
 		List<ResourceDTO> array = new ArrayList<ResourceDTO>();
 		candidates.forEach(operation -> {
-			List<OpObject> nw = operation.getNew();
+			List<OpObject> nw = operation.getCreated();
 			for (OpObject o : nw) {
 				array.clear();
 				getImageObject(o.getRawOtherFields(), array);

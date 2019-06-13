@@ -25,13 +25,13 @@ public class OpOperation extends OpObject {
 	public static final String F_SIGNATURE = "signature";
 	
 	public static final String F_REF = "ref";
-	public static final String F_NEW = "new";
-	public static final String F_OLD = "old";
+	public static final String F_CREATE = "create";
+	public static final String F_DELETE = "delete";
 	
 	public static final String F_NAME = "name";
 	public static final String F_COMMENT = "comment";
 	
-	private List<OpObject> newObjects = new LinkedList<OpObject>();
+	private List<OpObject> createdObjects = new LinkedList<OpObject>();
 	protected String type;
 	
 	public OpOperation() {
@@ -40,8 +40,8 @@ public class OpOperation extends OpObject {
 	public OpOperation(OpOperation cp, boolean copyCacheFields) {
 		super(cp, copyCacheFields);
 		this.type = cp.type;
-		for(OpObject o : cp.newObjects) {
-			this.newObjects.add(new OpObject(o, copyCacheFields));
+		for(OpObject o : cp.createdObjects) {
+			this.createdObjects.add(new OpObject(o, copyCacheFields));
 		}
 	}
 	
@@ -56,7 +56,7 @@ public class OpOperation extends OpObject {
 	}
 
 	protected void updateObjectsRef() {
-		for(OpObject o : newObjects) {
+		for(OpObject o : createdObjects) {
 			o.setParentOp(this);
 		}
 	}
@@ -67,7 +67,7 @@ public class OpOperation extends OpObject {
 	
 	public OpOperation makeImmutable() {
 		isImmutable = true;
-		for(OpObject o : newObjects) {
+		for(OpObject o : createdObjects) {
 			o.makeImmutable();
 		}
 		return this;
@@ -106,28 +106,28 @@ public class OpOperation extends OpObject {
 		return getMapStringList(F_REF);
 	}
 	
-	public List<String> getOld() {
-		return getStringList(F_OLD);
+	public List<String> getDeleted() {
+		return getStringList(F_DELETE);
 	}
 	
-	public void addOld(String hash, int ind) {
-		addOrSetStringValue(F_OLD, hash + ":" + ind);
+	public void addCreated(String hash, int ind) {
+		addOrSetStringValue(F_DELETE, hash + ":" + ind);
 	}
 	
-	public List<OpObject> getNew() {
-		return newObjects;
+	public List<OpObject> getCreated() {
+		return createdObjects;
 	}
 	
-	public void addNew(OpObject o) {
+	public void addCreated(OpObject o) {
 		checkNotImmutable();
-		newObjects.add(o);
+		createdObjects.add(o);
 		if(type != null) {
 			o.setParentOp(this);
 		}
 	}
 	
-	public boolean hasNew() {
-		return newObjects.size() > 0;
+	public boolean hasCreated() {
+		return createdObjects.size() > 0;
 	}
 	
 	public String getName() {
@@ -142,7 +142,7 @@ public class OpOperation extends OpObject {
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + ((newObjects == null) ? 0 : newObjects.hashCode());
+		result = prime * result + ((createdObjects == null) ? 0 : createdObjects.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
@@ -156,10 +156,10 @@ public class OpOperation extends OpObject {
 		if (getClass() != obj.getClass())
 			return false;
 		OpOperation other = (OpOperation) obj;
-		if (newObjects == null) {
-			if (other.newObjects != null)
+		if (createdObjects == null) {
+			if (other.createdObjects != null)
 				return false;
-		} else if (!newObjects.equals(other.newObjects))
+		} else if (!createdObjects.equals(other.createdObjects))
 			return false;
 		if (type == null) {
 			if (other.type != null)
@@ -201,11 +201,11 @@ public class OpOperation extends OpObject {
 			} else {
 				op.type = "";
 			}
-			JsonElement newObjs = jsonObj.remove(F_NEW);
-			if(newObjs != null) {
-				JsonArray ar = newObjs.getAsJsonArray();
+			JsonElement createdObjs = jsonObj.remove(F_CREATE);
+			if(createdObjs != null) {
+				JsonArray ar = createdObjs.getAsJsonArray();
 				for(int i = 0; i < ar.size(); i++) {
-					op.addNew(context.deserialize(ar.get(i), OpObject.class));
+					op.addCreated(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
 
@@ -222,8 +222,8 @@ public class OpOperation extends OpObject {
 				tm.remove(F_HASH);
 			}
 			tm.put(F_TYPE, src.type);
-			if(src.hasNew()) {
-				tm.put(F_NEW, context.serialize(src.newObjects));
+			if(src.hasCreated()) {
+				tm.put(F_CREATE, context.serialize(src.createdObjects));
 			}
 			return context.serialize(tm);
 		}

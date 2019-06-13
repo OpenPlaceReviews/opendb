@@ -76,7 +76,7 @@ class OpPrivateOperations {
 		}
 		OperationDeleteInfo pi = opsByHash.get(delHash);
 		if(pi.deletedObjects == null) {
-			pi.deletedObjects = new boolean[pi.op.getNew().size()];
+			pi.deletedObjects = new boolean[pi.op.getCreated().size()];
 		}
 		if(pi.deletedOpHashes == null) {
 			pi.deletedOpHashes = new ArrayList<String>();
@@ -109,7 +109,7 @@ class OpPrivateOperations {
 		OperationDeleteInfo odi = opsByHash.remove(op.getRawHash());
 		odi.create = false;
 		// delete deleted objects by name
-		List<String> deletedRefs = op.getOld();
+		List<String> deletedRefs = op.getDeleted();
 		String rawHash = op.getRawHash();
 		for (int i = 0; i < deletedRefs.size(); i++) {
 			String delRef = deletedRefs.get(i);
