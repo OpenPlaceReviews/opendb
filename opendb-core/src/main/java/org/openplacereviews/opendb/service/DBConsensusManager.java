@@ -193,28 +193,9 @@ public class DBConsensusManager {
 			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
 			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
 
-			String query = "INSERT into " + OP_DELETED_TABLE + "(hash, superblock, shash, mask) "
-					+ " SELECT coalesce(r1.hash, r2.hash), ?, r1.shash || r2.shash, r1.mask | r2.mask FROM "
-					+ " (select * from " + OP_DELETED_TABLE + " where superblock = ? ) r1 "
-					+ "  FULL OUTER JOIN "
-					+ " (select * from " + OP_DELETED_TABLE + " where superblock = ? ) r2 "
-					+ " ON r1.hash = r2.hash";
-			jdbcTemplate.update(query, sbHashNew, sbHashCurrent, sbHashParent);
-			jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashParent);
-			jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " WHERE superblock = ? ", sbHashCurrent);
-
 			for (String objTable : dbSchema.getObjectTables()) {
-				String queryIns = "INSERT INTO " + objTable + "(type, " + dbSchema.generatePKString(objTable, "p%1$d", ", ") + ", ophash, superblock, sblockid, sorder, content) "
-						+ " SELECT coalesce(r1.type, r2.type), " + dbSchema.generatePKString(objTable, "coalesce(r1.p%1$d, r2.p%1$d)", ", ") + ", "
-						+ "     coalesce(r1.ophash, r2.ophash), ?, coalesce(r1.sblockid, r2.sblockid), coalesce(r1.sorder, r2.sorder), coalesce(r1.content, r2.content) "
-						+ " FROM "
-						+ " (select * from " + objTable + " where superblock = ? ) r1 "
-						+ "  FULL OUTER JOIN "
-						+ " (select * from " + objTable + " where superblock = ? ) r2 "
-						+ " ON r1.type = r2.type and " + dbSchema.generatePKString(objTable, "r1.p%1$d is not distinct from r2.p%1$d", " and ");
-				jdbcTemplate.update(queryIns, sbHashNew, sbHashCurrent, sbHashParent);
-				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashParent);
-				jdbcTemplate.update("DELETE FROM " + objTable + " WHERE superblock = ? ", sbHashCurrent);
+				jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+				jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashParent);
 			}
 
 			res = new OpBlockChain(blc.getParent().getParent(),
@@ -284,7 +265,8 @@ public class DBConsensusManager {
 				}
 				String s = "select content, type, ophash from " + table +
 						" where superblock = ? and type = ? and " +
-						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz);
+						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) + 
+						" order by sblockid desc";
 				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
 
 					@Override
@@ -348,7 +330,7 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public OperationDeleteInfo getOperationInfo(String rawHash) {
+		public OpOperation getOperation(String rawHash) {
 			readLock.lock();
 			try {
 				if (staleAccess) {
@@ -357,36 +339,16 @@ public class DBConsensusManager {
 				Object[] o = new Object[2];
 				o[0] = sbhash;
 				o[1] = SecUtils.getHashBytes(rawHash);
-				String sql = "select d.mask, d.shash, o.content from " + OP_DELETED_TABLE + " d join " + OPERATIONS_TABLE + " o on o.hash = d.hash "
+				String sql = "select d.content from " + OPERATIONS_TABLE + " d "
 						+ " where d.superblock = ? and d.hash = ? ";
-				final OperationDeleteInfo od = new OperationDeleteInfo();
-				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
+				OpOperation op = jdbcTemplate.query(sql, o, new ResultSetExtractor<OpOperation>() {
 
 					@Override
-					public void processRow(ResultSet rs) throws SQLException {
-						long bigInt = rs.getLong(1);
-						od.create = bigInt % 2 == 0;
-						BitSet bs = BitSet.valueOf(new long[]{bigInt >> 1});
-						Array ar = rs.getArray(2);
-						PGobject[] ls = (PGobject[]) (ar == null ? null : ar.getArray());
-						if (ls != null) {
-							od.deletedOpHashes = new ArrayList<String>();
-							for (int k = 0; k < ls.length; k++) {
-								System.out.println("TODO VALIDATION hash dex format !!! : " + ls[k].getValue());
-								od.deletedOpHashes.add(ls[k].getValue());
-							}
-						}
-						od.deletedObjects = new boolean[bs.length()];
-						for (int i = 0; i < od.deletedObjects.length; i++) {
-							od.deletedObjects[i] = bs.get(i);
-						}
-						od.op = formatter.parseOperation(rs.getString(3));
+					public OpOperation extractData(ResultSet rs) throws SQLException, DataAccessException {
+						return formatter.parseOperation(rs.getString(1));
 					}
 				});
-				if (od.op == null) {
-					return null;
-				}
-				return od;
+				return op;
 			} finally {
 				readLock.unlock();
 			}
@@ -854,7 +816,6 @@ public class DBConsensusManager {
 				txRollback = true;
 				jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = NULL where superblock = ?", blockHash);
 				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = NULL where superblock = ? ", blockHash);
-				jdbcTemplate.update("DELETE FROM " + OP_DELETED_TABLE + " where superblock = ?", blockHash);
 				for (String objTable : dbSchema.getObjectTables()) {
 					jdbcTemplate.update("DELETE FROM " + objTable + " where superblock = ?", blockHash);
 				}
