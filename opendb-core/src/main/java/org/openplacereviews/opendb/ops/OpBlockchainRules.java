@@ -301,7 +301,7 @@ public class OpBlockchainRules {
 			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
 		}
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
-		JsonElement createdElement = opJsonObj.remove(F_CREATE);
+		JsonElement createdElement = opJsonObj.get(F_CREATE);
 		if (createdElement != null) {
 			opJsonObj.add(F_NEW, createdElement);
 		}
