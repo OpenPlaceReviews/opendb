@@ -568,13 +568,6 @@ public class OpBlockChain {
 		return blocks.getAllBlocks();
 	}
 
-	//TODO get ops info
-	public Collection<OperationDeleteInfo> getSuperblockDeleteInfo() {
-		if(dbAccess != null) {
-			throw new UnsupportedOperationException();
-		}
-		return null;//operations.opsByHash.values();
-	}
 
 	public Map<String, Map<CompoundKey, OpObject>> getSuperblockObjects() {
 		if(dbAccess != null) {
@@ -657,10 +650,13 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
-		// to do: this method is not optimal cause we can query in db by raw hash much quicker through all parents
-		OperationDeleteInfo odi = getOperationInfo(rawHash);
-		if(odi != null) {
-			return odi.op;
+		if(dbAccess != null) {
+			OpOperation o = dbAccess.getOperation(rawHash);
+			if(o != null) {
+				return o;
+			}
+		} else {
+			TODO_USE_LOCAL_ARRAY;
 		}
 		return parent.getOperationByHash(rawHash);
 	}
@@ -786,40 +782,15 @@ public class OpBlockChain {
 	
 	
 	
-	private OperationDeleteInfo getOperationInfo(String hash) {
-		if(nullObject) {
-			return null;
-		}
-		OperationDeleteInfo cdi = null;
-		if (dbAccess != null) {
-			cdi = dbAccess.getOperationInfo(hash);
-			if (cdi != null && cdi.create) {
-				return cdi;
-			}
-		}
-		OperationDeleteInfo pdi = parent.getOperationInfo(hash);
-		if(cdi != null && pdi != null) {
-			return OpPrivateOperations.mergeDeleteInfo(cdi, pdi);
-		} else if(cdi != null) {
-			return cdi;
-		} 
-		return pdi;
-	}
-
 	
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
 		ValidationTimer vld = new ValidationTimer().start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
-		// TODO load operation by hash for check on duplicate; from where?
-		if (dbAccess != null) {
-			OperationDeleteInfo oin = getOperationInfo(u.getRawHash());
-			if(oin != null) {
-				return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
-			}
-		} else {
-
+		OpOperation oin = getOperationByHash(u.getRawHash());
+		if(oin != null) {
+			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
 		u.updateObjectsRef();
 		boolean valid = true;
@@ -888,7 +859,6 @@ public class OpBlockChain {
 		ctx.deletedObjsCache.clear();
 
 		if (deletedRefs.size() > 0) {
-			OpPrivateObjectInstancesById op = getOrCreateObjectsByIdMap(u.getType());
 			OpObject opObject = getObjectByName(u.getType(), deletedRefs);
 			if(opObject == null) {
 				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRefs);
@@ -935,7 +905,6 @@ public class OpBlockChain {
 		final String blockHash;
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
-		List<OpOperation> deletedOpsCache = new ArrayList<OpOperation>();
 
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;
@@ -948,7 +917,7 @@ public class OpBlockChain {
 
 		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
 
-		OperationDeleteInfo getOperationInfo(String rawHash);
+		OpOperation getOperation(String rawHash);
 
 		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
 
