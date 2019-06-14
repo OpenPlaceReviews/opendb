@@ -53,7 +53,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_GRANT);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -118,7 +118,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_GRANT);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -145,8 +145,8 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addCreated(notExistingHash, 0);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(notExistingHash, 0);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -174,8 +174,8 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addCreated(oldHash, 0);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(oldHash, 0);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -205,7 +205,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_GRANT);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -487,7 +487,7 @@ public class OpBlockchainRulesTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.remove(OpOperation.F_SIGNATURE);
@@ -513,7 +513,7 @@ public class OpBlockchainRulesTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		opOperation.setSignedBy(serverName + 1);
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
@@ -539,7 +539,7 @@ public class OpBlockchainRulesTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -564,7 +564,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putStringValue(F_HASH, opHash);
 		opOperation.setType(OpBlockchainRules.OP_ROLE);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		opOperation.makeImmutable();
 
@@ -610,7 +610,7 @@ public class OpBlockchainRulesTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -636,7 +636,7 @@ public class OpBlockchainRulesTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_ROLE);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -664,7 +664,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_GRANT);
-		opOperation.addCreated(opObject);
+		opOperation.addDeleted(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();

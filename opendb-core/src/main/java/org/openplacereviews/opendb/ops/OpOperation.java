@@ -110,7 +110,7 @@ public class OpOperation extends OpObject {
 		return getStringList(F_DELETE);
 	}
 	
-	public void addCreated(String hash, int ind) {
+	public void addDeleted(String hash, int ind) {
 		addOrSetStringValue(F_DELETE, hash + ":" + ind);
 	}
 	
@@ -118,7 +118,7 @@ public class OpOperation extends OpObject {
 		return createdObjects;
 	}
 	
-	public void addCreated(OpObject o) {
+	public void addDeleted(OpObject o) {
 		checkNotImmutable();
 		createdObjects.add(o);
 		if(type != null) {
@@ -205,7 +205,7 @@ public class OpOperation extends OpObject {
 			if(createdObjs != null) {
 				JsonArray ar = createdObjs.getAsJsonArray();
 				for(int i = 0; i < ar.size(); i++) {
-					op.addCreated(context.deserialize(ar.get(i), OpObject.class));
+					op.addDeleted(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
 

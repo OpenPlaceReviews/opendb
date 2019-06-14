@@ -176,7 +176,7 @@ public class OpApiController {
     		if(loginObj == null) {
     			throw new IllegalArgumentException("There is nothing to edit cause signup obj doesn't exist");
     		} else {
-    			op.addCreated(loginObj.getParentHash(), 0);
+    			op.addDeleted(loginObj.getParentHash(), 0);
     			String authMethod = loginObj.getStringValue(OpBlockchainRules.F_AUTH_METHOD);
     			if(OpBlockchainRules.METHOD_PWD.equals(authMethod)) {
     				signKeyPair = SecUtils.generateKeyPairFromPassword(algoOld, loginObj.getStringValue(OpBlockchainRules.F_KEYGEN_METHOD), 
@@ -198,7 +198,7 @@ public class OpApiController {
     	
     	op.setType(OpBlockchainRules.OP_SIGNUP);
     	OpObject obj = new OpObject();
-    	op.addCreated(obj);
+    	op.addDeleted(obj);
     	obj.setId(name);
     	if(!OUtils.isEmpty(userDetails)) {
     		obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
@@ -286,7 +286,7 @@ public class OpApiController {
     				throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
     			}
     		} else {
-    			op.addCreated(loginObj.getParentHash(), 0);
+    			op.addDeleted(loginObj.getParentHash(), 0);
     		}
     	}
     	
@@ -344,7 +344,7 @@ public class OpApiController {
     	KeyPair loginPair = null;
 		if (!delete) {
 			OpObject obj = new OpObject();
-			op.addCreated(obj);
+			op.addDeleted(obj);
 			if (!OUtils.isEmpty(userDetails)) {
 				obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
 			}
