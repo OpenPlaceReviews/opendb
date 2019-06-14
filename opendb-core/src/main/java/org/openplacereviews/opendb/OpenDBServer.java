@@ -62,6 +62,10 @@ public class OpenDBServer  {
 		System.setProperty("spring.devtools.restart.enabled", "false");
 		SpringApplication.run(OpenDBServer.class, args);
 	}
+
+	public void preStartApplication() {
+
+	}
 	
 	public static class MetadataDb {
 		public Map<String, List<MetadataColumnSpec>> tablesSpec = new TreeMap<String, List<MetadataColumnSpec>>();
@@ -110,6 +114,7 @@ public class OpenDBServer  {
 		return args -> {
 			try {
 				LOGGER.info("Application starting...");
+				preStartApplication();
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
