@@ -41,6 +41,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class BlocksManager {
 
+	public static final String BOOT_STD_OPS_DEFINTIONS = "std-ops-defintions";
+	public static final String BOOT_STD_ROLES = "std-roles";
+	public static final String BOOT_OPR_TEST_GRANT = "opr-0-test-grant";
+	public static final String BOOT_STD_VALIDATION = "std-validations";
+
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
 	@Autowired
@@ -54,9 +59,8 @@ public class BlocksManager {
 
 	@Autowired
 	private IPFSFileManager extResourceService;
-	
-	protected List<String> bootstrapList =
-			new ArrayList<>(Arrays.asList("opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"));
+
+	protected List<String> bootstrapList = new ArrayList<>();
 	
 	@Value("${opendb.replicate.url}")
 	private String replicateUrl;
@@ -501,12 +505,12 @@ public class BlocksManager {
 		return blockchain.getRules().getLoginKeyObj(blockchain, nickname);
 	}
 
-	public boolean addToBootstrap(String element) {
-		return bootstrapList.add(element);
+	public List<String> getBootstrapList() {
+		return bootstrapList;
 	}
 
-	public boolean removeFromBootstrap(String element) {
-		return bootstrapList.remove(element);
+	public void setBootstrapList(List<String> bootstrapList) {
+		this.bootstrapList = bootstrapList;
 	}
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
