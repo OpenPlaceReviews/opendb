@@ -171,14 +171,6 @@ public class OpBlockchainGettersDbAccessTest {
 		opBlockchainGettersTest.testGetSuperblockFullBlocks(blockChain);
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
-	public void testGetSuperblockDeleteInfoWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
-
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
-
-		opBlockchainGettersTest.testGetSuperblockDeleteInfo(blockChain);
-	}
 
 	@Test(expected = UnsupportedOperationException.class)
 	public void testGetSuperblockObjectsWithDBAccess() throws FailedVerificationException {

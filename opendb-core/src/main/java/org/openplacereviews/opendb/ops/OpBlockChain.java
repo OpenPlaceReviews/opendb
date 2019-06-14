@@ -1,17 +1,25 @@
 package org.openplacereviews.opendb.ops;
 
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
-import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.security.KeyPair;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  *  Guidelines of object methods:
@@ -64,6 +72,8 @@ public class OpBlockChain {
 
 	// 4. operations to be stored like a queue
 	private final Deque<OpOperation> queueOperations = new ConcurrentLinkedDeque<OpOperation>();
+	
+	private final Map<String, OpOperation> blockOperations = new ConcurrentHashMap<>();
 	
 	private OpBlockChain(boolean nullParent) {
 		this.nullObject = true;
@@ -192,27 +202,23 @@ public class OpBlockChain {
 		if(blocks.size() != 0) {
 			return false;
 		}
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
-			clearQueueOperations(true);
+			objByName.clear();
+			queueOperations.clear();
 			locked = UNLOCKED;
 		} finally {
 			if (locked == LOCKED_OP_IN_PROGRESS) {
 				locked = LOCKED_ERROR;
 			}
 		}
+		
 		return true;
 	}
 
-	private void clearQueueOperations(boolean deleteInfo) {
-		if(dbAccess != null) {
-			throw new UnsupportedOperationException();
-		}
-		queueOperations.clear();
-		if(deleteInfo) {
-			objByName.clear();
-		}
-	}
 	
 	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
 		validateIsUnlocked();
@@ -397,7 +403,13 @@ public class OpBlockChain {
 	}
 
 	private void atomicCreateBlockFromAllOps(OpBlock block) {
-		clearQueueOperations(false);
+		if(dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
+		for(OpOperation o : queueOperations) {
+			blockOperations.put(o.getRawHash(), o);
+		}
+		queueOperations.clear();
 		blocks.addBlock(block, getSuperblocksDepth());
 		
 	}
@@ -457,11 +469,7 @@ public class OpBlockChain {
 		// 1. add blocks and their hashes
 		blocks.copyAndMerge(copy.blocks, parent.blocks, parent.getSuperblocksDepth());
 		
-		// 2. merge operations cache with create delete info
-		// TODO are needed that?
-		//operations.copyAndMerge(copy.operations, parent.operations);
-		
-		// 3. merge named objects
+		// 2. merge named objects
 		TreeSet<String> types = new TreeSet<String>(parent.objByName.keySet());
 		types.addAll(copy.objByName.keySet());
 		for(String type : types){
@@ -650,13 +658,14 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
+		OpOperation o;
 		if(dbAccess != null) {
-			OpOperation o = dbAccess.getOperation(rawHash);
-			if(o != null) {
-				return o;
-			}
+			o = dbAccess.getOperation(rawHash);
 		} else {
-			TODO_USE_LOCAL_ARRAY;
+			o = blockOperations.get(rawHash);
+		}
+		if(o != null) {
+			return o;
 		}
 		return parent.getOperationByHash(rawHash);
 	}

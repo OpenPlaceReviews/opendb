@@ -1,36 +1,57 @@
 package org.openplacereviews.opendb.service;
 
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.EXT_RESOURCE_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
+
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
-import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.sql.*;
-import java.util.*;
-import java.util.Date;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
-import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class DBConsensusManager {
@@ -592,45 +613,7 @@ public class DBConsensusManager {
 					order++;
 				}
 			}
-			Collection<OperationDeleteInfo> delInfo = blc.getSuperblockDeleteInfo();
-			for (OperationDeleteInfo oi : delInfo) {
-				byte[] opHash = SecUtils.getHashBytes(oi.op.getRawHash());
-				BitSet bs = new BitSet();
-				if (oi.create) {
-					bs.set(0);
-				}
-				if (oi.deletedObjects != null) {
-					if (oi.deletedObjects.length > 62) {
-						throw new UnsupportedOperationException(String.format("Deleting %d objects is not supported", oi.deletedObjects.length));
-					}
-					for (int i = 0; i < oi.deletedObjects.length; i++) {
-						if (oi.deletedObjects[i]) {
-							bs.set(i + 1);
-						}
-					}
-				}
-				final long[] ls = bs.toLongArray();
-				final String[] sobjs = new String[oi.deletedOpHashes == null ? 0 : oi.deletedOpHashes.size()];
-				for (int i = 0; i < sobjs.length; i++) {
-					// sobjs[i] = SecUtils.getHashBytes(oi.deletedOpHashes.get(i));
-					sobjs[i] = "\\x" + oi.deletedOpHashes.get(i);
-				}
-				jdbcTemplate.update(new PreparedStatementCreator() {
-
-					@Override
-					public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
-						Array refs = con.createArrayOf("bytea", sobjs);
-						PreparedStatement pt = con.prepareStatement("INSERT INTO " + OP_DELETED_TABLE + "(hash,superblock,shash,mask)"
-								+ " VALUES(?,?,?,?)");
-						pt.setBytes(1, opHash);
-						pt.setBytes(2, superBlockHash);
-						pt.setArray(3, refs);
-						pt.setLong(4, ls[0]);
-						return pt;
-					}
-				});
-			}
-
+			
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
