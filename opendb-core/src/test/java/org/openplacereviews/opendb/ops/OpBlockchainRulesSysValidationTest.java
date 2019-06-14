@@ -485,7 +485,6 @@ public class OpBlockchainRulesSysValidationTest {
 	public void testChangeRole() throws FailedVerificationException {
 		String role = "user", ownerRole = "administrator", newOwnerRole = "master", comment = "some comment",
 				newComment = "some comment 1";
-		String operationHash;
 
 		// generate role with owner_role = administrator
 		OpOperation opOperation = getOpRoleOperation(role, ownerRole, comment, serverName);
@@ -494,12 +493,11 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
-		operationHash = opOperation.getRawHash();
 
 		// change comment and owner_role for user role
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, serverName);
 		opOperation.addOtherSignedBy(serverName);
-		opOperation.addDeleted(Collections.singletonList(operationHash));
+		opOperation.addDeleted(Collections.singletonList(role));
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
