@@ -362,14 +362,19 @@ public class DBConsensusManager {
 				o[1] = SecUtils.getHashBytes(rawHash);
 				String sql = "select d.content from " + OPERATIONS_TABLE + " d "
 						+ " where d.superblock = ? and d.hash = ? ";
-				OpOperation op = jdbcTemplate.query(sql, o, new ResultSetExtractor<OpOperation>() {
+				OpOperation[] op = new OpOperation[1]; 	
+				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
 
 					@Override
-					public OpOperation extractData(ResultSet rs) throws SQLException, DataAccessException {
-						return formatter.parseOperation(rs.getString(1));
+					public void processRow(ResultSet rs) throws SQLException {
+						if(rs.next()) {
+							op[0] = formatter.parseOperation(rs.getString(1));
+						}
 					}
+
+					
 				});
-				return op;
+				return op[0];
 			} finally {
 				readLock.unlock();
 			}

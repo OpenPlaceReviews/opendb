@@ -563,7 +563,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		// checking to change role by not role owner
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
-		opOperation.addDeleted(Collections.singletonList(username));
+		opOperation.addDeleted(Collections.singletonList(role));
 
 		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
 		opOperation.makeImmutable();
@@ -681,12 +681,12 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(validationName);
 		opObject.putStringValue(F_TYPE, OP_OPERATION);
 		opObject.putStringValue(F_COMMENT, comment);
-		opObject.putObjectValue("role", "master");
+		opObject.putStringValue("role", "master");
 
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addDeleted(Collections.singletonList(name));
+		grantOperation.addDeleted(Collections.singletonList(validationName));
 		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
