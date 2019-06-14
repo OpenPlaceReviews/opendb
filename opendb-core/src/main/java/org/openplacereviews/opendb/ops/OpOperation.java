@@ -118,7 +118,7 @@ public class OpOperation extends OpObject {
 		return createdObjects;
 	}
 	
-	public void addDeleted(OpObject o) {
+	public void addCreated(OpObject o) {
 		checkNotImmutable();
 		createdObjects.add(o);
 		if(type != null) {
@@ -205,7 +205,7 @@ public class OpOperation extends OpObject {
 			if(createdObjs != null) {
 				JsonArray ar = createdObjs.getAsJsonArray();
 				for(int i = 0; i < ar.size(); i++) {
-					op.addDeleted(context.deserialize(ar.get(i), OpObject.class));
+					op.addCreated(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
 

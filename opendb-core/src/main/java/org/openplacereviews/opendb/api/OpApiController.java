@@ -198,7 +198,7 @@ public class OpApiController {
     	
     	op.setType(OpBlockchainRules.OP_SIGNUP);
     	OpObject obj = new OpObject();
-    	op.addDeleted(obj);
+    	op.addCreated(obj);
     	obj.setId(name);
     	if(!OUtils.isEmpty(userDetails)) {
     		obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
@@ -344,7 +344,7 @@ public class OpApiController {
     	KeyPair loginPair = null;
 		if (!delete) {
 			OpObject obj = new OpObject();
-			op.addDeleted(obj);
+			op.addCreated(obj);
 			if (!OUtils.isEmpty(userDetails)) {
 				obj.putObjectValue(OpBlockchainRules.F_DETAILS, formatter.fromJsonToTreeMap(userDetails));
 			}
