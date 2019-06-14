@@ -370,12 +370,12 @@ public class OpBlockChain {
 	}
 	
 	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
-		List<String> deletedRefs = u.getDeleted();
+		List<List<String>> deletedRefs = u.getDeleted();
 		String objType = u.getType();
 
-		if (!deletedRefs.isEmpty()) {
+		for(List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-			oinf.add(deletedRefs, null);
+			oinf.add(deletedRef, null);
 		}
 
 		queueOperations.add(u);
@@ -864,17 +864,15 @@ public class OpBlockChain {
 	}
 	
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx) {
-		List<String> deletedRefs = u.getDeleted();
+		List<List<String>> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 
-		if (deletedRefs.size() > 0) {
-			OpObject opObject = getObjectByName(u.getType(), deletedRefs);
+		for(List<String> deletedRef : deletedRefs) {
+			OpObject opObject = getObjectByName(u.getType(), deletedRef);
 			if(opObject == null) {
-				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRefs);
+				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRef);
 			}
-			if (opObject.getId().equals(deletedRefs)) {
-				ctx.deletedObjsCache.add(opObject);
-			}
+			ctx.deletedObjsCache.add(opObject);
 		}
 		return true;
 	}

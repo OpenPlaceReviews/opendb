@@ -3,6 +3,8 @@ package org.openplacereviews.opendb.ops;
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -98,12 +100,23 @@ public class OpOperation extends OpObject {
 		return getMapStringList(F_REF);
 	}
 	
-	public List<String> getDeleted() {
-		return getStringList(F_DELETE);
+	@SuppressWarnings("unchecked")
+	public List<List<String>> getDeleted() {
+		List<List<String>> l = (List<List<String>>) fields.get(F_DELETE);
+		if(l == null) {
+			return Collections.emptyList();
+		}
+		return l;
 	}
 
 	public void addDeleted(List<String> id) {
-		putObjectValue(F_DELETE, id);
+		if(!fields.containsKey(F_DELETE)) {
+			ArrayList<List<String>> lst = new ArrayList<>();
+			lst.add(id);
+			putObjectValue(F_DELETE, lst);
+		} else {
+			getDeleted().add(id);
+		}
 	}
 
 	public List<OpObject> getCreated() {

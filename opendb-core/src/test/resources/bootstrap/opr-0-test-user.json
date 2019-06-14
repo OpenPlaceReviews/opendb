@@ -33,7 +33,7 @@
 		"ref" : {
 			"s" : ["sys.signup","openplacereviews"]
 		},
-		"delete" : ["f5f8668b05be06d19f91fb80ec0d021c1823058f3e71203a7c79310c0ccff529:0"],
+		"delete" : [["openplacereviews","test_1"]],
 		"create": [{
 			"id": ["openplacereviews","test_1"],
 			"algo": "EC",

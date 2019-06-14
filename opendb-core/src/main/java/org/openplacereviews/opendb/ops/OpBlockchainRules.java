@@ -1,8 +1,18 @@
 package org.openplacereviews.opendb.ops;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
@@ -12,13 +22,8 @@ import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.security.KeyPair;
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.OpOperation.F_CREATE;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 /**
  * State less blockchain rules to validate roles and calculate hashes
