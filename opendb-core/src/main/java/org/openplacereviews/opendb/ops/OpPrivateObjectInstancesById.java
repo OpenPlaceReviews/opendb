@@ -48,7 +48,7 @@ class OpPrivateObjectInstancesById {
 		}
 		return objects;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public void fetchAllObjects(ObjectsSearchRequest request) {
 		

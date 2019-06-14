@@ -33,14 +33,14 @@
 		"ref" : {
 			"s" : ["sys.signup","openplacereviews"]
 		},
-		"delete" : ["f5f8668b05be06d19f91fb80ec0d021c1823058f3e71203a7c79310c0ccff529:0"],
+		"delete" : ["openplacereviews","test_1"],
 		"create": [{
 			"id": ["openplacereviews","test_1"],
 			"algo": "EC",
 			"auth_method": "provided",
 			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
-		"hash": "json:sha256:966cb675331eca27b5a74413bbb6c98dec818a6cc8173b73b1bf63c4a040adde",
-		"signature": "ECDSA:base64:MEQCIANnSVnjFTRDtPSobOqh0eGkTMqzrfEBmY3S0hhfADBLAiAtTz7RXu3Ae7XqgUOJXs0lUqIhM6rteRTDNfnt2hWrUQ=="
+		"hash": "json:sha256:6345605da4abfcb9d6667fb422a00f58afc763c39d52dad2256fa87715271339",
+		"signature": "ECDSA:base64:MEYCIQDRDj1NhghZ22QnipkO106wv83MVLpBNIgb23wOUWp/iAIhAIJUMwniYzjFtGpdz82BFwmuBWBQKCgpvF4VaUBnIobU"
 	}
 ]

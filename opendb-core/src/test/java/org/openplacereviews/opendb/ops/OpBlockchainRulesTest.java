@@ -145,7 +145,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addCreated(notExistingHash, 0);
+		opOperation.addDeleted(Collections.singletonList(notExistingHash));
 		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
@@ -174,7 +174,7 @@ public class OpBlockchainRulesTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addCreated(oldHash, 0);
+		opOperation.addDeleted(Collections.singletonList(oldHash));
 		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);

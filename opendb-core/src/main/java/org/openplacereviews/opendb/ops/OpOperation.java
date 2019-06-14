@@ -1,20 +1,12 @@
 package org.openplacereviews.opendb.ops;
 
+import com.google.gson.*;
+
 import java.lang.reflect.Type;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 
 public class OpOperation extends OpObject {
 	
@@ -110,10 +102,10 @@ public class OpOperation extends OpObject {
 		return getStringList(F_DELETE);
 	}
 	
-	public void addCreated(String hash, int ind) {
-		addOrSetStringValue(F_DELETE, hash + ":" + ind);
+	public void addDeleted(List<String> id) {
+		putObjectValue(F_DELETE, id);
 	}
-	
+
 	public List<OpObject> getCreated() {
 		return createdObjects;
 	}
@@ -191,7 +183,6 @@ public class OpOperation extends OpObject {
 		@Override
 		public OpOperation deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
 				throws JsonParseException {
-			Map treeMap = new Gson().fromJson(json, TreeMap.class);
 			JsonObject jsonObj = json.getAsJsonObject();
 			OpOperation op = new OpOperation();
 			JsonElement tp = jsonObj.remove(F_TYPE);

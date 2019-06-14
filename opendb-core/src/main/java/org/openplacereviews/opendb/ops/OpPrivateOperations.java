@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+@Deprecated
 class OpPrivateOperations {
 	// operations to be stored like a queue
 	private final Deque<OpOperation> queueOperations = new ConcurrentLinkedDeque<OpOperation>();
