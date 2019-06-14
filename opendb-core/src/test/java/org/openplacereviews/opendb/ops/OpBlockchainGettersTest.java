@@ -25,9 +25,10 @@ import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainGettersTest {
+	// TODO make class parameterized not methods !
 
 	public OpBlockChain blc;
-
+	
 	@Before
 	public void beforeEachTestMethod() throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();

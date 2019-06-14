@@ -551,7 +551,6 @@ public class OpBlockchainRulesSysValidationTest {
 		// generate user role
 		String username = "testUsername", role = "user", ownerRole = "master", newOwnerRole = "administrator", comment =
 				"some comment", newComment = "some comment 1";
-		String operationHash;
 
 		KeyPair userKeyPair = generateSysSignupWithPwdAuth(username);
 
@@ -561,11 +560,10 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
-		operationHash = opOperation.getRawHash();
 
 		// checking to change role by not role owner
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
-		opOperation.addDeleted(Collections.singletonList(operationHash));
+		opOperation.addDeleted(Collections.singletonList(username));
 
 		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
 		opOperation.makeImmutable();
@@ -688,7 +686,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addDeleted(Collections.singletonList(loadedObject.getParentHash()));
+		grantOperation.addDeleted(Collections.singletonList(name));
 		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);

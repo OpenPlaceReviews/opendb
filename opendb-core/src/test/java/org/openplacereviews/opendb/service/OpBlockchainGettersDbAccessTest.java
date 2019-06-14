@@ -240,7 +240,6 @@ public class OpBlockchainGettersDbAccessTest {
 		opBlockchainGettersTest.testGetFullBlockByNotExistingRawHash(blockChain);
 	}
 
-	//TODO
 	@Ignore
 	@Test
 	public void testGetOperationByHashWithDBAccess() throws FailedVerificationException {

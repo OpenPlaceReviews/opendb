@@ -663,6 +663,13 @@ public class OpBlockChain {
 			o = dbAccess.getOperation(rawHash);
 		} else {
 			o = blockOperations.get(rawHash);
+			if(o == null) {
+				for(OpOperation ops : queueOperations) {
+					if(ops.getRawHash().equals(rawHash)) {
+						return ops;
+					}
+				}
+			}
 		}
 		if(o != null) {
 			return o;
