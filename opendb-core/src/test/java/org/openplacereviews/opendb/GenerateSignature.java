@@ -16,15 +16,15 @@ public class GenerateSignature {
 				"\t\t\"ref\" : {\n" +
 				"\t\t\t\"s\" : [\"sys.signup\",\"openplacereviews\"]\n" +
 				"\t\t},\n" +
-				"\t\t\"delete\" : [\"openplacereviews\",\"test_1\"],\n" +
+				"\t\t\"delete\" : [[\"openplacereviews\",\"test_1\"]],\n" +
 				"\t\t\"create\": [{\n" +
 				"\t\t\t\"id\": [\"openplacereviews\",\"test_1\"],\n" +
 				"\t\t\t\"algo\": \"EC\",\n" +
 				"\t\t\t\"auth_method\": \"provided\",\n" +
 				"\t\t\t\"pubkey\": \"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==\"\n" +
 				"\t\t}],\n" +
-				"\t\t\"hash\": \"json:sha256:966cb675331eca27b5a74413bbb6c98dec818a6cc8173b73b1bf63c4a040adde\",\n" +
-				"\t\t\"signature\": \"ECDSA:base64:MEQCIANnSVnjFTRDtPSobOqh0eGkTMqzrfEBmY3S0hhfADBLAiAtTz7RXu3Ae7XqgUOJXs0lUqIhM6rteRTDNfnt2hWrUQ==\"\n" +
+				"\t\t\"hash\": \"json:sha256:5d5d1bb287be77fc38249f95db5b8a4fa10e8ba8df94ac5618bc2d5f3e040ea4\",\n" +
+				"\t\t\"signature\": \"ECDSA:base64:MEQCIHn8bCLfzmGpsnBKgbh3oGDrAZnETLR3Qq58m5QssXFbAiA25vZUizf2Dr9GomQ+zuj7JIZc4GW6GoNmP79Bvpdxng==\"\n" +
 				"\t}";
 
 		OpOperation opOperation = formatter.parseOperation(msg);

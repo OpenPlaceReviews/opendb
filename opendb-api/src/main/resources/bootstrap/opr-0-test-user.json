@@ -41,6 +41,6 @@
 			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
 		"hash": "json:sha256:6345605da4abfcb9d6667fb422a00f58afc763c39d52dad2256fa87715271339",
-		"signature": "ECDSA:base64:MEYCIQDRDj1NhghZ22QnipkO106wv83MVLpBNIgb23wOUWp/iAIhAIJUMwniYzjFtGpdz82BFwmuBWBQKCgpvF4VaUBnIobU"
+		"signature": "ECDSA:base64:MEQCIHn8bCLfzmGpsnBKgbh3oGDrAZnETLR3Qq58m5QssXFbAiA25vZUizf2Dr9GomQ+zuj7JIZc4GW6GoNmP79Bvpdxng=="
 	}
 ]

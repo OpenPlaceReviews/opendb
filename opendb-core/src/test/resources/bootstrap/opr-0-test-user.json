@@ -40,7 +40,7 @@
 			"auth_method": "provided",
 			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
-		"hash": "json:sha256:966cb675331eca27b5a74413bbb6c98dec818a6cc8173b73b1bf63c4a040adde",
-		"signature": "ECDSA:base64:MEQCIGj0oDTpTreVKKBW/PWXBLqDA1SsYFXFCBRh2Z1M06vHAiAjgnb+jS8AAolgs85vI4Iui5WXvRsT8f1tsqKCU1EaIg=="
+		"hash": "json:sha256:5d5d1bb287be77fc38249f95db5b8a4fa10e8ba8df94ac5618bc2d5f3e040ea4",
+		"signature": "ECDSA:base64:MEQCIHn8bCLfzmGpsnBKgbh3oGDrAZnETLR3Qq58m5QssXFbAiA25vZUizf2Dr9GomQ+zuj7JIZc4GW6GoNmP79Bvpdxng=="
 	}
 ]
