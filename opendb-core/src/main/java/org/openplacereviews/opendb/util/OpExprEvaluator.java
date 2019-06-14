@@ -17,6 +17,8 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
+import static org.openplacereviews.opendb.ops.OpOperation.F_CREATE;
+
 import java.util.*;
 
 public class OpExprEvaluator {
@@ -45,6 +47,10 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
 
 	public static final String FUNCTION_BLC_FIND = "blc:find";
+	
+	public static final String F_NEW = "new";
+	public static final String F_OLD = "old";
+	public static final String F_REF = "ref";
 
 	public static boolean TRACE_EXPRESSIONS = false;
 
@@ -56,8 +62,12 @@ public class OpExprEvaluator {
 		private int exprNested;
 
 		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx, JsonElement deleted, JsonObject refs) {
-			ctx.add("ref", refs);
-			ctx.add("old", deleted);
+			ctx.add(F_REF, refs);
+			ctx.add(F_OLD, deleted);
+			JsonElement createdElement = ctx.get(F_CREATE);
+			if (createdElement != null) {
+				ctx.add(F_NEW, createdElement);
+			}
 			this.blc = blockchain;
 			this.ctx = ctx;
 		}
