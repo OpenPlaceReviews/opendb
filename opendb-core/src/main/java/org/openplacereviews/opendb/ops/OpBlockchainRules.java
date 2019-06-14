@@ -67,7 +67,6 @@ public class OpBlockchainRules {
 	public static final String F_SUPER_ROLES = "super_roles";
 	public static final String F_ROLES = "roles";
 	public static final String F_ERROR_MESSAGE = "error_message"; // sys.validate
-	public static final String F_NEW = "new";
 
 	// transient - not stored in blockchain
 	public static final String F_PRIVATEKEY = "privatekey"; // private key to return to user
@@ -300,10 +299,6 @@ public class OpBlockchainRules {
 			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
 		}
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
-		JsonElement createdElement = opJsonObj.get(F_CREATE);
-		if (createdElement != null) {
-			opJsonObj.add(F_NEW, createdElement);
-		}
 		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, deletedArray, refsMap);
 		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);

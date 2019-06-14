@@ -53,10 +53,7 @@ public class OpenDBServer {
 	}
 
 	public void preStartApplication() {
-		List<String> bootstrapList =
-				Arrays.asList("opr-0-test-user", BlocksManager.BOOT_STD_OPS_DEFINTIONS, BlocksManager.BOOT_STD_ROLES,
-						BlocksManager.BOOT_OPR_TEST_GRANT, BlocksManager.BOOT_STD_VALIDATION);
-		blocksManager.setBootstrapList(bootstrapList);
+
 	}
 
 	public MetadataDb loadMetadata() {
