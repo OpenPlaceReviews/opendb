@@ -28,7 +28,6 @@ public class BlocksManager {
 
 	public static final String BOOT_STD_OPS_DEFINTIONS = "std-ops-defintions";
 	public static final String BOOT_STD_ROLES = "std-roles";
-	public static final String BOOT_OPR_TEST_GRANT = "opr-0-test-grant";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
 
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
