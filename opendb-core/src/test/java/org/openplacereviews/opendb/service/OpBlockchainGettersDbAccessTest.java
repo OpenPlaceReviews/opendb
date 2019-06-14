@@ -48,11 +48,6 @@ public class OpBlockchainGettersDbAccessTest {
 	private JdbcTemplate jdbcTemplate;
 	private OpenDBServer.MetadataDb metadataDb;
 
-	@AfterClass
-	public static void afterClassTest() throws SQLException {
-		databaseServer.getConnection().close();
-	}
-
 	@Before
 	public void beforeEachTest() throws SQLException, FailedVerificationException {
 		MockitoAnnotations.initMocks(this);
