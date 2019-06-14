@@ -58,10 +58,6 @@ public class OpBlockChain {
 	// These objects should be stored on disk (DB)
 	// 2. list of blocks, block hash ids link to blocks
 	private final OpPrivateBlocksList blocks ;
-
-	// TODO remove -> not needed more
-	// 3. stores operation list and information about created and deleted objects in this blockchain
-	//private final OpPrivateOperations operations ;
 	
 	// 3. stores information about last object by name in this blockchain
 	private final Map<String, OpPrivateObjectInstancesById> objByName = new ConcurrentHashMap<>();
@@ -253,7 +249,7 @@ public class OpBlockChain {
 	public synchronized OpBlock replicateBlock(OpBlock block) {
 		block.checkImmutable();
 		validateIsUnlocked();
-		if (isQueueEmpty()) {
+		if (!isQueueEmpty()) {
 			// can't replicate blocks when operations are not empty
 			return null;
 		}
@@ -853,10 +849,11 @@ public class OpBlockChain {
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
-		OperationDeleteInfo oin = getOperationInfo(u.getRawHash());
-		if(oin != null) {
-			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
-		}
+		// TODO load operation by hash;
+//		OperationDeleteInfo oin = getOperationInfo(u.getRawHash());
+//		if(oin != null) {
+//			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
+//		}
 		u.updateObjectsRef();
 		boolean valid = true;
 		valid = prepareDeletedObjects(u, ctx);
@@ -922,7 +919,6 @@ public class OpBlockChain {
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx) {
 		List<String> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
-		ctx.deletedOpsCache.clear();
 
 		if (deletedRefs.size() > 0) {
 			OpPrivateObjectInstancesById op = getOrCreateObjectsByIdMap(u.getType());
@@ -933,8 +929,6 @@ public class OpBlockChain {
 			if (opObject.getId().equals(deletedRefs)) {
 				ctx.deletedObjsCache.add(opObject);
 			}
-			// TODO this variable are needed yet? -> no
-			//ctx.deletedOpsCache.add(opInfo.op);
 		}
 		return true;
 	}

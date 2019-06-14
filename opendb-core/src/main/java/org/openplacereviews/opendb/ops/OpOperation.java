@@ -101,7 +101,7 @@ public class OpOperation extends OpObject {
 	public List<String> getDeleted() {
 		return getStringList(F_DELETE);
 	}
-	
+
 	public void addDeleted(List<String> id) {
 		putObjectValue(F_DELETE, id);
 	}

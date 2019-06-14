@@ -1,35 +1,12 @@
 package org.openplacereviews.opendb.service;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.ops.ValidationTimer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -37,9 +14,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.KeyPair;
+import java.util.*;
+
 
 @Service
 public class BlocksManager {
+
+	public static final String BOOT_STD_OPS_DEFINTIONS = "std-ops-defintions";
+	public static final String BOOT_STD_ROLES = "std-roles";
+	public static final String BOOT_OPR_TEST_GRANT = "opr-0-test-grant";
+	public static final String BOOT_STD_VALIDATION = "std-validations";
 
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
@@ -54,9 +44,8 @@ public class BlocksManager {
 
 	@Autowired
 	private IPFSFileManager extResourceService;
-	
-	protected String[] BOOTSTRAP_LIST = 
-			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"};
+
+	protected List<String> bootstrapList = new ArrayList<>();
 	
 	@Value("${opendb.replicate.url}")
 	private String replicateUrl;
@@ -364,7 +353,7 @@ public class BlocksManager {
 	}
 	
 	public synchronized void bootstrap(String serverName, KeyPair serverLoginKeyPair) throws FailedVerificationException {
-		for (String f : BOOTSTRAP_LIST) {
+		for (String f : bootstrapList) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
 					OpOperation[].class);
@@ -501,6 +490,13 @@ public class BlocksManager {
 		return blockchain.getRules().getLoginKeyObj(blockchain, nickname);
 	}
 
+	public List<String> getBootstrapList() {
+		return bootstrapList;
+	}
+
+	public void setBootstrapList(List<String> bootstrapList) {
+		this.bootstrapList = bootstrapList;
+	}
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();
