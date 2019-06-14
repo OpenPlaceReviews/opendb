@@ -55,8 +55,8 @@ public class BlocksManager {
 	@Autowired
 	private IPFSFileManager extResourceService;
 	
-	protected String[] BOOTSTRAP_LIST = 
-			new String[] {"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"};
+	protected List<String> bootstrapList =
+			new ArrayList<>(Arrays.asList("opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-grant", "std-validations"));
 	
 	@Value("${opendb.replicate.url}")
 	private String replicateUrl;
@@ -364,7 +364,7 @@ public class BlocksManager {
 	}
 	
 	public synchronized void bootstrap(String serverName, KeyPair serverLoginKeyPair) throws FailedVerificationException {
-		for (String f : BOOTSTRAP_LIST) {
+		for (String f : bootstrapList) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
 					OpOperation[].class);
@@ -501,6 +501,13 @@ public class BlocksManager {
 		return blockchain.getRules().getLoginKeyObj(blockchain, nickname);
 	}
 
+	public boolean addToBootstrap(String element) {
+		return bootstrapList.add(element);
+	}
+
+	public boolean removeFromBootstrap(String element) {
+		return bootstrapList.remove(element);
+	}
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<style>
+    body {padding: 40px;}
+</style>
+</head>
+<head>
+</head>
+
+<body>
+<p id="result"></p>
+<ul class="nav nav-tabs" id="tabspanel">
+    <li class="active"><a data-toggle="tab" href="#home">Status</a></li>
+    <li><a data-toggle="tab" href="#queue" id="queue-tab">Queue</a></li>
+    <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
+    <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
+    <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
+    <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
+    <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
+</ul>
+<div class="tab-content">
+    <div id="home" class="tab-pane fade in active">
+        <h1>Admin harness for OpenDB</h1>
+        <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
+        <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
+        <p id="blockchain-orphaned-blocks-header"><b>Orphaned blocks:</b> &nbsp;&nbsp;<span id="blockchain-orphaned-blocks"></span></p>
+        <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
+        <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
+
+        <h3>Admin actions</h3>
+        <form id="admin-login-div">
+            <input type="text" id="admin-login-name"/>
+            <input type="password" id="admin-login-key"/>
+            <input type="submit" value="Login as admin" id="admin-login-btn"/>
+        </form>
+        <div id="admin-actions" >
+
+            <input type="submit" value="Create block" id="block-create-btn"/>
+            <input type="submit" value="Clear log" id="clear-log-btn" />
+            <input type="submit" value="Compact" id="compact-btn" />
+            <input type="submit" value="Replicate" id="replicate-btn" />
+            <br><br>
+
+            <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
+            <input type="submit" value="Revert super block" id="block-revert-btn"/>
+            <input type="submit" value="Revert 1 block" id="block-1revert-btn"/>
+            <input type="submit" value="Clear queue" id="clear-list-btn" />
+            <br><br>
+            <input type="submit" value="Lock/unlock blockchain" id="ops-pause-btn"/>
+            <input type="submit" value="Pause/resume new blocks" id="blocks-pause-btn"/>
+            <input type="submit" value="Pause/resume replication" id="replicate-pause-btn"/>
+            <br><br>
+            <input type="text" id="remove-orphaned-blocks-txt"/>
+            <input type="submit" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
+            <br><br>
+            <input type="text" id="remove-queue-ops-txt"/>
+            <input type="submit" value="Remove queue operations" id="remove-queue-ops-btn"/>
+
+        </div>
+    </div>
+    <div id="queue" class="tab-pane fade">
+        <h3>Operations in Queue</h3>
+        <ul id="operations-list">
+        </ul>
+
+    </div>
+
+    <div id="blocks" class="tab-pane fade">
+        <h3>Blocks</h3>
+        <ul id="blocks-list">
+        </ul>
+
+    </div>
+
+    <div id="objects" class="tab-pane fade">
+        <h3>Objects</h3>
+        <label>Select object type:&nbsp;</label><select id="objects-type-list">
+    </select>
+        <p id="object-type-description"/>
+        <ul id="objects-list">
+        </ul>
+
+    </div>
+
+    <div id="errors" class="tab-pane fade">
+        <h3>Log</h3>
+        <ul id="errors-list">
+        </ul>
+
+    </div>
+
+    <div id="ipfs" class="tab-pane fade">
+        <h3>IPFS info</h3>
+        <div>
+            <p><b>IPFS STATUS:</b> &nbsp;&nbsp;<span id="ipfs-status"></span></p>
+            <p><b>PEER ID:</b> &nbsp;&nbsp;<span id="ipfs-peer-id"></span></p>
+            <p><b>VERSION:</b> &nbsp;&nbsp;<span id="ipfs-version"></span></p>
+            <p><b>GATEWAY</b> &nbsp;&nbsp;<span id="ipfs-gateway"></span></p>
+            <p><b>API</b> &nbsp;&nbsp;<span id="ipfs-api"></span></p>
+            <p><b>ADDRESSES</b> &nbsp;&nbsp;<span id="ipfs-addresses"></span></p>
+            <p><b>PUBLIC KEY</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
+        </div>
+
+        <h3>IPFS storage info</h3>
+        <div>
+            <p><b>REPO SIZE:</b> &nbsp;&nbsp;<span id="ipfs-repo-size"></span></p>
+            <p><b>STORAGE MAX:</b> &nbsp;&nbsp;<span id="ipfs-max-storage-size"></span></p>
+            <p><b>REPO PATH</b> &nbsp;&nbsp;<span id="ipfs-repo-path"></span></p>
+        </div>
+
+        <h3>IPFS system info</h3>
+        <div>
+            <p><b>DISK INFO:</b> &nbsp;&nbsp;<span id="system-info"></span></p>
+            <p><b>MEMORY:</b> &nbsp;&nbsp;<span id="system-memory"></span></p>
+            <p><b>RUNTIME:</b> &nbsp;&nbsp;<span id="system-runtime"></span></p>
+            <p><b>NETWORK</b> &nbsp;&nbsp;<span id="system-network"></span></p>
+        </div>
+
+        <h3>STATISTIC</h3>
+        <div>
+            <p><b>AMOUNT ALL IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-all-ipfs-objects"></span></p>
+            <p><b>AMOUNT PINNED IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-pinned-ipfs-objects"></span></p>
+            <p><b>AMOUNT MISSING IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-missing-ipfs-objects"></span></p>
+            <p><b>AMOUNT DB OBJECTS:</b> &nbsp;&nbsp;<span id="amount-db-objects"></span></p>
+            <p><b>AMOUNT UNACTIVATED OBJECTS:</b> &nbsp;&nbsp;<span id="amount-unactivated-objects"></span></p>
+            <input type="submit" value="Load full stats" id="laod-full-stats-btn">
+        </div>
+
+        <h3>IPFS missing resources</h3>
+        <div>
+            <p><b>List of missing resources</b> &nbsp;&nbsp;<span id="ipfs-missing-objects"></span></p>
+            <input type="submit" value="Upload missing images to IPFS" id="fix-ipfs-missing-images-btn">
+        </div>
+
+        <h3>Unactivated images</h3>
+        <div>
+            <p><b>List unactivated images: </b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
+            <input type="submit" value="Remove unactivated images" id="fix-blc-missing-images-btn">
+        </div>
+
+        <h3>Add Image</h3>
+        <div>
+            1. File: <input type="file" id="image-file">
+            <br>
+            <input type="submit" value="Add File" id="add-file-btn">
+            <br>
+            <p><b>Result: </b> &nbsp;&nbsp;<span id="result-add-image"></span></p>
+        </div>
+
+        <h3>Get file</h3>
+        <div>
+            1. Cid of image: <input type="text" id="get-image">
+            <br>
+            <a href="" id="image-link" download>
+                <input type="submit" value="Get image" id="get-image-btn">
+            </a>
+            <br>
+        </div>
+
+    </div>
+
+
+    <div id="reg" class="tab-pane fade">
+        <h3>Signup</h3>
+        <div>
+            1. Nickname: <input type="text" id="signup-name"/>
+            <br>
+            2a. Password: <input type="text" id="signup-pwd"/>
+            Old Password: <input type="text" id="signup-pwd-old"/>
+            <br>
+            2b. Private key: <input type="text" id="signup-user-prk"/>
+            Public key: <input type="text" id="signup-user-pbk"/>
+            <br>
+            Old private key: <input type="text" id="signup-user-prk-old"/>
+            Old public key: <input type="text" id="signup-user-pbk-old"/>
+            <br>
+            2c. OAuth provider: <input type="text" id="signup-oauth-p"/>
+            OAuth Id: <input type="text" id="signup-oauth-id"/>
+            <br>
+            Old OAuth provider: <input type="text" id="signup-oauth-p-old"/>
+            Old OAuth Id: <input type="text" id="signup-oauth-id-old"/>
+            <br>
+            3. User details (raw json): <input type="text" id="signup-details"/>
+            <br>
+            <input type="submit" value="Signup" id="signup-btn"/>
+        </div>
+
+        <h3>Login</h3>
+        <div>
+            1. Nickname + purpose (format 'nickname:site') : <input type="text" id="login-name"/>
+            <br>
+            2a. Signup Password: <input type="text" id="login-pwd"/>
+            <br>
+            2b. Signup or login private key: <input type="text" id="login-signup-key"/>
+            <br>
+            2c. Signup OAuth provider: <input type="text" id="login-oauth-p"/>
+            Signup OAuth Id: <input type="text" id="login-oauth-id"/>
+            <br>
+            3. Public key (optional): <input type="text" id="login-public-key"/>
+            <br>
+            4. User details (raw json): <input type="text" id="login-details"/>
+            <br>
+            <input type="submit" value="Login" id="login-btn"/>
+        </div>
+        <h3>Sign message</h3>
+        <div>
+            1. Json: <input type="text" id="sign-json"/>
+            <br>
+            2. Name (empty will be server): <input type="text" id="sign-name"/>
+            <br>
+            3a. Password: <input type="text" id="sign-pwd"/>
+            <br>
+            3b. Signup private key: <input type="text" id="sign-pk"/>
+            <br>
+            4. Don't sign by server: <input type="checkbox" id="sign-by-server"/>
+            <br>
+            <input type="submit" value="Sign message" id="sign-btn"/>
+            <input type="submit" value="Sign operation and add to queue" id="sign-add-btn"/>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+
+    var loginName = "";
+
+    function loadDataDelay(d=1500) {
+        setTimeout(function() { loadData(); }, d);
+    }
+
+    function loadData() {
+        refreshUser();
+        $.getJSON( "/api/auth/admin-status", function( data ) {
+            loginName = data.admin;
+            refreshUser();
+            loadAllData();
+        });
+    }
+
+
+    function loadAllData() {
+        loadStatusData();
+        loadQueueData();
+        loadObjectsData();
+        loadBlocksData();
+        loadErrorsData();
+        loadIpfsStatusData();
+    }
+
+    function refreshUser() {
+        if(loginName != "") {
+            $("#admin-login-user").html(loginName);
+            $("#admin-actions").show();
+            $("#admin-login-div").hide();
+            $("#reg").show();
+            $("#reg-tab").show();
+            $("#ipfs-tab").show();
+        } else {
+            $("#admin-actions").hide();
+            $("#admin-login-div").show();
+            $("#reg-tab").hide();
+            $("#reg").hide();
+            $("#ipfs-tab").hide();
+        }
+
+    }
+
+    function loadErrorsData() {
+        $.getJSON( "/api/logs", function( data ) {
+            var items = "";
+            var errs = 0;
+            for(var i = 0; i < data.logs.length; i++)  {
+                let op = data.logs[i];
+                items += "<br><li><b>Status</b>: " + op.status;
+                if(op.status) {
+                    errs++;
+                }
+                items += "<br><b>Message</b>: " + op.message;
+                items += "<br><b>Time</b>: " + new Date(op.utcTime).toUTCString();
+                if(op.cause) {
+                    items += "<br><b>Exception message</b>: " + op.cause.detailMessage;
+                }
+                if(op.block) {
+                    items += "<br><b>Block (id, hash)</b>: " + op.block.block_id + " " + op.block.hash;
+                }
+                if(op.operation) {
+                    items += "<br><b>Operation</b>: " +
+                        op.operation.type + " " + op.operation.hash;
+                }
+
+                if(op.block) {
+                    items += "<br><details><summary><b>Block json</b></summary><pre>" +
+                        JSON.stringify(op.block, null, 4) + "</pre></details>";
+                }
+                if(op.operation) {
+                    items += "<br><details><summary><b>Operation json</b></summary><pre>" +
+                        JSON.stringify(op.operation, null, 4) + "</pre></details>";
+                }
+                if(op.cause) {
+                    items += "<br><details><summary><b>Full exception</b></summary><pre>" +
+                        JSON.stringify(op.cause, null, 4) + "</pre></details>";
+                }
+                items += "</li>";
+            }
+            $("#errors-tab").html("Logs (" + errs + " Errors)");
+            $("#errors-list").html(items);
+        });
+    }
+
+    var globalObjectTypes = {};
+    function loadObjectsData() {
+
+        let selectType = $("#objects-type-list").val();
+        $.getJSON( "/api/objects?type=sys.operation", function( data ) {
+            var types = "<option value = 'none'>none</option>";
+            $("#objects-tab").html("Objects (" + data.objects.length + ")");
+            for(var i = 0; i < data.objects.length; i++)  {
+                let obj = data.objects[i];
+                let objType = obj.id[0];
+                globalObjectTypes[objType] = obj;
+
+                types += "<option value = '"+objType+"' " +
+                    (selectType == objType ? "selected" : "") + ">"+objType+"</option>";
+            }
+            $("#objects-type-list").html(types);
+        });
+
+        if(selectType != "none" && globalObjectTypes[selectType]) {
+            $.getJSON( "/api/objects?type="+selectType, function( data ) {
+                var items = "";
+                $("#object-type-description").html(globalObjectTypes[selectType].comment);
+                $("#objects-tab").html("Objects (" + data.objects.length + ")");
+                for(var i = 0; i < data.objects.length; i++)  {
+                    let obj = data.objects[i];
+                    items += "<br><li><b>Object id</b>: " + obj.id;
+                    items += "<br><b>Comment</b>: " + obj.comment;
+                    items += "<br><details><summary><b>Simple json</b></summary><pre>" +
+                        JSON.stringify(obj, null, 4) + "</pre></details>";
+                    items += "</li>";
+                }
+                $("#objects-list").html(items);
+            });
+        }
+    }
+
+    function loadStatusData() {
+        $.getJSON( "/api/status", function( data ) {
+            var items = "";
+            $("#blockchain-status").html(data.status);
+            $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
+
+            $("#admin-user").html(data.serverUser);
+            var ophS = Object.keys(data.orphanedBlocks);
+            if(ophS.length > 0) {
+                $("#blockchain-orphaned-blocks-header").show();
+                $("#blockchain-orphaned-blocks").html(
+                    JSON.stringify(ophS, null, 4) +
+                    "<br><details><summary><b>Simple json</b></summary><pre>" +
+                    JSON.stringify(data.orphanedBlocks, null, 4) + "</pre></details>");
+            } else {
+                $("#blockchain-orphaned-blocks-header").hide();
+            }
+
+        });
+    }
+
+    function loadIpfsStatusData() {
+        $.getJSON("/api/ipfs/status?full=false", function ( data ) {
+            $("#ipfs-status").html(data.status);
+            $("#ipfs-peer-id").html(data.peerId);
+            $("#ipfs-version").html(data.version);
+            $("#ipfs-gateway").html(data.gateway);
+            $("#ipfs-api").html(data.api);
+            $("#ipfs-addresses").html(JSON.stringify(data.addresses));
+            $("#ipfs-public-key").html(data.publicKey);
+
+            // IPFS STORAGE
+            $("#ipfs-repo-size").html(data.repoSize);
+            $("#ipfs-max-storage-size").html(data.storageMax);
+            $("#ipfs-repo-path").html(data.repoPath);
+
+            // IPFS SYSTEM INFO
+            $("#system-info").html(data.diskInfo);
+            $("#system-memory").html(data.memory);
+            $("#system-runtime").html(data.runtime);
+            $("#system-network").html(data.network);
+
+            // IPFS STATS
+            $("#amount-all-ipfs-objects").html(data.amountIpfsResources);
+            $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
+        });
+    }
+
+    function loadBlocksData() {
+        $.getJSON( "/api/blocks", function( data ) {
+            var items = "";
+            // SHOW currentBlock, currentTx - as in progress or failed
+            $("#blocks-tab").html("Blocks (" + data.length + ")");
+            var superblockId = 0;
+            var superblockHash = "";
+            for(var i = 0; i < data.length; i++)  {
+                let op = data[i];
+                items += "<br><li><b>Block id</b>: " + op.block_id;
+                items += "<br><b>Hash</b>: " + op.hash;
+                if(op.eval) {
+                    if(op.eval.superblock_hash != superblockHash) {
+                        superblockHash = op.eval.superblock_hash;
+                        superblockId = superblockId + 1;
+                    }
+                    items += "<br><b>Operations count</b>: " + op.eval.operations_size;
+                    items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
+                }
+                items += "<br><b>Signed by</b>: " + op.signed_by;
+                items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
+                items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
+                items += "<br><b>Details</b>: " + op.details;
+                // items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
+                items += "<br><details><summary><b>Simple json</b></summary><pre>" +
+                    JSON.stringify(op, null, 4) + "</pre></details>";
+                items += "</li>";
+            }
+            $("#blocks-list").html(items);
+        });
+    }
+
+    function loadFullIpfsStatus() {
+        $(document).ready(function () {
+            $.getJSON("/api/ipfs/status?full=true", function (data) {
+                $("#result").html("SUCCESS: " + data);
+                $("#amount-missing-ipfs-objects").html(data.missingResources.length);
+                $("#amount-db-objects").html(data.amountDBResources);
+                $("#amount-unactivated-objects").html(data.deprecatedResources.length);
+
+                console.log("tsts");
+                for(var i = 0; i < data.missingResources.length; i++)  {
+                    $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
+                };
+                for(var i = 0; i < data.deprecatedResources.length; i++)  {
+                    $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
+                };
+            });
+        });
+    }
+    function loadQueueData() {
+        $.getJSON( "/api/queue", function( data ) {
+            var items = "";
+            $("#queue-tab").html("Queue (" + data.ops.length + ")");
+            for(var i = 0; i < data.ops.length; i++)  {
+                let op = data.ops[i];
+                let clone = JSON.parse(JSON.stringify(op));
+                delete clone.hash;
+                delete clone.signature;
+                delete clone.signature_hash;
+                delete clone.validation;
+                delete clone.eval;
+                if(clone.create) {
+                    for(var ik = 0; ik < clone.create.length; ik++ ) {
+                        delete clone.create[ik].eval;
+                    }
+                }
+                sha256(JSON.stringify(clone)).then(digestValue => {
+                    if(("json:sha256:" + digestValue) != op.hash) {
+                    alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");
+                    // console.log("'"+JSON.stringify(clone)+"'");
+                }
+            });
+                items += "<br><li><b>Operation</b>: " + op.type;
+                items += "<br><b>Hash</b>: " + op.hash;
+                items += "<br><b>Added/removed objects</b>: " +
+                    (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
+                    (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0"));
+                if(op.create && op.create.length > 0) {
+                    items += "<br><b>Name</b>: " + op.create[0].id;
+                } else if(op.delete && op.delete.length > 0) {
+                    items += "<br><b>Name</b>: " + op.delete[0].id;
+                }
+                items += "<br><b>Signed by</b>: " + op.signed_by;
+                items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
+                items += "<br><details><summary><b>JSON</b></summary><pre>" +
+                    JSON.stringify(op, null, 4) + "</pre></details>";
+                items += "</li>";
+            }
+            $("#operations-list").html(items);
+        });
+    }
+
+    $( document ).ready(function() {
+        loadData();
+        $("#clear-list-btn").click(function(){
+            $.post("/api/mgmt/queue-clear", {},  function(data, status){
+                loadData();
+            });
+        });
+
+        $("#clear-log-btn").click(function(){
+            $.post("/api/mgmt/logs-clear", {},  function(data, status){
+                loadData();
+            });
+        });
+
+        $("#compact-btn").click(function(){
+            $.post("/api/mgmt/compact", {},  function(data, status){
+                loadDataDelay();
+            });
+        });
+        $("#replicate-btn").click(function(){
+            $.post("/api/mgmt/replicate", {},  function(data, status){
+                loadDataDelay();
+            });
+        });
+        $("#objects-type-list").change(function() {
+            loadObjectsData();
+        });
+
+        $("#block-create-btn").click(function(){
+            $.post("/api/mgmt/create", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#block-revert-btn").click(function(){
+            $.post("/api/mgmt/revert-superblock", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        $("#block-1revert-btn").click(function(){
+            $.post("/api/mgmt/revert-1-block", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        $("#ops-pause-btn").click(function(){
+            $.post("/api/mgmt/toggle-blockchain-pause", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        $("#blocks-pause-btn").click(function(){
+            $.post("/api/mgmt/toggle-blocks-pause", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        $("#replicate-pause-btn").click(function(){
+            $.post("/api/mgmt/toggle-replicate-pause", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#remove-orphaned-blocks-btn").click(function(){
+            $.post("/api/mgmt/delete-orphaned-blocks", {
+                "blockListOrSingleValue" : $("#remove-orphaned-blocks-txt").val()
+            })
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#remove-queue-ops-btn").click(function(){
+            $.post("/api/mgmt/delete-queue-ops", {
+                "opsListOrSingleValue" : $("#remove-queue-ops-txt").val()
+            })
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+
+        $("#block-bootstrap-btn").click(function(){
+            $.post("/api/mgmt/bootstrap", {})
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#admin-login-btn").click(function() {
+            var obj = {
+                "pwd":$("#admin-login-key").val(),
+                "name":$("#admin-login-name").val()
+            };
+            $.post("/api/auth/admin-login", obj)
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
+        });
+
+        $("#add-file-btn").click(function () {
+            var formData = new FormData();
+            formData.append("file", $("#image-file")[0].files[0]);
+
+            $.ajax({
+                url: '/api/ipfs/image',
+                data: formData,
+                processData: false,
+                contentType: false,
+                type: 'POST',
+                success: function(data) {
+                    $("#result-add-image").html(data.toString());
+                    loadData();
+                },
+                error: function (xhr, status, error) {
+                    $("#result-add-image").html("ERROR: " + error);
+                }
+            });
+        });
+
+        $("#get-image-btn").click(function () {
+            $("#image-link").attr("href", "/api/ipfs/image?hash=" + $("#get-image").val());
+            $("#image-link").click();
+        });
+
+        $("#fix-ipfs-missing-images-btn").click(function () {
+            $.post("/api/ipfs/mgmt/ipfs-maintenance")
+                .done(function (data) {$("#result").html("SUCCESS: " + data); loadData(); loadFullIpfsStatus(); })
+                .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
+        });
+
+        $("#fix-blc-missing-images-btn").click(function () {
+            $.post("/api/ipfs/mgmt/clean-deprecated-ipfs")
+                .done(function (data) {
+                    $("#result").html("SUCCESS: " + data);
+                    loadData();
+                    loadFullIpfsStatus();
+                })
+                .fail(function (xhr, status, error) {
+                    $("#result").html("ERROR: " + error);
+                });
+        });
+
+        $("#laod-full-stats-btn").click(function () {
+            loadFullIpfsStatus();
+        });
+
+        $("#signup-btn").click(function() {
+            var obj = {
+                "pwd":$("#signup-pwd").val(),
+                "pwdOld":$("#signup-pwd-old").val(),
+                "name":$("#signup-name").val(),
+                "oauthProvider":$("#signup-oauth-p").val(),
+                "oauthProviderOld":$("#signup-oauth-p-old").val(),
+                "oauthId":$("#signup-oauth-id").val(),
+                "oauthIdOld":$("#signup-oauth-id-old").val(),
+                "algo":"EC",
+                "privateKey":$("#signup-user-prk").val(),
+                "privateKeyOld":$("#signup-user-prk-old").val(),
+                "publicKey":$("#signup-user-pbk").val(),
+                "publicKeyOld":$("#signup-user-pbk-old").val(),
+                "userDetails":$("#signup-details").val()
+            };
+            $.post("/api/auth/signup", obj)
+                .done(function(data){  $("#result").html(data); loadData(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#sign-btn").click(function() {
+            var obj = {
+                "json":$("#sign-json").val(),
+                "name":$("#sign-name").val(),
+                "pwd":$("#sign-pwd").val(),
+                "privateKey":$("#sign-pk").val(),
+                "dontSignByServer":$("#sign-by-server").is(':checked')
+            };
+            $.post("/api/auth/process-operation", obj)
+                .done(function(data){  $("#result").html(data); loadData();})
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+        });
+        $("#sign-add-btn").click(function() {
+            var obj = {
+                "name":$("#sign-name").val(),
+                "pwd":$("#sign-pwd").val(),
+                "privateKey":$("#sign-pk").val(),
+                "addToQueue" : "true",
+                "dontSignByServer":$("#sign-by-server").is(':checked')
+            };
+            var params = $.param(obj);
+            var json = $("#sign-json").val();
+            $.ajax({
+                url: '/api/auth/process-operation?' + params,
+                type: 'POST',
+                data: json,
+                contentType: 'application/json; charset=utf-8'
+            }).done(function(data){  $("#result").html(data); loadData();})
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+
+            // $.post("/api/auth/process-operation", obj)
+        });
+        $("#login-btn").click(function() {
+            var obj = {
+                "name":$("#login-name").val(),
+                "pwd":$("#login-pwd").val(),
+                "edit":"true",
+                "signupPrivateKey":$("#login-signup-key").val(),
+                "oauthProvider":$("#login-oauth-p").val(),
+                "oauthId":$("#login-oauth-id").val(),
+                "loginPubKey":$("#login-public-key").val(),
+                "loginAlgo":"EC",
+                "userDetails": $("#login-details").val()
+            };
+            $.post("/api/auth/login", obj)
+                .done(function(data){  $("#result").html(data); loadData();})
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+        });
+    });
+
+    async function sha256(message) {
+        // encode as UTF-8
+        const msgBuffer = new TextEncoder('utf-8').encode(message);
+
+        // hash the message
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+
+        // convert ArrayBuffer to Array
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+        // convert bytes to hex string                  
+        const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('');
+        return hashHex;
+    }
+</script>
+
+</html>

@@ -1,7 +1,7 @@
 [
-	{  
+	{
 		"type" : "sys.validate",
-		"new" : [{ 
+		"create" : [{
 			"id" : ["all_op_type_registered"],
 			"type" : ["*"],
 			"comment" : "Validate that operation is registered",
@@ -11,9 +11,9 @@
 			]
 		}]
 	},
-	{  
+	{
 		"type" : "sys.validate",
-		"new" : [{ 
+		"create" : [{
 			"id" : ["all_op_arity_new_del"],
 			"type" : ["*"],
 			"comment" : "Validate operation arity",
@@ -27,9 +27,9 @@
 			]
 		}]
 	},
-	{  
+	{
 		"type" : "sys.validate",
-		"new" : [{ 
+		"create" : [{
 			"id" : ["all_op_arity_same_type_and_id"],
 			"type" : ["*"],
 			"comment" : "Validate operation arity their types and ids",
@@ -45,9 +45,26 @@
 			]
 		}]
 	},
-	{  
+	// TODO write validation rules for create/delete/edit
+	//	{
+	//		"type" : "sys.validate",
+	//		"create" : [{
+	//			"id" : ["new_and_old_array_must_have_unique_id"],
+	//			"type" : ["*"],
+	//			"comment" : "Validate operation on unique object if for old and new arrays",
+	//			"role" : "none",
+	//			"if" : [
+	//				"std:eq(std:size(.new),1)",
+	//				"std:eq(std:size(.old),1)"
+	//			],
+	//			"validate" : [
+	//				"std:neq(.new.id,.old.id)"
+	//			]
+	//		}]
+	//	},
+	{
 		"type" : "sys.validate",
-		"new" : [{ 
+		"create" : [{
 			"id" : ["operation_std_arity_always_0"],
 			"type" : ["sys.operation"],
 			"comment" : "Validate that for all standard operation arity is always 0 and nobody could change it",
@@ -61,9 +78,9 @@
 			]
 		}]
 	},
-	{  
+	{
 		"type" : "sys.validate",
-		"new" : [{ 
+		"create" : [{
 			"id" : ["sysvalidate_check_previous_role_for_change"],
 			"type" : ["sys.validate"],
 			"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
@@ -78,7 +95,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["role_none_could_not_be_created"],
 			"type" : ["sys.role"],
 			"comment" : "Check that role none could not be created. Couldn't be changed!",
@@ -90,7 +107,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["role_could_be_changed_only_by_owner"],
 			"type" : ["sys.role"],
 			"comment" : "Check that role could be changed only by owner. Role couldn't be deleted cause it will require revoking all grant access!",
@@ -106,7 +123,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["grant_check_op_role_and_check_assigned_role"],
 			"type" : ["sys.grant"],
 			"comment" : "Check that role is assigned by person who has it. The role could be revoked or added only if operation is signed by a person who has that role. Check that Owner role could change that validation.",
@@ -119,7 +136,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["signup_login_only_by_administrator"],
 			"type" : ["sys.login", "sys.signup"],
 			"comment" : "Check that only administrator could signup and login users",
@@ -131,7 +148,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["login_should_reference_its_signup"],
 			"type" : ["sys.login"],
 			"comment"   : "Every login should reference signup (that validates signup is active)",
@@ -147,7 +164,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["login_self_signed_provided"],
 			"type" : ["sys.login"],
 			"comment"   : "Check that login is signed by signup key. Nobody could change that rule",
@@ -163,7 +180,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["login_update_self_signed_provided"],
 			"type" : ["sys.login"],
 			"comment"   : "Check that login is signed by signup key. Nobody could change that rule",
@@ -179,7 +196,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["signup_self_signed_provided"],
 			"type" : ["sys.signup"],
 			"comment"   : "Check that signup is signed by itself. Nobody could change that rule",
@@ -194,7 +211,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["login_self_signed_pwd"],
 			"type" : ["sys.login"],
 			"comment"   : "Check that login is signed by signup key. Only owner could change that rule",
@@ -210,7 +227,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["login_update_self_signed_pwd"],
 			"type" : ["sys.login"],
 			"comment"   : "Check that login is signed by signup key. Only owner could change that rule",
@@ -226,7 +243,7 @@
 	},
 	{
 		"type" : "sys.validate",
-		"new" : [{
+		"create" : [{
 			"id" : ["signup_self_signed_pwd"],
 			"type" : ["sys.signup"],
 			"comment"   : "Check that signup is signed by itself. Only owner could change that rule",

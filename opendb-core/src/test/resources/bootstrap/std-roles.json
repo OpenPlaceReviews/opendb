@@ -1,7 +1,7 @@
-[		
+[
 	{
 		"type"  : "sys.role",
-		"new" : [{
+		"create" : [{
 			"id" : ["owner"],
 			"comment" : "Owner role is a super role that nobody could change it",
 			"owner_role" : "none",
@@ -10,7 +10,7 @@
 	},
 	{
 		"type" : "sys.role",
-		"new" : [{ 
+		"create" : [{
 			"id"	: ["master"],
 			"comment"   : "Role master and only owner could change it",
 			"owner_role" : "owner",
@@ -19,7 +19,7 @@
 	},
 	{
 		"type" : "sys.role",
-		"new" : [{ 
+		"create" : [{
 			"id"	: ["administrator"],
 			"comment"   : "Role administrator for user signup and only owner could change it",
 			"owner_role" : "owner",

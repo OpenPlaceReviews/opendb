@@ -356,13 +356,13 @@ public class OpBlockChain {
 	}
 	
 	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
-		List<String> deletedRefs = u.getOld();
+		List<String> deletedRefs = u.getDeleted();
 		for(int i = 0; i < deletedRefs.size(); i++) {
 			String delRef = deletedRefs.get(i);
 			String delHash = getHashFromAbsRef(delRef);
 			int delInd = getIndexFromAbsRef(delRef);
 			OperationDeleteInfo oinfo = operations.addDeletedObject(delHash, delInd, u);
-			for (OpObject delObj : oinfo.op.getNew()) {
+			for (OpObject delObj : oinfo.op.getCreated()) {
 				List<String> id = delObj.getId();
 				if (id != null && id.size() > 0) {
 					String objType = u.getType();
@@ -373,12 +373,12 @@ public class OpBlockChain {
 			
 		}
 		operations.addNewOperation(u);
-		for (OpObject newObj : u.getNew()) {
-			List<String> id = newObj.getId();
+		for (OpObject createdObj : u.getCreated()) {
+			List<String> id = createdObj.getId();
 			if (id != null && id.size() > 0) {
 				String objType = u.getType();
 				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-				oinf.add(id, newObj);
+				oinf.add(id, createdObj);
 			}
 		}
 		
@@ -474,7 +474,7 @@ public class OpBlockChain {
 	
 	private void atomicRemoveOperationObj(OpOperation op, List<OpOperation> prevOperationsSameType) {
 		// delete new objects by name
-		for (OpObject ok : op.getNew()) {
+		for (OpObject ok : op.getCreated()) {
 			List<String> id = ok.getId();
 			if (id != null && id.size() > 0) {
 				String objType = op.getType();
@@ -494,7 +494,7 @@ public class OpBlockChain {
 	private OpObject findLast(List<OpOperation> list, List<String> id) {
 		OpObject last = null;
 		for(OpOperation o : list) {
-			for(OpObject obj : o.getNew()) {
+			for(OpObject obj : o.getCreated()) {
 				if(OUtils.equals(obj.getId(), id)) {
 					last = obj;
 				}
@@ -870,7 +870,7 @@ public class OpBlockChain {
 	}
 	
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx) {
-		List<String> deletedRefs = u.getOld();
+		List<String> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 		ctx.deletedOpsCache.clear();
 		for(int i = 0; i < deletedRefs.size(); i++) {
@@ -879,7 +879,7 @@ public class OpBlockChain {
 			int delInd = getIndexFromAbsRef(delRef);
 			
 			OperationDeleteInfo opInfo = getOperationInfo(delHash);
-			if(opInfo == null || opInfo.op.getNew().size() <= delInd) {
+			if(opInfo == null || opInfo.op.getCreated().size() <= delInd) {
 				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), delRef);
 			}
 			if(opInfo.deletedObjects != null && delInd < opInfo.deletedObjects.length){
@@ -888,7 +888,7 @@ public class OpBlockChain {
 							delRef, ctx.blockHash);
 				}
 			}
-			List<OpObject> nw = opInfo.op.getNew();
+			List<OpObject> nw = opInfo.op.getCreated();
 			ctx.deletedObjsCache.add(nw.get(delInd));
 			ctx.deletedOpsCache.add(opInfo.op);
 		}
@@ -896,7 +896,7 @@ public class OpBlockChain {
 	}
 	
 	private boolean prepareNoNewDuplicatedObjects(OpOperation u, LocalValidationCtx ctx) {
-		List<OpObject> list = u.getNew();
+		List<OpObject> list = u.getCreated();
 		for(int i = 0; i < list.size(); i++) {
 			OpObject o = list.get(i);
 			// check duplicates in same operation

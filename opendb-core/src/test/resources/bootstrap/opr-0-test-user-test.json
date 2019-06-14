@@ -2,19 +2,19 @@
 	{
 		"type" : "sys.signup",
 		"signed_by": "openplacereviewsPWD",
-		"new": [{
+		"create": [{
 			"id": ["openplacereviewsPWD"],
 			"name" : "openplacereviewsPWD",
 			"algo": "EC",
 			"auth_method": "pwd",
 			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
-		"hash": "json:sha256:0cd8e668951c046d11f32eadcc995eaf7d30590edee57e703f2228633475ed39",
-		"signature": "ECDSA:base64:MEYCIQCn98KqDzDrjkuSjK9gr1o3XxQAOGLbZT7k9NYU3xIFyAIhAN5uVPtFDyoTZEok4oiThE6WyFWv+m7mHt/s88Cna5f1"
+		"hash": "json:sha256:5e7aac0f29a9737f7fc4cdecb4a635f7563b3e3fffeb117618b2ed468e46704d",
+		"signature": "ECDSA:base64:MEUCIAIsnKgYRuAsIkzLEqArCHbuZ/LQacqd4eIJl4cB4K82AiEArX9u7yD+I5+Lj4EZMfnF60scJbk4JEt7uNfPtYLlRvQ="
 	},
 	{
 		"type"  : "sys.role",
-		"new" : [{
+		"create" : [{
 			"id" : ["none"],
 			"comment" : "Owner role is a super role that nobody could change it",
 			"owner_role" : "none",
@@ -23,19 +23,27 @@
 	},
 	{
 		"type"  : "sys.role",
-		"new" : [{
-			"id" : ["none3"],
+		"create" : [{
+			"id" : ["none2"],
 			"comment" : "2Owner role is a super role that nobody could change it",
 			"owner_role" : "none",
-			"super_roles": [],
-			"image": {"type":"#image","hash":"b8b2580ee9ac30c3ace5dc1dfeb8e4d141a19e803a8f8237b12bf79bebd04862","extension":"jpg","cid":"QmXh3zuuubDKtrJBw76P4PQENWhnKXnecTRVg2mthYVRpi"}
+			"super_roles": []
 		}]
 	},
 	{
 		"type"  : "sys.role",
-		"new" : [{
+		"create" : [{
 			"id" : ["none1"],
 			"comment" : "1Owner role is a super role that nobody could change it",
+			"owner_role" : "none",
+			"super_roles": []
+		}]
+	},
+	{
+		"type"  : "sys.role",
+		"create" : [{
+			"id" : ["none3"],
+			"comment" : "3Owner role is a super role that nobody could change it",
 			"owner_role" : "none",
 			"super_roles": []
 		}]
@@ -45,7 +53,7 @@
 		"ref" : {
 			"s" : ["sys.signup","openplacereviewsPWD"]
 		},
-		"new" : [{
+		"create" : [{
 			"id" : ["openplacereviewsPWD"],
 			"roles" : ["none"]
 		}]
