@@ -177,7 +177,7 @@ public class OpApiController {
     		if(loginObj == null) {
     			throw new IllegalArgumentException("There is nothing to edit cause signup obj doesn't exist");
     		} else {
-    			op.addDeleted(Collections.singletonList(loginObj.getParentHash()));
+    			op.addDeleted(loginObj.getId());
     			String authMethod = loginObj.getStringValue(OpBlockchainRules.F_AUTH_METHOD);
     			if(OpBlockchainRules.METHOD_PWD.equals(authMethod)) {
     				signKeyPair = SecUtils.generateKeyPairFromPassword(algoOld, loginObj.getStringValue(OpBlockchainRules.F_KEYGEN_METHOD), 
@@ -287,7 +287,7 @@ public class OpApiController {
     				throw new IllegalArgumentException("There is nothing to edit cause login obj doesn't exist");
     			}
     		} else {
-    			op.addDeleted(Collections.singletonList(loginObj.getParentHash()));
+    			op.addDeleted(loginObj.getId());
     		}
     	}
     	
