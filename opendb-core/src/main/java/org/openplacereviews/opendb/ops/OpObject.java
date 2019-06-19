@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.ops;
 
 import com.google.gson.*;
 import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.TechnicalException;
 
 import java.lang.reflect.Type;
 import java.text.ParseException;
@@ -32,10 +33,10 @@ public class OpObject {
 	
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected transient Map<String, Object> cacheFields;
-	protected boolean isImmutable;
+	public boolean isImmutable;
 	
 	protected transient String parentType;
-	protected transient String parentHash;
+	public transient String parentHash;
 	
 	public OpObject() {}
 	
@@ -44,10 +45,48 @@ public class OpObject {
 	}
 	
 	public OpObject(OpObject cp, boolean copyCacheFields) {
-		this.fields.putAll(cp.fields);
-		if(copyCacheFields && cp.cacheFields != null) {
-			this.cacheFields = new ConcurrentHashMap<String, Object>();
-			this.cacheFields.putAll(cp.cacheFields);
+		createOpObjectCopy(cp, copyCacheFields);
+	}
+
+	private OpObject createOpObjectCopy(OpObject opObject, Boolean copyCacheFields) {
+		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
+		if (opObject.cacheFields != null && copyCacheFields) {
+			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
+		}
+		if (opObject.parentType != null) {
+			this.parentType = (String) copyingObjects(opObject.parentType);
+		}
+		if (opObject.parentHash != null) {
+			this.parentHash = (String) copyingObjects(opObject.parentHash);
+		}
+		this.isImmutable = (boolean) copyingObjects(opObject.isImmutable);
+
+		return this;
+	}
+
+	private Object copyingObjects(Object object) {
+		if (object instanceof Number) {
+			return (Number) object;
+		} else if (object instanceof String) {
+			return (String) object;
+		} else if (object instanceof Boolean) {
+			return (Boolean) object;
+		} else if (object instanceof List) {
+			ArrayList<Object> copy = new ArrayList<>();
+			ArrayList<Object> list = (ArrayList) object;
+			for (Object o : list) {
+				copy.add(copyingObjects(o));
+			}
+			return copy;
+		} else if (object instanceof Map) {
+			Map<String, Object> copy = new HashMap<>();
+			Map<String, Object> map = (Map) object;
+			for (String key : map.keySet()) {
+				copy.put(key, copyingObjects(map.get(key)));
+			}
+			return copy;
+		} else {
+			throw new TechnicalException("Type of object is not supported");
 		}
 	}
 	
@@ -277,6 +316,15 @@ public class OpObject {
 			}
 		}
 		return mp;
+	}
+
+	@Override
+	public Object clone() {
+		try {
+			return super.clone();
+		} catch (CloneNotSupportedException e) {
+			throw new TechnicalException("Error while cloning object" , e);
+		}
 	}
 
 	@Override

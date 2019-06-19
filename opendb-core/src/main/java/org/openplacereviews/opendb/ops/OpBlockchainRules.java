@@ -1,18 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
@@ -22,8 +11,11 @@ import org.openplacereviews.opendb.util.OpExprEvaluator;
 import org.openplacereviews.opendb.util.OpExprEvaluator.EvaluationContext;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.security.KeyPair;
+import java.util.*;
 
 /**
  * State less blockchain rules to validate roles and calculate hashes
@@ -34,6 +26,7 @@ public class OpBlockchainRules {
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;
+	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
 	
@@ -481,9 +474,11 @@ public class OpBlockchainRules {
 		boolean signByItself = false;
 		String signupName = "";
 		if(OpBlockchainRules.OP_SIGNUP.equals(ob.getType()) && ob.getCreated().size() == 1) {
-			signupName =  ob.getCreated().get(0).getId().get(0);
-			OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
-			signByItself = obj == null || obj.getStringValue(F_AUTH_METHOD).equals(METHOD_OAUTH);
+			if (!ob.getCreated().get(0).getId().isEmpty()) {
+				signupName = ob.getCreated().get(0).getId().get(0);
+				OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
+				signByItself = obj == null || obj.getStringValue(F_AUTH_METHOD).equals(METHOD_OAUTH);
+			}
 		}
 		// 1st signup could be signed by itself
 		for (int i = 0; i < sigs.size(); i++) {
@@ -666,10 +661,12 @@ public class OpBlockchainRules {
 		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
 		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
 		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
+
+		LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED("Operation '%s': exceeded amount of created objects"),
 		
 		NEW_OBJ_DOUBLE_CREATED("Operation '%s': object '%s' was already created"),
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
-		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%s'"),
+		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),

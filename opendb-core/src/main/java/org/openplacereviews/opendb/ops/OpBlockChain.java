@@ -1,25 +1,18 @@
 package org.openplacereviews.opendb.ops;
 
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.security.KeyPair;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.MAX_AMOUNT_CREATED_OBJ_FOR_OP;
 
 /**
  *  Guidelines of object methods:
@@ -48,7 +41,7 @@ public class OpBlockChain {
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
 	public static final int LOCKED_STATE = 2; // FINAL STATE. locked successfully and could be used as parent superblock
-	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user 
+	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 
 	// 0-0 represents locked or unlocked state for blockchain
@@ -381,9 +374,16 @@ public class OpBlockChain {
 		queueOperations.add(u);
 		for (OpObject createdObj : u.getCreated()) {
 			List<String> id = createdObj.getId();
-			if (id != null && id.size() > 0) {
+			if (id != null) {
 				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-				oinf.add(id, createdObj);
+				if (!id.isEmpty()) {
+					oinf.add(id, createdObj);
+				} else {
+					OpObject opObject = new OpObject(createdObj);
+					opObject.isImmutable = false;
+					opObject.setId(u.getRawHash());
+					oinf.add(Collections.singletonList(u.getRawHash()), opObject);
+				}
 			}
 		}
 		
@@ -874,10 +874,18 @@ public class OpBlockChain {
 		List<List<String>> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 
-		for(List<String> deletedRef : deletedRefs) {
-			OpObject opObject = getObjectByName(u.getType(), deletedRef);
+		for(int i = 0; i < deletedRefs.size(); i++) {
+			OpObject opObject = getObjectByName(u.getType(), deletedRefs.get(i));
 			if(opObject == null) {
-				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRef);
+				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRefs.get(i));
+			}
+
+			// check duplicates in same operation
+			for (int j = 0; j < i; j++) {
+				if (OUtils.equals(deletedRefs.get(j), opObject.getId())) {
+					return rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(),
+							opObject.getId());
+				}
 			}
 			ctx.deletedObjsCache.add(opObject);
 		}
@@ -886,25 +894,37 @@ public class OpBlockChain {
 	
 	private boolean prepareNoNewDuplicatedObjects(OpOperation u, LocalValidationCtx ctx) {
 		List<OpObject> list = u.getCreated();
+
+		if (list.size() > MAX_AMOUNT_CREATED_OBJ_FOR_OP) {
+			return rules.error(u, ErrorType.LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED, u.getHash());
+		}
 		for(int i = 0; i < list.size(); i++) {
 			OpObject o = list.get(i);
+
+			List<String> id;
+			if (o.getId().isEmpty()) {
+				id = Collections.singletonList(u.getRawHash());
+			} else {
+				id = o.getId();
+			}
+
 			// check duplicates in same operation
 			for(int j = 0; j < i; j++) {
 				OpObject oj = list.get(j);
-				if(OUtils.equals(oj.getId(), o.getId())) {
+				if(OUtils.equals(oj.getId(), id)) {
 					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());
 				}
 			}
 			boolean newVersion = false;
 			for(OpObject del : ctx.deletedObjsCache) {
-				if(OUtils.equals(del.getId(), o.getId())) {
+				if(OUtils.equals(del.getId(), id)) {
 					newVersion = true;
 					break;
 				}
 			}
 			if(!newVersion) {
-				OpObject exObj = getObjectByName(u.getType(), o.getId());
+				OpObject exObj = getObjectByName(u.getType(), id);
 				if(exObj != null) {
 					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());	
