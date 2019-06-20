@@ -372,17 +372,17 @@ public class OpBlockChain {
 		}
 
 		queueOperations.add(u);
-		for (OpObject createdObj : u.getCreated()) {
-			List<String> id = createdObj.getId();
+		for (int i = 0; i < u.getCreated().size(); i++) {
+			List<String> id = u.getCreated().get(i).getId();
 			if (id != null) {
 				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 				if (!id.isEmpty()) {
-					oinf.add(id, createdObj);
+					oinf.add(id, u.getCreated().get(i));
 				} else {
-					OpObject opObject = new OpObject(createdObj);
+					OpObject opObject = new OpObject(u.getCreated().get(i));
 					opObject.isImmutable = false;
-					opObject.setId(u.getRawHash());
-					oinf.add(Collections.singletonList(u.getRawHash()), opObject);
+					opObject.setId(u.getRawHash() + ":" + i);
+					oinf.add(opObject.getId(), opObject);
 				}
 			}
 		}
