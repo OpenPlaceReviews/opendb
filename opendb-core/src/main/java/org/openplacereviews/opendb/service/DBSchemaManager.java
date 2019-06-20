@@ -100,6 +100,12 @@ public class DBSchemaManager {
 		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", false);
 
 		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
+		registerColumn(OPERATIONS_TABLE, "addedby", "jsonb", true);
+		registerColumn(OPERATIONS_TABLE, "time", "timestamp", true);
+		registerColumn(OPERATIONS_TABLE, "type", "text", true);
+		for (int i = 1; i <= 5; i++) {
+			registerColumn(OPERATIONS_TABLE, "p" + i, "text", true);
+		}
 		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
 		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", true);
 		registerColumn(OPERATIONS_TABLE, "sblockid", "int", true);

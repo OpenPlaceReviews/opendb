@@ -1,45 +1,14 @@
 package org.openplacereviews.opendb.service;
 
-import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.EXT_RESOURCE_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
-
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -52,6 +21,18 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class DBConsensusManager {
@@ -908,16 +889,22 @@ public class DBConsensusManager {
 
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
+		PGobject addedByObject = new PGobject();
+
 		pGobject.setType("jsonb");
+		addedByObject.setType("jsonb");
+
 		String js = formatter.opToJson(op);
 		try {
 			pGobject.setValue(js);
+			addedByObject.setValue(formatter.fullObjectToJson(op.getSignedBy()));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
-				bhash, pGobject);
+
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, addedby, time, hash, content) VALUES (?, ?, ?, ?, ?)",
+				op.getType(), addedByObject, new Date(), bhash, pGobject);
 	}
 
 	public OpOperation getOperationByHash(String hash) {
