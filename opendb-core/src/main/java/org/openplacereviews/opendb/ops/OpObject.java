@@ -33,10 +33,10 @@ public class OpObject {
 	
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected transient Map<String, Object> cacheFields;
-	public boolean isImmutable;
+	protected boolean isImmutable;
 	
 	protected transient String parentType;
-	public transient String parentHash;
+	protected transient String parentHash;
 	
 	public OpObject() {}
 	
@@ -62,6 +62,10 @@ public class OpObject {
 		this.isImmutable = (boolean) copyingObjects(opObject.isImmutable);
 
 		return this;
+	}
+
+	public OpObject(Map<String, Object> fields) {
+		this.fields = (Map<String, Object>) copyingObjects(fields);
 	}
 
 	private Object copyingObjects(Object object) {
@@ -316,15 +320,6 @@ public class OpObject {
 			}
 		}
 		return mp;
-	}
-
-	@Override
-	public Object clone() {
-		try {
-			return super.clone();
-		} catch (CloneNotSupportedException e) {
-			throw new TechnicalException("Error while cloning object" , e);
-		}
 	}
 
 	@Override

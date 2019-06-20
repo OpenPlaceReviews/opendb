@@ -665,7 +665,12 @@ public class OpBlockchainRules {
 		LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED("Operation '%s': exceeded amount of created objects"),
 		
 		NEW_OBJ_DOUBLE_CREATED("Operation '%s': object '%s' was already created"),
+		EDITED_OBJ_DOUBLE_EDITED("Operation '%s': object '%s' was already edited"),
+		EDITED_OBJ_WAS_DELETED("Operation '%s': object '%s' was already deleted"),
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
+		EDIT_OBJ_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
+		EDIT_CURRENT_OBJ_INCORRECT("Operation '%s' contains incorrect current obj: changed fields '%s' current fields '%s'"),
+		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field value '%s' expected old field value '%s'"),
 		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		

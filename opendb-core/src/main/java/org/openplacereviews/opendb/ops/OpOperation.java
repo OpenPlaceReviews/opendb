@@ -15,17 +15,16 @@ public class OpOperation extends OpObject {
 
 	public static final String F_REF = "ref";
 	public static final String F_CREATE = "create";
-	public static final String F_EDIT = "edit";
 	public static final String F_DELETE = "delete";
-	public static final String F_NEW = "new";
-	public static final String F_OLD = "old";
+	public static final String F_EDIT = "edit";
+	public static final String F_CHANGE = "change";
+	public static final String F_CURRENT = "current";
 
 	public static final String F_NAME = "name";
 	public static final String F_COMMENT = "comment";
 	protected String type;
 	private List<OpObject> createdObjects = new LinkedList<OpObject>();
-	private List<OpObject> editedOldObjects = new LinkedList<OpObject>();
-	private List<OpObject> editedNewObjects = new LinkedList<OpObject>();
+	private List<OpObject> editedObjects = new LinkedList<OpObject>();
 
 	public OpOperation() {
 	}
@@ -36,13 +35,9 @@ public class OpOperation extends OpObject {
 		for (OpObject o : cp.createdObjects) {
 			this.createdObjects.add(new OpObject(o, copyCacheFields));
 		}
-		for (OpObject o : cp.editedOldObjects) {
-			this.editedOldObjects.add(new OpObject(o, copyCacheFields));
+		for (OpObject o : cp.editedObjects) {
+			this.editedObjects.add(new OpObject(o, copyCacheFields));
 		}
-		for (OpObject o : cp.editedNewObjects) {
-			this.editedNewObjects.add(new OpObject(o, copyCacheFields));
-		}
-
 	}
 
 	public String getOperationType() {
@@ -137,21 +132,16 @@ public class OpOperation extends OpObject {
 		}
 	}
 
-	public void addEdited(OpObject newO, OpObject oldO) {
+	public void addEdited(OpObject o) {
 		checkNotImmutable();
-		editedNewObjects.add(newO);
-		editedOldObjects.add(oldO);
+		editedObjects.add(o);
 		if (type != null) {
-			newO.setParentOp(this);
+			o.setParentOp(this);
 		}
 	}
 
-	public List<OpObject> getEditedNew() {
-		return editedNewObjects;
-	}
-
-	public List<OpObject> getEditedOld() {
-		return editedOldObjects;
+	public List<OpObject> getEdited() {
+		return editedObjects;
 	}
 
 	public boolean hasCreated() {
@@ -159,8 +149,9 @@ public class OpOperation extends OpObject {
 	}
 
 	public boolean hasEdited() {
-		return editedNewObjects.size() > 0;
+		return editedObjects.size() > 0;
 	}
+
 
 	public String getName() {
 		return getStringValue(F_NAME);
@@ -244,11 +235,7 @@ public class OpOperation extends OpObject {
 			JsonElement editedObjs = jsonObj.remove(F_EDIT);
 			if (editedObjs != null) {
 				for (JsonElement editElem : editedObjs.getAsJsonArray()) {
-					OpObject newEditObj =
-							context.deserialize(editElem.getAsJsonObject().getAsJsonObject(F_NEW), OpObject.class);
-					OpObject deletedEditObj =
-							context.deserialize(editElem.getAsJsonObject().getAsJsonObject(F_OLD), OpObject.class);
-					op.addEdited(newEditObj, deletedEditObj);
+					op.addEdited(context.deserialize(editElem, OpObject.class));
 				}
 			}
 
@@ -270,16 +257,7 @@ public class OpOperation extends OpObject {
 			}
 
 			if (src.hasEdited()) {
-				List<OpObject> newObject = src.getEditedNew();
-				List<OpObject> oldObject = src.getEditedOld();
-				List<Map<String, OpObject>> editedMap = new ArrayList<>(newObject.size());
-				for (int i = 0; i < newObject.size(); i++) {
-					Map<String, OpObject> editedObj = new TreeMap<>();
-					editedObj.put(F_NEW, newObject.get(i));
-					editedObj.put(F_OLD, oldObject.get(i));
-					editedMap.add(editedObj);
-				}
-				tm.put(F_EDIT, context.serialize(editedMap));
+				tm.put(F_EDIT, context.serialize(src.editedObjects));
 			}
 
 			return context.serialize(tm);
