@@ -903,8 +903,15 @@ public class DBConsensusManager {
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, addedby, time, hash, content) VALUES (?, ?, ?, ?, ?)",
-				op.getType(), addedByObject, new Date(), bhash, pGobject);
+		Object[] args = new Object[5];
+		args[0] = op.getType();
+		args[1] = addedByObject;
+		args[2] = new Date();
+		args[3] = bhash;
+		args[4] = pGobject;
+
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, addedby, time, hash, content)" +
+						"VALUES (?, ?, ?, ?, ?)", args);
 	}
 
 	public OpOperation getOperationByHash(String hash) {

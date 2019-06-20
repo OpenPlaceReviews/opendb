@@ -103,7 +103,7 @@ public class DBSchemaManager {
 		registerColumn(OPERATIONS_TABLE, "addedby", "jsonb", true);
 		registerColumn(OPERATIONS_TABLE, "time", "timestamp", true);
 		registerColumn(OPERATIONS_TABLE, "type", "text", true);
-		for (int i = 1; i <= 5; i++) {
+		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
 			registerColumn(OPERATIONS_TABLE, "p" + i, "text", true);
 		}
 		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
