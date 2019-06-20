@@ -15,7 +15,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import static org.openplacereviews.opendb.ops.OpObject.F_ID;
 import static org.openplacereviews.opendb.ops.OpOperation.F_CHANGE;
 import static org.openplacereviews.opendb.ops.OpOperation.F_CURRENT;
-import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
+
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.MAX_AMOUNT_CREATED_OBJ_FOR_OP;
+
 
 /**
  * Guidelines of object methods:
@@ -45,7 +47,7 @@ public class OpBlockChain {
 	public static final int LOCKED_OP_IN_PROGRESS = 1;
 	// operation on blockchain is in progress and it will be unlocked after
 	public static final int LOCKED_STATE = 2; // FINAL STATE. locked successfully and could be used as parent superblock
-	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user 
+	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 	// 0-1 nullable object is always root (in order to perform operations in sync)
 	private final boolean nullObject;
@@ -391,29 +393,25 @@ public class OpBlockChain {
 
 		queueOperations.add(u);
 
-//		for (OpObject editedOpObject: u.getEditedNew()) {
-//			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-//			OpObject oldOpObject = getObjectByName(objType, editedOpObject.getId());
-//
-//			Object editNewFieldsObj = editedOpObject.fields.get(F_EDIT);
-//			if (editNewFieldsObj != null) {
-//				Map<String, Object> editedFieldsMap = ((TreeMap) editNewFieldsObj);
-//				for (Entry<String, Object> entry : editedFieldsMap.entrySet()) {
-////					oldOpObject.fields.put(entry.getKey(), entry.getValue());
-//				}
-//			}
-//
-//			oinf.add(oldOpObject.getId(), oldOpObject);
-//		}
+		for (OpObject editedOpOpbject: validationCtx.editedObjsCache) {
+			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
+			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
+		}
 
 		for (OpObject createdObj : u.getCreated()) {
 			List<String> id = createdObj.getId();
-			if (id != null && id.size() > 0) {
+			if (id != null) {
 				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-				oinf.add(id, createdObj);
+				if (!id.isEmpty()) {
+					oinf.add(id, createdObj);
+				} else {
+					OpObject opObject = new OpObject(createdObj);
+					opObject.isImmutable = false;
+					opObject.setId(u.getRawHash());
+					oinf.add(Collections.singletonList(u.getRawHash()), opObject);
+				}
 			}
 		}
-
 	}
 
 	private void atomicSetParent(OpBlockChain parent) {
@@ -878,10 +876,18 @@ public class OpBlockChain {
 		List<List<String>> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 
-		for (List<String> deletedRef : deletedRefs) {
-			OpObject opObject = getObjectByName(u.getType(), deletedRef);
-			if (opObject == null) {
-				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRef);
+		for(int i = 0; i < deletedRefs.size(); i++) {
+			OpObject opObject = getObjectByName(u.getType(), deletedRefs.get(i));
+			if(opObject == null) {
+				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRefs.get(i));
+			}
+
+			// check duplicates in same operation
+			for (int j = 0; j < i; j++) {
+				if (OUtils.equals(deletedRefs.get(j), opObject.getId())) {
+					return rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(),
+							opObject.getId());
+				}
 			}
 			ctx.deletedObjsCache.add(opObject);
 		}
@@ -890,27 +896,39 @@ public class OpBlockChain {
 
 	private boolean prepareNoNewDuplicatedObjects(OpOperation u, LocalValidationCtx ctx) {
 		List<OpObject> list = u.getCreated();
-		for (int i = 0; i < list.size(); i++) {
+
+		if (list.size() > MAX_AMOUNT_CREATED_OBJ_FOR_OP) {
+			return rules.error(u, ErrorType.LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED, u.getHash());
+		}
+		for(int i = 0; i < list.size(); i++) {
 			OpObject o = list.get(i);
+
+			List<String> id;
+			if (o.getId().isEmpty()) {
+				id = Collections.singletonList(u.getRawHash());
+			} else {
+				id = o.getId();
+			}
+
 			// check duplicates in same operation
 			for (int j = 0; j < i; j++) {
 				OpObject oj = list.get(j);
-				if (OUtils.equals(oj.getId(), o.getId())) {
+				if(OUtils.equals(oj.getId(), id)) {
 					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(),
 							o.getId());
 				}
 			}
 			boolean newVersion = false;
-			for (OpObject del : ctx.deletedObjsCache) {
-				if (OUtils.equals(del.getId(), o.getId())) {
+			for(OpObject del : ctx.deletedObjsCache) {
+				if(OUtils.equals(del.getId(), id)) {
 					newVersion = true;
 					break;
 				}
 			}
-			if (!newVersion) {
-				OpObject exObj = getObjectByName(u.getType(), o.getId());
-				if (exObj != null) {
-					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(),
+			if(!newVersion) {
+				OpObject exObj = getObjectByName(u.getType(), id);
+				if(exObj != null) {
+					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(), 
 							o.getId());
 				}
 			}
@@ -921,7 +939,7 @@ public class OpBlockChain {
 	private boolean prepareEditedObjects(OpOperation u, LocalValidationCtx ctx) {
 		List<OpObject> editedObjs = u.getEdited();
 		List<OpObject> changedObjs = new ArrayList<>(editedObjs.size());
-		List<OpObject> expectedCurrObjs = new ArrayList<>(editedObjs.size());
+		List<OpObject> expectedCurObjs = new ArrayList<>(editedObjs.size());
 		for (OpObject object : editedObjs) {
 			List<String> id = object.getId();
 			TreeMap<String, Object> changedMap = (TreeMap) object.fields.get(F_CHANGE);
@@ -932,7 +950,7 @@ public class OpBlockChain {
 			currentObj.fields.put(F_ID, id);
 
 			changedObjs.add(changedObj);
-			expectedCurrObjs.add(currentObj);
+			expectedCurObjs.add(currentObj);
 		}
 
 		List<List<String>> deletedIds = u.getDeleted();
@@ -954,48 +972,35 @@ public class OpBlockChain {
 				}
 			}
 
-			OpObject expectedCurrObj = expectedCurrObjs.get(i);
-			if (expectedCurrObj == null) {
-				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(),
-						changedObj.getId());
-			}
-			if (!OUtils.equals(expectedCurrObj.getId(), changedObj.getId())) {
-				return rules.error(u, ErrorType.EDIT_NEW_AND_OLD_ID_DIFFERENT, u.getHash(),
-						changedObj.getId(), expectedCurrObj.getId());
-			}
-
-			OpObject currentObj = getObjectByName(u.getType(), expectedCurrObj.getId());
+			OpObject expectedCurObj = expectedCurObjs.get(i);
+			OpObject currentObj = getObjectByName(u.getType(), expectedCurObj.getId());
 			if (currentObj == null) {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(),
-						expectedCurrObj.getId());
+						expectedCurObj.getId());
 			}
 
 			//If edit field exist in changed field it have to exist in current and current
 			// values have to be the same with expected current values.
-			Object editNewFieldsObj = changedObj.fields.get(F_EDIT);
-			if (editNewFieldsObj != null) {
-				Object editOldFieldsObj = expectedCurrObj.fields.get(F_EDIT);
-				if (editOldFieldsObj == null || !(editOldFieldsObj instanceof TreeMap) ||
-						!(editNewFieldsObj instanceof TreeMap)) {
-					return rules.error(u, ErrorType.EDIT_FIELD_NOT_FOUND, u.getHash(), expectedCurrObj);
-				}
+			if (changedObj.fields != null) {
+				OpObject currentObjCopy = new OpObject(currentObj, true);
+				for (String changedFiledKey : changedObj.fields.keySet()) {
+					if (!expectedCurObj.fields.containsKey(changedFiledKey)) {
+						return rules
+								.error(u, ErrorType.EDIT_CURRENT_OBJ_INCORRECT, u.getHash(), changedObj, expectedCurObj);
+					}
 
-				Map editOldFields = ((TreeMap) editOldFieldsObj);
-				Map editNewFields = ((TreeMap) editNewFieldsObj);
-				for (Object oldKeyF : editOldFields.keySet()) {
-					Object expectedOldValF = editOldFields.get(oldKeyF);
-					Object oldValF = currentObj.fields.get(oldKeyF);
-					if (!OUtils.equals(expectedOldValF, oldValF)) {
-						return rules.error(u, ErrorType.EDIT_OLD_FIELD_VALUE_INCORRECT, u.getHash(), oldValF,
+					Object expectedOldValF = expectedCurObj.fields.get(changedFiledKey);
+					Object curValF = currentObj.fields.get(changedFiledKey);
+					if (!OUtils.equals(expectedOldValF, curValF)) {
+						return rules.error(u, ErrorType.EDIT_OLD_FIELD_VALUE_INCORRECT, u.getHash(), curValF,
 								expectedOldValF);
 					}
 
-					if (!editNewFields.containsKey(oldKeyF)) {
-						return rules
-								.error(u, ErrorType.EDIT_FIELDS_INCORRECT, u.getHash(), editNewFields, editOldFields);
-					}
+					Object changedValue = changedObj.fields.get(changedFiledKey);
+					currentObjCopy.fields.put(changedFiledKey, changedValue);
 				}
 
+				ctx.editedObjsCache.add(currentObjCopy);
 			}
 		}
 
@@ -1022,6 +1027,7 @@ public class OpBlockChain {
 		final String blockHash;
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
+		List<OpObject> editedObjsCache = new ArrayList<>();
 
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;
