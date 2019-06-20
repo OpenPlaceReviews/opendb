@@ -668,7 +668,14 @@ public class OpBlockchainRules {
 		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
 		
 		NEW_OBJ_DOUBLE_CREATED("Operation '%s': object '%s' was already created"),
+		EDITED_OBJ_DOUBLE_EDITED("Operation '%s': object '%s' was already edited"),
+		EDITED_OBJ_WAS_DELETED("Operation '%s': object '%s' was already deleted"),
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
+		EDIT_OBJ_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
+		EDIT_FIELD_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
+		EDIT_NEW_AND_OLD_ID_DIFFERENT("Operation '%s': new edit id '%s' old edit id '%s'"),
+		EDIT_FIELDS_INCORRECT("Operation '%s': new edit fields '%s' old edit fields '%s'"),
+		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field value '%s' expected old field value '%s'"),
 		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%s'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		

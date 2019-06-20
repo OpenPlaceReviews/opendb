@@ -50,6 +50,10 @@ public class OpObject {
 			this.cacheFields.putAll(cp.cacheFields);
 		}
 	}
+
+	public OpObject(Map<String, Object> fields) {
+		this.fields.putAll(fields);
+	}
 	
 	public void setParentOp(OpOperation op) {
 		setParentOp(op.type, op.getRawHash());
