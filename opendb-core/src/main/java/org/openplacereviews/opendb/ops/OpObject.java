@@ -33,10 +33,10 @@ public class OpObject {
 	
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected transient Map<String, Object> cacheFields;
-	public boolean isImmutable;
+	protected boolean isImmutable;
 	
 	protected transient String parentType;
-	public transient String parentHash;
+	protected transient String parentHash;
 	
 	public OpObject() {}
 	
