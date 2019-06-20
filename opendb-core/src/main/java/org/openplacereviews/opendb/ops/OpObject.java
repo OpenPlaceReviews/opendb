@@ -323,15 +323,6 @@ public class OpObject {
 	}
 
 	@Override
-	public Object clone() {
-		try {
-			return super.clone();
-		} catch (CloneNotSupportedException e) {
-			throw new TechnicalException("Error while cloning object" , e);
-		}
-	}
-
-	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
