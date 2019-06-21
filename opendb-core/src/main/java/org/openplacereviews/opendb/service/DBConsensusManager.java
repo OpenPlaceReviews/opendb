@@ -910,7 +910,7 @@ public class DBConsensusManager {
 		args[3] = bhash;
 		args[4] = pGobject;
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, addedby, time, hash, content)" +
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, user_op, time, hash, content)" +
 						"VALUES (?, ?, ?, ?, ?)", args);
 	}
 
