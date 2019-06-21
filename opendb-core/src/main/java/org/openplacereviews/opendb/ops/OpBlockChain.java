@@ -407,7 +407,7 @@ public class OpBlockChain {
 				} else {
 					OpObject opObject = new OpObject(u.getCreated().get(i));
 					opObject.isImmutable = false;
-					opObject.setId(u.getRawHash() + ":" + i);
+					opObject.setId(u.getRawHash(), String.valueOf(i));
 					oinf.add(opObject.getId(), opObject);
 				}
 			}
