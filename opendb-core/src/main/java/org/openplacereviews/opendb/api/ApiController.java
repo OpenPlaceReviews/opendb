@@ -114,6 +114,11 @@ public class ApiController {
 	protected static class ObjectsResult {
 		public Collection<OpObject> objects;
 	}
+//
+//	// TODO create DTO
+//	protected static class HistoryResult {
+//		public Collection<> history;
+//	}
 
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
 	@ResponseBody
@@ -198,6 +203,15 @@ public class ApiController {
 			obj = blc.getObjectByName(type, key, key2);
 		}
 		return formatter.fullObjectToJson(obj);
+	}
+
+	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String history(@RequestParam(required = true) String type,
+						  @RequestParam(required = false) String key) {
+		Collection<OpOperation> result = manager.getHistoryForUser(key);
+
+		return formatter.fullObjectToJson(result);
 	}
 
 }

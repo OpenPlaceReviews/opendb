@@ -914,6 +914,28 @@ public class DBConsensusManager {
 						"VALUES (?, ?, ?, ?, ?)", args);
 	}
 
+	// TODO struct of history for user????
+	public Collection<OpOperation> getOperationsForUser(String user) {
+		PGobject pGobject = new PGobject();
+		pGobject.setType("jsonb");
+		try {
+			pGobject.setValue(user);
+		} catch (SQLException e) {
+			throw new IllegalArgumentException(e);
+		}
+		return jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where addedby = ? ORDER BY DESC ", new ResultSetExtractor<List<OpOperation>>() {
+			@Override
+			public List<OpOperation> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				List<OpOperation> resources = new LinkedList<>();
+				while (rs.next()) {
+					resources.add(formatter.parseOperation(rs.getString(1)));
+				}
+				return resources;
+			}
+		}, pGobject);
+	}
+
+
 	public OpOperation getOperationByHash(String hash) {
 		final byte[] bhash = SecUtils.getHashBytes(hash);
 		OpOperation[] res = new OpOperation[1];

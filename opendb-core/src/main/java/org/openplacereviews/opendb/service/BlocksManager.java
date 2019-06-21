@@ -92,6 +92,10 @@ public class BlocksManager {
 	public String getReplicateUrl() {
 		return replicateUrl;
 	}
+
+	public Collection<OpOperation> getHistoryForUser(String user) {
+		return dataManager.getOperationsForUser(user);
+	}
 	
 	public synchronized void setReplicateOn(boolean on) {
 		if(on && this.mgmtStatus == BlockchainMgmtStatus.NONE) {
