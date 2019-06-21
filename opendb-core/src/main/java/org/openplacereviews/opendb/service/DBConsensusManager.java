@@ -890,32 +890,47 @@ public class DBConsensusManager {
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
 		PGobject user = new PGobject();
+		PGobject objs = new PGobject();
 
 		pGobject.setType("jsonb");
 		user.setType("jsonb");
+		objs.setType("jsonb");
 
 		String js = formatter.opToJson(op);
 		try {
 			pGobject.setValue(js);
 			user.setValue(formatter.fullObjectToJson(op.getSignedBy()));
+
+
+			List<List<String>> objId = new LinkedList<>();
+			for (int i = 0; i < op.getCreated().size(); i++) {
+				List<String> id = op.getCreated().get(i).getId();
+				if (id.isEmpty()) {
+					objId.add(Arrays.asList(op.getRawHash(), String.valueOf(i)));
+				} else {
+					objId.add(id);
+				}
+			}
+			objs.setValue(formatter.fullObjectToJson(objId));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-		Object[] args = new Object[5];
+		Object[] args = new Object[6];
 		args[0] = op.getType();
 		args[1] = user;
 		args[2] = new Date();
 		args[3] = bhash;
 		args[4] = pGobject;
+		args[5] = objs;
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, user_op, time, hash, content)" +
-						"VALUES (?, ?, ?, ?, ?)", args);
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, user_op, time, hash, content, objs)" +
+						"VALUES (?, ?, ?, ?, ?, ?)", args);
 	}
 
 	// TODO struct of history for user????
-	public Collection<OpOperation> getOperationsForUser(String user) {
+	public Collection<OpOperation> getOperationsByUser(String user) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
 		try {
@@ -923,7 +938,7 @@ public class DBConsensusManager {
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
-		return jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where user_op = ? ORDER BY DESC ", new ResultSetExtractor<List<OpOperation>>() {
+		return jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where user_op @> ? ORDER BY dbid DESC ", new ResultSetExtractor<List<OpOperation>>() {
 			@Override
 			public List<OpOperation> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				List<OpOperation> resources = new LinkedList<>();
@@ -935,6 +950,26 @@ public class DBConsensusManager {
 		}, pGobject);
 	}
 
+	public Collection<OpOperation> getOperationsByObject(List<String> id) {
+		PGobject pGobject = new PGobject();
+		pGobject.setType("jsonb");
+		try {
+			pGobject.setValue(id.toString());
+		} catch (SQLException e) {
+			throw new IllegalArgumentException(e);
+		}
+		return jdbcTemplate.query("SELECT content FROM " + OPERATIONS_TABLE + " WHERE objs @> ? ORDER BY dbid DESC", new ResultSetExtractor<Collection<OpOperation>>() {
+			@Override
+			public Collection<OpOperation> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				List<OpOperation> resources = new LinkedList<>();
+				while (rs.next()) {
+					resources.add(formatter.parseOperation(rs.getString(1)));
+				}
+
+				return resources;
+			}
+		}, pGobject);
+	}
 
 	public OpOperation getOperationByHash(String hash) {
 		final byte[] bhash = SecUtils.getHashBytes(hash);

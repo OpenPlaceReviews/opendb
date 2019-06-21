@@ -94,7 +94,7 @@ public class BlocksManager {
 	}
 
 	public Collection<OpOperation> getHistoryForUser(String user) {
-		return dataManager.getOperationsForUser(user);
+		return dataManager.getOperationsByUser(user);
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
