@@ -100,7 +100,7 @@ public class DBSchemaManager {
 		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", false);
 
 		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
-		registerColumn(OPERATIONS_TABLE, "addedby", "jsonb", true);
+		registerColumn(OPERATIONS_TABLE, "user_op", "jsonb", true);
 		registerColumn(OPERATIONS_TABLE, "time", "timestamp", true);
 		registerColumn(OPERATIONS_TABLE, "type", "text", true);
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
