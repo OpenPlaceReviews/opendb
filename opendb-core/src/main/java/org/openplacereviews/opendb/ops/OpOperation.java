@@ -3,7 +3,12 @@ package org.openplacereviews.opendb.ops;
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class OpOperation extends OpObject {
 
@@ -20,11 +25,13 @@ public class OpOperation extends OpObject {
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
 
+
 	public static final String F_NAME = "name";
 	public static final String F_COMMENT = "comment";
-	protected String type;
+
 	private List<OpObject> createdObjects = new LinkedList<OpObject>();
 	private List<OpObject> editedObjects = new LinkedList<OpObject>();
+	protected String type;
 
 	public OpOperation() {
 	}
@@ -32,25 +39,12 @@ public class OpOperation extends OpObject {
 	public OpOperation(OpOperation cp, boolean copyCacheFields) {
 		super(cp, copyCacheFields);
 		this.type = cp.type;
-		for (OpObject o : cp.createdObjects) {
+		for(OpObject o : cp.createdObjects) {
 			this.createdObjects.add(new OpObject(o, copyCacheFields));
-		}
-		for (OpObject o : cp.editedObjects) {
-			this.editedObjects.add(new OpObject(o, copyCacheFields));
 		}
 	}
 
 	public String getOperationType() {
-		return type;
-	}
-
-	protected void updateObjectsRef() {
-		for (OpObject o : createdObjects) {
-			o.setParentOp(this);
-		}
-	}
-
-	public String getType() {
 		return type;
 	}
 
@@ -60,12 +54,26 @@ public class OpOperation extends OpObject {
 		updateObjectsRef();
 	}
 
+	protected void updateObjectsRef() {
+		for(OpObject o : createdObjects) {
+			o.setParentOp(this);
+		}
+	}
+
+	public String getType() {
+		return type;
+	}
+
 	public OpOperation makeImmutable() {
 		isImmutable = true;
-		for (OpObject o : createdObjects) {
+		for(OpObject o : createdObjects) {
 			o.makeImmutable();
 		}
 		return this;
+	}
+
+	public void setSignedBy(String value) {
+		putStringValue(F_SIGNED_BY, value);
 	}
 
 	public void addOtherSignedBy(String value) {
@@ -76,10 +84,6 @@ public class OpOperation extends OpObject {
 		return getStringList(F_SIGNED_BY);
 	}
 
-	public void setSignedBy(String value) {
-		putStringValue(F_SIGNED_BY, value);
-	}
-
 	public String getHash() {
 		return getStringValue(F_HASH);
 	}
@@ -87,7 +91,7 @@ public class OpOperation extends OpObject {
 	public String getRawHash() {
 		String rw = getStringValue(F_HASH);
 		// drop algorithm and everything else
-		if (rw != null) {
+		if(rw != null) {
 			rw = rw.substring(rw.lastIndexOf(':') + 1);
 		}
 		return rw;
@@ -104,14 +108,14 @@ public class OpOperation extends OpObject {
 	@SuppressWarnings("unchecked")
 	public List<List<String>> getDeleted() {
 		List<List<String>> l = (List<List<String>>) fields.get(F_DELETE);
-		if (l == null) {
+		if(l == null) {
 			return Collections.emptyList();
 		}
 		return l;
 	}
 
 	public void addDeleted(List<String> id) {
-		if (!fields.containsKey(F_DELETE)) {
+		if(!fields.containsKey(F_DELETE)) {
 			ArrayList<List<String>> lst = new ArrayList<>();
 			lst.add(id);
 			putObjectValue(F_DELETE, lst);
@@ -127,9 +131,13 @@ public class OpOperation extends OpObject {
 	public void addCreated(OpObject o) {
 		checkNotImmutable();
 		createdObjects.add(o);
-		if (type != null) {
+		if(type != null) {
 			o.setParentOp(this);
 		}
+	}
+
+	public boolean hasCreated() {
+		return createdObjects.size() > 0;
 	}
 
 	public void addEdited(OpObject o) {
@@ -144,14 +152,9 @@ public class OpOperation extends OpObject {
 		return editedObjects;
 	}
 
-	public boolean hasCreated() {
-		return createdObjects.size() > 0;
-	}
-
 	public boolean hasEdited() {
 		return editedObjects.size() > 0;
 	}
-
 
 	public String getName() {
 		return getStringValue(F_NAME);
@@ -182,17 +185,16 @@ public class OpOperation extends OpObject {
 		if (createdObjects == null) {
 			if (other.createdObjects != null)
 				return false;
-		} else
-			if (!createdObjects.equals(other.createdObjects))
-				return false;
+		} else if (!createdObjects.equals(other.createdObjects))
+			return false;
 		if (type == null) {
 			if (other.type != null)
 				return false;
-		} else
-			if (!type.equals(other.type))
-				return false;
+		} else if (!type.equals(other.type))
+			return false;
 		return true;
 	}
+
 
 
 	public static class OpOperationBeanAdapter implements JsonDeserializer<OpOperation>,
@@ -218,16 +220,16 @@ public class OpOperation extends OpObject {
 			JsonObject jsonObj = json.getAsJsonObject();
 			OpOperation op = new OpOperation();
 			JsonElement tp = jsonObj.remove(F_TYPE);
-			if (tp != null) {
+			if(tp != null) {
 				String opType = tp.getAsString();
 				op.type = opType;
 			} else {
 				op.type = "";
 			}
 			JsonElement createdObjs = jsonObj.remove(F_CREATE);
-			if (createdObjs != null) {
+			if(createdObjs != null) {
 				JsonArray ar = createdObjs.getAsJsonArray();
-				for (int i = 0; i < ar.size(); i++) {
+				for(int i = 0; i < ar.size(); i++) {
 					op.addCreated(context.deserialize(ar.get(i), OpObject.class));
 				}
 			}
@@ -247,21 +249,22 @@ public class OpOperation extends OpObject {
 		@Override
 		public JsonElement serialize(OpOperation src, Type typeOfSrc, JsonSerializationContext context) {
 			TreeMap<String, Object> tm = new TreeMap<>(fullOutput ? src.getMixedFieldsAndCacheMap() : src.fields);
-			if (excludeHashAndSignature) {
+			if(excludeHashAndSignature) {
 				tm.remove(F_SIGNATURE);
 				tm.remove(F_HASH);
 			}
 			tm.put(F_TYPE, src.type);
-			if (src.hasCreated()) {
-				tm.put(F_CREATE, context.serialize(src.createdObjects));
-			}
 
 			if (src.hasEdited()) {
 				tm.put(F_EDIT, context.serialize(src.editedObjects));
 			}
 
+			if(src.hasCreated()) {
+				tm.put(F_CREATE, context.serialize(src.createdObjects));
+			}
 			return context.serialize(tm);
 		}
+
 
 
 	}
