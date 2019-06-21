@@ -889,15 +889,15 @@ public class DBConsensusManager {
 
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
-		PGobject addedByObject = new PGobject();
+		PGobject user = new PGobject();
 
 		pGobject.setType("jsonb");
-		addedByObject.setType("jsonb");
+		user.setType("jsonb");
 
 		String js = formatter.opToJson(op);
 		try {
 			pGobject.setValue(js);
-			addedByObject.setValue(formatter.fullObjectToJson(op.getSignedBy()));
+			user.setValue(formatter.fullObjectToJson(op.getSignedBy()));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
@@ -905,7 +905,7 @@ public class DBConsensusManager {
 
 		Object[] args = new Object[5];
 		args[0] = op.getType();
-		args[1] = addedByObject;
+		args[1] = user;
 		args[2] = new Date();
 		args[3] = bhash;
 		args[4] = pGobject;
@@ -923,7 +923,7 @@ public class DBConsensusManager {
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
-		return jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where addedby = ? ORDER BY DESC ", new ResultSetExtractor<List<OpOperation>>() {
+		return jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where user_op = ? ORDER BY DESC ", new ResultSetExtractor<List<OpOperation>>() {
 			@Override
 			public List<OpOperation> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				List<OpOperation> resources = new LinkedList<>();
