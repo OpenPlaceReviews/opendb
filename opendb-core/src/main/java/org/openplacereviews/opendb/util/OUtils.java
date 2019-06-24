@@ -87,4 +87,25 @@ public class OUtils {
 		return s1.equals(s2);
 	}
 
+	public static long parseLongSilently(String input, long def) {
+		if (input != null && input.length() > 0) {
+			try {
+				return Long.parseLong(input);
+			} catch (NumberFormatException e) {
+				return def;
+			}
+		}
+		return def;
+	}
+	
+	public static int parseIntSilently(String input, int def) {
+		if (input != null && input.length() > 0) {
+			try {
+				return Integer.parseInt(input);
+			} catch (NumberFormatException e) {
+				return def;
+			}
+		}
+		return def;
+	}
 }
