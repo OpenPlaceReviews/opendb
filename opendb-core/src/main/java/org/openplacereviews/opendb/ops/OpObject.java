@@ -6,8 +6,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -65,20 +65,18 @@ public class OpObject {
 		createOpObjectCopy(cp, copyCacheFields);
 	}
 
-	private OpObject createOpObjectCopy(OpObject opObject, Boolean copyCacheFields) {
+	@SuppressWarnings("unchecked")
+	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
+		this.parentType = opObject.parentType;
+		this.parentHash = opObject.parentHash;
 		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
 		if (opObject.cacheFields != null && copyCacheFields) {
 			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
 		}
-		if (opObject.parentType != null) {
-			this.parentType = (String) copyingObjects(opObject.parentType);
-		}
-		if (opObject.parentHash != null) {
-			this.parentHash = (String) copyingObjects(opObject.parentHash);
-		}
 		return this;
 	}
 
+	@SuppressWarnings("unchecked")
 	private Object copyingObjects(Object object) {
 		if (object instanceof Number) {
 			return (Number) object;
@@ -88,14 +86,14 @@ public class OpObject {
 			return (Boolean) object;
 		} else if (object instanceof List) {
 			ArrayList<Object> copy = new ArrayList<>();
-			ArrayList<Object> list = (ArrayList) object;
+			ArrayList<Object> list = (ArrayList<Object>) object;
 			for (Object o : list) {
 				copy.add(copyingObjects(o));
 			}
 			return copy;
 		} else if (object instanceof Map) {
-			Map<String, Object> copy = new HashMap<>();
-			Map<String, Object> map = (Map) object;
+			Map<String, Object> copy = new LinkedHashMap<>();
+			Map<String, Object> map = (Map<String, Object>) object;
 			for (String key : map.keySet()) {
 				copy.put(key, copyingObjects(map.get(key)));
 			}
@@ -363,15 +361,6 @@ public class OpObject {
 			}
 		}
 		return mp;
-	}
-
-	@Override
-	public Object clone() {
-		try {
-			return super.clone();
-		} catch (CloneNotSupportedException e) {
-			throw new TechnicalException("Error while cloning object" , e);
-		}
 	}
 
 	@Override

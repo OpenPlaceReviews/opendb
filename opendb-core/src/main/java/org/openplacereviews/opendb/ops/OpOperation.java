@@ -55,6 +55,9 @@ public class OpOperation extends OpObject {
 		for(OpObject o : createdObjects) {
 			o.setParentOp(this);
 		}
+		for(OpObject o : editedObjects) {
+			o.setParentOp(this);
+		}
 	}
 
 	public String getType() {
@@ -64,6 +67,9 @@ public class OpOperation extends OpObject {
 	public OpOperation makeImmutable() {
 		isImmutable = true;
 		for(OpObject o : createdObjects) {
+			o.makeImmutable();
+		}
+		for(OpObject o : editedObjects) {
 			o.makeImmutable();
 		}
 		return this;
@@ -166,6 +172,7 @@ public class OpOperation extends OpObject {
 		final int prime = 31;
 		int result = super.hashCode();
 		result = prime * result + ((createdObjects == null) ? 0 : createdObjects.hashCode());
+		result = prime * result + ((editedObjects == null) ? 0 : editedObjects.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
@@ -183,6 +190,11 @@ public class OpOperation extends OpObject {
 			if (other.createdObjects != null)
 				return false;
 		} else if (!createdObjects.equals(other.createdObjects))
+			return false;
+		if (editedObjects == null) {
+			if (other.editedObjects != null)
+				return false;
+		} else if (!editedObjects.equals(other.editedObjects))
 			return false;
 		if (type == null) {
 			if (other.type != null)
