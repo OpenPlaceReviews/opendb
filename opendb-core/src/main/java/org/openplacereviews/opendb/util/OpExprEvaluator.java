@@ -61,13 +61,10 @@ public class OpExprEvaluator {
 		private OpBlockChain blc;
 		private int exprNested;
 
-		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx, JsonElement deleted, JsonObject refs) {
+		public EvaluationContext(OpBlockChain blockchain, JsonObject ctx, JsonElement createdElement, JsonElement deleted, JsonObject refs) {
 			ctx.add(F_REF, refs);
 			ctx.add(F_OLD, deleted);
-			JsonElement createdElement = ctx.get(F_CREATE);
-			if (createdElement != null) {
-				ctx.add(F_NEW, createdElement);
-			}
+			ctx.add(F_NEW, createdElement);
 			this.blc = blockchain;
 			this.ctx = ctx;
 		}

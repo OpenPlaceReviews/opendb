@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
+import com.google.common.collect.Lists;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.apache.commons.logging.Log;
@@ -267,20 +268,18 @@ public class OpBlockchainRules {
 			}
 		}
 		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
-		ArrayList<Object> dls = new ArrayList<>();
+		ArrayList<OpObject> dls = new ArrayList<>();
 		dls.addAll(ctx.deletedObjsCache);
 		for(OpObject oldObj : ctx.newObjsCache.values()) {
 			if(oldObj != null) {
 				dls.add(o);
 			}
 		}
-		JsonArray deletedArray = (JsonArray) formatter.toJsonElement(dls);
-		JsonArray newArray = (JsonArray) formatter.toJsonElement(ctx.newObjsCache.keySet());
 
 		List<OpObject> toValidate = validationRules.get(o.getType());
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, deletedArray, newArray, refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
 					return false;
 				}
 			}
@@ -288,7 +287,7 @@ public class OpBlockchainRules {
 		toValidate = validationRules.get(WILDCARD_RULE);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, deletedArray, newArray, refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
 					return false;
 				}
 			}
@@ -296,8 +295,7 @@ public class OpBlockchainRules {
 		return true;
 	}
 
-	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, List<OpObject> deletedObjsCache,
-			 List<OpObject> ObjsCache,
+	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, Set<OpObject> newObjsArray, List<OpObject> deletedObjsCache,
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
 		JsonArray deletedArray = (JsonArray) formatter.toJsonElement(deletedObjsCache);
 		for(int i = 0; i < deletedArray.size(); i++) {
@@ -307,8 +305,9 @@ public class OpBlockchainRules {
 		for(String key : refObjsCache.keySet()) {
 			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
 		}
+		JsonArray newArray = (JsonArray) formatter.toJsonElement(newObjsArray);
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
-		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, deletedArray, refsMap);
+		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, newArray, deletedArray, refsMap);
 		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(OpExprEvaluator s : ifs) {
