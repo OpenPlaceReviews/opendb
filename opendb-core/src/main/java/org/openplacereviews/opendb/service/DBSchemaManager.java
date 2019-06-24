@@ -36,6 +36,7 @@ public class DBSchemaManager {
 	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
 	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
 	protected static String EXT_RESOURCE_TABLE = "resources";
+	protected static String OP_OBJ_HISTORY_TABLE = "op_obj_history";
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
@@ -100,19 +101,23 @@ public class DBSchemaManager {
 		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", false);
 
 		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
-		registerColumn(OPERATIONS_TABLE, "user_op", "jsonb", true);
-		registerColumn(OPERATIONS_TABLE, "time", "timestamp", true);
-		registerColumn(OPERATIONS_TABLE, "type", "text", true);
-//		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
-//			registerColumn(OPERATIONS_TABLE, "p" + i, "text", true);
-//		}
-		registerColumn(OPERATIONS_TABLE, "objs", "jsonb", true);
 		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
 		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", true);
 		registerColumn(OPERATIONS_TABLE, "sblockid", "int", true);
 		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
 		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
 		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
+
+		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", true);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", true);
+		for (int i = 1; i <= 2; i++) {
+			registerColumn(OP_OBJ_HISTORY_TABLE, "u" + i, "text", true);
+		}
+		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
+			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", true);
+		}
+		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", true);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", false);
 
 		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", true);
 		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", true);

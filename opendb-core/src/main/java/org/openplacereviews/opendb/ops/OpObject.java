@@ -59,7 +59,7 @@ public class OpObject {
 		if (opObject.parentHash != null) {
 			this.parentHash = (String) copyingObjects(opObject.parentHash);
 		}
-		this.isImmutable = (boolean) copyingObjects(opObject.isImmutable);
+		this.isImmutable = false;
 
 		return this;
 	}

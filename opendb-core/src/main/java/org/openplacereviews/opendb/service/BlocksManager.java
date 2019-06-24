@@ -164,11 +164,18 @@ public class BlocksManager {
 		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
+
+		List<OpObject> deletedObjects = new ArrayList<>();
+		if(!existing) {
+			for (List<String> id : op.getDeleted())
+			deletedObjects.add(blockchain.getObjectByName(op.getType(), id));
+		}
 		boolean added = blockchain.addOperation(op);
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
 		if(!existing) {
 			dataManager.insertOperation(op);
+			dataManager.insertObjForHistory(op);
 		}
 		return added;
 	}

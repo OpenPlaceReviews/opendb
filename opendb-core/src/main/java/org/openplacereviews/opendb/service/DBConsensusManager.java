@@ -889,44 +889,105 @@ public class DBConsensusManager {
 
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
-		PGobject user = new PGobject();
-		PGobject objs = new PGobject();
-
 		pGobject.setType("jsonb");
-		user.setType("jsonb");
-		objs.setType("jsonb");
 
 		String js = formatter.opToJson(op);
 		try {
 			pGobject.setValue(js);
-			user.setValue(formatter.fullObjectToJson(op.getSignedBy()));
-
-
-			List<List<String>> objId = new LinkedList<>();
-			for (int i = 0; i < op.getCreated().size(); i++) {
-				List<String> id = op.getCreated().get(i).getId();
-				if (id.isEmpty()) {
-					objId.add(Arrays.asList(op.getRawHash(), String.valueOf(i)));
-				} else {
-					objId.add(id);
-				}
-			}
-			objs.setValue(formatter.fullObjectToJson(objId));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-		Object[] args = new Object[6];
-		args[0] = op.getType();
-		args[1] = user;
-		args[2] = new Date();
-		args[3] = bhash;
-		args[4] = pGobject;
-		args[5] = objs;
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
+				bhash, pGobject);
+	}
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(type, user_op, time, hash, content, objs)" +
-						"VALUES (?, ?, ?, ?, ?, ?)", args);
+	public void insertObjForHistory(OpOperation op) {
+		PGobject pGobject = new PGobject();
+		pGobject.setType("jsonb");
+
+		String js = formatter.opToJson(op);
+		try {
+			pGobject.setValue(js);
+		} catch (SQLException e) {
+			throw new IllegalArgumentException(e);
+		}
+
+		if (op.hasEdited()) {
+
+		}
+
+		for (int i = 0; i < op.getDeleted().size(); i++) {
+			Object[] args = new Object[4 + op.getSignedBy().size() + op.getDeleted().get(i).size()];
+			args[0] = SecUtils.getHashBytes(op.getHash());
+			args[1] = op.getType();
+			args[2] = new Date();
+			args[3] = null;
+
+			int k = 4;
+			for (String user : op.getSignedBy()) {
+				args[k] = user;
+				k++;
+			}
+			for (String id : op.getDeleted().get(i)) {
+				args[k] = id;
+				k++;
+			}
+
+			jdbcTemplate.update("INSERT INTO " + OP_OBJ_HISTORY_TABLE + "(ophash, type, time, obj," +
+					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d", ",", op.getSignedBy().size()) + "," +
+					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d", ",", op.getDeleted().get(i).size()) + ") VALUES (" +
+					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "?", ",", args.length) + ")", args);
+		}
+
+		if (op.hasCreated()) {
+			for (int i = 0; i < op.getCreated().size(); i++) {
+				OpObject opObject = op.getCreated().get(i);
+
+				if (opObject.getId().isEmpty()) {
+					opObject = new OpObject(opObject);
+					opObject.setId(op.getRawHash(), String.valueOf(i));
+				}
+
+				List<String> objIds = opObject.getId();
+				if (objIds.isEmpty()) {
+					objIds.add(op.getRawHash());
+					objIds.add(String.valueOf(i));
+				}
+
+				Object[] args = new Object[4 + op.getSignedBy().size() + objIds.size()];
+				args[0] = SecUtils.getHashBytes(op.getHash());
+				args[1] = op.getType();
+				args[2] = new Date();
+
+				PGobject newObj = new PGobject();
+				newObj.setType("jsonb");
+
+				try {
+					newObj.setValue(formatter.objToJson(opObject));
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
+				args[3] = newObj;
+
+				int k = 4;
+				for (String user : op.getSignedBy()) {
+					args[k] = user;
+					k++;
+				}
+				for (String id : objIds) {
+					args[k] = id;
+					k++;
+				}
+
+				jdbcTemplate.update("INSERT INTO " + OP_OBJ_HISTORY_TABLE + "(ophash, type, time, obj," +
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d", ",", op.getSignedBy().size()) + "," +
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d", ",", objIds.size()) + ") VALUES ("+
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "?", ",", args.length) + ")", args);
+			}
+		}
 	}
 
 	// TODO struct of history for user????
