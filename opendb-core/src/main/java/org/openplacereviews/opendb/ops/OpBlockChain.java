@@ -829,7 +829,7 @@ public class OpBlockChain {
 			return valid;
 		}
 		vld.measure(ValidationTimer.OP_PREPARATION);
-		valid = rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache, vld);
+		valid = rules.validateOp(this, u, ctx, vld);
 		if(!valid) {
 			return valid;
 		}
@@ -983,7 +983,7 @@ public class OpBlockChain {
 	}
 
 	// no multi thread issue (used only in synchronized blocks)
-	private static class LocalValidationCtx {
+	public static class LocalValidationCtx {
 		final String blockHash;
 		Set<List<String>> ids = new TreeSet<List<String>>();
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
