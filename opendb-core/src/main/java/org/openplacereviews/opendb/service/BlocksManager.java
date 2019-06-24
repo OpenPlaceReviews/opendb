@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
+import org.openplacereviews.opendb.dto.HistoryDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -93,8 +94,16 @@ public class BlocksManager {
 		return replicateUrl;
 	}
 
-	public Collection<OpOperation> getHistoryForUser(String user) {
-		return dataManager.getOperationsByUser(user);
+	public Collection<HistoryDTO> getHistory(String type, List<String> key) {
+		if (type.equals("user")) {
+			return dataManager.getOperationsByUser(key);
+		} else if (type.equals("object")) {
+			return dataManager.getOperationsByObject(key);
+		} else if (type.equals("time")) {
+			return null;
+		}
+
+		return null;
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
@@ -164,18 +173,11 @@ public class BlocksManager {
 		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
-
-		List<OpObject> deletedObjects = new ArrayList<>();
-		if(!existing) {
-			for (List<String> id : op.getDeleted())
-			deletedObjects.add(blockchain.getObjectByName(op.getType(), id));
-		}
 		boolean added = blockchain.addOperation(op);
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
 		if(!existing) {
 			dataManager.insertOperation(op);
-			dataManager.insertObjForHistory(op);
 		}
 		return added;
 	}
@@ -209,6 +211,12 @@ public class BlocksManager {
 		if(opBlock == null) {
 			return null;
 		}
+
+		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
+		for (OpOperation o : opBlock.getOperations()) {
+			dataManager.insertObjForHistory(o, date);
+		}
+
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
 		return replicateValidBlock(timer, blc, opBlock);

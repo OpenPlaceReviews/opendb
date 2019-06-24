@@ -108,6 +108,7 @@ public class DBSchemaManager {
 		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
 		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
 
+		registerColumn(OP_OBJ_HISTORY_TABLE, "dbid", "serial not null", false);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", true);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", true);
 		for (int i = 1; i <= 2; i++) {
@@ -118,6 +119,7 @@ public class DBSchemaManager {
 		}
 		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", true);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", false);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", false);
 
 		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", true);
 		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", true);

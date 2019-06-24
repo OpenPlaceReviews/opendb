@@ -68,6 +68,8 @@ dependencies {
     // https://mvnrepository.com/artifact/commons-io/commons-io
     implementation group: 'commons-io', name: 'commons-io', version: '2.6'
     // https://mvnrepository.com/artifact/com.google.guava/guava
+    // https://mvnrepository.com/artifact/joda-time/joda-time
+    implementation group: 'joda-time', name: 'joda-time', version: '2.10.2'
     implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
     implementation group: 'commons-codec', name: 'commons-codec', version: '1.12'
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.60'

@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.api;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.dto.HistoryDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
@@ -208,8 +209,8 @@ public class ApiController {
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,
-						  @RequestParam(required = false) String key) {
-		Collection<OpOperation> result = manager.getHistoryForUser(key);
+						  @RequestParam(required = true) List<String> key) {
+		Collection<HistoryDTO> result = manager.getHistory(type, key);
 
 		return formatter.fullObjectToJson(result);
 	}
