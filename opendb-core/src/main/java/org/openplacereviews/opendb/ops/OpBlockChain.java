@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -382,7 +383,7 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(deletedRef, null);
 		}
-
+		queueOperations.add(u);
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
@@ -985,7 +986,7 @@ public class OpBlockChain {
 	// no multi thread issue (used only in synchronized blocks)
 	public static class LocalValidationCtx {
 		final String blockHash;
-		Set<List<String>> ids = new TreeSet<List<String>>();
+		Set<List<String>> ids = new HashSet<List<String>>();
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
