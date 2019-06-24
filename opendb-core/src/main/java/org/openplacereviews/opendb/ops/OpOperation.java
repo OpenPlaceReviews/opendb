@@ -22,8 +22,6 @@ public class OpOperation extends OpObject {
 	public static final String F_CREATE = "create";
 	public static final String F_DELETE = "delete";
 	public static final String F_EDIT = "edit";
-	public static final String F_CHANGE = "change";
-	public static final String F_CURRENT = "current";
 	
 	public static final String F_NAME = "name";
 	public static final String F_COMMENT = "comment";

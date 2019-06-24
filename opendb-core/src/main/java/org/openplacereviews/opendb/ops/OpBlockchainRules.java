@@ -665,13 +665,11 @@ public class OpBlockchainRules {
 		LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED("Operation '%s': exceeded amount of created objects"),
 		
 		NEW_OBJ_DOUBLE_CREATED("Operation '%s': object '%s' was already created"),
-		EDITED_OBJ_DOUBLE_EDITED("Operation '%s': object '%s' was already edited"),
-		EDITED_OBJ_WAS_DELETED("Operation '%s': object '%s' was already deleted"),
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
+		OBJ_MODIFIED_TWICE_IN_SAME_OPERATION("Operation '%s': object '%s' was modified twice in the same operation"),
 		EDIT_OBJ_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
-		EDIT_CURRENT_OBJ_INCORRECT("Operation '%s' contains incorrect current obj: changed fields '%s' current fields '%s'"),
-		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field value '%s' expected old field value '%s'"),
-		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted"),
+		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
+		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),

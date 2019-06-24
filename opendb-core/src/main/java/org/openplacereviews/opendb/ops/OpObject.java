@@ -1,15 +1,29 @@
 package org.openplacereviews.opendb.ops;
 
-import com.google.gson.*;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.TechnicalException;
-
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimeZone;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.TechnicalException;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 public class OpObject {
 	
@@ -25,6 +39,9 @@ public class OpObject {
 	public static final String F_TIMESTAMP_ADDED = "timestamp";
 	public static final String F_PARENT_TYPE = "parentType";
 	public static final String F_PARENT_HASH = "parentHash";
+	public static final String F_CHANGE = "change";
+	public static final String F_CURRENT = "current";
+	
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	{
@@ -33,10 +50,10 @@ public class OpObject {
 	
 	protected Map<String, Object> fields = new TreeMap<>();
 	protected transient Map<String, Object> cacheFields;
-	public boolean isImmutable;
+	protected boolean isImmutable;
 	
 	protected transient String parentType;
-	public transient String parentHash;
+	protected transient String parentHash;
 	
 	public OpObject() {}
 	
@@ -59,13 +76,7 @@ public class OpObject {
 		if (opObject.parentHash != null) {
 			this.parentHash = (String) copyingObjects(opObject.parentHash);
 		}
-		this.isImmutable = (boolean) copyingObjects(opObject.isImmutable);
-
 		return this;
-	}
-
-	public OpObject(Map<String, Object> fields) {
-		this.fields = (Map<String, Object>) copyingObjects(fields);
 	}
 
 	private Object copyingObjects(Object object) {
@@ -126,6 +137,28 @@ public class OpObject {
 	public OpObject makeImmutable() {
 		isImmutable = true;
 		return this;
+	}
+	
+	
+	public Object getFieldByExpr(String s) {
+		// TODO
+		if(s.contains(".") || s.contains("[") || s.contains("]")) {
+			throw new UnsupportedOperationException();
+		}
+		
+		return fields.get(s);
+	}
+	
+	public void setFieldByExpr(String field, Object object) {
+		// TODO
+		if (field.contains(".") || field.contains("[") || field.contains("]")) {
+			throw new UnsupportedOperationException();
+		}
+		if (object == null) {
+			fields.remove(field);
+		} else {
+			fields.put(field, object);
+		}
 	}
 	
 	public Object getCacheObject(String f) {
@@ -267,6 +300,16 @@ public class OpObject {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getChangedEditFields() {
+		return (Map<String, Object>) fields.get(F_CHANGE);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getCurrentEditFields() {
+		return (Map<String, Object>) fields.get(F_CURRENT);
+	}
+	
 	public void putObjectValue(String key, Object value) {
 		checkNotImmutable();
 		if(value == null) {
@@ -387,6 +430,10 @@ public class OpObject {
 
 
 	}
+
+	
+
+	
 
 
 }
