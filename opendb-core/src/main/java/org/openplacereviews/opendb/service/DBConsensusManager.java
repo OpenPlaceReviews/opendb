@@ -753,6 +753,7 @@ public class DBConsensusManager {
 					jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE
 									+ " set blocks = array_remove(blocks, ?) where hash = ?",
 							blockHash, SecUtils.getHashBytes(o.getRawHash()));
+					jdbcTemplate.update("DELETE FROM " + OP_OBJ_HISTORY_TABLE + " WHERE ophash = ?", SecUtils.getHashBytes(o.getRawHash()));
 				}
 				orphanedBlocks.remove(block.getRawHash());
 				blocks.remove(block.getRawHash());
@@ -906,7 +907,7 @@ public class DBConsensusManager {
 				bhash, pGobject);
 	}
 
-	public void insertObjForHistory(OpOperation op, Date date) {
+	public void saveHistoryForObjects(OpOperation op, Date date) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
 
@@ -917,11 +918,32 @@ public class DBConsensusManager {
 			throw new IllegalArgumentException(e);
 		}
 
-		if (op.hasEdited()) {
-			for (int i = 0; i < op.getEdited().size(); i++) {
-
-			}
-		}
+//		//TODO
+//		if (op.hasEdited()) {
+//			for (int i = 0; i < op.getEdited().size(); i++) {
+//				Object[] args = new Object[5 + op.getSignedBy().size() + op.getEdited().get(i).getId().size()];
+//				args[0] = SecUtils.getHashBytes(op.getHash());
+//				args[1] = op.getType();
+//				args[2] = date;
+//				args[3] = null;
+//				args[4] = HistoryDTO.Status.EDITED.getValue();
+//
+//				int k = 5;
+//				for (String user : op.getSignedBy()) {
+//					args[k] = user;
+//					k++;
+//				}
+//				for (String id : op.getDeleted().get(i)) {
+//					args[k] = id;
+//					k++;
+//				}
+//
+//				jdbcTemplate.update("INSERT INTO " + OP_OBJ_HISTORY_TABLE + "(ophash, type, time, obj, status, " +
+//						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d", ",", op.getSignedBy().size()) + "," +
+//						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d", ",", op.getDeleted().get(i).size()) + ") VALUES (" +
+//						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "?", ",", args.length) + ")", args);
+//			}
+//		}
 
 		for (int i = 0; i < op.getDeleted().size(); i++) {
 			Object[] args = new Object[5 + op.getSignedBy().size() + op.getDeleted().get(i).size()];
@@ -990,7 +1012,7 @@ public class DBConsensusManager {
 		}
 	}
 
-	public Collection<HistoryDTO> getOperationsByUser(List<String> user) {
+	public Collection<HistoryDTO> getHistoryForUser(List<String> user) {
 		return jdbcTemplate.query("SELECT p1, p2, p3, p4, p5, time, obj, type, status from " + OP_OBJ_HISTORY_TABLE + " where " +
 				dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", user.size())+ " ORDER BY time,dbid DESC ", user.toArray(), new ResultSetExtractor<Collection<HistoryDTO>>() {
 			@Override
@@ -1019,7 +1041,7 @@ public class DBConsensusManager {
 		});
 	}
 
-	public Collection<HistoryDTO> getOperationsByObject(List<String> id) {
+	public Collection<HistoryDTO> getHistoryForObject(List<String> id) {
 		return jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 				dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", id.size())+ " ORDER BY time, dbid DESC", id.toArray(), new ResultSetExtractor<Collection<HistoryDTO>>() {
 			@Override

@@ -96,9 +96,9 @@ public class BlocksManager {
 
 	public Collection<HistoryDTO> getHistory(String type, List<String> key) {
 		if (type.equals("user")) {
-			return dataManager.getOperationsByUser(key);
+			return dataManager.getHistoryForUser(key);
 		} else if (type.equals("object")) {
-			return dataManager.getOperationsByObject(key);
+			return dataManager.getHistoryForObject(key);
 		} else if (type.equals("time")) {
 			return null;
 		}
@@ -214,7 +214,7 @@ public class BlocksManager {
 
 		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
 		for (OpOperation o : opBlock.getOperations()) {
-			dataManager.insertObjForHistory(o, date);
+			dataManager.saveHistoryForObjects(o, date);
 		}
 
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);

@@ -115,11 +115,6 @@ public class ApiController {
 	protected static class ObjectsResult {
 		public Collection<OpObject> objects;
 	}
-//
-//	// TODO create DTO
-//	protected static class HistoryResult {
-//		public Collection<> history;
-//	}
 
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
 	@ResponseBody
@@ -209,7 +204,8 @@ public class ApiController {
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,
-						  @RequestParam(required = true) List<String> key) {
+						  @RequestParam(required = true) List<String> key,
+						  @RequestParam(required = false) boolean latestChanges) {
 		Collection<HistoryDTO> result = manager.getHistory(type, key);
 
 		return formatter.fullObjectToJson(result);
