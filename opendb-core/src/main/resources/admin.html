@@ -18,6 +18,7 @@
     <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
     <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
+    <li><a data-toggle="tab" href="#history" id="history-tab">History</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
     <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
 </ul>
@@ -90,6 +91,25 @@
         <ul id="errors-list">
         </ul>
 
+    </div>
+
+    <div id="history" class="tab-pane fade">
+        <h3>History</h3>
+        <label>Select history type:&nbsp;</label><select id="history-type-list">
+            <option value="user">User</option>
+            <option value="object">Object</option>
+            <option value="type">Type</option>
+    </select>
+        <br>
+        <label>Load latest changes:&nbsp;</label><input type="checkbox" id="load-history-with-latest-changes"/>
+        <br>
+        <label>Input search key:</label><input type="text" id="history-search-field"/>
+        <br>
+        <label>Input amount entries (Limit):</label><input type="text" id="history-limit-field" value="20"/>
+        <br>
+        <input type="submit" value="Load history" id="load-history-btn">
+        <br>
+        <ul id="history-list"></ul>
     </div>
 
     <div id="ipfs" class="tab-pane fade">
@@ -578,6 +598,44 @@
             $.post("/api/auth/admin-login", obj)
                 .done(function(data){  $("#result").html(data); loadData(); })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
+        });
+
+        $("#load-history-btn").click(function () {
+           var obj = {
+               "type":$("#history-type-list").val(),
+               "key":$("#history-search-field").val(),
+               "latestChanges":$("#load-history-with-latest-changes").is(':checked'),
+               "limit":$("#history-limit-field").val()
+           };
+           $.get("/api/history", obj)
+               .done(function(data) {
+                   var items = "";
+                   for (var key in data.objects) {
+                       if (data.objects.hasOwnProperty(key)) {
+                           let arrays = data.objects[key];
+                           items += "<br><li><b>Object id</b>: " + key;
+                           items += "<br><b>Type</b>: " + arrays[0].type;
+                           items += "<br><b>User</b>: " + arrays[0].user;
+                           items += "<br>";
+
+                           for (var i = 0; i < arrays.length; i++) {
+                               items += "<br><b>Status</b>: " + arrays[i].status;
+                               items += "<br><b>Date</b>: " + arrays[i].date;
+
+                               if ('opObject' in arrays[i]) {
+                                   items += "<br><details><summary><b>OpObject: </b></summary><pre>" +
+                                       JSON.stringify(arrays[i].opObject, null, 4) + "</pre></details>";
+                               }
+                               items += "</li>";
+
+                               console.log(items);
+                           }
+                       }
+                   }
+                   $("#history-list").html(items);
+                   loadData();
+                   })
+               .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
         });
 
         $("#add-file-btn").click(function () {

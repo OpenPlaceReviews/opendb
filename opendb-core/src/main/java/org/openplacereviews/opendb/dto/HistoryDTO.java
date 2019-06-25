@@ -7,14 +7,14 @@ import java.util.Map;
 
 public class HistoryDTO {
 
-	private Map<List<String>, List<HistoryObject>> id;
+	private Map<List<String>, List<HistoryObject>> objects;
 
-	public Map<List<String>, List<HistoryObject>> getId() {
-		return id;
+	public Map<List<String>, List<HistoryObject>> getObjects() {
+		return objects;
 	}
 
-	public void setId(Map<List<String>, List<HistoryObject>> id) {
-		this.id = id;
+	public void setObjects(Map<List<String>, List<HistoryObject>> id) {
+		this.objects = id;
 	}
 
 	public static class HistoryObject {

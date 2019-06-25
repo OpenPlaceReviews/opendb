@@ -205,8 +205,10 @@ public class ApiController {
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,
 						  @RequestParam(required = true) List<String> key,
-						  @RequestParam(required = false) boolean latestChanges) {
-		HistoryDTO result = manager.getHistory(type, key, latestChanges);
+						  @RequestParam(required = false) boolean latestChanges,
+						  @RequestParam(required = false, defaultValue = "20") int limit,
+						  @RequestParam(required = false) boolean sortDateASC) {
+		HistoryDTO result = manager.getHistory(type, key, latestChanges, limit, sortDateASC);
 
 		return formatter.fullObjectToJson(result);
 	}

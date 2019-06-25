@@ -401,6 +401,13 @@ public class DBSchemaManager {
 				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);
 	}
 
+	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, int userAmount, int objSize) {
+		jdbcTemplate.batchUpdate("INSERT INTO " + table + "(ophash, type, time, obj, status," +
+				generatePKString(table, "u%1$d", ",", userAmount) + "," +
+				generatePKString(table, "p%1$d", ",", MAX_KEY_SIZE) + ") VALUES ("+
+				generatePKString(table, "?", ",", objSize) + ")", args);
+	}
+
 
 
 
