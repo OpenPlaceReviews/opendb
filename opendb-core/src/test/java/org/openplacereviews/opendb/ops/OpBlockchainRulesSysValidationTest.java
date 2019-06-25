@@ -186,7 +186,7 @@ public class OpBlockchainRulesSysValidationTest {
 		vld.measure(ValidationTimer.OP_PREPARATION);
 
 		exceptionRule.expect(IllegalArgumentException.class);
-		blc.getRules().validateRules(blc, opOperation, new ArrayList<>(), new HashMap<>(), vld);
+		blc.getRules().validateRules(blc, opOperation, new OpBlockChain.LocalValidationCtx(null), vld);
 	}
 
 

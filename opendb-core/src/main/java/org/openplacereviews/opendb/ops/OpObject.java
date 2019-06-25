@@ -1,15 +1,29 @@
 package org.openplacereviews.opendb.ops;
 
-import com.google.gson.*;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.TechnicalException;
-
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimeZone;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.TechnicalException;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 public class OpObject {
 	
@@ -25,6 +39,9 @@ public class OpObject {
 	public static final String F_TIMESTAMP_ADDED = "timestamp";
 	public static final String F_PARENT_TYPE = "parentType";
 	public static final String F_PARENT_HASH = "parentHash";
+	public static final String F_CHANGE = "change";
+	public static final String F_CURRENT = "current";
+	
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	{
@@ -48,7 +65,10 @@ public class OpObject {
 		createOpObjectCopy(cp, copyCacheFields);
 	}
 
-	private OpObject createOpObjectCopy(OpObject opObject, Boolean copyCacheFields) {
+	@SuppressWarnings("unchecked")
+	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
+		this.parentType = opObject.parentType;
+		this.parentHash = opObject.parentHash;
 		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
 		if (opObject.cacheFields != null && copyCacheFields) {
 			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
@@ -64,10 +84,7 @@ public class OpObject {
 		return this;
 	}
 
-	public OpObject(Map<String, Object> fields) {
-		this.fields = (Map<String, Object>) copyingObjects(fields);
-	}
-
+	@SuppressWarnings("unchecked")
 	private Object copyingObjects(Object object) {
 		if (object instanceof Number) {
 			return (Number) object;
@@ -77,20 +94,20 @@ public class OpObject {
 			return (Boolean) object;
 		} else if (object instanceof List) {
 			ArrayList<Object> copy = new ArrayList<>();
-			ArrayList<Object> list = (ArrayList) object;
+			ArrayList<Object> list = (ArrayList<Object>) object;
 			for (Object o : list) {
 				copy.add(copyingObjects(o));
 			}
 			return copy;
 		} else if (object instanceof Map) {
-			Map<String, Object> copy = new HashMap<>();
-			Map<String, Object> map = (Map) object;
+			Map<String, Object> copy = new LinkedHashMap<>();
+			Map<String, Object> map = (Map<String, Object>) object;
 			for (String key : map.keySet()) {
 				copy.put(key, copyingObjects(map.get(key)));
 			}
 			return copy;
 		} else {
-			throw new TechnicalException("Type of object is not supported");
+			throw new UnsupportedOperationException("Type of object is not supported");
 		}
 	}
 	
@@ -126,6 +143,28 @@ public class OpObject {
 	public OpObject makeImmutable() {
 		isImmutable = true;
 		return this;
+	}
+	
+	
+	public Object getFieldByExpr(String s) {
+		// TODO
+		if(s.contains(".") || s.contains("[") || s.contains("]")) {
+			throw new UnsupportedOperationException();
+		}
+		
+		return fields.get(s);
+	}
+	
+	public void setFieldByExpr(String field, Object object) {
+		// TODO
+		if (field.contains(".") || field.contains("[") || field.contains("]")) {
+			throw new UnsupportedOperationException();
+		}
+		if (object == null) {
+			fields.remove(field);
+		} else {
+			fields.put(field, object);
+		}
 	}
 	
 	public Object getCacheObject(String f) {
@@ -267,6 +306,16 @@ public class OpObject {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getChangedEditFields() {
+		return (Map<String, Object>) fields.get(F_CHANGE);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getCurrentEditFields() {
+		return (Map<String, Object>) fields.get(F_CURRENT);
+	}
+	
 	public void putObjectValue(String key, Object value) {
 		checkNotImmutable();
 		if(value == null) {
@@ -378,6 +427,10 @@ public class OpObject {
 
 
 	}
+
+	
+
+	
 
 
 }

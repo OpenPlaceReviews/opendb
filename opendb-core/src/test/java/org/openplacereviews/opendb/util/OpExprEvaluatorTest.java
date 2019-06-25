@@ -23,7 +23,7 @@ public class OpExprEvaluatorTest {
 	public Object evaluateExpr(String e) {
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
-		OpExprEvaluator.EvaluationContext ectx = new OpExprEvaluator.EvaluationContext(null, obj.getAsJsonObject(), null, null);
+		OpExprEvaluator.EvaluationContext ectx = new OpExprEvaluator.EvaluationContext(null, obj.getAsJsonObject(),obj.getAsJsonObject().get("new"), null, null);
 		return OpExprEvaluator.parseExpression(e).evaluateObject(ectx);
 	}
 	
@@ -211,7 +211,8 @@ public class OpExprEvaluatorTest {
 
 		Gson gson = new Gson();
 		JsonElement obj = gson.fromJson(SIMPLE_JSON, JsonElement.class);
-		OpExprEvaluator.EvaluationContext ectx = new OpExprEvaluator.EvaluationContext(blc, obj.getAsJsonObject(), null, null);
+
+		OpExprEvaluator.EvaluationContext ectx = new OpExprEvaluator.EvaluationContext(blc, obj.getAsJsonObject(), obj.getAsJsonObject().get("new"), null, null);
 
 		assertEquals(1, OpExprEvaluator.parseExpression("auth:has_sig_roles(this, 'master')").evaluateObject(ectx));
 		assertEquals(1, OpExprEvaluator.parseExpression("auth:has_sig_roles(this, 'administrator')").evaluateObject(ectx));

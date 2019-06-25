@@ -1,21 +1,26 @@
 package org.openplacereviews.opendb.ops;
 
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.security.KeyPair;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.MAX_AMOUNT_CREATED_OBJ_FOR_OP;
-import static org.openplacereviews.opendb.ops.OpObject.F_ID;
-import static org.openplacereviews.opendb.ops.OpOperation.F_CHANGE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_CURRENT;
 
 /**
  *  Guidelines of object methods:
@@ -39,7 +44,12 @@ import static org.openplacereviews.opendb.ops.OpOperation.F_CURRENT;
  */
 public class OpBlockChain {
 
-
+	private static final Object OP_CHANGE_DELETE = "delete";
+	private static final Object OP_CHANGE_INCREMENT = "increment";
+	private static final Object OP_CHANGE_APPEND = "append";
+	private static final Object OP_CHANGE_SET = "set";
+	
+	
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
@@ -373,27 +383,11 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(deletedRef, null);
 		}
-
-		for (OpObject editedOpOpbject: validationCtx.editedObjsCache) {
+		queueOperations.add(u);
+		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
 		}
-
-		for (int i = 0; i < u.getCreated().size(); i++) {
-			List<String> id = u.getCreated().get(i).getId();
-			if (id != null) {
-				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-				if (!id.isEmpty()) {
-					oinf.add(id, u.getCreated().get(i));
-				} else {
-					OpObject opObject = new OpObject(u.getCreated().get(i));
-					opObject.isImmutable = false;
-					opObject.setId(u.getRawHash(), String.valueOf(i));
-					oinf.add(opObject.getId(), opObject);
-				}
-			}
-		}
-
 	}
 
 	private void atomicSetParent(OpBlockChain parent) {
@@ -817,12 +811,13 @@ public class OpBlockChain {
 		}
 		u.updateObjectsRef();
 		boolean valid = true;
+		ctx.ids.clear();
 		valid = prepareDeletedObjects(u, ctx);
 		if(!valid) {
 			return false;
 		}
 		// should be called after prepareDeletedObjects (so cache is prepared)
-		valid = prepareNoNewDuplicatedObjects(u, ctx);
+		valid = prepareCreatedObjects(u, ctx);
 		if(!valid) {
 			return false;
 		}
@@ -835,7 +830,7 @@ public class OpBlockChain {
 			return valid;
 		}
 		vld.measure(ValidationTimer.OP_PREPARATION);
-		valid = rules.validateOp(this, u, ctx.deletedObjsCache, ctx.refObjsCache, vld);
+		valid = rules.validateOp(this, u, ctx, vld);
 		if(!valid) {
 			return valid;
 		}
@@ -890,138 +885,111 @@ public class OpBlockChain {
 			if(opObject == null) {
 				return rules.error(u, ErrorType.DEL_OBJ_NOT_FOUND, u.getHash(), deletedRefs.get(i));
 			}
-
-			// check duplicates in same operation
-			for (int j = 0; j < i; j++) {
-				if (OUtils.equals(deletedRefs.get(j), opObject.getId())) {
-					return rules.error(u, ErrorType.DEL_OBJ_DOUBLE_DELETED, u.getHash(),
-							opObject.getId());
-				}
+			if(!ctx.ids.add(opObject.getId())) {
+				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(),
+						opObject.getId());
 			}
 			ctx.deletedObjsCache.add(opObject);
 		}
 		return true;
 	}
 
-	private boolean prepareNoNewDuplicatedObjects(OpOperation u, LocalValidationCtx ctx) {
+	private boolean prepareCreatedObjects(OpOperation u, LocalValidationCtx ctx) {
 		List<OpObject> list = u.getCreated();
-
-		if (list.size() > MAX_AMOUNT_CREATED_OBJ_FOR_OP) {
+		if (list.size() > OpBlockchainRules.MAX_AMOUNT_CREATED_OBJ_FOR_OP) {
 			return rules.error(u, ErrorType.LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED, u.getHash());
 		}
 		for(int i = 0; i < list.size(); i++) {
-			OpObject o = list.get(i);
-
-			List<String> id;
-			if (o.getId().isEmpty()) {
-				id = Arrays.asList(u.getRawHash(), String.valueOf(i));
-			} else {
-				id = o.getId();
+			OpObject newObject = list.get(i);
+			if (newObject.getId().isEmpty()) {
+				newObject = new OpObject(newObject);
+				newObject.setId(u.getRawHash(), String.valueOf(i));
+				newObject.makeImmutable();
 			}
-
-			// check duplicates in same operation
-			for (int j = 0; j < i; j++) {
-				OpObject oj = list.get(j);
-				if(OUtils.equals(oj.getId(), id)) {
-					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(),
-							o.getId());
-				}
+			if(!ctx.ids.add(newObject.getId())) {
+				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(), newObject.getId());
 			}
-			boolean newVersion = false;
-			for(OpObject del : ctx.deletedObjsCache) {
-				if(OUtils.equals(del.getId(), id)) {
-					newVersion = true;
-					break;
-				}
-			}
-			if(!newVersion) {
-				OpObject exObj = getObjectByName(u.getType(), id);
-				if(exObj != null) {
-					return rules.error(u, ErrorType.NEW_OBJ_DOUBLE_CREATED, u.getHash(),
-							o.getId());
-				}
-			}
+			ctx.newObjsCache.put(newObject, null);
 		}
 		return true;
 	}
-
+	
+	@SuppressWarnings("unchecked")
 	private boolean prepareEditedObjects(OpOperation u, LocalValidationCtx ctx) {
 		List<OpObject> editedObjs = u.getEdited();
-		List<OpObject> changedObjs = new ArrayList<>(editedObjs.size());
-		List<OpObject> expectedCurObjs = new ArrayList<>(editedObjs.size());
-		for (OpObject object : editedObjs) {
-			List<String> id = object.getId();
-			TreeMap<String, Object> changedMap = (TreeMap) object.fields.get(F_CHANGE);
-			TreeMap<String, Object> currentMap = (TreeMap) object.getMapStringList(F_CURRENT);
-			OpObject changedObj = new OpObject(changedMap);
-			OpObject currentObj = new OpObject(currentMap);
-			changedObj.fields.put(F_ID, id);
-			currentObj.fields.put(F_ID, id);
-
-			changedObjs.add(changedObj);
-			expectedCurObjs.add(currentObj);
-		}
-
-		List<List<String>> deletedIds = u.getDeleted();
-		for (int i = 0; i < changedObjs.size(); i++) {
-			OpObject changedObj = changedObjs.get(i);
+		for (OpObject editObject : editedObjs) {
+			List<String> id = editObject.getId();
 			// check duplicates in same operation
-			for (int j = 0; j < i; j++) {
-				OpObject oj = changedObjs.get(j);
-				if (OUtils.equals(oj.getId(), changedObj.getId())) {
-					return rules.error(u, ErrorType.EDITED_OBJ_DOUBLE_EDITED, u.getHash(),
-							changedObj.getId());
-				}
+			if (!ctx.ids.add(id)) {
+				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(), id);
 			}
-			//Check duplicates in delete objects in same operation
-			for (List<String> id : deletedIds) {
-				if (OUtils.equals(changedObj.getId(), id)) {
-					return rules.error(u, ErrorType.EDITED_OBJ_WAS_DELETED, u.getHash(),
-							changedObj.getId());
-				}
+			OpObject currentObject = getObjectByName(u.getType(), id);
+			OpObject newObject = new OpObject(currentObject);
+			if (currentObject == null) {
+				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
-
-			OpObject expectedCurObj = expectedCurObjs.get(i);
-			OpObject currentObj = getObjectByName(u.getType(), expectedCurObj.getId());
-			if (currentObj == null) {
-				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(),
-						expectedCurObj.getId());
-			}
-
-			//If edit field exist in changed field it have to exist in current and current
-			// values have to be the same with expected current values.
-			if (changedObj.fields != null) {
-				OpObject currentObjCopy = new OpObject(currentObj, true);
-				for (String changedFiledKey : changedObj.fields.keySet()) {
-					if (!expectedCurObj.fields.containsKey(changedFiledKey)) {
-						return rules
-								.error(u, ErrorType.EDIT_CURRENT_OBJ_INCORRECT, u.getHash(), changedObj, expectedCurObj);
+			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
+			if (currentExpectedFields != null) {
+				Iterator<Entry<String, Object>> itEditCurrentFields = currentExpectedFields.entrySet().iterator();
+				while (itEditCurrentFields.hasNext()) {
+					Entry<String, Object> fieldsPair = itEditCurrentFields.next();
+					Object expectedOldValF = currentObject.getFieldByExpr(fieldsPair.getKey());
+					if (!OUtils.equals(fieldsPair.getValue(), expectedOldValF)) {
+						return rules.error(u, ErrorType.EDIT_OLD_FIELD_VALUE_INCORRECT, u.getHash(),
+								fieldsPair.getKey(), fieldsPair.getValue(), expectedOldValF);
 					}
-
-					Object expectedOldValF = expectedCurObj.fields.get(changedFiledKey);
-					Object curValF = currentObj.fields.get(changedFiledKey);
-					if (!OUtils.equals(expectedOldValF, curValF)) {
-						return rules.error(u, ErrorType.EDIT_OLD_FIELD_VALUE_INCORRECT, u.getHash(), curValF,
-								expectedOldValF);
-					}
-
-					Object changedValue = changedObj.fields.get(changedFiledKey);
-					currentObjCopy.fields.put(changedFiledKey, changedValue);
 				}
-
-				ctx.editedObjsCache.add(currentObjCopy);
 			}
+			Map<String, Object> changedMap = editObject.getChangedEditFields();
+			for (Map.Entry<String, Object> e : changedMap.entrySet()) {
+				// evaluate changes for new object
+				String fieldExpr = e.getKey();
+				Object op = e.getValue();
+				String opId = op.toString();
+				Object opValue = null;
+				if (op instanceof Map) {
+					Entry<String, Object> ee = ((Map<String, Object>) op).entrySet().iterator().next();
+					opId = ee.getKey();
+					opValue = ee.getValue();
+				}
+				boolean checkCurrentFieldSpecified = false;
+				if (OP_CHANGE_DELETE.equals(opId)) {
+					newObject.setFieldByExpr(fieldExpr, null);
+					checkCurrentFieldSpecified = true;
+				} else if (OP_CHANGE_SET.equals(opId)) {
+					newObject.setFieldByExpr(fieldExpr, opValue);
+					checkCurrentFieldSpecified = true;
+				} else if (OP_CHANGE_APPEND.equals(opId)) {
+					// TODO
+					// 1. check that previous field is null, empty or array !!!
+					// 2. call setFieldByExpr
+				} else if (OP_CHANGE_INCREMENT.equals(opId)) {
+					// TODO
+					// 1. check that previous field is null, empty or int number !!!
+					// 2. call setFieldByExpr
+				} else {
+					throw new UnsupportedOperationException(
+							String.format("Operation %s is not supported for change", opId));
+				}
+				if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
+						&& currentObject.getFieldByExpr(fieldExpr) == null) {
+					return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+				}
+			}
+			newObject.makeImmutable();
+			ctx.newObjsCache.put(newObject, currentObject);
 		}
-
 		return true;
+
 	}
 
 	// no multi thread issue (used only in synchronized blocks)
-	private static class LocalValidationCtx {
+	public static class LocalValidationCtx {
 		final String blockHash;
+		Set<List<String>> ids = new HashSet<List<String>>();
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
-		List<OpObject> editedObjsCache = new ArrayList<>();
+		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
 
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;
