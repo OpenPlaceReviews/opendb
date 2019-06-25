@@ -501,7 +501,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
-
+		//TODO separate delete operation and check what is going wrong
 		blc.addOperation(opOperation);
 	}
 
@@ -561,9 +561,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		blc.addOperation(opOperation);
 
-		// checking to change role by not role owner
-		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
-		opOperation.addDeleted(Collections.singletonList(role));
+		opOperation = getOpDeletedRoleOperation(role, username);
 
 		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
 		opOperation.makeImmutable();
@@ -594,7 +592,20 @@ public class OpBlockchainRulesSysValidationTest {
 
 		blc.addOperation(grantOperation);
 
+		// checking to change role by not role owner
+		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
+
+		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
+		opOperation.makeImmutable();
 		// checking to change role by granted owner
+		blc.addOperation(opOperation);
+
+		opOperation = getOpDeletedRoleOperation(role, username);
+
+		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
+		opOperation.makeImmutable();
+
+		//TODO check grants
 		blc.addOperation(opOperation);
 	}
 
@@ -686,13 +697,20 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addDeleted(Collections.singletonList(validationName));
 		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
 		grantOperation.makeImmutable();
-
 		blc.addOperation(grantOperation);
+
+		OpOperation delGrantOperation = new OpOperation();
+		delGrantOperation.setSignedBy(name);
+		delGrantOperation.setType(OpBlockchainRules.OP_VALIDATE);
+		delGrantOperation.addDeleted(Collections.singletonList(validationName));
+
+		generateHashAndSignForOperation(delGrantOperation, blc, false, serverKeyPair);
+		delGrantOperation.makeImmutable();
+		blc.addOperation(delGrantOperation);
 	}
 
 	//////////////////////////////////////////////////////// SYS.OPERATION ///////////////////////////////////////////////////////
@@ -1049,4 +1067,15 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.addCreated(opObject);
 		return opOperation;
 	}
+
+	private OpOperation getOpDeletedRoleOperation(String role, String signedBy) {
+		OpOperation opOperation = new OpOperation();
+		opOperation.addOtherSignedBy(signedBy);
+		opOperation.setType(OpBlockchainRules.OP_ROLE);
+		opOperation.addDeleted(Arrays.asList(role));
+
+		return opOperation;
+	}
+
+
 }
