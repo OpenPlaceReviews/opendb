@@ -94,11 +94,11 @@ public class BlocksManager {
 		return replicateUrl;
 	}
 
-	public Collection<HistoryDTO> getHistory(String type, List<String> key) {
+	public HistoryDTO getHistory(String type, List<String> key, boolean latestChanges) {
 		if (type.equals("user")) {
-			return dataManager.getHistoryForUser(key);
+			return dataManager.getHistoryForUser(key, latestChanges);
 		} else if (type.equals("object")) {
-			return dataManager.getHistoryForObject(key);
+			return dataManager.getHistoryForObject(key, latestChanges);
 		} else if (type.equals("time")) {
 			return null;
 		}
@@ -212,11 +212,6 @@ public class BlocksManager {
 			return null;
 		}
 
-		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
-		for (OpOperation o : opBlock.getOperations()) {
-			dataManager.saveHistoryForObjects(o, date);
-		}
-
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
 		return replicateValidBlock(timer, blc, opBlock);
@@ -226,6 +221,16 @@ public class BlocksManager {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
+		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
+		for (OpOperation o : opBlock.getOperations()) {
+			List<OpObject> newEditedObjects = new LinkedList<>();
+			if (o.hasEdited()) {
+				for (OpObject opObject : o.getEdited()) {
+					newEditedObjects.add(blockChain.getObjectByName(o.getType(), opObject.getId()));
+				}
+			}
+			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
+		}
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
