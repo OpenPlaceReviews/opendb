@@ -41,20 +41,20 @@ public class JsonMapUtils {
 		if (fieldSequence == null) {
 			return null;
 		}
-		Map<String, Object> _jsonMap = jsonMap;
+		Map<String, Object> jsonMapLocal = jsonMap;
 		for (int i = 0; i < fieldSequence.length; i++) {
 			String fieldName = fieldSequence[i];
 			//If elementIndexes not null it means that current field represent json array NOT object.
 			List<Integer> elementIndexes = retrieveArrayIndexes(fieldName);
 			Object fieldValue = null;
 			if (elementIndexes != null) {
-				fieldValue = retrieveFieldFromArrayInMap(_jsonMap, elementIndexes, fieldName);
+				fieldValue = retrieveFieldFromArrayInMap(jsonMapLocal, elementIndexes, fieldName);
 			} else {
-				fieldValue = _jsonMap.get(fieldName);
+				fieldValue = jsonMapLocal.get(fieldName);
 			}
 			if (i < fieldSequence.length - 1) {
 				if (fieldValue instanceof Map) {
-					_jsonMap = (Map) fieldValue;
+					jsonMapLocal = (Map) fieldValue;
 				} else {
 					throw new IllegalArgumentException(
 							"Not found field by sequence: " + Arrays.asList(fieldSequence) + " In: " + jsonMap);
@@ -82,20 +82,20 @@ public class JsonMapUtils {
 	/**
 	 * Set value to json field (path to field presented as sequence of string)
 	 *
-	 * @param jsonMap       source json object deserialized in map
+	 * @param jsonObject       source json object deserialized in map
 	 * @param fieldSequence Sequence to field value.
 	 *                      *                      Example: person.car.number have to be ["person", "car[2]", "number"]
 	 * @param field         field value
 	 */
-	public static void setField(Map<String, Object> jsonMap, String[] fieldSequence, Object field) {
+	public static void setField(Map<String, Object> jsonObject, String[] fieldSequence, Object field) {
 		if (fieldSequence == null || fieldSequence.length == 0) {
 			throw new IllegalArgumentException("Field sequence is empty. Set value to root not possible.");
 		}
 
-		List<String> _fieldSequence = Arrays.asList(fieldSequence);
+		List<String> fieldSequenceLocal = Arrays.asList(fieldSequence);
 
-		Map<String, Object> _jsonMap = jsonMap;
-		Iterator<String> iterator = _fieldSequence.iterator();
+		Map<String, Object> jsonMapLocal = jsonObject;
+		Iterator<String> iterator = fieldSequenceLocal.iterator();
 		while (iterator.hasNext()) {
 			String fieldName = iterator.next();
 			//If elementIndexes not null it means that current field represent json array NOT object.
@@ -103,33 +103,33 @@ public class JsonMapUtils {
 			Object fieldValue = null;
 			if (elementIndexes != null) {
 				//If field don't exist throw exception
-				fieldValue = retrieveFieldFromArrayInMap(_jsonMap, elementIndexes, fieldName);
+				fieldValue = retrieveFieldFromArrayInMap(jsonMapLocal, elementIndexes, fieldName);
 			} else {
-				fieldValue = _jsonMap.get(fieldName);
+				fieldValue = jsonMapLocal.get(fieldName);
 			}
 			//If current field is NULL and represent json object and has inner elements
 			//We have to create new Map that represent json object
 			if (fieldValue == null && iterator.hasNext()) {
 				Map<String, Object> newJsonMap = new TreeMap<>();
-				_jsonMap.put(fieldName, newJsonMap);
-				_jsonMap = newJsonMap;
+				jsonMapLocal.put(fieldName, newJsonMap);
+				jsonMapLocal = newJsonMap;
 			} else if (iterator.hasNext()) {
 				if (fieldValue instanceof Map) {
-					_jsonMap = (Map) fieldValue;
+					jsonMapLocal = (Map) fieldValue;
 				} else {
 					throw new IllegalArgumentException(
-							"Not found field by sequence: " + Arrays.asList(fieldSequence) + " In: " + jsonMap);
+							"Not found field by sequence: " + Arrays.asList(fieldSequence) + " In: " + jsonObject);
 				}
 			} else {
 				if (elementIndexes == null) {
 					if (field == null) {
-						_jsonMap.remove(fieldName);
+						jsonMapLocal.remove(fieldName);
 					} else {
-						_jsonMap.put(fieldName, field);
+						jsonMapLocal.put(fieldName, field);
 					}
 				} else {
 					int lastIndex = elementIndexes.remove(elementIndexes.size() - 1);
-					fieldValue = retrieveFieldFromArrayInMap(_jsonMap, elementIndexes, fieldName);
+					fieldValue = retrieveFieldFromArrayInMap(jsonMapLocal, elementIndexes, fieldName);
 					if (field == null) {
 						((List)fieldValue).remove(lastIndex);
 					} else {
@@ -170,9 +170,9 @@ public class JsonMapUtils {
 			return;
 		}
 
-		List<String> _fieldSequence = new ArrayList<>(fieldSequence);
-		String deletedFieldName = _fieldSequence.remove(_fieldSequence.size() - 1);
-		Object targetJsonElement = getField(jsonMap, _fieldSequence);
+		List<String> fieldSequenceLocal = new ArrayList<>(fieldSequence);
+		String deletedFieldName = fieldSequenceLocal.remove(fieldSequenceLocal.size() - 1);
+		Object targetJsonElement = getField(jsonMap, fieldSequenceLocal);
 		if (!(targetJsonElement instanceof Map)) {
 			throw new IllegalArgumentException("Delete allowed only from json object.");
 		}
