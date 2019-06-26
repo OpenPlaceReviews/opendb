@@ -132,7 +132,6 @@ public class DBConsensusManager {
 		return blcQueue;
 	}
 
-
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent,
 									final OpBlockchainRules rules) {
 		if (topBlockInfo.size() == 0) {
@@ -221,7 +220,6 @@ public class DBConsensusManager {
 		}
 		return res;
 	}
-
 
 	protected class SuperblockDbAccess implements BlockDbAccessInterface {
 
@@ -998,82 +996,84 @@ public class DBConsensusManager {
 
 	public HistoryDTO getHistoryForUser(List<String> user, boolean latestChanges, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT p1, p2, p3, p4, p5, time, obj, type, status from " + OP_OBJ_HISTORY_TABLE + " where " +
-					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", user.size())+ " ORDER BY time,dbid " + sortType + " LIMIT " + limit, user.toArray(),
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", user.size()) +
+						" ORDER BY time,dbid " + sortType + " LIMIT " + limit, user.toArray(),
 				new ResultSetExtractor<HistoryDTO>() {
-			@Override
-			public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
-				HistoryDTO historyDTO = new HistoryDTO();
-				List<List<String>> objIds = new LinkedList<>();
-				List<HistoryDTO.HistoryObject> allObjects = new LinkedList<>();
-				while (rs.next()) {
-					HistoryDTO.HistoryObject historyObject = new HistoryDTO.HistoryObject();
-					List<String> ids = new ArrayList<>();
-					for (int i = 1; i <=5; i++) {
-						if (rs.getString(i) != null) {
-							ids.add(rs.getString(i));
+					@Override
+					public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
+						HistoryDTO historyDTO = new HistoryDTO();
+						List<List<String>> objIds = new LinkedList<>();
+						List<HistoryDTO.HistoryObject> allObjects = new LinkedList<>();
+						while (rs.next()) {
+							HistoryDTO.HistoryObject historyObject = new HistoryDTO.HistoryObject();
+							List<String> ids = new ArrayList<>();
+							for (int i = 1; i <= 5; i++) {
+								if (rs.getString(i) != null) {
+									ids.add(rs.getString(i));
+								}
+							}
+							historyObject
+									.setUser(user)
+									.setId(ids)
+									.setDate(formatFullDate(rs.getTimestamp(6)))
+									.setOpObject(formatter.parseObject(rs.getString(7)))
+									.setType(rs.getString(8))
+									.setStatus(HistoryDTO.HistoryObject.Status.getStatus(rs.getInt(9)));
+
+							allObjects.add(historyObject);
+							if (!objIds.contains(ids)) {
+								objIds.add(ids);
+							}
 						}
+						Map<List<String>, List<HistoryDTO.HistoryObject>> history = new LinkedHashMap<>();
+						generateObjMapping(objIds, allObjects, history);
+
+						historyDTO.setObjects(history);
+
+						return historyDTO;
 					}
-					historyObject
-							.setUser(user)
-							.setId(ids)
-							.setDate(formatFullDate(rs.getTimestamp(6)))
-							.setOpObject(formatter.parseObject(rs.getString(7)))
-							.setType(rs.getString(8))
-							.setStatus(HistoryDTO.HistoryObject.Status.getStatus(rs.getInt(9)));
-
-					allObjects.add(historyObject);
-					if (!objIds.contains(ids)) {
-						objIds.add(ids);
-					}
-				}
-				Map<List<String>, List<HistoryDTO.HistoryObject>> history = new LinkedHashMap<>();
-				generateObjMapping(objIds, allObjects, history);
-
-				historyDTO.setObjects(history);
-
-				return historyDTO;
-			}
-		});
+				});
 	}
 
 	public HistoryDTO getHistoryForObject(List<String> id, boolean latestChanges, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", id.size())+ " ORDER BY time, dbid "  + sortType + " LIMIT " + limit, id.toArray(),
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", id.size()) +
+						" ORDER BY time, dbid " + sortType + " LIMIT " + limit, id.toArray(),
 				new ResultSetExtractor<HistoryDTO>() {
-			@Override
-			public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
-				HistoryDTO historyDTO = new HistoryDTO();
-				Map<List<String>, List<HistoryDTO.HistoryObject>> history = new LinkedHashMap<>();
-				List<HistoryDTO.HistoryObject> resources = new LinkedList<>();
-				while (rs.next()) {
-					HistoryDTO.HistoryObject historyObject = new HistoryDTO.HistoryObject();
-					List<String> users = new ArrayList<>();
-					for (int i = 1; i <=2; i++) {
-						if (rs.getString(i) != null) {
-							users.add(rs.getString(i));
+					@Override
+					public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
+						HistoryDTO historyDTO = new HistoryDTO();
+						Map<List<String>, List<HistoryDTO.HistoryObject>> history = new LinkedHashMap<>();
+						List<HistoryDTO.HistoryObject> resources = new LinkedList<>();
+						while (rs.next()) {
+							HistoryDTO.HistoryObject historyObject = new HistoryDTO.HistoryObject();
+							List<String> users = new ArrayList<>();
+							for (int i = 1; i <= 2; i++) {
+								if (rs.getString(i) != null) {
+									users.add(rs.getString(i));
+								}
+							}
+							historyObject
+									.setId(id)
+									.setUser(users)
+									.setDate(formatFullDate(rs.getTimestamp(3)))
+									.setOpObject(formatter.parseObject(rs.getString(4)))
+									.setType(rs.getString(5))
+									.setStatus(HistoryDTO.HistoryObject.Status.getStatus(rs.getInt(6)));
+
+							resources.add(historyObject);
 						}
+						history.put(id, resources);
+						historyDTO.setObjects(history);
+
+						return historyDTO;
 					}
-					historyObject
-							.setId(id)
-							.setUser(users)
-							.setDate(formatFullDate(rs.getTimestamp(3)))
-							.setOpObject(formatter.parseObject(rs.getString(4)))
-							.setType(rs.getString(5))
-							.setStatus(HistoryDTO.HistoryObject.Status.getStatus(rs.getInt(6)));
-
-					resources.add(historyObject);
-				}
-				history.put(id, resources);
-				historyDTO.setObjects(history);
-
-				return historyDTO;
-			}
-		});
+				});
 	}
 
 	public HistoryDTO getHistoryForType(String type, boolean latestChanges, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE type = ?" +
-						" ORDER BY time, dbid "  + sortType + " LIMIT " + limit, new Object[] {type},
+						" ORDER BY time, dbid " + sortType + " LIMIT " + limit, new Object[]{type},
 				new ResultSetExtractor<HistoryDTO>() {
 					@Override
 					public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -1129,7 +1129,7 @@ public class DBConsensusManager {
 		}
 	}
 
-	private static String formatFullDate(Date date) {
+	private String formatFullDate(Date date) {
 		if (date == null)
 			return null;
 
