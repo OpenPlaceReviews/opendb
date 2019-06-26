@@ -988,9 +988,9 @@ public class DBConsensusManager {
 		int userAmountFields = 2, totalAmountFields = 12;
 
 		List<Object[]> allBatches = new LinkedList<>();
-		allBatches.addAll(prepareArgumentsForHistoryBatch(newEditedObjects, op, date, HistoryDTO.HistoryObject.Status.EDITED, totalAmountFields));
-		allBatches.addAll(prepareArgumentsForHistoryBatch(op.getDeleted(), op, date, totalAmountFields));
 		allBatches.addAll(prepareArgumentsForHistoryBatch(op.getCreated(), op, date, HistoryDTO.HistoryObject.Status.CREATED, totalAmountFields));
+		allBatches.addAll(prepareArgumentsForHistoryBatch(op.getDeleted(), op, date, totalAmountFields));
+		allBatches.addAll(prepareArgumentsForHistoryBatch(newEditedObjects, op, date, HistoryDTO.HistoryObject.Status.EDITED, totalAmountFields));
 
 		dbSchema.insertObjIntoHistoryTableBatch(allBatches, OP_OBJ_HISTORY_TABLE, jdbcTemplate, userAmountFields, totalAmountFields);
 
