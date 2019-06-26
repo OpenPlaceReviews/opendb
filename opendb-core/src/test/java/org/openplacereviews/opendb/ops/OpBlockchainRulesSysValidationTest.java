@@ -489,7 +489,7 @@ public class OpBlockchainRulesSysValidationTest {
 		// generate role with owner_role = administrator
 		OpOperation opOperation = getOpRoleOperation(role, ownerRole, comment, serverName);
 
-		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
+		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
@@ -497,11 +497,17 @@ public class OpBlockchainRulesSysValidationTest {
 		// change comment and owner_role for user role
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, serverName);
 		opOperation.addOtherSignedBy(serverName);
-		opOperation.addDeleted(Collections.singletonList(role));
+
+		// create delete op
+		OpOperation deleteOperation = new OpOperation();
+		deleteOperation.setType(OpBlockchainRules.OP_ROLE);
+		deleteOperation.addDeleted(Collections.singletonList(role));
+		generateHashAndSignForOperation(deleteOperation, blc, true, serverKeyPair);
+		deleteOperation.makeImmutable();
+		blc.addOperation(deleteOperation);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
-		//TODO separate delete operation and check what is going wrong
 		blc.addOperation(opOperation);
 	}
 
@@ -605,7 +611,6 @@ public class OpBlockchainRulesSysValidationTest {
 		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
 		opOperation.makeImmutable();
 
-		//TODO check grants
 		blc.addOperation(opOperation);
 	}
 

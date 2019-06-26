@@ -105,10 +105,11 @@
 			]
 		}]
 	},
+	//TODO add validation rule -> change by edit
 	{
 		"type" : "sys.validate",
 		"create" : [{
-			"id" : ["role_could_be_changed_only_by_owner"],
+			"id" : ["role_could_be_deleted_only_by_owner"],
 			"type" : ["sys.role"],
 			"comment" : "Check that role could be changed only by owner. Role couldn't be deleted cause it will require revoking all grant access!",
 			"role" : "none",
@@ -116,8 +117,7 @@
 				"std:eq(std:size(.old), 1)"
 			],
 			"validate" : [
-				"auth:has_sig_roles(this, .old.0.owner_role)",
-				"std:eq(std:size(.new), 1)"
+				"auth:has_sig_roles(this, .old.0.owner_role)"
 			]
 		}]
 	},
