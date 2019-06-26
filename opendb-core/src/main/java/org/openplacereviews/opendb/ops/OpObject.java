@@ -15,7 +15,7 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.openplacereviews.opendb.util.JsonMapUtils;
+import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 
@@ -141,7 +141,7 @@ public class OpObject {
 	public Object getFieldByExpr(String field) {
 		if (field.contains(".") || field.contains("[") || field.contains("]")) {
 			String[] fieldSequence = field.split("\\.");
-			return JsonMapUtils.getField(this.fields, fieldSequence);
+			return JsonObjectUtils.getField(this.fields, fieldSequence);
 		}
 
 		return fields.get(field);
@@ -150,7 +150,7 @@ public class OpObject {
 	public void setFieldByExpr(String field, Object object) {
 		if (field.contains(".") || field.contains("[") || field.contains("]")) {
 			String[] fieldSequence = field.split("\\.");
-			JsonMapUtils.setField(this.fields, fieldSequence, object);
+			JsonObjectUtils.setField(this.fields, fieldSequence, object);
 		} else if (object == null) {
 			fields.remove(field);
 		} else {
