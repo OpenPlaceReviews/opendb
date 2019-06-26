@@ -272,7 +272,7 @@ public class OpBlockchainRules {
 		dls.addAll(ctx.deletedObjsCache);
 		for(OpObject oldObj : ctx.newObjsCache.values()) {
 			if(oldObj != null) {
-				dls.add(o);
+				dls.add(oldObj);
 			}
 		}
 
