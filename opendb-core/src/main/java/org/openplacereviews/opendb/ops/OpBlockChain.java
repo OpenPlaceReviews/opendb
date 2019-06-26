@@ -952,28 +952,39 @@ public class OpBlockChain {
 					opId = ee.getKey();
 					opValue = ee.getValue();
 				}
-				boolean checkCurrentFieldSpecified = false;
-				if (OP_CHANGE_DELETE.equals(opId)) {
-					newObject.setFieldByExpr(fieldExpr, null);
-					checkCurrentFieldSpecified = true;
-				} else if (OP_CHANGE_SET.equals(opId)) {
-					newObject.setFieldByExpr(fieldExpr, opValue);
-					checkCurrentFieldSpecified = true;
-				} else if (OP_CHANGE_APPEND.equals(opId)) {
-					// TODO
-					// 1. check that previous field is null, empty or array !!!
-					// 2. call setFieldByExpr
-				} else if (OP_CHANGE_INCREMENT.equals(opId)) {
-					// TODO
-					// 1. check that previous field is null, empty or int number !!!
-					// 2. call setFieldByExpr
-				} else {
-					throw new UnsupportedOperationException(
-							String.format("Operation %s is not supported for change", opId));
-				}
-				if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
-						&& currentObject.getFieldByExpr(fieldExpr) == null) {
-					return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+				try {
+					boolean checkCurrentFieldSpecified = false;
+					if (OP_CHANGE_DELETE.equals(opId)) {
+						newObject.setFieldByExpr(fieldExpr, null);
+						checkCurrentFieldSpecified = true;
+					} else if (OP_CHANGE_SET.equals(opId)) {
+						newObject.setFieldByExpr(fieldExpr, opValue);
+						checkCurrentFieldSpecified = true;
+					} else if (OP_CHANGE_APPEND.equals(opId)) {
+						Object oldObject = newObject.getFieldByExpr(fieldExpr);
+						if (oldObject == null) {
+							newObject.setFieldByExpr(fieldExpr, opValue);
+							checkCurrentFieldSpecified = true;
+						} else if (oldObject instanceof List) {
+							((List)oldObject).add(opValue);
+							checkCurrentFieldSpecified = true;
+						} else {
+							checkCurrentFieldSpecified = false;
+						}
+					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
+						// TODO
+						// 1. check that previous field is null, empty or int number !!!
+						// 2. call setFieldByExpr
+					} else {
+						throw new UnsupportedOperationException(
+								String.format("Operation %s is not supported for change", opId));
+					}
+					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
+							&& currentObject.getFieldByExpr(fieldExpr) == null) {
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+					}
+				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
+					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr);
 				}
 			}
 			newObject.makeImmutable();
