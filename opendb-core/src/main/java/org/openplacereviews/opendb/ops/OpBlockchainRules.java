@@ -225,11 +225,11 @@ public class OpBlockchainRules {
 	}
 
 	
-	public boolean validateRules(OpBlockChain blockchain, OpOperation o, 
+	public boolean validateRules(OpBlockChain blockchain, OpOperation o,
 			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache, ValidationTimer timer) {
 		if(OpBlockchainRules.OP_VALIDATE.equals(o.getType())) {
 			// validate expression
-			for(OpObject obj : o.getNew()) {
+			for(OpObject obj : o.getCreated()) {
 				try {
 					getValidateExpresions(F_IF, obj);
 					getValidateExpresions(F_VALIDATE, obj);
@@ -241,7 +241,7 @@ public class OpBlockchainRules {
 		// these 2 validations could be registered as blockchain sys.validate
 		if(OpBlockchainRules.OP_ROLE.equals(o.getType())) {
 			Map<String, Set<String>> builtInRoles = getRoles(blockchain);
-			for(OpObject obj : o.getNew()) {
+			for(OpObject obj : o.getCreated()) {
 				String roleId = obj.getId().get(0);
 				Set<String> existingDescendants = builtInRoles.get(roleId);
 				for (String superRole : obj.getStringList(F_SUPER_ROLES)) {
@@ -257,7 +257,7 @@ public class OpBlockchainRules {
 		// this validation could be registered as blockchain sys.validate
 		if(OpBlockchainRules.OP_GRANT.equals(o.getType())) {
 			Map<String, Set<String>> builtInRoles = getRoles(blockchain);
-			for(OpObject obj : o.getNew()) {
+			for(OpObject obj : o.getCreated()) {
 				for (String role : obj.getStringList(F_ROLES)) {
 					if (!builtInRoles.containsKey(role)) {
 						return error(o, ErrorType.OP_GRANT_ROLE_DOESNT_EXIST, o.getHash(), role, obj.getId().toString());
@@ -295,8 +295,8 @@ public class OpBlockchainRules {
 		for(String key : refObjsCache.keySet()) {
 			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
 		}
-		EvaluationContext ctx = new EvaluationContext(blockchain, formatter.toJsonElement(o).getAsJsonObject(),
-				deletedArray, refsMap);
+		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
+		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, deletedArray, refsMap);
 		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(OpExprEvaluator s : ifs) {
@@ -472,8 +472,8 @@ public class OpBlockchainRules {
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());
 		boolean signByItself = false;
 		String signupName = "";
-		if(OpBlockchainRules.OP_SIGNUP.equals(ob.getType()) && ob.getNew().size() == 1) {
-			signupName =  ob.getNew().get(0).getId().get(0);
+		if(OpBlockchainRules.OP_SIGNUP.equals(ob.getType()) && ob.getCreated().size() == 1) {
+			signupName =  ob.getCreated().get(0).getId().get(0);
 			OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
 			signByItself = obj == null || obj.getStringValue(F_AUTH_METHOD).equals(METHOD_OAUTH);
 		}
@@ -486,7 +486,7 @@ public class OpBlockchainRules {
 				String signedByName = signedBy.get(i);
 				OpObject keyObj;
 				if(signByItself && signedByName.equals(signupName)) {
-					keyObj = ob.getNew().get(0);
+					keyObj = ob.getCreated().get(0);
 				} else {
 					keyObj = getLoginKeyObj(ctx, signedByName);
 				}

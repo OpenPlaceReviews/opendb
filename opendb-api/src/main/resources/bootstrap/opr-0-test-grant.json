@@ -4,7 +4,7 @@
 		"ref" : {
 			"s" : ["sys.login","openplacereviews","test_1"]
 		},
-		"new" : [{ 
+		"create" : [{
 			"id" : ["openplacereviews:test_1"],
 			"roles" : ["master", "administrator"]
 		}]
@@ -14,7 +14,7 @@
 		"ref" : {
 			"s" : ["sys.signup","openplacereviews"]
 		},
-		"new" : [{ 
+		"create" : [{
 			"id" : ["openplacereviews"],
 			"roles" : ["owner"]
 		}]

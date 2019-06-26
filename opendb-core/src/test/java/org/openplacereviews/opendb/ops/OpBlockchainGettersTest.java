@@ -1,30 +1,34 @@
 package org.openplacereviews.opendb.ops;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-import org.openplacereviews.opendb.ops.de.CompoundKey;
-import org.openplacereviews.opendb.ops.de.OperationDeleteInfo;
-import org.openplacereviews.opendb.util.JsonFormatter;
-
-import java.util.Collection;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainGettersTest {
+	// TODO make class parameterized not methods !
 
 	public OpBlockChain blc;
-
+	
 	@Before
 	public void beforeEachTestMethod() throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();
@@ -106,12 +110,6 @@ public class OpBlockchainGettersTest {
 		assertFalse(opBlockDeque.isEmpty());
 	}
 
-	@Test
-	@Parameters(method = "opblockchainBasicParameterWithBlock")
-	public void testGetSuperblockDeleteInfo(OpBlockChain opBlockChain) {
-		Collection<OperationDeleteInfo> listOperationDeleteInfo = opBlockChain.getSuperblockDeleteInfo();
-		assertFalse(listOperationDeleteInfo.isEmpty());
-	}
 
 	@Test
 	@Parameters(method = "opblockchainBasicParameterWithoutBlock")

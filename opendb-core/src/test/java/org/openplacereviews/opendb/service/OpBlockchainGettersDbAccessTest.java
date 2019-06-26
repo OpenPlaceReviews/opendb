@@ -48,11 +48,6 @@ public class OpBlockchainGettersDbAccessTest {
 	private JdbcTemplate jdbcTemplate;
 	private OpenDBServer.MetadataDb metadataDb;
 
-	@AfterClass
-	public static void afterClassTest() throws SQLException {
-		databaseServer.getConnection().close();
-	}
-
 	@Before
 	public void beforeEachTest() throws SQLException, FailedVerificationException {
 		MockitoAnnotations.initMocks(this);
@@ -171,14 +166,6 @@ public class OpBlockchainGettersDbAccessTest {
 		opBlockchainGettersTest.testGetSuperblockFullBlocks(blockChain);
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
-	public void testGetSuperblockDeleteInfoWithDBAccess() throws FailedVerificationException {
-		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
-
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
-
-		opBlockchainGettersTest.testGetSuperblockDeleteInfo(blockChain);
-	}
 
 	@Test(expected = UnsupportedOperationException.class)
 	public void testGetSuperblockObjectsWithDBAccess() throws FailedVerificationException {
@@ -248,7 +235,6 @@ public class OpBlockchainGettersDbAccessTest {
 		opBlockchainGettersTest.testGetFullBlockByNotExistingRawHash(blockChain);
 	}
 
-	//TODO
 	@Ignore
 	@Test
 	public void testGetOperationByHashWithDBAccess() throws FailedVerificationException {

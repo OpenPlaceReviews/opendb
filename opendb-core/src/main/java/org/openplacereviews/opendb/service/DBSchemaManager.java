@@ -36,7 +36,6 @@ public class DBSchemaManager {
 	protected static String SETTINGS_TABLE = "opendb_settings";
 	protected static String BLOCKS_TABLE = "blocks";
 	protected static String OPERATIONS_TABLE = "operations";
-	protected static String OP_DELETED_TABLE = "op_deleted";
 	protected static String OBJS_TABLE = "objs";
 	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
 	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
@@ -142,11 +141,6 @@ public class DBSchemaManager {
 		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", INDEXED);
 		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
 		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
-
-		registerColumn(OP_DELETED_TABLE, "hash", "bytea", INDEXED);
-		registerColumn(OP_DELETED_TABLE, "superblock", "bytea", INDEXED);
-		registerColumn(OP_DELETED_TABLE, "shash", "bytea[]", NOT_INDEXED);
-		registerColumn(OP_DELETED_TABLE, "mask", "bigint", NOT_INDEXED);
 
 		registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
 		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", NOT_INDEXED);

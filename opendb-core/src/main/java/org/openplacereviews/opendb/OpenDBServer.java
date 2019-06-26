@@ -24,69 +24,46 @@ import javax.servlet.MultipartConfigElement;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 @EnableScheduling
 @EnableJpaAuditing
 @EnableConfigurationProperties
-public class OpenDBServer  {
+public class OpenDBServer {
 
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBServer.class);
-	
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-	
-	@Autowired
-	BlocksManager blocksManager;
-
-	@Autowired
-	DBConsensusManager dbDataManager;
-	
-	@Autowired
-	LogOperationService logOperationService;
-
-	@Autowired
-	IPFSFileManager externalResourcesService;
-
 	@Value("${spring.servlet.multipart.max-file-size}")
 	public String maxUploadSize;
-
 	@Value("${spring.servlet.multipart.max-request-size}")
 	public String maxRequestSize;
+	@Autowired
+	BlocksManager blocksManager;
+	@Autowired
+	DBConsensusManager dbDataManager;
+	@Autowired
+	LogOperationService logOperationService;
+	@Autowired
+	IPFSFileManager externalResourcesService;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
 		SpringApplication.run(OpenDBServer.class, args);
 	}
-	
-	public static class MetadataDb {
-		public Map<String, List<MetadataColumnSpec>> tablesSpec = new TreeMap<String, List<MetadataColumnSpec>>();
+
+	public void preStartApplication() {
+
 	}
-	
-	public static class MetadataColumnSpec {
-		public String name;
-		public String columnName;
-		public int sqlType;
-		public String dataType;
-		public int columnSize;
-		@Override
-		public String toString() {
-			return "Column [name=" + name + ", columnName=" + columnName + ", sqlType=" + sqlType
-					+ ", dataType=" + dataType + ", columnSize=" + columnSize + "]";
-		}
-	}
-	
+
 	public MetadataDb loadMetadata() {
 		MetadataDb d = new MetadataDb();
 		try {
 			DatabaseMetaData mt = jdbcTemplate.getDataSource().getConnection().getMetaData();
 			ResultSet rs = mt.getColumns(null, DBConstants.SCHEMA_NAME, null, null);
-			while(rs.next()) {
+			while (rs.next()) {
 				String tName = rs.getString("TABLE_NAME");
-				if(!d.tablesSpec.containsKey(tName)) {
+				if (!d.tablesSpec.containsKey(tName)) {
 					d.tablesSpec.put(tName, new ArrayList<OpenDBServer.MetadataColumnSpec>());
 				}
 				List<MetadataColumnSpec> cols = d.tablesSpec.get(tName);
@@ -102,13 +79,13 @@ public class OpenDBServer  {
 		}
 		return d;
 	}
-	
 
 	@Bean
 	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
 		return args -> {
 			try {
 				LOGGER.info("Application starting...");
+				preStartApplication();
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
@@ -127,6 +104,24 @@ public class OpenDBServer  {
 		factory.setMaxFileSize(maxUploadSize);
 		factory.setMaxRequestSize(maxRequestSize);
 		return factory.createMultipartConfig();
+	}
+
+	public static class MetadataDb {
+		public Map<String, List<MetadataColumnSpec>> tablesSpec = new TreeMap<String, List<MetadataColumnSpec>>();
+	}
+
+	public static class MetadataColumnSpec {
+		public String name;
+		public String columnName;
+		public int sqlType;
+		public String dataType;
+		public int columnSize;
+
+		@Override
+		public String toString() {
+			return "Column [name=" + name + ", columnName=" + columnName + ", sqlType=" + sqlType
+					+ ", dataType=" + dataType + ", columnSize=" + columnSize + "]";
+		}
 	}
 
 }

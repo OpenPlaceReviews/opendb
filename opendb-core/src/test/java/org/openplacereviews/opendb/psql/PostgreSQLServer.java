@@ -52,12 +52,6 @@ public class PostgreSQLServer extends org.junit.rules.ExternalResource {
 		System.setProperty("spring.datasource.password", JDBC_PASSWORD);
 	}
 
-	@Override
-	protected void after() {
-		super.after();
-		postgres.stop();
-	}
-
 	public void wipeDatabase() throws Exception {
 		synchronized (PostgreSQLServer.class) {
 			try (final Connection connection = getConnection();

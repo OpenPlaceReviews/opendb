@@ -69,7 +69,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.setSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
@@ -113,7 +113,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
@@ -145,7 +145,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
@@ -177,7 +177,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(name + 1);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
@@ -219,7 +219,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password);
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
@@ -254,7 +254,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.setSignedBy(name);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password);
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair);
@@ -290,7 +290,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -324,7 +324,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
@@ -359,8 +359,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(sName);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addOld(blc.getRules().getLoginKeyObj(blc, name).getParentHash(), 0);
-		opOperation.addNew(opObject);
+		opOperation.addDeleted(Collections.singletonList(blc.getRules().getLoginKeyObj(blc, name).getParentHash()));
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -392,7 +392,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.putObjectValue(OpOperation.F_REF, refs);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
@@ -426,8 +426,8 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name1);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
-		opOperation.addOld(blc.getRules().getLoginKeyObj(blc, name).getParentHash(), 0);
-		opOperation.addNew(opObject);
+		opOperation.addDeleted(Collections.singletonList(blc.getRules().getLoginKeyObj(blc, name).getParentHash()));
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -485,7 +485,6 @@ public class OpBlockchainRulesSysValidationTest {
 	public void testChangeRole() throws FailedVerificationException {
 		String role = "user", ownerRole = "administrator", newOwnerRole = "master", comment = "some comment",
 				newComment = "some comment 1";
-		String operationHash;
 
 		// generate role with owner_role = administrator
 		OpOperation opOperation = getOpRoleOperation(role, ownerRole, comment, serverName);
@@ -494,12 +493,11 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
-		operationHash = opOperation.getRawHash();
 
 		// change comment and owner_role for user role
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, serverName);
 		opOperation.addOtherSignedBy(serverName);
-		opOperation.addOld(operationHash, 0);
+		opOperation.addDeleted(Collections.singletonList(role));
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -531,7 +529,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		// change comment and onwer_role for user role
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, notOwner);
-		opOperation.addOld(operationHash, 0);
+		opOperation.addDeleted(Collections.singletonList(operationHash));
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair);
 		opOperation.makeImmutable();
@@ -553,7 +551,6 @@ public class OpBlockchainRulesSysValidationTest {
 		// generate user role
 		String username = "testUsername", role = "user", ownerRole = "master", newOwnerRole = "administrator", comment =
 				"some comment", newComment = "some comment 1";
-		String operationHash;
 
 		KeyPair userKeyPair = generateSysSignupWithPwdAuth(username);
 
@@ -563,11 +560,10 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
-		operationHash = opOperation.getRawHash();
 
 		// checking to change role by not role owner
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
-		opOperation.addOld(operationHash, 0);
+		opOperation.addDeleted(Collections.singletonList(role));
 
 		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
 		opOperation.makeImmutable();
@@ -591,7 +587,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.putObjectValue(OpOperation.F_REF, refs);
 		grantOperation.setType(OpBlockchainRules.OP_GRANT);
-		grantOperation.addNew(opObject);
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, true, serverKeyPair);
 		grantOperation.makeImmutable();
@@ -626,7 +622,7 @@ public class OpBlockchainRulesSysValidationTest {
 		grantOperation.setSignedBy(username);
 		grantOperation.putObjectValue(OpOperation.F_REF, refs);
 		grantOperation.setType(OpBlockchainRules.OP_GRANT);
-		grantOperation.addNew(opObject);
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, userKeyPair);
 		grantOperation.makeImmutable();
@@ -658,8 +654,8 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addOld(loadedObject.getParentHash(), 0);
-		grantOperation.addNew(opObject);
+		grantOperation.addDeleted(Collections.singletonList(loadedObject.getParentHash()));
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, true, serverKeyPair);
 		grantOperation.makeImmutable();
@@ -685,13 +681,13 @@ public class OpBlockchainRulesSysValidationTest {
 		opObject.setId(validationName);
 		opObject.putStringValue(F_TYPE, OP_OPERATION);
 		opObject.putStringValue(F_COMMENT, comment);
-		opObject.putObjectValue("role", "master");
+		opObject.putStringValue("role", "master");
 
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addOld(loadedObject.getParentHash(), 0);
-		grantOperation.addNew(opObject);
+		grantOperation.addDeleted(Collections.singletonList(validationName));
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
 		grantOperation.makeImmutable();
@@ -720,7 +716,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.putObjectValue(OpOperation.F_REF, refs);
 		grantOperation.setType(OpBlockchainRules.OP_GRANT);
-		grantOperation.addNew(opObject);
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, true, serverKeyPair);
 		grantOperation.makeImmutable();
@@ -752,7 +748,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
 		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,
 				SecUtils.encodeKey(SecUtils.KEY_BASE64, keyPair.getPublic()));
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -776,7 +772,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_ROLE);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -800,7 +796,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_OPERATION);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -830,7 +826,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -861,7 +857,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -885,7 +881,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_OPERATION);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -912,7 +908,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(notExistingOperationType);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
@@ -941,9 +937,9 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addOld(loadedObject.getParentHash(), 0);
-		grantOperation.addOld(loadedObject.getParentHash(), 0);
-		grantOperation.addNew(opObject);
+		grantOperation.addDeleted(Collections.singletonList(loadedObject.getParentHash()));
+		grantOperation.addDeleted(Collections.singletonList(loadedObject.getParentHash()));
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
 		grantOperation.makeImmutable();
@@ -974,8 +970,8 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addOld(loadedObject.getParentHash(), 0);
-		grantOperation.addNew(opObject);
+		grantOperation.addDeleted(Collections.singletonList(loadedObject.getParentHash()));
+		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
 		grantOperation.makeImmutable();
@@ -1003,7 +999,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -1031,7 +1027,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setSignedBy(name);
 		opOperation.addOtherSignedBy(serverName);
 		opOperation.setType(OpBlockchainRules.OP_SIGNUP);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
@@ -1050,7 +1046,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation opOperation = new OpOperation();
 		opOperation.addOtherSignedBy(signedBy);
 		opOperation.setType(OpBlockchainRules.OP_ROLE);
-		opOperation.addNew(opObject);
+		opOperation.addCreated(opObject);
 		return opOperation;
 	}
 }

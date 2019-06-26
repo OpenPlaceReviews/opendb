@@ -2,15 +2,15 @@
 	{
 		"type" : "sys.signup",
 		"signed_by": "openplacereviews",
-		"new": [{	
+		"create": [{
 			"id": ["openplacereviews"],
 			"name" : "openplacereviews",
 			"algo": "EC",
 			"auth_method": "provided",
-			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOR7zRAwYHy2vmJhOxrwNCUGI23NldhKV+kuBK5Jsah2gyHX4jNqkryksrmNHUjFogNttjilhFwG78HT64KLgcw=="
+			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
-		"hash": "json:sha256:10c5978d2466b67505d2d94a9a0f29695e03bf11893a4a5cac3cd700aa757dd9",
-		"signature": "ECDSA:base64:MEUCIQDjwKWF4BTeDdILZKq51eBt7VW0fkCBggCT0DDRd7hpFgIgdnKccY5yMoHaL2FWbMWqGZlvzvF76oacrlbqBmQDYBo="
+		"hash": "json:sha256:439715024c856dd93b4bf45bb0c592621d1f6c0905078a4e73cf73d400ff2a1b",
+		"signature": "ECDSA:base64:MEQCIEQ0AJe5SldWl0wuZevCIK4qjgDT6O9IcpSQNZpoZuq8AiBSZkWNGRKsfsxF2Kevn50NSilFbjCK8QkXlxtQZV7QNw=="
 	},
 	{
 		"type" : "sys.login",
@@ -18,14 +18,14 @@
 		"ref" : {
 			"s" : ["sys.signup","openplacereviews"]
 		},
-		"new" : [{	
+		"create" : [{
 			"id" : ["openplacereviews","test_1"],
 			"algo" : "EC",
 			"auth_method" : "provided",
-			"pubkey": "base64:X.509:XXXwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqb=="
+			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
-		"hash": "json:sha256:fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802",
-		"signature": "ECDSA:base64:MEUCIQDbaIttXUkJCqiR61b39u6xr9xxOPw/XOM2no+04XrPlgIgOrAwPOVIh9oL8wb4FvWA0Fcx0SpqOK6P3GfPHLmTQ60="
+		"hash": "json:sha256:f5f8668b05be06d19f91fb80ec0d021c1823058f3e71203a7c79310c0ccff529",
+		"signature": "ECDSA:base64:MEUCIQCH289bbPSUwlV0AzwbPW06Ksu2t0VN3RElRuFQXihvqQIgMhI8yW1v/QrMYvqQyCPFPbXE9oSwC4h4cWGn92spMfA="
 	},
 	{
 		"type" : "sys.login",
@@ -33,14 +33,14 @@
 		"ref" : {
 			"s" : ["sys.signup","openplacereviews"]
 		},
-		"old" : ["fefffd95ccaa8b2545f2c5b8e1e7ae8c7d8f530b8d61be60df2345d74102c802:0"],
-		"new": [{	
+		"delete" : [["openplacereviews","test_1"]],
+		"create": [{
 			"id": ["openplacereviews","test_1"],
 			"algo": "EC",
 			"auth_method": "provided",
 			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
-		}],			
-		"hash": "json:sha256:41b132e7832099d14bf501606a969ba2a84ad2c46125b1c6470df709481d94b6",
-		"signature": "ECDSA:base64:MEYCIQDCuwakI7jd0bExEDnnKc4X41oS2hbj0XwRfuSgXqu6/gIhAKQSlPt9amGgHz20yiES87vOt4i3/BFDu3IrGgIlz8AM"
+		}],
+		"hash": "json:sha256:5d5d1bb287be77fc38249f95db5b8a4fa10e8ba8df94ac5618bc2d5f3e040ea4",
+		"signature": "ECDSA:base64:MEQCIHn8bCLfzmGpsnBKgbh3oGDrAZnETLR3Qq58m5QssXFbAiA25vZUizf2Dr9GomQ+zuj7JIZc4GW6GoNmP79Bvpdxng=="
 	}
 ]

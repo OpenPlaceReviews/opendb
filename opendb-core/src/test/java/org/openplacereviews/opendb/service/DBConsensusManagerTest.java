@@ -1,31 +1,50 @@
 package org.openplacereviews.opendb.service;
 
-import org.junit.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generate30Blocks;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
+
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
-import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 public class DBConsensusManagerTest {
 
@@ -51,11 +70,6 @@ public class DBConsensusManagerTest {
 	private FileBackupManager fileBackupManager;
 	private JdbcTemplate jdbcTemplate;
 	private OpenDBServer.MetadataDb metadataDb;
-
-	@AfterClass
-	public static void closeDBConnection() throws SQLException {
-		databaseServer.getConnection().close();
-	}
 
 	@Before
 	public void beforeEachTestMethod() throws Exception {

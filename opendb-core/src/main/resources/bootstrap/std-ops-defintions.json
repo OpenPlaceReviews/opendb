@@ -1,7 +1,7 @@
 [
 	{
 		"type" : "sys.operation",
-		"new": [{
+		"create": [{
 			"id" : ["sys.operation"],
 			"comment" : "Operation to define other operations with description and fields",
 			"version" : 0,
@@ -10,13 +10,13 @@
 				"fields" : "map of fields accepted by operation with their description",
 				"arity" : "integer number describing arity of operation, 0 - means that operation could create/delete 0 or 1 object maximum.",
 				"comment" : "description of the operation, purpose and how it could be used",
-				"version" : "optional int version of the defined operation"	
+				"version" : "optional int version of the defined operation"
 			}
 		}]
 	},
 	{
 		"type" : "sys.operation",
-		"new": [{
+		"create": [{
 			"id" : ["sys.signup"],
 			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",
 			"version" : 0,
@@ -51,7 +51,7 @@
 	},
 	{
 		"type" : "sys.operation",
-		"new": [{	
+		"create": [{
 			"id" : ["sys.login"],
 			"comment" : "Operation to create login pair of private key",
 			"version" : 0,
@@ -80,7 +80,7 @@
 	},
 	{
 		"type" : "sys.operation",
-		"new": [{	
+		"create": [{
 			"id" : ["sys.validate"],
 			"comment" : "Operation that defines validation on blockchain operations",
 			"version" : 0,
@@ -96,7 +96,7 @@
 	},
 	{
 		"type" : "sys.operation",
-		"new": [{
+		"create": [{
 			"id" : ["sys.grant"],
 			"comment" : "Operation that assigns user to a specific role",
 			"version" : 0,
@@ -110,7 +110,7 @@
 	},
 	{
 		"type" : "sys.operation",
-		"new": [{	
+		"create": [{
 			"id" : ["sys.role"],
 			"comment" : "Operation that defines role for user, role restriction are defined by validation operations",
 			"version" : 0,
