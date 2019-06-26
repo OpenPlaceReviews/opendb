@@ -117,7 +117,7 @@ public class DBSchemaManager {
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
 			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", true);
 		}
-		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", true);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", false);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", false);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", false);
 

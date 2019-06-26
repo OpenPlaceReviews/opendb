@@ -996,9 +996,9 @@ public class DBConsensusManager {
 
 	}
 
-	public HistoryDTO getHistoryForUser(List<String> user, boolean latestChanges, int limit) {
+	public HistoryDTO getHistoryForUser(List<String> user, boolean latestChanges, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT p1, p2, p3, p4, p5, time, obj, type, status from " + OP_OBJ_HISTORY_TABLE + " where " +
-					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", user.size())+ " ORDER BY time,dbid DESC LIMIT " + limit, user.toArray(),
+					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", user.size())+ " ORDER BY time,dbid " + sortType + " LIMIT " + limit, user.toArray(),
 				new ResultSetExtractor<HistoryDTO>() {
 			@Override
 			public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -1036,9 +1036,9 @@ public class DBConsensusManager {
 		});
 	}
 
-	public HistoryDTO getHistoryForObject(List<String> id, boolean latestChanges, int limit) {
+	public HistoryDTO getHistoryForObject(List<String> id, boolean latestChanges, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", id.size())+ " ORDER BY time, dbid DESC LIMIT " + limit, id.toArray(),
+					dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", id.size())+ " ORDER BY time, dbid "  + sortType + " LIMIT " + limit, id.toArray(),
 				new ResultSetExtractor<HistoryDTO>() {
 			@Override
 			public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -1071,9 +1071,9 @@ public class DBConsensusManager {
 		});
 	}
 
-	public HistoryDTO getHistoryForType(String type, boolean latestChanges, int limit) {
+	public HistoryDTO getHistoryForType(String type, boolean latestChanges, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE type = ?" +
-						" ORDER BY time, dbid DESC LIMIT " + limit, new Object[] {type},
+						" ORDER BY time, dbid "  + sortType + " LIMIT " + limit, new Object[] {type},
 				new ResultSetExtractor<HistoryDTO>() {
 					@Override
 					public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {

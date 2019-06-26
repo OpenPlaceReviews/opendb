@@ -103,6 +103,11 @@
         <br>
         <label>Load latest changes:&nbsp;</label><input type="checkbox" id="load-history-with-latest-changes"/>
         <br>
+        <label>Time sorting ASC/DESC:&nbsp;</label>
+        <div>
+           <label>ASC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="ASC" id="load-history-sort-asc"/>
+           <label>DESC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="DESC" id="load-history-sort-desc" checked/>
+        </div>
         <label>Input search key:</label><input type="text" id="history-search-field"/>
         <br>
         <label>Input amount entries (Limit):</label><input type="text" id="history-limit-field" value="20"/>
@@ -244,7 +249,6 @@
 </div>
 </body>
 <script>
-
     var loginName = "";
 
     function loadDataDelay(d=1500) {
@@ -605,8 +609,10 @@
                "type":$("#history-type-list").val(),
                "key":$("#history-search-field").val(),
                "latestChanges":$("#load-history-with-latest-changes").is(':checked'),
-               "limit":$("#history-limit-field").val()
+               "limit":$("#history-limit-field").val(),
+               "sort":$('.history-checkbox-sort:checked').val()
            };
+           console.log($('.history-checkbox-sort:checked').val());
            $.get("/api/history", obj)
                .done(function(data) {
                    var items = "";
@@ -770,6 +776,11 @@
         const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('');
         return hashHex;
     }
+
+    $('input[type="checkbox"]').on('change', function() {
+        $(this).siblings('input[type="checkbox"]').prop('checked', false);
+    });
+
 </script>
 
 </html>

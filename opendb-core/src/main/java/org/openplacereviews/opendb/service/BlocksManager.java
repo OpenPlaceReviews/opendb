@@ -94,13 +94,13 @@ public class BlocksManager {
 		return replicateUrl;
 	}
 
-	public HistoryDTO getHistory(String type, List<String> key, boolean latestChanges, int limit, boolean sortDateASC) {
+	public HistoryDTO getHistory(String type, List<String> key, boolean latestChanges, int limit, String sortDateASC) {
 		if (type.equals("user")) {
-			return dataManager.getHistoryForUser(key, latestChanges, limit);
+			return dataManager.getHistoryForUser(key, latestChanges, limit, sortDateASC);
 		} else if (type.equals("object")) {
-			return dataManager.getHistoryForObject(key, latestChanges, limit);
+			return dataManager.getHistoryForObject(key, latestChanges, limit, sortDateASC);
 		} else if (type.equals("type")) {
-			return dataManager.getHistoryForType(key.get(0), latestChanges, limit);
+			return dataManager.getHistoryForType(key.get(0), latestChanges, limit, sortDateASC);
 		}
 
 		return null;
