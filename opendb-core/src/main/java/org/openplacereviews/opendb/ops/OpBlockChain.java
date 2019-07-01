@@ -1,26 +1,16 @@
 package org.openplacereviews.opendb.ops;
 
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.security.KeyPair;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  *  Guidelines of object methods:
@@ -952,28 +942,39 @@ public class OpBlockChain {
 					opId = ee.getKey();
 					opValue = ee.getValue();
 				}
-				boolean checkCurrentFieldSpecified = false;
-				if (OP_CHANGE_DELETE.equals(opId)) {
-					newObject.setFieldByExpr(fieldExpr, null);
-					checkCurrentFieldSpecified = true;
-				} else if (OP_CHANGE_SET.equals(opId)) {
-					newObject.setFieldByExpr(fieldExpr, opValue);
-					checkCurrentFieldSpecified = true;
-				} else if (OP_CHANGE_APPEND.equals(opId)) {
-					// TODO
-					// 1. check that previous field is null, empty or array !!!
-					// 2. call setFieldByExpr
-				} else if (OP_CHANGE_INCREMENT.equals(opId)) {
-					// TODO
-					// 1. check that previous field is null, empty or int number !!!
-					// 2. call setFieldByExpr
-				} else {
-					throw new UnsupportedOperationException(
-							String.format("Operation %s is not supported for change", opId));
-				}
-				if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
-						&& currentObject.getFieldByExpr(fieldExpr) == null) {
-					return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+				try {
+					boolean checkCurrentFieldSpecified = false;
+					if (OP_CHANGE_DELETE.equals(opId)) {
+						newObject.setFieldByExpr(fieldExpr, null);
+						checkCurrentFieldSpecified = true;
+					} else if (OP_CHANGE_SET.equals(opId)) {
+						newObject.setFieldByExpr(fieldExpr, opValue);
+						checkCurrentFieldSpecified = true;
+					} else if (OP_CHANGE_APPEND.equals(opId)) {
+						Object oldObject = newObject.getFieldByExpr(fieldExpr);
+						if (oldObject == null) {
+							newObject.setFieldByExpr(fieldExpr, opValue);
+							checkCurrentFieldSpecified = true;
+						} else if (oldObject instanceof List) {
+							((List)oldObject).add(opValue);
+							checkCurrentFieldSpecified = true;
+						} else {
+							checkCurrentFieldSpecified = false;
+						}
+					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
+						// TODO
+						// 1. check that previous field is null, empty or int number !!!
+						// 2. call setFieldByExpr
+					} else {
+						throw new UnsupportedOperationException(
+								String.format("Operation %s is not supported for change", opId));
+					}
+					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
+							&& currentObject.getFieldByExpr(fieldExpr) == null) {
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+					}
+				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
+					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr);
 				}
 			}
 			newObject.makeImmutable();
