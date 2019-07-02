@@ -1,26 +1,16 @@
 package org.openplacereviews.opendb.ops;
 
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.security.KeyPair;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  *  Guidelines of object methods:
@@ -972,9 +962,16 @@ public class OpBlockChain {
 							checkCurrentFieldSpecified = false;
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
-						// TODO
-						// 1. check that previous field is null, empty or int number !!!
-						// 2. call setFieldByExpr
+						Object oldObject = newObject.getFieldByExpr(fieldExpr);
+						if (oldObject == null) {
+							newObject.setFieldByExpr(fieldExpr, 0);
+							checkCurrentFieldSpecified = true;
+						} else if (oldObject instanceof Number) {
+							oldObject = ((Number) oldObject).doubleValue() + 1;
+							checkCurrentFieldSpecified = true;
+						} else {
+							checkCurrentFieldSpecified = false;
+						}
 					} else {
 						throw new UnsupportedOperationException(
 								String.format("Operation %s is not supported for change", opId));
