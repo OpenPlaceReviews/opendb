@@ -964,7 +964,7 @@ public class OpBlockChain {
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
-							newObject.setFieldByExpr(fieldExpr, 0);
+							newObject.setFieldByExpr(fieldExpr, 1);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof Number) {
 							oldObject = ((Number) oldObject).doubleValue() + 1;
