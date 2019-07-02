@@ -101,8 +101,6 @@
             <option value="type">Type</option>
     </select>
         <br>
-        <label>Load latest changes:&nbsp;</label><input type="checkbox" id="load-history-with-latest-changes"/>
-        <br>
         <label>Time sorting ASC/DESC:&nbsp;</label>
         <div>
            <label>ASC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="ASC" id="load-history-sort-asc"/>
@@ -620,7 +618,6 @@
            var obj = {
                "type":$("#history-type-list").val(),
                "key":$("#history-search-field").val(),
-               "latestChanges":$("#load-history-with-latest-changes").is(':checked'),
                "limit":$("#history-limit-field").val(),
                "sort":$('.history-checkbox-sort:checked').val()
            };

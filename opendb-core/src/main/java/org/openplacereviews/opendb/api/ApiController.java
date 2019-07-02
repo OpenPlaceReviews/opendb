@@ -208,7 +208,10 @@ public class ApiController {
 						  @RequestParam(required = false) boolean latestChanges,
 						  @RequestParam(required = false, defaultValue = "20") int limit,
 						  @RequestParam(required = true) String sort) {
-		HistoryDTO result = manager.getHistory(type, key, latestChanges, limit, sort);
+		if (key.isEmpty()) {
+			return "{}";
+		}
+		HistoryDTO result = manager.getHistory(type, key, limit, sort);
 
 		return formatter.fullObjectToJson(result);
 	}

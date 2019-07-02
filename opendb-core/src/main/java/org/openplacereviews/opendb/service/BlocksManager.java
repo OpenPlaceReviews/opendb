@@ -94,15 +94,16 @@ public class BlocksManager {
 		return replicateUrl;
 	}
 
-	public HistoryDTO getHistory(String type, List<String> key, boolean latestChanges, int limit, String sortDateASC) {
+	public HistoryDTO getHistory(String type, List<String> key, int limit, String sortDateASC) {
 		if (type.equals("user")) {
-			return dataManager.getHistoryForUser(key, latestChanges, limit, sortDateASC);
+			return dataManager.getHistoryForUser(key, limit, sortDateASC);
 		} else if (type.equals("object")) {
-			return dataManager.getHistoryForObject(key, latestChanges, limit, sortDateASC);
+			return dataManager.getHistoryForObject(key, limit, sortDateASC);
 		} else if (type.equals("type")) {
-			return dataManager.getHistoryForType(key.get(0), latestChanges, limit, sortDateASC);
+			return dataManager.getHistoryForType(key.get(0), limit, sortDateASC);
 		}
 
+		LOGGER.debug("History for type: " + type + " is not defined");
 		return null;
 	}
 	
