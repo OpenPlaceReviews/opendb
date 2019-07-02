@@ -57,8 +57,7 @@
 			],
 			"validate" : [
 				"std:leq(std:size(.new),1)",
-				"std:leq(std:size(.old),1)",
-				"std:leq(std:size(.edit),1)"
+				"std:leq(std:size(.old),1)"
 			]
 		}]
 	},
