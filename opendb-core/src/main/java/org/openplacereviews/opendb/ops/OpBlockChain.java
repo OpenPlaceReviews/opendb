@@ -962,9 +962,16 @@ public class OpBlockChain {
 							checkCurrentFieldSpecified = false;
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
-						// TODO
-						// 1. check that previous field is null, empty or int number !!!
-						// 2. call setFieldByExpr
+						Object oldObject = newObject.getFieldByExpr(fieldExpr);
+						if (oldObject == null) {
+							newObject.setFieldByExpr(fieldExpr, 1);
+							checkCurrentFieldSpecified = true;
+						} else if (oldObject instanceof Number) {
+							newObject.setFieldByExpr(fieldExpr, (((Number) oldObject).doubleValue() + 1));
+							checkCurrentFieldSpecified = true;
+						} else {
+							checkCurrentFieldSpecified = false;
+						}
 					} else {
 						throw new UnsupportedOperationException(
 								String.format("Operation %s is not supported for change", opId));
