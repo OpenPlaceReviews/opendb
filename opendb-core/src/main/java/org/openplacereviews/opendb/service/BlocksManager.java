@@ -31,6 +31,11 @@ public class BlocksManager {
 	public static final String BOOT_STD_ROLES = "std-roles";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
 
+	private static final String HISTORY_BY_USER = "user";
+	private static final String HISTORY_BY_OBJECT = "object";
+	private static final String HISTORY_BY_TYPE = "type";
+
+
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
 	@Autowired
@@ -95,15 +100,14 @@ public class BlocksManager {
 	}
 
 	public HistoryDTO getHistory(String type, List<String> key, int limit, String sortDateASC) {
-		if (type.equals("user")) {
+		if (type.equals(HISTORY_BY_USER)) {
 			return dataManager.getHistoryForUser(key, limit, sortDateASC);
-		} else if (type.equals("object")) {
+		} else if (type.equals(HISTORY_BY_OBJECT)) {
 			return dataManager.getHistoryForObject(key, limit, sortDateASC);
-		} else if (type.equals("type")) {
+		} else if (type.equals(HISTORY_BY_TYPE)) {
 			return dataManager.getHistoryForType(key.get(0), limit, sortDateASC);
 		}
 
-		LOGGER.debug("History for type: " + type + " is not defined");
 		return null;
 	}
 	

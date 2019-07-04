@@ -1035,10 +1035,17 @@ public class DBConsensusManager {
 				});
 	}
 
-	public HistoryDTO getHistoryForObject(List<String> id, int limit, String sortType) {
+	public HistoryDTO getHistoryForObject(List<String> obj, int limit, String sortType) {
+		String objType = null;
+		if (obj.size() > 1) {
+			objType = obj.get(0);
+		}
+		Object[] args = obj.toArray();
+		System.out.println(Arrays.toString(args));
 		return jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", id.size()) +
-						" ORDER BY time, dbid " + sortType + " LIMIT " + limit, id.toArray(),
+						(objType == null ? "" : " type = ? AND ") +
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", (objType == null ? obj.size() : obj.size() - 1)) +
+						" ORDER BY time, dbid " + sortType + " LIMIT " + limit, args,
 				new ResultSetExtractor<HistoryDTO>() {
 					@Override
 					public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -1054,7 +1061,7 @@ public class DBConsensusManager {
 								}
 							}
 							historyObject
-									.setId(id)
+									.setId(obj)
 									.setUser(users)
 									.setDate(formatFullDate(rs.getTimestamp(3)))
 									.setOpObject(formatter.parseObject(rs.getString(4)))
@@ -1063,7 +1070,7 @@ public class DBConsensusManager {
 
 							resources.add(historyObject);
 						}
-						history.put(id, resources);
+						history.put(obj, resources);
 						historyDTO.setObjects(history);
 
 						return historyDTO;
