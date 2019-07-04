@@ -23,6 +23,8 @@ import java.net.URL;
 import java.security.KeyPair;
 import java.util.*;
 
+import static org.openplacereviews.opendb.ops.OpBlockChain.*;
+
 
 @Service
 public class BlocksManager {
@@ -226,16 +228,7 @@ public class BlocksManager {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
-		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
-		for (OpOperation o : opBlock.getOperations()) {
-			List<OpObject> newEditedObjects = new LinkedList<>();
-			if (o.hasEdited()) {
-				for (OpObject opObject : o.getEdited()) {
-					newEditedObjects.add(blockChain.getObjectByName(o.getType(), opObject.getId()));
-				}
-			}
-			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
-		}
+		saveHistoryForBlockOperations(opBlock);
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
@@ -263,6 +256,71 @@ public class BlocksManager {
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		return opBlock;
+	}
+
+	private void saveHistoryForBlockOperations(OpBlock opBlock) {
+		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
+		Map<List<String>, OpObject> lastOriginObjects = new HashMap<>();
+		for (OpOperation o : opBlock.getOperations()) {
+			List<OpObject> newEditedObjects = new LinkedList<>();
+			if (o.hasEdited()) {
+				for (OpObject opObject : o.getEdited()) {
+					OpObject lastOriginObject = getOriginOpObject(lastOriginObjects, o, opObject);
+					OpObject newObject = new OpObject(lastOriginObject);
+
+					Map<String, Object> changedMap = opObject.getChangedEditFields();
+					for (Map.Entry<String, Object> e : changedMap.entrySet()) {
+						// evaluate changes for new object
+						String fieldExpr = e.getKey();
+						Object op = e.getValue();
+						String opId = op.toString();
+						Object opValue = null;
+						if (op instanceof Map) {
+							Map.Entry<String, Object> ee = ((Map<String, Object>) op).entrySet().iterator().next();
+							opId = ee.getKey();
+							opValue = ee.getValue();
+						}
+
+						if (OP_CHANGE_DELETE.equals(opId)) {
+							newObject.setFieldByExpr(fieldExpr, null);
+						} else if (OP_CHANGE_SET.equals(opId)) {
+							newObject.setFieldByExpr(fieldExpr, opValue);
+						} else if (OP_CHANGE_APPEND.equals(opId)) {
+							Object oldObject = newObject.getFieldByExpr(fieldExpr);
+							if (oldObject == null) {
+								List<Object> args = new ArrayList<>(Collections.singletonList(opValue));
+								newObject.setFieldByExpr(fieldExpr, args);
+							} else if (oldObject instanceof List) {
+								((List) oldObject).add(opValue);
+							}
+						} else if (OP_CHANGE_INCREMENT.equals(opId)) {
+							Object oldObject = newObject.getFieldByExpr(fieldExpr);
+							if (oldObject == null) {
+								newObject.setFieldByExpr(fieldExpr, 1);
+							} else if (oldObject instanceof Number) {
+								newObject.setFieldByExpr(fieldExpr, (((Long) oldObject) + 1));
+							}
+						}
+
+						newEditedObjects.add(newObject);
+						lastOriginObjects.put(opObject.getId(), newObject);
+					}
+				}
+			}
+			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
+		}
+	}
+
+	private OpObject getOriginOpObject(Map<List<String>, OpObject> lastOriginObjects, OpOperation o, OpObject opObject) {
+		OpObject lastOriginObject = lastOriginObjects.get(opObject.getId());
+		if (lastOriginObject == null) {
+			lastOriginObject = dataManager.getLastOriginObjectFromHistory(opObject.getId());
+		}
+
+		if (lastOriginObject == null) {
+			lastOriginObject = blockchain.getObjectByName(o.getType(), opObject.getId());
+		}
+		return lastOriginObject;
 	}
 
 	public synchronized boolean compact() {

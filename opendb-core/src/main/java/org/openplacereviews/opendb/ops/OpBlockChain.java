@@ -34,10 +34,10 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class OpBlockChain {
 
-	private static final Object OP_CHANGE_DELETE = "delete";
-	private static final Object OP_CHANGE_INCREMENT = "increment";
-	private static final Object OP_CHANGE_APPEND = "append";
-	private static final Object OP_CHANGE_SET = "set";
+	public static final Object OP_CHANGE_DELETE = "delete";
+	public static final Object OP_CHANGE_INCREMENT = "increment";
+	public static final Object OP_CHANGE_APPEND = "append";
+	public static final Object OP_CHANGE_SET = "set";
 	
 	
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation

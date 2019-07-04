@@ -994,6 +994,27 @@ public class DBConsensusManager {
 
 	}
 
+
+
+
+
+
+	public OpObject getLastOriginObjectFromHistory(List<String> obj) {
+		return jdbcTemplate.query("SELECT obj FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+				dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", obj.size()) +
+				" ORDER BY time, dbid DESC LIMIT 1", obj.toArray(), new ResultSetExtractor<OpObject>() {
+			@Override
+			public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
+				OpObject opObject = null;
+				if (rs.next()) {
+					opObject = formatter.parseObject(rs.getString(1));
+				}
+
+				return opObject;
+			}
+		});
+	}
+
 	public HistoryDTO getHistoryForUser(List<String> user, int limit, String sortType) {
 		return jdbcTemplate.query("SELECT p1, p2, p3, p4, p5, time, obj, type, status from " + OP_OBJ_HISTORY_TABLE + " where " +
 						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", user.size()) +
@@ -1041,7 +1062,6 @@ public class DBConsensusManager {
 			objType = obj.get(0);
 		}
 		Object[] args = obj.toArray();
-		System.out.println(Arrays.toString(args));
 		return jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						(objType == null ? "" : " type = ? AND ") +
 						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", (objType == null ? obj.size() : obj.size() - 1)) +
