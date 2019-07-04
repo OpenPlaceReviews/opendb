@@ -461,6 +461,18 @@
                         delete clone.create[ik].eval;
                     }
                 }
+                if(clone.edit) {
+                    for(var j = 0; j < clone.edit.length; j++ ) {
+                        delete clone.edit[j].eval;
+                    }
+                }
+
+                if(clone.delete) {
+                    for(var j = 0; j < clone.delete.length; j++ ) {
+                        delete clone.delete[j].eval;
+                    }
+                }
+
                 sha256(JSON.stringify(clone)).then(digestValue => {
                     if(("json:sha256:" + digestValue) != op.hash) {
                     alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");

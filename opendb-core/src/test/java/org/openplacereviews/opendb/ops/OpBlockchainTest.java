@@ -398,4 +398,33 @@ public class OpBlockchainTest {
 		blc.validateOperation(opOperation);
 	}
 
+
+	@Test
+	public void testCreatingACopyOfObject() {
+		JsonFormatter formatter = new JsonFormatter();
+		String msg = "{\n" +
+				"\t\t\"type\" : \"sys.signup\",\n" +
+				"\t\t\"signed_by\": \"openplacereviews\",\n" +
+				"\t\t\"create\": [{\n" +
+				"\t\t\t\"id\": [\"openplacereviews\"],\n" +
+				"\t\t\t\"name\" : \"openplacereviews\",\n" +
+				"\t\t\t\"algo\": \"EC\",\n" +
+				"\t\t\t\"auth_method\": \"provided\",\n" +
+				"\t\t\t\"pubkey\": \"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==\"\n" +
+				"\t\t}],\n" +
+				"\t\t\"hash\": \"json:sha256:439715024c856dd93b4bf45bb0c592621d1f6c0905078a4e73cf73d400ff2a1b\",\n" +
+				"\t\t\"signature\": \"ECDSA:base64:MEYCIQDa+wCjXGRxUsTDUMHCTX8kwofiSvlfK2IqjfO7mP5wjAIhAI4x4T1X43qhpTpmcHxHZo2bgHw1mGiCGXeX4NjJBaDB\"\n" +
+				"\t}";
+
+		OpOperation opOperation = formatter.parseOperation(msg);
+
+		OpObject old = opOperation.getCreated().get(0);
+		OpObject copy = new OpObject(old);
+
+		copy.isImmutable = false;
+		copy.setId("test1");
+		assertFalse(copy.isImmutable());
+		assertNotEquals(copy.getId(), old.getId());
+	}
+
 }
