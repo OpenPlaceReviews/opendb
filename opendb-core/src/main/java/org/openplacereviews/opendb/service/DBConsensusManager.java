@@ -115,7 +115,7 @@ public class DBConsensusManager {
 
 		LOGGER.info("... Loading operation queue  ...");
 		int[] ops = new int[1];
-		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where blocks is null order by dbid asc ",
+		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where blocks is null and status = 0 order by dbid asc ",
 				new RowCallbackHandler() {
 
 					@Override
@@ -889,7 +889,7 @@ public class DBConsensusManager {
 		return existingOperation != null;
 	}
 
-	public void insertOperation(OpOperation op) {
+	public void insertOperation(OpOperation op, OpOperation.Status status) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
 
@@ -901,8 +901,13 @@ public class DBConsensusManager {
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
-				bhash, pGobject);
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content, status) VALUES (?, ?, ?)",
+				bhash, pGobject, status.getValue());
+	}
+
+	public void updateOperationStatus(OpOperation op, OpOperation.Status status) {
+		byte[] bhash = SecUtils.getHashBytes(op.getHash());
+		jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set status = ? WHERE hash = ?", status.getValue(), bhash);
 	}
 
 	protected List<Object[]> prepareArgumentsForHistoryBatch(List<OpObject> opObject, OpOperation op, Date date, HistoryDTO.HistoryObject.Status status, int totalAmountfields) {
@@ -992,6 +997,22 @@ public class DBConsensusManager {
 
 		dbSchema.insertObjIntoHistoryTableBatch(allBatches, OP_OBJ_HISTORY_TABLE, jdbcTemplate, userAmountFields, totalAmountFields);
 
+	}
+
+	public OpObject getLastOriginObjectFromHistory(List<String> obj) {
+		return jdbcTemplate.query("SELECT obj FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+				dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", obj.size()) +
+				" ORDER BY time, dbid DESC LIMIT 1", obj.toArray(), new ResultSetExtractor<OpObject>() {
+			@Override
+			public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
+				OpObject opObject = null;
+				if (rs.next()) {
+					opObject = formatter.parseObject(rs.getString(1));
+				}
+
+				return opObject;
+			}
+		});
 	}
 
 	public HistoryDTO getHistoryForUser(List<String> user, int limit, String sortType) {

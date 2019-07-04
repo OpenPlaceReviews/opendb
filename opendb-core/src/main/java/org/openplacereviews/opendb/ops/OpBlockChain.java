@@ -12,6 +12,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.MIN_AMOUNT_VOTES_FOR_EDIT_OP;
+
 /**
  *  Guidelines of object methods:
  *  1. This object doesn't expose any of the internal representation i.e. doesn't expose internal arrays or anything for modification
@@ -34,10 +36,10 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class OpBlockChain {
 
-	private static final Object OP_CHANGE_DELETE = "delete";
-	private static final Object OP_CHANGE_INCREMENT = "increment";
-	private static final Object OP_CHANGE_APPEND = "append";
-	private static final Object OP_CHANGE_SET = "set";
+	public static final Object OP_CHANGE_DELETE = "delete";
+	public static final Object OP_CHANGE_INCREMENT = "increment";
+	public static final Object OP_CHANGE_APPEND = "append";
+	public static final Object OP_CHANGE_SET = "set";
 	
 	
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
@@ -68,6 +70,8 @@ public class OpBlockChain {
 
 	// 4. operations to be stored like a queue
 	private final Deque<OpOperation> queueOperations = new ConcurrentLinkedDeque<OpOperation>();
+
+	private final Deque<OpOperation> votingOperations = new ConcurrentLinkedDeque<OpOperation>();
 
 	private final Map<String, OpOperation> blockOperations = new ConcurrentHashMap<>();
 
@@ -700,6 +704,17 @@ public class OpBlockChain {
 		return parent.getObjectByName(type, o);
 	}
 
+	public boolean validateVotingRefObject(OpOperation op, OpObject refObject, List<String> refKey) {
+		if (refObject == null) {
+			return rules.error(op, ErrorType.REF_OBJ_NOT_FOUND, op.getHash(), refKey);
+		}
+		if (refObject.getNumberValue("votes").longValue() < MIN_AMOUNT_VOTES_FOR_EDIT_OP) {
+			return rules.error(op, ErrorType.AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT, op.getHash(),
+					refObject.getNumberValue("votes").longValue(), MIN_AMOUNT_VOTES_FOR_EDIT_OP);
+		}
+
+		return true;
+	}
 
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {
 		if(request.objToSetCache != null) {
@@ -832,8 +847,6 @@ public class OpBlockChain {
 		return true;
 	}
 
-
-
 	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
 		if (refs != null) {
@@ -914,10 +927,10 @@ public class OpBlockChain {
 				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(), id);
 			}
 			OpObject currentObject = getObjectByName(u.getType(), id);
-			OpObject newObject = new OpObject(currentObject);
 			if (currentObject == null) {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
+			OpObject newObject = new OpObject(currentObject);
 			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
 			if (currentExpectedFields != null) {
 				Iterator<Entry<String, Object>> itEditCurrentFields = currentExpectedFields.entrySet().iterator();
@@ -967,7 +980,7 @@ public class OpBlockChain {
 							newObject.setFieldByExpr(fieldExpr, 1);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof Number) {
-							newObject.setFieldByExpr(fieldExpr, (((Number) oldObject).doubleValue() + 1));
+							newObject.setFieldByExpr(fieldExpr, (((Long) oldObject) + 1));
 							checkCurrentFieldSpecified = true;
 						} else {
 							checkCurrentFieldSpecified = false;

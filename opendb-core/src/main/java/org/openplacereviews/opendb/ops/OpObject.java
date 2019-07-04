@@ -79,8 +79,8 @@ public class OpObject {
 		} else if (object instanceof Boolean) {
 			return (Boolean) object;
 		} else if (object instanceof List) {
-			ArrayList<Object> copy = new ArrayList<>();
-			ArrayList<Object> list = (ArrayList<Object>) object;
+			List<Object> copy = new ArrayList<>();
+			List<Object> list = (List<Object>) object;
 			for (Object o : list) {
 				copy.add(copyingObjects(o));
 			}
@@ -92,6 +92,8 @@ public class OpObject {
 				copy.put(key, copyingObjects(map.get(key)));
 			}
 			return copy;
+		} else if (object instanceof OpObject) {
+			return (OpObject) object;
 		} else {
 			throw new UnsupportedOperationException("Type of object is not supported");
 		}

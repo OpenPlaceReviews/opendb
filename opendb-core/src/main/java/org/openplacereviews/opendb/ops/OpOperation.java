@@ -3,12 +3,7 @@ package org.openplacereviews.opendb.ops;
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class OpOperation extends OpObject {
 
@@ -22,6 +17,7 @@ public class OpOperation extends OpObject {
 	public static final String F_CREATE = "create";
 	public static final String F_DELETE = "delete";
 	public static final String F_EDIT = "edit";
+	public static final String F_EDITED_OBJECT = "changesForObject";
 	
 	public static final String F_NAME = "name";
 	public static final String F_COMMENT = "comment";
@@ -29,6 +25,37 @@ public class OpOperation extends OpObject {
 	private List<OpObject> createdObjects = new LinkedList<OpObject>();
 	private List<OpObject> editedObjects = new LinkedList<OpObject>();
 	protected String type;
+
+	public enum Status {
+		ACTIVE(0),
+		VOTING(1),
+		INACTIVE(2);
+
+		private final int value;
+
+		Status(final int newValue) {
+			value = newValue;
+		}
+
+		public int getValue() { return value; }
+
+		public static Status getStatus(int value) {
+			switch (value) {
+				case 0 : {
+					return ACTIVE;
+				}
+				case 1 : {
+					return VOTING;
+				}
+				case 2: {
+					return INACTIVE;
+				}
+				default: {
+					return null;
+				}
+			}
+		}
+	}
 
 	public OpOperation() {
 	}
@@ -38,6 +65,9 @@ public class OpOperation extends OpObject {
 		this.type = cp.type;
 		for(OpObject o : cp.createdObjects) {
 			this.createdObjects.add(new OpObject(o, copyCacheFields));
+		}
+		for(OpObject o : cp.editedObjects) {
+			this.editedObjects.add(new OpObject(o, copyCacheFields));
 		}
 	}
 

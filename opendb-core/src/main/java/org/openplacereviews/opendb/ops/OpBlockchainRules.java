@@ -28,6 +28,7 @@ public class OpBlockchainRules {
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;
 	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
+	public static final int MIN_AMOUNT_VOTES_FOR_EDIT_OP = 2;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
 	
@@ -45,7 +46,10 @@ public class OpBlockchainRules {
 	public static final String OP_ROLE = OP_TYPE_SYS + "role";
 	public static final String OP_GRANT = OP_TYPE_SYS + "grant";
 	public static final String OP_VALIDATE = OP_TYPE_SYS + "validate";
-	// limit external ops 
+	// voting operation
+	public static final String OP_VOTING = OP_TYPE_SYS + "voting";
+	public static final String OP_VOTE = OP_TYPE_SYS + "vote";
+	// limit external ops
 	public static final String OP_LIMIT = OP_TYPE_SYS + "limit";
 	// ddl?
 	public static final String OP_TABLE = OP_TYPE_SYS + "table";
@@ -679,6 +683,7 @@ public class OpBlockchainRules {
 		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
+		AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT("Operation '%s': amount votes: '%s' min amount votes: '%s'"),
 		
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
 		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),
@@ -690,8 +695,8 @@ public class OpBlockchainRules {
 		MGMT_CANT_DELETE_NON_LAST_OPERATIONS("Operation '%s' couldn't be validated cause the parent operation '%s' is going to be deleted"),
 		MGMT_REPLICATION_IO_FAILED("Replication sync has failed"),
 		MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED("Replication: replication of '%s' block has failed"),
-		MGMT_REPLICATION_BLOCK_CONFLICTS("Replication: replication has conflicting blocks '%s'-there vs '%s'-here: '%s'")
-		;
+		MGMT_REPLICATION_BLOCK_CONFLICTS("Replication: replication has conflicting blocks '%s'-there vs '%s'-here: '%s'");
+
 		private final String msg;
 
 		ErrorType(String msg) {

@@ -23,6 +23,11 @@ import java.net.URL;
 import java.security.KeyPair;
 import java.util.*;
 
+import static org.openplacereviews.opendb.ops.OpBlockChain.*;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
+import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
+
 
 @Service
 public class BlocksManager {
@@ -167,22 +172,96 @@ public class BlocksManager {
 		}
 		return false;
 	}
-	
-	public synchronized boolean addOperation(OpOperation op) {
+
+	// TODO -> check sys.vote on voting for each user
+	// TODO -> sys.voting can be called only by admin?
+	// TODO -> change history struct !!! -> update admin.html
+	// TODO -> add admin tab for view voting process
+	// TODO -> add user tab for voting
+	// TODO -> write tests for voting process
+	public synchronized boolean addOperation(OpOperation op) throws FailedVerificationException {
 		if(blockchain == null) {
 			return false;
 		}
 		op.makeImmutable();
+		if (!createVoteObject(op)) {
+			throw new IllegalArgumentException("Voting object was not created");
+		}
+		if (!createFinishedVotingObject(op)) {
+			throw new IllegalArgumentException("Voting cannot be finished");
+		}
 		boolean existing = dataManager.validateExistingOperation(op);
-		boolean added = blockchain.addOperation(op);
+		if (!op.hasEdited() || op.getType().equals(OP_VOTE)) {
+			boolean added = blockchain.addOperation(op);
+			if(!existing) {
+				dataManager.insertOperation(op, OpOperation.Status.ACTIVE);
+			}
+			return added;
+		}
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
 		if(!existing) {
-			dataManager.insertOperation(op);
+			dataManager.insertOperation(op, OpOperation.Status.VOTING);
 		}
-		return added;
+		return true;
 	}
-	
+
+	private boolean createVoteObject(OpOperation op) throws FailedVerificationException {
+		if (op.hasEdited() && !op.getType().equals(OP_VOTE)) {
+			OpOperation opOperation = new OpOperation();
+			opOperation.setType(OP_VOTE);
+			opOperation.setSignedBy(serverUser);
+
+			OpObject opObject = new OpObject();
+			opObject.putObjectValue(F_EDITED_OBJECT, op.getEdited());
+			opObject.putObjectValue("votes", 0L);
+			opObject.setId(op.getRawHash());
+			for (String objId : op.getEdited().get(0).getId()) {
+				opObject.addOrSetStringValue(OpObject.F_ID, objId);
+			}
+			opOperation.addCreated(opObject);
+			generateHashAndSign(opOperation, serverKeyPair);
+
+			opOperation.makeImmutable();
+			boolean existing = dataManager.validateExistingOperation(opOperation);
+			boolean added = blockchain.addOperation(opOperation);
+			if (!existing) {
+				dataManager.insertOperation(opOperation, OpOperation.Status.ACTIVE);
+			}
+
+			return added;
+		}
+
+		return true;
+	}
+
+	private boolean createFinishedVotingObject(OpOperation op) {
+		if (op.getType().equals(OP_VOTING)) {
+			Map<String, List<String>> refObjectList = op.getRef();
+			if (refObjectList == null) {
+				return false;
+			}
+
+			for (Map.Entry<String, List<String>> e : refObjectList.entrySet()) {
+				List<String> refObjName = e.getValue();
+				if (refObjName.size() > 1) {
+					// type is necessary
+					String objType = refObjName.get(0);
+					List<String> refKey = refObjName.subList(1, refObjName.size());
+					OpObject refObject = blockchain.getObjectByName(objType, refKey);
+					blockchain.validateVotingRefObject(op, refObject, refKey);
+
+					OpOperation opOperation = dataManager.getOperationByHash(SecUtils.HASH_SHA256 + ":" + refObject.getId().get(0));
+					opOperation.makeImmutable();
+					blockchain.addOperation(opOperation);
+					dataManager.updateOperationStatus(opOperation, OpOperation.Status.ACTIVE);
+				}
+			}
+		}
+
+		return true;
+	}
+
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
@@ -222,16 +301,7 @@ public class BlocksManager {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
-		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
-		for (OpOperation o : opBlock.getOperations()) {
-			List<OpObject> newEditedObjects = new LinkedList<>();
-			if (o.hasEdited()) {
-				for (OpObject opObject : o.getEdited()) {
-					newEditedObjects.add(blockChain.getObjectByName(o.getType(), opObject.getId()));
-				}
-			}
-			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
-		}
+		saveHistoryForBlockOperations(opBlock);
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
@@ -259,6 +329,70 @@ public class BlocksManager {
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		return opBlock;
+	}
+
+	private void saveHistoryForBlockOperations(OpBlock opBlock) {
+		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
+		Map<List<String>, OpObject> lastOriginObjects = new HashMap<>();
+		for (OpOperation o : opBlock.getOperations()) {
+			List<OpObject> newEditedObjects = new LinkedList<>();
+			if (o.hasEdited()) {
+				for (OpObject opObject : o.getEdited()) {
+					OpObject lastOriginObject = getOriginOpObject(lastOriginObjects, o, opObject);
+					OpObject newObject = new OpObject(lastOriginObject);
+
+					Map<String, Object> changedMap = opObject.getChangedEditFields();
+					for (Map.Entry<String, Object> e : changedMap.entrySet()) {
+						// evaluate changes for new object
+						String fieldExpr = e.getKey();
+						Object op = e.getValue();
+						String opId = op.toString();
+						Object opValue = null;
+						if (op instanceof Map) {
+							Map.Entry<String, Object> ee = ((Map<String, Object>) op).entrySet().iterator().next();
+							opId = ee.getKey();
+							opValue = ee.getValue();
+						}
+
+						if (OP_CHANGE_DELETE.equals(opId)) {
+							newObject.setFieldByExpr(fieldExpr, null);
+						} else if (OP_CHANGE_SET.equals(opId)) {
+							newObject.setFieldByExpr(fieldExpr, opValue);
+						} else if (OP_CHANGE_APPEND.equals(opId)) {
+							Object oldObject = newObject.getFieldByExpr(fieldExpr);
+							if (oldObject == null) {
+								newObject.setFieldByExpr(fieldExpr, opValue);
+							} else if (oldObject instanceof List) {
+								((List) oldObject).add(opValue);
+							}
+						} else if (OP_CHANGE_INCREMENT.equals(opId)) {
+							Object oldObject = newObject.getFieldByExpr(fieldExpr);
+							if (oldObject == null) {
+								newObject.setFieldByExpr(fieldExpr, 1);
+							} else if (oldObject instanceof Number) {
+								newObject.setFieldByExpr(fieldExpr, (((Long) oldObject) + 1));
+							}
+						}
+
+						newEditedObjects.add(newObject);
+						lastOriginObjects.put(opObject.getId(), newObject);
+					}
+				}
+			}
+			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
+		}
+	}
+
+	private OpObject getOriginOpObject(Map<List<String>, OpObject> lastOriginObjects, OpOperation o, OpObject opObject) {
+		OpObject lastOriginObject = lastOriginObjects.get(opObject.getId());
+		if (lastOriginObject == null) {
+			lastOriginObject = dataManager.getLastOriginObjectFromHistory(opObject.getId());
+		}
+
+		if (lastOriginObject == null) {
+			lastOriginObject = blockchain.getObjectByName(o.getType(), opObject.getId());
+		}
+		return lastOriginObject;
 	}
 
 	public synchronized boolean compact() {
@@ -314,7 +448,7 @@ public class BlocksManager {
 					fullBlock.makeImmutable();
 					for (OpOperation o : fullBlock.getOperations()) {
 						if (!dataManager.validateExistingOperation(o)) {
-							dataManager.insertOperation(o);
+							dataManager.insertOperation(o, OpOperation.Status.ACTIVE);
 						}
 					}
 					replicateOneBlock(fullBlock);
