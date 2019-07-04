@@ -953,13 +953,14 @@ public class OpBlockChain {
 					} else if (OP_CHANGE_APPEND.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
-							newObject.setFieldByExpr(fieldExpr, opValue);
+							List<Object> args = new ArrayList<>(Collections.singletonList(opValue));
+							newObject.setFieldByExpr(fieldExpr, args);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof List) {
 							((List)oldObject).add(opValue);
 							checkCurrentFieldSpecified = true;
 						} else {
-							checkCurrentFieldSpecified = false;
+							throw new UnsupportedOperationException("Operation Append supported only for list");
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
@@ -967,10 +968,10 @@ public class OpBlockChain {
 							newObject.setFieldByExpr(fieldExpr, 1);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof Number) {
-							newObject.setFieldByExpr(fieldExpr, (((Number) oldObject).doubleValue() + 1));
+							newObject.setFieldByExpr(fieldExpr, ((Long) oldObject) + 1);
 							checkCurrentFieldSpecified = true;
 						} else {
-							checkCurrentFieldSpecified = false;
+							throw new UnsupportedOperationException("Operation Increment supported only for Numbers");
 						}
 					} else {
 						throw new UnsupportedOperationException(

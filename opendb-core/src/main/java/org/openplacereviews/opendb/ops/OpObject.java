@@ -1,30 +1,15 @@
 package org.openplacereviews.opendb.ops;
 
+import com.google.gson.*;
+import org.openplacereviews.opendb.util.JsonObjectUtils;
+import org.openplacereviews.opendb.util.OUtils;
+
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.TimeZone;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.openplacereviews.opendb.util.JsonObjectUtils;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.TechnicalException;
-
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 
 public class OpObject {
 	
@@ -100,7 +85,7 @@ public class OpObject {
 			}
 			return copy;
 		} else {
-			throw new TechnicalException("Type of object is not supported");
+			throw new UnsupportedOperationException("Type of object is not supported");
 		}
 	}
 	
