@@ -630,25 +630,27 @@
            $.get("/api/history", obj)
                .done(function(data) {
                    var items = "";
-                   for (var key in data.objects) {
-                       if (data.objects.hasOwnProperty(key)) {
-                           let arrays = data.objects[key];
+                   for (var key in data) {
+                       if (data.hasOwnProperty(key)) {
+                           let arrays = data[key];
                            items += "<br><li><b>Object id</b>: " + key;
-                           items += "<br><b>Type</b>: " + arrays[0].type;
-                           items += "<br><b>User</b>: " + arrays[0].user;
-                           items += "<br>";
 
                            for (var i = 0; i < arrays.length; i++) {
-                               items += "<br><b>Status</b>: " + arrays[i].status;
-                               items += "<br><b>Date</b>: " + arrays[i].date;
-
-                               if ('opObject' in arrays[i]) {
-                                   items += "<br><details><summary><b>OpObject: </b></summary><pre>" +
-                                       JSON.stringify(arrays[i].opObject, null, 4) + "</pre></details>";
-                               }
-                               items += "</li>";
-
-                               console.log(items);
+                           items +="<div class='tabcontent'>";
+                           items += "<br><b>Status</b>: " + arrays[i].status;
+                           items += "<br><b>User</b>: " + arrays[i].userId;
+                           items += "<br><b>Type</b>: " + arrays[i].objType;
+                           items += "<br><b>Date</b>: " + arrays[i].date;
+                           if ('deltaChanges' in arrays[i]) {
+                               items += "<br><details><summary><b>DeltaChanges: </b></summary><pre>" +
+                                   JSON.stringify(arrays[i].deltaChanges, null, 4) + "</pre></details>";
+                           }
+                           if ('editObj' in arrays[i]) {
+                               items += "<br><details><summary><b>EditObj: </b></summary><pre>" +
+                                   JSON.stringify(arrays[i].editObj, null, 4) + "</pre></details>";
+                           }
+                           items += "</li></div>";
+                           console.log(items);
                            }
                        }
                    }

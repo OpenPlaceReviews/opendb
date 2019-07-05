@@ -40,6 +40,7 @@ public class DBSchemaManager {
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	private static final int MAX_KEY_SIZE = 5;
+	private static final int USER_KEY_SIZE = 2;
 
 	// loaded from config
 	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
@@ -112,7 +113,7 @@ public class DBSchemaManager {
 		registerColumn(OP_OBJ_HISTORY_TABLE, "dbid", "serial not null", false);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", true);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", true);
-		for (int i = 1; i <= 2; i++) {
+		for (int i = 1; i <= USER_KEY_SIZE; i++) {
 			registerColumn(OP_OBJ_HISTORY_TABLE, "u" + i, "text", true);
 		}
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
@@ -402,9 +403,9 @@ public class DBSchemaManager {
 				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);
 	}
 
-	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, int userAmount, int objSize) {
+	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, int objSize) {
 		jdbcTemplate.batchUpdate("INSERT INTO " + table + "(ophash, type, time, obj, status," +
-				generatePKString(table, "u%1$d", ",", userAmount) + "," +
+				generatePKString(table, "u%1$d", ",", USER_KEY_SIZE) + "," +
 				generatePKString(table, "p%1$d", ",", MAX_KEY_SIZE) + ") VALUES ("+
 				generatePKString(table, "?", ",", objSize) + ")", args);
 	}

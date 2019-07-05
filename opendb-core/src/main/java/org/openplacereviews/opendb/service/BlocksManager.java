@@ -36,6 +36,11 @@ public class BlocksManager {
 	public static final String BOOT_STD_ROLES = "std-roles";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
 
+	private static final String HISTORY_BY_USER = "user";
+	private static final String HISTORY_BY_OBJECT = "object";
+	private static final String HISTORY_BY_TYPE = "type";
+
+
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
 	@Autowired
@@ -99,17 +104,18 @@ public class BlocksManager {
 		return replicateUrl;
 	}
 
-	public HistoryDTO getHistory(String type, List<String> key, int limit, String sortDateASC) {
-		if (type.equals("user")) {
-			return dataManager.getHistoryForUser(key, limit, sortDateASC);
-		} else if (type.equals("object")) {
-			return dataManager.getHistoryForObject(key, limit, sortDateASC);
-		} else if (type.equals("type")) {
-			return dataManager.getHistoryForType(key.get(0), limit, sortDateASC);
+	public void getHistory(HistoryDTO.HistoryObjectRequest historyObjectRequest) {
+		switch (historyObjectRequest.historyType) {
+			case HISTORY_BY_USER:
+				dataManager.getHistoryForUser(historyObjectRequest);
+				break;
+			case HISTORY_BY_OBJECT:
+				dataManager.getHistoryForObject(historyObjectRequest);
+				break;
+			case HISTORY_BY_TYPE:
+				dataManager.getHistoryForType(historyObjectRequest);
+				break;
 		}
-
-		LOGGER.debug("History for type: " + type + " is not defined");
-		return null;
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
@@ -361,7 +367,8 @@ public class BlocksManager {
 						} else if (OP_CHANGE_APPEND.equals(opId)) {
 							Object oldObject = newObject.getFieldByExpr(fieldExpr);
 							if (oldObject == null) {
-								newObject.setFieldByExpr(fieldExpr, opValue);
+								List<Object> args = new ArrayList<>(Collections.singletonList(opValue));
+								newObject.setFieldByExpr(fieldExpr, args);
 							} else if (oldObject instanceof List) {
 								((List) oldObject).add(opValue);
 							}
@@ -373,10 +380,10 @@ public class BlocksManager {
 								newObject.setFieldByExpr(fieldExpr, (((Long) oldObject) + 1));
 							}
 						}
-
-						newEditedObjects.add(newObject);
-						lastOriginObjects.put(opObject.getId(), newObject);
 					}
+
+					newEditedObjects.add(newObject);
+					lastOriginObjects.put(opObject.getId(), newObject);
 				}
 			}
 			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
@@ -655,6 +662,7 @@ public class BlocksManager {
 	public void setBootstrapList(List<String> bootstrapList) {
 		this.bootstrapList = bootstrapList;
 	}
+
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();

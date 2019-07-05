@@ -7,108 +7,127 @@ import java.util.Map;
 
 public class HistoryDTO {
 
-	private Map<List<String>, List<HistoryObject>> objects;
+	public static class HistoryObjectRequest {
+		public String historyType;
+		public List<String> key;
+		public int limit;
+		public String sort;
+		public Map<List<String>, List<HistoryDTO.HistoryEdit>> historySearchResult;
 
-	public Map<List<String>, List<HistoryObject>> getObjects() {
-		return objects;
-	}
-
-	public void setObjects(Map<List<String>, List<HistoryObject>> id) {
-		this.objects = id;
-	}
-
-	public static class HistoryObject {
-		public enum Status {
-			CREATED(0),
-			DELETED(1),
-			EDITED(2),
-			NOT_SPECIFIED(3);
-
-			private final int value;
-
-			Status(final int newValue) {
-				value = newValue;
-			}
-
-			public int getValue() { return value; }
-
-			public static Status getStatus(int value) {
-				switch (value) {
-					case 0 : {
-						return CREATED;
-					}
-					case 1 : {
-						return DELETED;
-					}
-					case 2: {
-						return EDITED;
-					}
-					default: {
-						return NOT_SPECIFIED;
-					}
-				}
-			}
+		public HistoryObjectRequest(String historyType, List<String> key, int limit, String sort) {
+			this.historyType = historyType;
+			this.key = key;
+			this.limit = limit;
+			this.sort = sort;
 		}
+	}
 
+	public static class HistoryEdit {
 		private List<String> id;
-		private String type;
-		private List<String> user;
+		private List<String> userId;
+		private String objType;
+		private OpObject objEdit;
+		private OpObject deltaChanges;
 		private String date;
 		private Status status;
-		private OpObject opObject;
+
+		public HistoryEdit(List<String> userId, String objType, OpObject objEdit, OpObject deltaChanges, String date, Status status) {
+			this.userId = userId;
+			this.objType = objType;
+			this.objEdit = objEdit;
+			this.deltaChanges = deltaChanges;
+			this.date = date;
+			this.status = status;
+		}
 
 		public List<String> getId() {
 			return id;
 		}
 
-		public HistoryObject setId(List<String> id) {
+		public void setId(List<String> id) {
 			this.id = id;
-			return this;
 		}
 
-		public List<String> getUser() {
-			return user;
+		public List<String> getUserId() {
+			return userId;
 		}
 
-		public HistoryObject setUser(List<String> user) {
-			this.user = user;
-			return this;
+		public void setUserId(List<String> userId) {
+			this.userId = userId;
+		}
+
+		public String getObjType() {
+			return objType;
+		}
+
+		public void setObjType(String objType) {
+			this.objType = objType;
+		}
+
+		public OpObject getObjEdit() {
+			return objEdit;
+		}
+
+		public void setObjEdit(OpObject objEdit) {
+			this.objEdit = objEdit;
+		}
+
+		public OpObject getDeltaChanges() {
+			return deltaChanges;
+		}
+
+		public void setDeltaChanges(OpObject deltaChanges) {
+			this.deltaChanges = deltaChanges;
 		}
 
 		public String getDate() {
 			return date;
 		}
 
-		public HistoryObject setDate(String date) {
+		public void setDate(String date) {
 			this.date = date;
-			return this;
 		}
 
 		public Status getStatus() {
 			return status;
 		}
 
-		public HistoryObject setStatus(Status status) {
+		public void setStatus(Status status) {
 			this.status = status;
-			return this;
+		}
+	}
+
+	public enum Status {
+		CREATED(0),
+		DELETED(1),
+		EDITED(2),
+		NOT_SPECIFIED(3);
+
+		private final int value;
+
+		Status(final int newValue) {
+			value = newValue;
 		}
 
-		public OpObject getOpObject() {
-			return opObject;
+		public int getValue() {
+			return value;
 		}
 
-		public HistoryObject setOpObject(OpObject opObject) {
-			this.opObject = opObject;
-			return this;
-		}
-
-		public String getType() {
-			return type;
-		}
-
-		public HistoryObject setType(String type) {
-			this.type = type;
-			return this;
+		public static Status getStatus(int value) {
+			switch (value) {
+				case 0: {
+					return CREATED;
+				}
+				case 1: {
+					return DELETED;
+				}
+				case 2: {
+					return EDITED;
+				}
+				default: {
+					return NOT_SPECIFIED;
+				}
+			}
 		}
 	}
 }
