@@ -26,6 +26,7 @@ import java.util.*;
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
 
 
@@ -216,7 +217,7 @@ public class BlocksManager {
 
 			OpObject opObject = new OpObject();
 			opObject.putObjectValue(F_EDITED_OBJECT, op.getEdited());
-			opObject.putObjectValue("votes", Collections.EMPTY_LIST);
+			opObject.putObjectValue(F_VOTES, Collections.EMPTY_LIST);
 			opObject.setId(op.getRawHash());
 			for (String objId : op.getEdited().get(0).getId()) {
 				opObject.addOrSetStringValue(OpObject.F_ID, objId);
