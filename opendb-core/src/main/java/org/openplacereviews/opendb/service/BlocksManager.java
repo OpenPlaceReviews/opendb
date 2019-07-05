@@ -220,7 +220,7 @@ public class BlocksManager {
 
 			OpObject opObject = new OpObject();
 			opObject.putObjectValue(F_EDITED_OBJECT, op.getEdited());
-			opObject.putObjectValue("votes", 0L);
+			opObject.putObjectValue("votes", Collections.EMPTY_LIST);
 			opObject.setId(op.getRawHash());
 			for (String objId : op.getEdited().get(0).getId()) {
 				opObject.addOrSetStringValue(OpObject.F_ID, objId);

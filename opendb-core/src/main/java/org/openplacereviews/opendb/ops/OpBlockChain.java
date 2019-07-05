@@ -708,7 +708,7 @@ public class OpBlockChain {
 		if (refObject == null) {
 			return rules.error(op, ErrorType.REF_OBJ_NOT_FOUND, op.getHash(), refKey);
 		}
-		if (refObject.getNumberValue("votes").longValue() < MIN_AMOUNT_VOTES_FOR_EDIT_OP) {
+		if (refObject.getStringList("votes").size() < MIN_AMOUNT_VOTES_FOR_EDIT_OP) {
 			return rules.error(op, ErrorType.AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT, op.getHash(),
 					refObject.getNumberValue("votes").longValue(), MIN_AMOUNT_VOTES_FOR_EDIT_OP);
 		}
