@@ -179,7 +179,6 @@ public class BlocksManager {
 		return false;
 	}
 
-	// TODO -> check sys.vote on voting for each user
 	// TODO -> sys.voting can be called only by admin?
 	// TODO -> write tests for voting process
 	public synchronized boolean addOperation(OpOperation op) throws FailedVerificationException {

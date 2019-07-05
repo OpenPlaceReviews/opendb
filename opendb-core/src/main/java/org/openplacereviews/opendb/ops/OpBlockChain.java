@@ -935,6 +935,9 @@ public class OpBlockChain {
 			OpObject newObject = new OpObject(currentObject);
 			if (u.getType().equals(OP_VOTE)) {
 				List<String> newVote = ((TreeMap<String, List<String>>) editObject.getChangedEditFields().get(F_VOTES)).get(OP_CHANGE_APPEND);
+				if (loadRefUserObject(newVote) == null) {
+					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
+				}
 				List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES);
 
 				if (votes.contains(newVote)) {
@@ -1013,6 +1016,20 @@ public class OpBlockChain {
 		}
 		return true;
 
+	}
+
+	private OpObject loadRefUserObject(List<String> refs) {
+		String objType = null;
+		if (refs.size() > 1) {
+			objType = refs.get(0);
+		}
+
+		if (objType != null) {
+			return getObjectByName(objType, refs.subList(1, refs.size()));
+		} else {
+			//TODO
+			return null;
+		}
 	}
 
 	private boolean checkVotingOperationOnDuplicateVotes(OpOperation u, OpObject currentObject, OpObject editObject) {
