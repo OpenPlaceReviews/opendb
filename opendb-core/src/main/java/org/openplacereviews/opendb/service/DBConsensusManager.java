@@ -1061,11 +1061,10 @@ public class DBConsensusManager {
 		if (obj.size() > 1) {
 			objType = obj.get(0);
 		}
-		Object[] args = obj.toArray();
 		return jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						(objType == null ? "" : " type = ? AND ") +
 						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", (objType == null ? obj.size() : obj.size() - 1)) +
-						" ORDER BY time, dbid " + sortType + " LIMIT " + limit, args,
+						" ORDER BY time, dbid " + sortType + " LIMIT " + limit, obj.toArray(),
 				new ResultSetExtractor<HistoryDTO>() {
 					@Override
 					public HistoryDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
