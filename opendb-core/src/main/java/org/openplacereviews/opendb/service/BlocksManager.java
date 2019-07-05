@@ -181,9 +181,6 @@ public class BlocksManager {
 
 	// TODO -> check sys.vote on voting for each user
 	// TODO -> sys.voting can be called only by admin?
-	// TODO -> change history struct !!! -> update admin.html
-	// TODO -> add admin tab for view voting process
-	// TODO -> add user tab for voting
 	// TODO -> write tests for voting process
 	public synchronized boolean addOperation(OpOperation op) throws FailedVerificationException {
 		if(blockchain == null) {

@@ -135,6 +135,18 @@
 			}
 		}]
 	},
+//	{
+//		"type" : "sys.vote",
+//		"edit" : [{
+//			"id" : ["10821a42d417af7abfaafec47f2fa0815afb6b2455b135520c3a721e053e209a","osm.place"],
+//			"change" : {
+//				"votes" : {"append": ["openplacereviews:test_1"]}
+//			},
+//			"current" : {
+//				"votes" : [["openplacereviews"],["openplacereviews:test_1"]]
+//			}
+//		}]
+//	},
 	{
 		"type" : "sys.vote",
 		"edit" : [{

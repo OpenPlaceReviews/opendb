@@ -28,7 +28,7 @@ public class OpBlockchainRules {
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;
 	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
-	public static final int MIN_AMOUNT_VOTES_FOR_EDIT_OP = 2;
+	public static final int MIN_AMOUNT_VOTES_FOR_EDIT_OP = 100;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
 	
@@ -684,7 +684,8 @@ public class OpBlockchainRules {
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT("Operation '%s': amount votes: '%s' min amount votes: '%s'"),
-		
+		USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING("Operation '%s': user vote: '%s' votes: '%s'"),
+
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
 		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),
 		

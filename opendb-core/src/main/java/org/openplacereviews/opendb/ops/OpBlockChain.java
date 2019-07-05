@@ -12,7 +12,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.MIN_AMOUNT_VOTES_FOR_EDIT_OP;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
 
 /**
  *  Guidelines of object methods:
@@ -708,10 +710,10 @@ public class OpBlockChain {
 		if (refObject == null) {
 			return rules.error(op, ErrorType.REF_OBJ_NOT_FOUND, op.getHash(), refKey);
 		}
-		if (refObject.getStringList("votes").size() < MIN_AMOUNT_VOTES_FOR_EDIT_OP) {
-			return rules.error(op, ErrorType.AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT, op.getHash(),
-					refObject.getNumberValue("votes").longValue(), MIN_AMOUNT_VOTES_FOR_EDIT_OP);
-		}
+//		if (refObject.getStringList("votes").size() < MIN_AMOUNT_VOTES_FOR_EDIT_OP) {
+//			return rules.error(op, ErrorType.AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT, op.getHash(),
+//					refObject.getNumberValue("votes").longValue(), MIN_AMOUNT_VOTES_FOR_EDIT_OP);
+//		}
 
 		return true;
 	}
@@ -931,6 +933,14 @@ public class OpBlockChain {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
 			OpObject newObject = new OpObject(currentObject);
+			if (u.getType().equals(OP_VOTE)) {
+				List<String> newVote = ((TreeMap<String, List<String>>) editObject.getChangedEditFields().get(F_VOTES)).get(OP_CHANGE_APPEND);
+				List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES);
+
+				if (votes.contains(newVote)) {
+					return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, u.getHash(), newVote, votes);
+				}
+			}
 			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
 			if (currentExpectedFields != null) {
 				Iterator<Entry<String, Object>> itEditCurrentFields = currentExpectedFields.entrySet().iterator();
@@ -1003,6 +1013,21 @@ public class OpBlockChain {
 		}
 		return true;
 
+	}
+
+	private boolean checkVotingOperationOnDuplicateVotes(OpOperation u, OpObject currentObject, OpObject editObject) {
+		if (u.getType().equals(OP_VOTING)) {
+			List<String> newVote = (List<String>) editObject.getFieldByExpr("votes");
+			List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr("votes");
+
+			if (votes.contains(newVote)) {
+				return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, newVote, votes);
+			}
+
+			return true;
+		}
+
+		return true;
 	}
 
 	// no multi thread issue (used only in synchronized blocks)

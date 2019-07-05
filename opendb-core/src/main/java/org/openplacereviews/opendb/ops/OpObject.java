@@ -27,6 +27,7 @@ public class OpObject {
 	public static final String F_PARENT_HASH = "parentHash";
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
+	public static final String F_VOTES = "votes";
 	
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
