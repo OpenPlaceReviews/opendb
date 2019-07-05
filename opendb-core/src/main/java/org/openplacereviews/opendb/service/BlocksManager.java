@@ -101,16 +101,18 @@ public class BlocksManager {
 		return replicateUrl;
 	}
 
-	public HistoryDTO getHistory(String type, List<String> key, int limit, String sortDateASC) {
-		if (type.equals(HISTORY_BY_USER)) {
-			return dataManager.getHistoryForUser(key, limit, sortDateASC);
-		} else if (type.equals(HISTORY_BY_OBJECT)) {
-			return dataManager.getHistoryForObject(key, limit, sortDateASC);
-		} else if (type.equals(HISTORY_BY_TYPE)) {
-			return dataManager.getHistoryForType(key.get(0), limit, sortDateASC);
+	public void getHistory(HistoryDTO.HistoryObjectRequest historyObjectRequest) {
+		switch (historyObjectRequest.historyType) {
+			case HISTORY_BY_USER:
+				dataManager.getHistoryForUser(historyObjectRequest);
+				break;
+			case HISTORY_BY_OBJECT:
+				dataManager.getHistoryForObject(historyObjectRequest);
+				break;
+			case HISTORY_BY_TYPE:
+				dataManager.getHistoryForType(historyObjectRequest);
+				break;
 		}
-
-		return null;
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
@@ -301,10 +303,10 @@ public class BlocksManager {
 								newObject.setFieldByExpr(fieldExpr, (((Long) oldObject) + 1));
 							}
 						}
-
-						newEditedObjects.add(newObject);
-						lastOriginObjects.put(opObject.getId(), newObject);
 					}
+
+					newEditedObjects.add(newObject);
+					lastOriginObjects.put(opObject.getId(), newObject);
 				}
 			}
 			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
@@ -583,6 +585,7 @@ public class BlocksManager {
 	public void setBootstrapList(List<String> bootstrapList) {
 		this.bootstrapList = bootstrapList;
 	}
+
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();

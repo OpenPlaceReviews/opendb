@@ -2,7 +2,7 @@ package org.openplacereviews.opendb.api;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.dto.HistoryDTO;
+import org.openplacereviews.opendb.dto.HistoryDTO.HistoryObjectRequest;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
@@ -205,15 +205,15 @@ public class ApiController {
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,
 						  @RequestParam(required = true) List<String> key,
-						  @RequestParam(required = false) boolean latestChanges,
 						  @RequestParam(required = false, defaultValue = "20") int limit,
 						  @RequestParam(required = true) String sort) {
 		if (key.isEmpty()) {
 			return "{}";
 		}
-		HistoryDTO result = manager.getHistory(type, key, limit, sort);
+		HistoryObjectRequest historyObjectRequest = new HistoryObjectRequest(type, key, limit, sort);
+		manager.getHistory(historyObjectRequest);
 
-		return formatter.fullObjectToJson(result);
+		return formatter.fullObjectToJson(historyObjectRequest.historySearchResult);
 	}
 
 }
