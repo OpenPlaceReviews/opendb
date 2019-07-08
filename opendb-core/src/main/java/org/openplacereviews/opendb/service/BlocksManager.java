@@ -186,16 +186,8 @@ public class BlocksManager {
 		
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-		Map<String, OpObject> deletedObjs = new LinkedHashMap<>();
 		HistoryManager.HistoryObjectCtx deleteObjContext = new HistoryManager.HistoryObjectCtx("");
 		for (OpOperation o : candidates) {
-			if (!o.getDeleted().isEmpty()) {
-				for (List<String> ids : o.getDeleted()) {
-					OpObject objToRemove = blc.getObjectByName(o.getType(), ids);
-
-					deletedObjs.put(o.getHash(), objToRemove);
-				}
-			}
 			if(!blc.addOperation(o, deleteObjContext)) {
 				return null;
 			}
