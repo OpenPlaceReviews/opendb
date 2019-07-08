@@ -935,9 +935,10 @@ public class OpBlockChain {
 			OpObject newObject = new OpObject(currentObject);
 			if (u.getType().equals(OP_VOTE)) {
 				List<String> newVote = ((TreeMap<String, List<String>>) editObject.getChangedEditFields().get(F_VOTES)).get(OP_CHANGE_APPEND);
-				if (loadRefUserObject(newVote) == null) {
-					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
-				}
+				// TODO are needed that?
+//				if (loadRefUserObject(newVote) == null) {
+//					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
+//				}
 				List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES);
 
 				if (votes.contains(newVote)) {

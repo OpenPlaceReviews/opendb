@@ -116,7 +116,7 @@
 		"edit" : [{
 			"id" : ["10821a42d417af7abfaafec47f2fa0815afb6b2455b135520c3a721e053e209a","osm.place"],
 			"change" : {
-				"votes" : {"append" : ["openplacereviews"]}
+				"votes" : {"append" : ["sys.signup","openplacereviews"]}
 			},
 			"current" : {
 				"votes" : []
@@ -131,7 +131,7 @@
 				"votes" : {"append": ["openplacereviews:test_1"]}
 			},
 			"current" : {
-				"votes" : [["openplacereviews"]]
+				"votes" : [["sys.signup", "openplacereviews"]]
 			}
 		}]
 	},
@@ -155,7 +155,7 @@
 				"votes" : {"append": ["openplacereviews:test_2"]}
 			},
 			"current" : {
-				"votes" : [["openplacereviews"],["openplacereviews:test_1"]]
+				"votes" : [["sys.signup", "openplacereviews"],["openplacereviews:test_1"]]
 			}
 		}]
 	},
