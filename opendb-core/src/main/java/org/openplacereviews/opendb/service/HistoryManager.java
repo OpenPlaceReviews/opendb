@@ -7,6 +7,7 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
@@ -14,13 +15,19 @@ import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
 import static org.openplacereviews.opendb.service.DBSchemaManager.HISTORY_TABLE_SIZE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.USER_KEY_SIZE;
 
 @Service
 public class HistoryManager {
 
 	private static final String ASC_SORT = "ASC";
 	private static final String DESC_SORT = "DESC";
+
+	protected static final String HISTORY_BY_USER = "user";
+	protected static final String HISTORY_BY_OBJECT = "object";
+	protected static final String HISTORY_BY_TYPE = "type";
+
+	@Value("${opendb.db.store-history}")
+	private boolean isRunning;
 
 	@Autowired
 	private DBConsensusManager dataManager;
@@ -31,10 +38,18 @@ public class HistoryManager {
 	@Autowired
 	private JsonFormatter formatter;
 
-	public void saveHistoryForBlockOperations(OpBlock opBlock,  Map<String, OpObject> deletedObjs) {
+	public boolean isRunning() {
+		return isRunning;
+	}
+
+	public void retrieveHistory(HistoryManager.HistoryObjectRequest historyObjectRequest) {
+		dataManager.retrieveHistory(historyObjectRequest);
+	}
+
+	public void saveHistoryForBlockOperations(OpBlock opBlock,  HistoryObjectCtx hctx) {
 		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
 		for (OpOperation o : opBlock.getOperations()) {
-			List<Object[]> allBatches = generateHistoryObjBatch(opBlock, o, date, deletedObjs);
+			List<Object[]> allBatches = generateHistoryObjBatch(opBlock, o, date, hctx);
 			dataManager.saveHistoryForOperationObjects(allBatches);
 		}
 	}
@@ -138,14 +153,16 @@ public class HistoryManager {
 		return null;
 	}
 
-	protected List<Object[]> generateHistoryObjBatch(OpBlock opBlock, OpOperation op, Date date, Map<String, OpObject> deletedObjs) {
+	protected List<Object[]> generateHistoryObjBatch(OpBlock opBlock, OpOperation op, Date date, HistoryObjectCtx hctx) {
 		byte[] blockHash = SecUtils.getHashBytes(opBlock.getFullHash());
 		List<Object[]> args = new LinkedList<>();
 
 		args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getCreated(), op, date, Status.CREATED));
-		for (String key : deletedObjs.keySet()) {
-			if (key.equals(op.getHash())) {
-				args.addAll(prepareArgumentsForHistoryBatch(blockHash, deletedObjs.values(), op, date, Status.DELETED));
+		if (hctx != null) {
+			for (String key : hctx.deletedObjsCache.keySet()) {
+				if (key.equals(op.getHash())) {
+					args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.deletedObjsCache.get(key), op, date, Status.DELETED));
+				}
 			}
 		}
 		args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getEdited(), op, date, Status.EDITED));
@@ -217,42 +234,29 @@ public class HistoryManager {
 		return insertBatch;
 	}
 
-	private List<Object[]> prepareArgumentsForHistoryBatch(byte[] blockHash, Collection<OpObject> deletedObjects, OpOperation op, Date date, Status status) {
-		List<Object[]> insertBatch = new ArrayList<>(deletedObjects.size());
-
-		for (OpObject opObject : deletedObjects) {
-			Object[] args = new Object[HISTORY_TABLE_SIZE];
-			args[0] = blockHash;
-			args[1] = SecUtils.getHashBytes(op.getHash());
-			args[2] = op.getType();
-			args[3] = date;
-			args[4] = getObjectByStatus(opObject, status);
-			args[5] = status.getValue();
-			generateSignedByArguments(args, op.getSignedBy(), 6);
-
-			int k = 8;
-			for (String id : opObject.getId()) {
-				args[k] = id;
-				k++;
-			}
-			insertBatch.add(args);
+	private void generateSignedByArguments(Object[] args, List<String> signedBy, int k) {
+		if (signedBy.size() > 1) {
+			args[k] = signedBy.toArray();
+		} else {
+			args[k] = signedBy.get(0);
 		}
-
-		return insertBatch;
 	}
 
-	private void generateSignedByArguments(Object[] args, List<String> signedBy, int k) {
-		for (int i = 0; i < USER_KEY_SIZE; i++) {
-			if (signedBy.size() > 1) {
-				args[k] = signedBy.get(i);
-			} else {
-				if (k == 7) {
-					args[k] = null;
-				} else {
-					args[k] = signedBy.get(0);
-				}
+	public static class HistoryObjectCtx {
+		final String blockHash;
+		public Map<String, List<OpObject>> deletedObjsCache = new LinkedHashMap<>();
+
+		public HistoryObjectCtx(String bhash) {
+			blockHash = bhash;
+		}
+
+		public void putObjectToDeleteCache(String key, OpObject opObject) {
+			List<OpObject> list = deletedObjsCache.get(key);
+			if (list == null) {
+				list = new ArrayList<>();
 			}
-			k++;
+			list.add(opObject);
+			deletedObjsCache.put(key, list);
 		}
 	}
 
@@ -261,7 +265,7 @@ public class HistoryManager {
 		public List<String> key;
 		public int limit;
 		public String sort;
-		public Map<List<String>, List<HistoryManager.HistoryEdit>> historySearchResult;
+		public Map<List<String>, List<HistoryEdit>> historySearchResult;
 
 		public HistoryObjectRequest(String historyType, List<String> key, int limit, String sort) {
 			this.historyType = historyType;
@@ -279,9 +283,6 @@ public class HistoryManager {
 		private OpObject deltaChanges;
 		private String date;
 		private Status status;
-
-		public HistoryEdit() {
-		}
 
 		public HistoryEdit(List<String> userId, String objType, OpObject deltaChanges, String date, Status status) {
 			this.userId = userId;

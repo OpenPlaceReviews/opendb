@@ -30,10 +30,6 @@ public class BlocksManager {
 	public static final String BOOT_STD_ROLES = "std-roles";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
 
-	protected static final String HISTORY_BY_USER = "user";
-	protected static final String HISTORY_BY_OBJECT = "object";
-	protected static final String HISTORY_BY_TYPE = "type";
-
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
 	@Autowired
@@ -98,10 +94,6 @@ public class BlocksManager {
 	
 	public String getReplicateUrl() {
 		return replicateUrl;
-	}
-
-	public void retrieveHistory(HistoryManager.HistoryObjectRequest historyObjectRequest) {
-		dataManager.retrieveHistory(historyObjectRequest);
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
@@ -195,6 +187,7 @@ public class BlocksManager {
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		Map<String, OpObject> deletedObjs = new LinkedHashMap<>();
+		HistoryManager.HistoryObjectCtx deleteObjContext = new HistoryManager.HistoryObjectCtx("");
 		for (OpOperation o : candidates) {
 			if (!o.getDeleted().isEmpty()) {
 				for (List<String> ids : o.getDeleted()) {
@@ -203,7 +196,7 @@ public class BlocksManager {
 					deletedObjs.put(o.getHash(), objToRemove);
 				}
 			}
-			if(!blc.addOperation(o)) {
+			if(!blc.addOperation(o, deleteObjContext)) {
 				return null;
 			}
 		}
@@ -220,14 +213,16 @@ public class BlocksManager {
 
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
-		return replicateValidBlock(timer, blc, opBlock, deletedObjs);
+		return replicateValidBlock(timer, blc, opBlock, deleteObjContext);
 	}
 
-	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock, Map<String, OpObject> deletedObjs) {
+	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
-		historyManager.saveHistoryForBlockOperations(opBlock, deletedObjs);
+		if (historyManager.isRunning()) {
+			historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+		}
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
@@ -337,22 +332,13 @@ public class BlocksManager {
 		ValidationTimer timer = new ValidationTimer();
 		timer.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-		Map<String, OpObject> deletedObjs = new LinkedHashMap<>();
-		for (OpOperation o : block.getOperations()) {
-			if (!o.getDeleted().isEmpty()) {
-				for (List<String> ids : o.getDeleted()) {
-					OpObject objToRemove = blc.getObjectByName(o.getType(), ids);
-
-					deletedObjs.put(o.getHash(), objToRemove);
-				}
-			}
-		}
 		OpBlock res;
-		res = blc.replicateBlock(block);
+		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		res = blc.replicateBlock(block, hctx);
 		if(res == null) {
 			return false;
 		}
-		res = replicateValidBlock(timer, blc, res, deletedObjs);
+		res = replicateValidBlock(timer, blc, res, hctx);
 		if(res == null) {
 			return false;
 		}

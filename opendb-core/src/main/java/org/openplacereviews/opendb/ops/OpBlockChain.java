@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.ops;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
@@ -249,6 +250,10 @@ public class OpBlockChain {
 	}
 
 	public synchronized OpBlock replicateBlock(OpBlock block) {
+		return replicateBlock(block, null);
+	}
+
+	public synchronized OpBlock replicateBlock(OpBlock block, HistoryObjectCtx hctx) {
 		block.checkImmutable();
 		validateIsUnlocked();
 		if (!isQueueEmpty()) {
@@ -264,7 +269,7 @@ public class OpBlockChain {
 		try {
 			for (OpOperation o : block.getOperations()) {
 				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash());
-				validateAndPrepareOperation(o, validationCtx);
+				validateAndPrepareOperation(o, validationCtx, hctx);
 				atomicAddOperationAfterPrepare(o, validationCtx);
 			}
 			atomicCreateBlockFromAllOps(block);
@@ -335,21 +340,25 @@ public class OpBlockChain {
 
 	}
 
+	public boolean addOperation(OpOperation op, HistoryObjectCtx historyObjectCtx) {
+		return addOperation(op, false, historyObjectCtx);
+	}
+
 	public boolean addOperation(OpOperation op) {
-		return addOperation(op, false);
+		return addOperation(op, false, null);
 	}
 
 	public boolean validateOperation(OpOperation op) {
-		return addOperation(op, true);
+		return addOperation(op, true, null);
 	}
 	/**
 	 * Adds operation and validates it to block chain
 	 */
-	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate) {
+	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, HistoryObjectCtx historyObjectCtx) {
 		op.checkImmutable();
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx("");
-		boolean valid = validateAndPrepareOperation(op, validationCtx);
+		boolean valid = validateAndPrepareOperation(op, validationCtx, historyObjectCtx);
 		if(!valid || onlyValidate) {
 			return valid;
 		}
@@ -787,10 +796,7 @@ public class OpBlockChain {
 		parent.fetchBlockHeaders(lst, depth);
 	}
 
-
-
-
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx) {
+	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
 		ValidationTimer vld = new ValidationTimer().start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
@@ -802,7 +808,7 @@ public class OpBlockChain {
 		u.updateObjectsRef();
 		boolean valid = true;
 		ctx.ids.clear();
-		valid = prepareDeletedObjects(u, ctx);
+		valid = prepareDeletedObjects(u, ctx, hctx);
 		if(!valid) {
 			return false;
 		}
@@ -866,7 +872,7 @@ public class OpBlockChain {
 		return true;
 	}
 
-	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx) {
+	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
 		List<List<String>> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 
@@ -878,6 +884,9 @@ public class OpBlockChain {
 			if(!ctx.ids.add(opObject.getId())) {
 				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(),
 						opObject.getId());
+			}
+			if (hctx != null) {
+				hctx.putObjectToDeleteCache(u.getHash(), opObject);
 			}
 			ctx.deletedObjsCache.add(opObject);
 		}

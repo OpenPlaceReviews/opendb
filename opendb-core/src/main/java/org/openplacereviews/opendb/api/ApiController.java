@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.api;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.service.HistoryManager;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
@@ -30,6 +31,9 @@ public class ApiController {
 
 	@Autowired
 	private BlocksManager manager;
+
+	@Autowired
+	private HistoryManager historyManager;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -207,11 +211,11 @@ public class ApiController {
 						  @RequestParam(required = true) List<String> key,
 						  @RequestParam(required = false, defaultValue = "20") int limit,
 						  @RequestParam(required = true) String sort) {
-		if (key.isEmpty()) {
+		if (key.isEmpty() || !historyManager.isRunning()) {
 			return "{}";
 		}
 		HistoryObjectRequest historyObjectRequest = new HistoryObjectRequest(type, key, limit, sort);
-		manager.retrieveHistory(historyObjectRequest);
+		historyManager.retrieveHistory(historyObjectRequest);
 
 		return formatter.fullObjectToJson(historyObjectRequest.historySearchResult);
 	}

@@ -35,10 +35,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import static org.openplacereviews.opendb.service.BlocksManager.HISTORY_BY_OBJECT;
-import static org.openplacereviews.opendb.service.BlocksManager.HISTORY_BY_TYPE;
-import static org.openplacereviews.opendb.service.BlocksManager.HISTORY_BY_USER;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
+import static org.openplacereviews.opendb.service.HistoryManager.HISTORY_BY_OBJECT;
+import static org.openplacereviews.opendb.service.HistoryManager.HISTORY_BY_TYPE;
+import static org.openplacereviews.opendb.service.HistoryManager.HISTORY_BY_USER;
 
 @Service
 public class DBConsensusManager {
