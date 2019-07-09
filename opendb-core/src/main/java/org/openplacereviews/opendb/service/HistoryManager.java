@@ -24,8 +24,8 @@ import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 @Service
 public class HistoryManager {
 
-	private static final String ASC_SORT = "ASC";
-	private static final String DESC_SORT = "DESC";
+	protected static final String ASC_SORT = "ASC";
+	protected static final String DESC_SORT = "DESC";
 
 	protected static final String HISTORY_BY_USER = "user";
 	protected static final String HISTORY_BY_OBJECT = "object";

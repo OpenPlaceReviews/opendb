@@ -1,28 +1,19 @@
 package org.openplacereviews.opendb.service;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.openplacereviews.opendb.ops.OpObject;
 
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 public class HistoryManagerTest {
 
 	private HistoryManager historyManager = new HistoryManager();
 
-	@Before
-	public void beforeEachTestMethod() {
-
-	}
-
 	@After
-	public void tearDown() throws Exception {
-
+	public void tearDown() {
 	}
 
 	@Test
@@ -41,31 +32,28 @@ public class HistoryManagerTest {
 		previousHistoryEdit = historyEdit;
 		assertNotNull(originObject);
 
-		HistoryManager.HistoryEdit newHistoryEdit = new HistoryManager.HistoryEdit(
-				Arrays.asList("user", "test1"),
-				"sys.operation",
+		HistoryManager.HistoryEdit firstHistoryEdit = generateHistoryEdit(
 				generateTestDeletedDeltaObject(),
-				new Date().toString(),
-				HistoryManager.Status.EDITED
+				HistoryManager.Status.EDITED,
+				null
 		);
-		newHistoryEdit.setObjEdit(generateObjEdit());
-		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, newHistoryEdit);
-		previousHistoryEdit = newHistoryEdit;
+
+		firstHistoryEdit.setObjEdit(generateObjEdit());
+		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, firstHistoryEdit);
+		previousHistoryEdit = firstHistoryEdit;
 
 		assertNull(originObject.getFieldByExpr("lat"));
 		assertEquals(originObject.getFieldByExpr("lon"), 12346);
 		assertEquals(originObject.getFieldByExpr("addf"), 1234567);
 		assertEquals(((List)originObject.getFieldByExpr("tags")).size(), 3);
 
-		HistoryManager.HistoryEdit secondHistoryEdit = new HistoryManager.HistoryEdit(
-				Arrays.asList("user", "test1"),
-				"sys.operation",
+		HistoryManager.HistoryEdit secondHistoryEdit = generateHistoryEdit(
 				generateTestDeletedDeltaObject(),
-				new Date().toString(),
-				HistoryManager.Status.EDITED
+				HistoryManager.Status.EDITED,
+				generateSecondObjEdit()
 		);
 		secondHistoryEdit.setObjEdit(generateSecondObjEdit());
-		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, newHistoryEdit);
+		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, secondHistoryEdit);
 		previousHistoryEdit = secondHistoryEdit;
 
 		assertEquals(originObject.getFieldByExpr("lon"), 12345L);
@@ -73,12 +61,11 @@ public class HistoryManagerTest {
 		assertNull(originObject.getFieldByExpr("addf"));
 		assertEquals(((List)originObject.getFieldByExpr("tags")).size(), 2);
 
-		HistoryManager.HistoryEdit createHistoryEdit = new HistoryManager.HistoryEdit(
-				Arrays.asList("user", "test1"),
-				"sys.operation",
+
+		HistoryManager.HistoryEdit createHistoryEdit = generateHistoryEdit(
 				null,
-				new Date().toString(),
-				HistoryManager.Status.CREATED
+				HistoryManager.Status.CREATED,
+				null
 		);
 		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, createHistoryEdit);
 		assertEquals(originObject.getFieldByExpr("lon"), 12344L);
@@ -87,9 +74,17 @@ public class HistoryManagerTest {
 		assertEquals(((List)originObject.getFieldByExpr("tags")).size(), 1);
 	}
 
-	@Test
-	public void generatingHistoryForObjectFromDB() {
+	private HistoryManager.HistoryEdit generateHistoryEdit(OpObject delataChanges, HistoryManager.Status status, TreeMap<String, Object> objEdit) {
+		HistoryManager.HistoryEdit historyEdit = new HistoryManager.HistoryEdit(
+				Arrays.asList("user", "test1"),
+				"sys.operation",
+				delataChanges,
+				new Date().toString(),
+				status
+		);
+		historyEdit.setObjEdit(objEdit);
 
+		return historyEdit;
 	}
 
 	private TreeMap<String, Object> generateObjEdit() {
