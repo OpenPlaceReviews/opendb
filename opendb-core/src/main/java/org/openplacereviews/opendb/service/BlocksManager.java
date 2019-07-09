@@ -24,8 +24,6 @@ import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
-import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
-import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
 
 @Service
 public class BlocksManager {
@@ -166,9 +164,6 @@ public class BlocksManager {
 		if(blockchain == null) {
 			return false;
 		}
-		if (!createVoteObject(op)) {
-			throw new IllegalArgumentException("Voting object was not created");
-		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
 		if (!op.hasEdited() || op.getType().equals(OP_VOTE)) {
@@ -182,37 +177,26 @@ public class BlocksManager {
 				}
 			}
 			return added;
+		} else {
+			if (!createVoteObject(op)) {
+				throw new IllegalArgumentException("Voting object was not created");
+			}
+			if(!existing) {
+				dataManager.insertOperation(op, OpOperation.Status.VOTING);
+			}
 		}
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
-		if(!existing) {
-			dataManager.insertOperation(op, OpOperation.Status.VOTING);
-		}
 		return true;
 	}
 
 	private boolean createVoteObject(OpOperation op) throws FailedVerificationException {
 		if (op.hasEdited() && !op.getType().equals(OP_VOTE)) {
-			OpOperation opOperation = new OpOperation();
-			opOperation.setType(OP_VOTE);
-			opOperation.setSignedBy(serverUser);
-
-			OpObject opObject = new OpObject();
-			opObject.putObjectValue(F_EDITED_OBJECT, op.getEdited());
-			opObject.putObjectValue(F_VOTES, Collections.EMPTY_LIST);
-			opObject.setId(op.getRawHash());
-			for (String objId : op.getEdited().get(0).getId()) {
-				opObject.addOrSetStringValue(OpObject.F_ID, objId);
-			}
-			opOperation.addCreated(opObject);
-			generateHashAndSign(opOperation, serverKeyPair);
-
-			System.out.println(opObject.getId());
-			opOperation.makeImmutable();
-			boolean existing = dataManager.validateExistingOperation(opOperation);
-			boolean added = blockchain.addOperation(opOperation);
+			OpOperation voteOperation = blockchain.generateOpVoteOperation(op, serverUser, serverKeyPair);
+			boolean existing = dataManager.validateExistingOperation(voteOperation);
+			boolean added = blockchain.addOperation(voteOperation);
 			if (!existing) {
-				dataManager.insertOperation(opOperation, OpOperation.Status.ACTIVE);
+				dataManager.insertOperation(voteOperation, OpOperation.Status.ACTIVE);
 			}
 
 			return added;
@@ -231,15 +215,19 @@ public class BlocksManager {
 			for (Map.Entry<String, List<String>> e : refObjectList.entrySet()) {
 				List<String> refObjName = e.getValue();
 				// type is necessary
-				String objType = refObjName.get(0);
-				List<String> refKey = refObjName.subList(1, refObjName.size());
-				OpObject refObject = blockchain.getObjectByName(objType, refKey);
+				if (refObjName.size() > 1) {
+					String objType = refObjName.get(0);
+					List<String> refKey = refObjName.subList(1, refObjName.size());
+					OpObject refObject = blockchain.getObjectByName(objType, refKey);
 
-				OpOperation opOperation = dataManager.getOperationByHash(SecUtils.HASH_SHA256 + ":" + refObject.getId().get(0));
-				opOperation.makeImmutable();
+					OpOperation opOperation = dataManager.getOperationByHash(SecUtils.HASH_SHA256 + ":" + refObject.getId().get(0));
+					opOperation.makeImmutable();
 
-				blockchain.addOperation(opOperation);
-				dataManager.updateOperationStatus(opOperation, OpOperation.Status.ACTIVE);
+					blockchain.addOperation(opOperation);
+					dataManager.updateOperationStatus(opOperation, OpOperation.Status.ACTIVE);
+				} else {
+					throw new IllegalArgumentException("Voting must have ref op type with obj id");
+				}
 			}
 		}
 
