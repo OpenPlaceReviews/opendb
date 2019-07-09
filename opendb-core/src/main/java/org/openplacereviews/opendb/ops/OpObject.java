@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.ops;
 import com.google.gson.*;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
 
 import java.lang.reflect.Type;
 import java.text.ParseException;
@@ -92,6 +93,8 @@ public class OpObject {
 				copy.put(key, copyingObjects(map.get(key)));
 			}
 			return copy;
+		} else if (object instanceof OpExprEvaluator) {
+			return new OpExprEvaluator(((OpExprEvaluator) object).getEctx());
 		} else {
 			throw new UnsupportedOperationException("Type of object is not supported");
 		}
