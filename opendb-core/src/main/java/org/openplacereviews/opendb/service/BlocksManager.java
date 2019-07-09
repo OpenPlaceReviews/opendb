@@ -186,9 +186,9 @@ public class BlocksManager {
 		
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-		HistoryManager.HistoryObjectCtx deleteObjContext = new HistoryManager.HistoryObjectCtx("");
+		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
 		for (OpOperation o : candidates) {
-			if(!blc.addOperation(o, deleteObjContext)) {
+			if(!blc.addOperation(o, hctx)) {
 				return null;
 			}
 		}
@@ -205,7 +205,7 @@ public class BlocksManager {
 
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
-		return replicateValidBlock(timer, blc, opBlock, deleteObjContext);
+		return replicateValidBlock(timer, blc, opBlock, hctx);
 	}
 
 	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {

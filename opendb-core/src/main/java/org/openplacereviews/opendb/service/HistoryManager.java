@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.service;
 
+import org.joda.time.DateTime;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -8,13 +9,17 @@ import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
-import static org.openplacereviews.opendb.service.DBSchemaManager.HISTORY_TABLE_SIZE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class HistoryManager {
@@ -30,10 +35,13 @@ public class HistoryManager {
 	private boolean isRunning;
 
 	@Autowired
-	private DBConsensusManager dataManager;
+	private DBSchemaManager dbSchema;
 
 	@Autowired
 	private BlocksManager blocksManager;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -42,15 +50,88 @@ public class HistoryManager {
 		return isRunning;
 	}
 
-	public void retrieveHistory(HistoryManager.HistoryObjectRequest historyObjectRequest) {
-		dataManager.retrieveHistory(historyObjectRequest);
+	public void retrieveHistory(HistoryObjectRequest historyObjectRequest) {
+		String sql;
+		switch (historyObjectRequest.historyType) {
+			case HISTORY_BY_USER: {
+				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", historyObjectRequest.key.size()) +
+						" ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+				loadHistory(sql, historyObjectRequest);
+				break;
+			}
+			case HISTORY_BY_OBJECT: {
+				String objType = null;
+				if (historyObjectRequest.key.size() > 1) {
+					objType = historyObjectRequest.key.get(0);
+				}
+				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+						(objType == null ? "" : " type = ? AND ") + dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ",
+						(objType == null ? historyObjectRequest.key.size() : historyObjectRequest.key.size() - 1)) +
+						" ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+				loadHistory(sql, historyObjectRequest);
+				break;
+			}
+			case HISTORY_BY_TYPE: {
+				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
+						" WHERE type = ?" + " ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+				loadHistory(sql, historyObjectRequest);
+				break;
+			}
+		}
+	}
+
+	protected void loadHistory(String sql, HistoryObjectRequest historyObjectRequest) {
+		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, historyObjectRequest.key.toArray(), new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
+			@Override
+			public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
+
+				List<List<String>> objIds = new ArrayList<>();
+				List<HistoryEdit> allObjects = new LinkedList<>();
+				while (rs.next()) {
+					List<String> users = new ArrayList<>();
+					for (int i = 1; i <= USER_KEY_SIZE; i++) {
+						if (rs.getString(i) != null) {
+							users.add(rs.getString(i));
+						}
+					}
+					List<String> ids = new ArrayList<>();
+					for (int i = 3; i <= USER_KEY_SIZE + MAX_KEY_SIZE; i++) {
+						if (rs.getString(i) != null) {
+							ids.add(rs.getString(i));
+						}
+					}
+					HistoryEdit historyObject = new HistoryEdit(
+							users,
+							rs.getString(10),
+							formatter.parseObject(rs.getString(9)),
+							formatFullDate(rs.getTimestamp(8)),
+							HistoryManager.Status.getStatus(rs.getInt(11))
+					);
+					if (historyObject.getStatus().equals(HistoryManager.Status.EDITED)) {
+						historyObject.setObjEdit(formatter.fromJsonToTreeMap(rs.getString(9)));
+					}
+					historyObject.setId(ids);
+
+					allObjects.add(historyObject);
+					if (!objIds.contains(ids)) {
+						objIds.add(ids);
+					}
+				}
+				generateObjMapping(objIds, allObjects, result);
+
+				result = generateHistoryObj(result, historyObjectRequest.sort);
+				return result;
+			}
+		});
 	}
 
 	public void saveHistoryForBlockOperations(OpBlock opBlock,  HistoryObjectCtx hctx) {
 		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
 		for (OpOperation o : opBlock.getOperations()) {
 			List<Object[]> allBatches = generateHistoryObjBatch(opBlock, o, date, hctx);
-			dataManager.saveHistoryForOperationObjects(allBatches);
+			saveHistoryForOperationObjects(allBatches);
 		}
 	}
 
@@ -83,7 +164,30 @@ public class HistoryManager {
 		return newHistoryMap;
 	}
 
-	private OpObject getPreviousOpObject(OpObject originObject, HistoryEdit previousHistoryEdit, HistoryEdit historyEdit) {
+	private void saveHistoryForOperationObjects(List<Object[]> allBatches) {
+		dbSchema.insertObjIntoHistoryTableBatch(allBatches, OP_OBJ_HISTORY_TABLE, jdbcTemplate);
+	}
+
+	private String formatFullDate(Date date) {
+		if (date == null)
+			return null;
+
+		return new DateTime(date).toString(OpObject.DATE_FORMAT);
+	}
+
+	private void generateObjMapping(List<List<String>> objIds, List<HistoryEdit> allObjects, Map<List<String>, List<HistoryEdit>> history) {
+		for (List<String> id : objIds) {
+			List<HistoryEdit> objWithSameId = new LinkedList<>();
+			for (HistoryEdit hdto : allObjects) {
+				if (hdto.getId().equals(id)) {
+					objWithSameId.add(hdto);
+				}
+			}
+			history.put(id, objWithSameId);
+		}
+	}
+
+	protected OpObject getPreviousOpObject(OpObject originObject, HistoryEdit previousHistoryEdit, HistoryEdit historyEdit) {
 		if (historyEdit.getStatus().equals(Status.DELETED)) {
 			originObject = historyEdit.deltaChanges;
 		} else if (historyEdit.getStatus().equals(Status.EDITED) && originObject == null ||
@@ -103,7 +207,7 @@ public class HistoryManager {
 		return originObject;
 	}
 
-	private OpObject generateReverseEditObject(OpObject originObject, Map<String, Object> changes) {
+	protected OpObject generateReverseEditObject(OpObject originObject, Map<String, Object> changes) {
 		TreeMap<String, Object> changeEdit = (TreeMap<String, Object>) changes.get(OpObject.F_CHANGE);
 		TreeMap<String, Object> currentEdit = (TreeMap<String, Object>) changes.get(OpObject.F_CURRENT);
 
@@ -112,23 +216,24 @@ public class HistoryManager {
 			String fieldExpr = e.getKey();
 			Object op = e.getValue();
 			String opId = op.toString();
-			Object opValue = getPreviousValueForField(fieldExpr, currentEdit);
 			if (op instanceof Map) {
 				Map.Entry<String, Object> ee = ((Map<String, Object>) op).entrySet().iterator().next();
 				opId = ee.getKey();
-				opValue = getPreviousValueForField(fieldExpr, currentEdit);
 			}
 
 			if (OP_CHANGE_DELETE.equals(opId)) {
-				prevObj.setFieldByExpr(fieldExpr, opValue);
+				Object previousObj = getValueForField(fieldExpr, currentEdit);
+				prevObj.setFieldByExpr(fieldExpr, previousObj);
 			} else if (OP_CHANGE_APPEND.equals(opId)) {
-				List<Object> args = new ArrayList<>(1);
-				args.add(opValue);
-				prevObj.setFieldByExpr(fieldExpr, args);
+				List<Object> currentObj = (List<Object>) prevObj.getFieldByExpr(fieldExpr);
+				Object appendObj = getValueForField(fieldExpr, changeEdit);
+				currentObj.remove(appendObj);
+				prevObj.setFieldByExpr(fieldExpr, currentObj);
 			} else if (OP_CHANGE_SET.equals(opId)) {
 				prevObj.setFieldByExpr(fieldExpr, null);
 			} else if (OP_CHANGE_INCREMENT.equals(opId)) {
-				prevObj.setFieldByExpr(fieldExpr, opValue);
+				Object currentValue = prevObj.getFieldByExpr(fieldExpr);
+				prevObj.setFieldByExpr(fieldExpr, ((Number) currentValue).longValue() - 1);
 			}
 
 		}
@@ -136,8 +241,8 @@ public class HistoryManager {
 		return prevObj;
 	}
 
-	private Object getPreviousValueForField(String fieldExpr, TreeMap<String, Object> currentValues) {
-		for (Map.Entry<String, Object> e : currentValues.entrySet()) {
+	protected Object getValueForField(String fieldExpr, TreeMap<String, Object> editMap) {
+		for (Map.Entry<String, Object> e : editMap.entrySet()) {
 			if (e.getKey().equals(fieldExpr)) {
 				Object op = e.getValue();
 				Object opValue = e.getValue();

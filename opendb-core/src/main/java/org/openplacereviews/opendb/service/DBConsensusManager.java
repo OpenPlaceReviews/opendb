@@ -3,11 +3,8 @@ package org.openplacereviews.opendb.service;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.joda.time.DateTime;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
-import org.openplacereviews.opendb.service.HistoryManager.HistoryEdit;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
@@ -36,9 +33,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
-import static org.openplacereviews.opendb.service.HistoryManager.HISTORY_BY_OBJECT;
-import static org.openplacereviews.opendb.service.HistoryManager.HISTORY_BY_TYPE;
-import static org.openplacereviews.opendb.service.HistoryManager.HISTORY_BY_USER;
 
 @Service
 public class DBConsensusManager {
@@ -66,9 +60,6 @@ public class DBConsensusManager {
 
 	@Autowired
 	private LogOperationService logSystem;
-
-	@Autowired
-	private HistoryManager historyManager;
 
 	private Map<String, OpBlock> blocks = new ConcurrentHashMap<String, OpBlock>();
 	private Map<String, OpBlock> orphanedBlocks = new ConcurrentHashMap<String, OpBlock>();
@@ -909,106 +900,6 @@ public class DBConsensusManager {
 
 		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
 				bhash, pGobject);
-	}
-
-	public void saveHistoryForOperationObjects(List<Object[]> allBatches) {
-		dbSchema.insertObjIntoHistoryTableBatch(allBatches, OP_OBJ_HISTORY_TABLE, jdbcTemplate);
-	}
-
-	public void retrieveHistory(HistoryObjectRequest historyObjectRequest) {
-		String sql;
-		switch (historyObjectRequest.historyType) {
-			case HISTORY_BY_USER: {
-				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status from " + OP_OBJ_HISTORY_TABLE + " where " +
-						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", historyObjectRequest.key.size()) +
-						" ORDER BY time,sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
-				loadHistory(sql, historyObjectRequest);
-				break;
-			}
-			case HISTORY_BY_OBJECT: {
-				String objType = null;
-				if (historyObjectRequest.key.size() > 1) {
-					objType = historyObjectRequest.key.get(0);
-				}
-				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-						(objType == null ? "" : " type = ? AND ") + dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ",
-								(objType == null ? historyObjectRequest.key.size() : historyObjectRequest.key.size() - 1)) +
-						" ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
-				loadHistory(sql, historyObjectRequest);
-				break;
-			}
-			case HISTORY_BY_TYPE: {
-				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
-						" WHERE type = ?" + " ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
-				loadHistory(sql, historyObjectRequest);
-				break;
-			}
-		}
-	}
-
-	protected void loadHistory(String sql, HistoryObjectRequest historyObjectRequest) {
-		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, historyObjectRequest.key.toArray(), new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
-			@Override
-			public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
-				Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
-
-				List<List<String>> objIds = new ArrayList<>();
-				List<HistoryEdit> allObjects = new LinkedList<>();
-				while (rs.next()) {
-					List<String> users = new ArrayList<>();
-					for (int i = 1; i <= USER_KEY_SIZE; i++) {
-						if (rs.getString(i) != null) {
-							users.add(rs.getString(i));
-						}
-					}
-					List<String> ids = new ArrayList<>();
-					for (int i = 3; i <= USER_KEY_SIZE + MAX_KEY_SIZE; i++) {
-						if (rs.getString(i) != null) {
-							ids.add(rs.getString(i));
-						}
-					}
-					HistoryEdit historyObject = new HistoryEdit(
-							users,
-							rs.getString(10),
-							formatter.parseObject(rs.getString(9)),
-							formatFullDate(rs.getTimestamp(8)),
-							HistoryManager.Status.getStatus(rs.getInt(11))
-					);
-					if (historyObject.getStatus().equals(HistoryManager.Status.EDITED)) {
-						historyObject.setObjEdit(formatter.fromJsonToTreeMap(rs.getString(9)));
-					}
-					historyObject.setId(ids);
-
-					allObjects.add(historyObject);
-					if (!objIds.contains(ids)) {
-						objIds.add(ids);
-					}
-				}
-				generateObjMapping(objIds, allObjects, result);
-
-				result = historyManager.generateHistoryObj(result, historyObjectRequest.sort);
-				return result;
-			}
-		});
-	}
-
-	private void generateObjMapping(List<List<String>> objIds, List<HistoryEdit> allObjects, Map<List<String>, List<HistoryEdit>> history) {
-		for (List<String> id : objIds) {
-			List<HistoryEdit> objWithSameId = new LinkedList<>();
-			for (HistoryEdit hdto : allObjects) {
-				if (hdto.getId().equals(id)) {
-					objWithSameId.add(hdto);
-				}
-			}
-			history.put(id, objWithSameId);
-		}
-	}
-
-	private String formatFullDate(Date date) {
-		if (date == null)
-			return null;
-
-		return new DateTime(date).toString(OpObject.DATE_FORMAT);
 	}
 
 	public OpOperation getOperationByHash(String hash) {
