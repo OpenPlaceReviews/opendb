@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
@@ -262,15 +263,19 @@ public class HistoryManager {
 		byte[] blockHash = SecUtils.getHashBytes(opBlock.getFullHash());
 		List<Object[]> args = new LinkedList<>();
 
-		args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getCreated(), op, date, Status.CREATED));
-		if (hctx != null) {
-			for (String key : hctx.deletedObjsCache.keySet()) {
-				if (key.equals(op.getHash())) {
-					args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.deletedObjsCache.get(key), op, date, Status.DELETED));
+		if (op.getType().equals(OP_VOTING)) {
+			//TODO add voting op to history!
+		} else {
+			args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getCreated(), op, date, Status.CREATED));
+			if (hctx != null) {
+				for (String key : hctx.deletedObjsCache.keySet()) {
+					if (key.equals(op.getHash())) {
+						args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.deletedObjsCache.get(key), op, date, Status.DELETED));
+					}
 				}
 			}
+			args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getEdited(), op, date, Status.EDITED));
 		}
-		args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getEdited(), op, date, Status.EDITED));
 
 		return args;
 	}

@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
 import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
 
 /**
@@ -719,10 +718,7 @@ public class OpBlockChain {
 		if (refObject == null) {
 			return rules.error(op, ErrorType.REF_OBJ_NOT_FOUND, op.getHash(), refKey);
 		}
-//		if (refObject.getStringList("votes").size() < MIN_AMOUNT_VOTES_FOR_EDIT_OP) {
-//			return rules.error(op, ErrorType.AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT, op.getHash(),
-//					refObject.getNumberValue("votes").longValue(), MIN_AMOUNT_VOTES_FOR_EDIT_OP);
-//		}
+		//TODO add validation
 
 		return true;
 	}
@@ -944,10 +940,9 @@ public class OpBlockChain {
 			OpObject newObject = new OpObject(currentObject);
 			if (u.getType().equals(OP_VOTE)) {
 				List<String> newVote = ((TreeMap<String, List<String>>) editObject.getChangedEditFields().get(F_VOTES)).get(OP_CHANGE_APPEND);
-				// TODO are needed that?
-//				if (loadRefUserObject(newVote) == null) {
-//					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
-//				}
+				if (loadRefUserObject(newVote) == null) {
+					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
+				}
 				List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES);
 
 				if (votes.contains(newVote)) {
@@ -1037,25 +1032,9 @@ public class OpBlockChain {
 
 		if (objType != null) {
 			return getObjectByName(objType, refs.subList(1, refs.size()));
-		} else {
-			//TODO
-			return null;
-		}
-	}
-
-	private boolean checkVotingOperationOnDuplicateVotes(OpOperation u, OpObject currentObject, OpObject editObject) {
-		if (u.getType().equals(OP_VOTING)) {
-			List<String> newVote = (List<String>) editObject.getFieldByExpr("votes");
-			List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr("votes");
-
-			if (votes.contains(newVote)) {
-				return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, newVote, votes);
-			}
-
-			return true;
 		}
 
-		return true;
+		return null;
 	}
 
 	// no multi thread issue (used only in synchronized blocks)

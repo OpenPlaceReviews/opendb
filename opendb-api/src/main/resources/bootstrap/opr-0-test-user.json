@@ -119,7 +119,6 @@
 				"votes" : {"append" : ["sys.signup","openplacereviews"]}
 			},
 			"current" : {
-				"votes" : []
 			}
 		}]
 	},
@@ -128,34 +127,20 @@
 		"edit" : [{
 			"id" : ["10821a42d417af7abfaafec47f2fa0815afb6b2455b135520c3a721e053e209a","osm.place"],
 			"change" : {
-				"votes" : {"append": ["openplacereviews:test_1"]}
+				"votes" : {"append": ["sys.login","openplacereviews","test_1"]}
 			},
 			"current" : {
-				"votes" : [["sys.signup", "openplacereviews"]]
 			}
 		}]
 	},
-//	{
-//		"type" : "sys.vote",
-//		"edit" : [{
-//			"id" : ["10821a42d417af7abfaafec47f2fa0815afb6b2455b135520c3a721e053e209a","osm.place"],
-//			"change" : {
-//				"votes" : {"append": ["openplacereviews:test_1"]}
-//			},
-//			"current" : {
-//				"votes" : [["openplacereviews"],["openplacereviews:test_1"]]
-//			}
-//		}]
-//	},
 	{
 		"type" : "sys.vote",
 		"edit" : [{
 			"id" : ["10821a42d417af7abfaafec47f2fa0815afb6b2455b135520c3a721e053e209a","osm.place"],
 			"change" : {
-				"votes" : {"append": ["openplacereviews:test_2"]}
+				"votes" : {"append": ["sys.signup","191762bd1e2e64925b936fb172053d74151ee212f5c465b48bb0416e51026676","0"]}
 			},
 			"current" : {
-				"votes" : [["sys.signup", "openplacereviews"],["openplacereviews:test_1"]]
 			}
 		}]
 	},

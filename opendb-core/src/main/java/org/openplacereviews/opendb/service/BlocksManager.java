@@ -161,24 +161,25 @@ public class BlocksManager {
 		return false;
 	}
 
-	// TODO -> sys.voting can be called only by admin?
 	// TODO -> write tests for voting process
 	public synchronized boolean addOperation(OpOperation op) throws FailedVerificationException {
 		if(blockchain == null) {
 			return false;
 		}
-		op.makeImmutable();
 		if (!createVoteObject(op)) {
 			throw new IllegalArgumentException("Voting object was not created");
 		}
-		if (!createFinishedVotingObject(op)) {
-			throw new IllegalArgumentException("Voting cannot be finished");
-		}
+		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
 		if (!op.hasEdited() || op.getType().equals(OP_VOTE)) {
 			boolean added = blockchain.addOperation(op);
 			if(!existing) {
 				dataManager.insertOperation(op, OpOperation.Status.ACTIVE);
+			}
+			if (added) {
+				if (!createFinishedVotingObject(op)) {
+					throw new IllegalArgumentException("Voting cannot be finished");
+				}
 			}
 			return added;
 		}
@@ -206,6 +207,7 @@ public class BlocksManager {
 			opOperation.addCreated(opObject);
 			generateHashAndSign(opOperation, serverKeyPair);
 
+			System.out.println(opObject.getId());
 			opOperation.makeImmutable();
 			boolean existing = dataManager.validateExistingOperation(opOperation);
 			boolean added = blockchain.addOperation(opOperation);
@@ -228,18 +230,16 @@ public class BlocksManager {
 
 			for (Map.Entry<String, List<String>> e : refObjectList.entrySet()) {
 				List<String> refObjName = e.getValue();
-				if (refObjName.size() > 1) {
-					// type is necessary
-					String objType = refObjName.get(0);
-					List<String> refKey = refObjName.subList(1, refObjName.size());
-					OpObject refObject = blockchain.getObjectByName(objType, refKey);
-					blockchain.validateVotingRefObject(op, refObject, refKey);
+				// type is necessary
+				String objType = refObjName.get(0);
+				List<String> refKey = refObjName.subList(1, refObjName.size());
+				OpObject refObject = blockchain.getObjectByName(objType, refKey);
 
-					OpOperation opOperation = dataManager.getOperationByHash(SecUtils.HASH_SHA256 + ":" + refObject.getId().get(0));
-					opOperation.makeImmutable();
-					blockchain.addOperation(opOperation);
-					dataManager.updateOperationStatus(opOperation, OpOperation.Status.ACTIVE);
-				}
+				OpOperation opOperation = dataManager.getOperationByHash(SecUtils.HASH_SHA256 + ":" + refObject.getId().get(0));
+				opOperation.makeImmutable();
+
+				blockchain.addOperation(opOperation);
+				dataManager.updateOperationStatus(opOperation, OpOperation.Status.ACTIVE);
 			}
 		}
 
