@@ -5,7 +5,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.dto.HistoryDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -23,12 +22,10 @@ import java.net.URL;
 import java.security.KeyPair;
 import java.util.*;
 
-import static org.openplacereviews.opendb.ops.OpBlockChain.*;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
 import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
-
 
 @Service
 public class BlocksManager {
@@ -36,11 +33,6 @@ public class BlocksManager {
 	public static final String BOOT_STD_OPS_DEFINTIONS = "std-ops-defintions";
 	public static final String BOOT_STD_ROLES = "std-roles";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
-
-	private static final String HISTORY_BY_USER = "user";
-	private static final String HISTORY_BY_OBJECT = "object";
-	private static final String HISTORY_BY_TYPE = "type";
-
 
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
@@ -52,6 +44,9 @@ public class BlocksManager {
 	
 	@Autowired
 	private DBConsensusManager dataManager;
+
+	@Autowired
+	private HistoryManager historyManager;
 
 	@Autowired
 	private IPFSFileManager extResourceService;
@@ -103,20 +98,6 @@ public class BlocksManager {
 	
 	public String getReplicateUrl() {
 		return replicateUrl;
-	}
-
-	public void getHistory(HistoryDTO.HistoryObjectRequest historyObjectRequest) {
-		switch (historyObjectRequest.historyType) {
-			case HISTORY_BY_USER:
-				dataManager.getHistoryForUser(historyObjectRequest);
-				break;
-			case HISTORY_BY_OBJECT:
-				dataManager.getHistoryForObject(historyObjectRequest);
-				break;
-			case HISTORY_BY_TYPE:
-				dataManager.getHistoryForType(historyObjectRequest);
-				break;
-		}
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
@@ -279,8 +260,9 @@ public class BlocksManager {
 		
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
 		for (OpOperation o : candidates) {
-			if(!blc.addOperation(o)) {
+			if(!blc.addOperation(o, hctx)) {
 				return null;
 			}
 		}
@@ -297,14 +279,16 @@ public class BlocksManager {
 
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
-		return replicateValidBlock(timer, blc, opBlock);
+		return replicateValidBlock(timer, blc, opBlock, hctx);
 	}
 
-	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock) {
+	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
-		saveHistoryForBlockOperations(opBlock);
+		if (historyManager.isRunning()) {
+			historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+		}
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
@@ -332,71 +316,6 @@ public class BlocksManager {
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		return opBlock;
-	}
-
-	private void saveHistoryForBlockOperations(OpBlock opBlock) {
-		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
-		Map<List<String>, OpObject> lastOriginObjects = new HashMap<>();
-		for (OpOperation o : opBlock.getOperations()) {
-			List<OpObject> newEditedObjects = new LinkedList<>();
-			if (o.hasEdited()) {
-				for (OpObject opObject : o.getEdited()) {
-					OpObject lastOriginObject = getOriginOpObject(lastOriginObjects, o, opObject);
-					OpObject newObject = new OpObject(lastOriginObject);
-
-					Map<String, Object> changedMap = opObject.getChangedEditFields();
-					for (Map.Entry<String, Object> e : changedMap.entrySet()) {
-						// evaluate changes for new object
-						String fieldExpr = e.getKey();
-						Object op = e.getValue();
-						String opId = op.toString();
-						Object opValue = null;
-						if (op instanceof Map) {
-							Map.Entry<String, Object> ee = ((Map<String, Object>) op).entrySet().iterator().next();
-							opId = ee.getKey();
-							opValue = ee.getValue();
-						}
-
-						if (OP_CHANGE_DELETE.equals(opId)) {
-							newObject.setFieldByExpr(fieldExpr, null);
-						} else if (OP_CHANGE_SET.equals(opId)) {
-							newObject.setFieldByExpr(fieldExpr, opValue);
-						} else if (OP_CHANGE_APPEND.equals(opId)) {
-							Object oldObject = newObject.getFieldByExpr(fieldExpr);
-							if (oldObject == null) {
-								List<Object> args = new ArrayList<>(Collections.singletonList(opValue));
-								newObject.setFieldByExpr(fieldExpr, args);
-							} else if (oldObject instanceof List) {
-								((List) oldObject).add(opValue);
-							}
-						} else if (OP_CHANGE_INCREMENT.equals(opId)) {
-							Object oldObject = newObject.getFieldByExpr(fieldExpr);
-							if (oldObject == null) {
-								newObject.setFieldByExpr(fieldExpr, 1);
-							} else if (oldObject instanceof Number) {
-								newObject.setFieldByExpr(fieldExpr, (((Long) oldObject) + 1));
-							}
-						}
-					}
-
-					newEditedObjects.add(newObject);
-					lastOriginObjects.put(opObject.getId(), newObject);
-				}
-			}
-			dataManager.saveHistoryForObjects(o, date, newEditedObjects);
-		}
-	}
-
-	private OpObject getOriginOpObject(Map<List<String>, OpObject> lastOriginObjects, OpOperation o, OpObject opObject) {
-		OpObject lastOriginObject = lastOriginObjects.get(opObject.getId());
-		if (lastOriginObject == null) {
-			lastOriginObject = dataManager.getLastOriginObjectFromHistory(opObject.getId());
-		}
-
-		if (lastOriginObject == null) {
-			lastOriginObject = blockchain.getObjectByName(o.getType(), opObject.getId());
-		}
-		return lastOriginObject;
 	}
 
 	public synchronized boolean compact() {
@@ -480,11 +399,12 @@ public class BlocksManager {
 		timer.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		OpBlock res;
-		res = blc.replicateBlock(block);
+		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		res = blc.replicateBlock(block, hctx);
 		if(res == null) {
 			return false;
 		}
-		res = replicateValidBlock(timer, blc, res);
+		res = replicateValidBlock(timer, blc, res, hctx);
 		if(res == null) {
 			return false;
 		}

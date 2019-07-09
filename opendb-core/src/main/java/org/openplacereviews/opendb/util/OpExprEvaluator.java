@@ -17,8 +17,6 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
-import static org.openplacereviews.opendb.ops.OpOperation.F_CREATE;
-
 import java.util.*;
 
 public class OpExprEvaluator {
@@ -71,9 +69,12 @@ public class OpExprEvaluator {
 
 	}
 
-	private OpExprEvaluator(ExpressionContext ectx) {
+	public OpExprEvaluator(ExpressionContext ectx) {
 		this.ectx = ectx;
+	}
 
+	public ExpressionContext getEctx() {
+		return this.ectx;
 	}
 
 	public Object evaluateObject(EvaluationContext obj) {

@@ -20,7 +20,10 @@ publishing {
 }
 
 test {
-    exclude '**/service'
+    exclude '**/service/DBConsensusManagerTest.class'
+    exclude '**/service/DBHistoryManagerTest.class'
+    exclude '**/service/OpBlockchainDbAccessTest.class'
+    exclude '**/service/OpBlockchainGettersDbAccessTest.class'
 }
 
 task embeddedPostgresTest(type: Test) {

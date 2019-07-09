@@ -3,12 +3,8 @@ package org.openplacereviews.opendb.service;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.joda.time.DateTime;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.dto.HistoryDTO;
-import org.openplacereviews.opendb.dto.HistoryDTO.HistoryObjectRequest;
-import org.openplacereviews.opendb.dto.HistoryDTO.HistoryEdit;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
@@ -37,7 +33,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
-import static org.openplacereviews.opendb.util.DateUtils.FULL_DATE_FORMAT;
 
 @Service
 public class DBConsensusManager {
@@ -753,8 +748,8 @@ public class DBConsensusManager {
 					jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE
 									+ " set blocks = array_remove(blocks, ?) where hash = ?",
 							blockHash, SecUtils.getHashBytes(o.getRawHash()));
-					jdbcTemplate.update("DELETE FROM " + OP_OBJ_HISTORY_TABLE + " WHERE ophash = ?", SecUtils.getHashBytes(o.getRawHash()));
 				}
+				jdbcTemplate.update("DELETE FROM " + OP_OBJ_HISTORY_TABLE + " WHERE blockhash = ?", SecUtils.getHashBytes(block.getFullHash()));
 				orphanedBlocks.remove(block.getRawHash());
 				blocks.remove(block.getRawHash());
 			}
@@ -891,6 +886,9 @@ public class DBConsensusManager {
 		return existingOperation != null;
 	}
 
+	public void insertOperation(OpOperation op) {
+		insertOperation(op, OpOperation.Status.ACTIVE);
+	}
 	public void insertOperation(OpOperation op, OpOperation.Status status) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
@@ -910,258 +908,6 @@ public class DBConsensusManager {
 	public void updateOperationStatus(OpOperation op, OpOperation.Status status) {
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
 		jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set status = ? WHERE hash = ?", status.getValue(), bhash);
-	}
-
-	protected List<Object[]> prepareArgumentsForHistoryBatch(List<OpObject> opObject, OpOperation op, Date date, HistoryDTO.Status status, int totalAmountfields) {
-		List<Object[]> insertBatch = new ArrayList<>(opObject.size());
-
-		for (int i = 0; i < opObject.size(); i++) {
-			Object[] args = new Object[totalAmountfields];
-			args[0] = SecUtils.getHashBytes(op.getRawHash());
-			args[1] = op.getType();
-			args[2] = date;
-
-			PGobject obj = new PGobject();
-			obj.setType("jsonb");
-			try {
-				obj.setValue(formatter.objToJson(opObject.get(i)));
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-			args[3] = obj;
-			args[4] = status.getValue();
-			generateSignedByArguments(args, op.getSignedBy(), 5);
-
-			List<String> objIds = opObject.get(i).getId();
-			if (objIds.isEmpty()) {
-				objIds = new ArrayList<>();
-				objIds.add(op.getRawHash());
-				objIds.add(String.valueOf(i));
-			}
-
-			int k = 7;
-			for (String id : objIds) {
-				args[k] = id;
-				k++;
-			}
-
-			insertBatch.add(args);
-		}
-
-		return insertBatch;
-	}
-
-	protected List<Object[]> prepareArgumentsForHistoryBatch(List<List<String>> deletedObjects, OpOperation op, Date date, int totalAmountfields) {
-		List<Object[]> insertBatch = new ArrayList<>(deletedObjects.size());
-
-		for (int i = 0; i < deletedObjects.size(); i++) {
-			Object[] args = new Object[totalAmountfields];
-			args[0] = SecUtils.getHashBytes(op.getHash());
-			args[1] = op.getType();
-			args[2] = date;
-			args[3] = null;
-			args[4] = HistoryDTO.Status.DELETED.getValue();
-			generateSignedByArguments(args, op.getSignedBy(), 5);
-
-			int k = 7;
-			for (String id : deletedObjects.get(i)) {
-				args[k] = id;
-				k++;
-			}
-			insertBatch.add(args);
-		}
-
-		return insertBatch;
-	}
-
-	private void generateSignedByArguments(Object[] args, List<String> signedBy, int k) {
-		for (int i = 0; i < 2; i++) {
-			if (signedBy.size() > 1) {
-				args[k] = signedBy.get(i);
-			} else {
-				if (k == 6) {
-					args[k] = null;
-				} else {
-					args[k] = signedBy.get(0);
-				}
-			}
-			k++;
-		}
-	}
-
-	public void saveHistoryForObjects(OpOperation op, Date date, List<OpObject> newEditedObjects) {
-		int totalAmountFields = 12;
-
-		List<Object[]> allBatches = new LinkedList<>();
-		allBatches.addAll(prepareArgumentsForHistoryBatch(op.getCreated(), op, date, HistoryDTO.Status.CREATED, totalAmountFields));
-		allBatches.addAll(prepareArgumentsForHistoryBatch(op.getDeleted(), op, date, totalAmountFields));
-		allBatches.addAll(prepareArgumentsForHistoryBatch(newEditedObjects, op, date, HistoryDTO.Status.EDITED, totalAmountFields));
-
-		dbSchema.insertObjIntoHistoryTableBatch(allBatches, OP_OBJ_HISTORY_TABLE, jdbcTemplate, totalAmountFields);
-
-	}
-
-	public OpObject getLastOriginObjectFromHistory(List<String> obj) {
-		return jdbcTemplate.query("SELECT obj FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-				dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ", obj.size()) +
-				" ORDER BY time, dbid DESC LIMIT 1", obj.toArray(), new ResultSetExtractor<OpObject>() {
-			@Override
-			public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
-				OpObject opObject = null;
-				if (rs.next()) {
-					opObject = formatter.parseObject(rs.getString(1));
-				}
-
-				return opObject;
-			}
-		});
-	}
-
-	public void getHistoryForUser(HistoryObjectRequest historyObjectRequest) {
-		historyObjectRequest.historySearchResult = jdbcTemplate.query("SELECT p1, p2, p3, p4, p5, time, obj, type, status from " + OP_OBJ_HISTORY_TABLE + " where " +
-						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", historyObjectRequest.key.size()) +
-						" ORDER BY time,dbid " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit, historyObjectRequest.key.toArray(),
-				new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
-					@Override
-					public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
-						Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
-
-						List<List<String>> objIds = new ArrayList<>();
-						List<HistoryEdit> allObjects = new LinkedList<>();
-
-						while (rs.next()) {
-							List<String> ids = new ArrayList<>();
-							for (int i = 1; i <= 5; i++) {
-								if (rs.getString(i) != null) {
-									ids.add(rs.getString(i));
-								}
-							}
-							HistoryEdit historyObject = new HistoryEdit(
-									historyObjectRequest.key,
-									rs.getString(8),
-									null,
-									formatter.parseObject(rs.getString(7)),
-									formatFullDate(rs.getTimestamp(6)),
-									HistoryDTO.Status.getStatus(rs.getInt(9))
-							);
-							historyObject.setId(ids);
-
-							allObjects.add(historyObject);
-							if (!objIds.contains(ids)) {
-								objIds.add(ids);
-							}
-						}
-						generateObjMapping(objIds, allObjects, result);
-
-						return result;
-					}
-				});
-	}
-
-	public void getHistoryForObject(HistoryObjectRequest historyObjectRequest) {
-		String objType = null;
-		if (historyObjectRequest.key.size() > 1) {
-			objType = historyObjectRequest.key.get(0);
-		}
-		historyObjectRequest.historySearchResult = jdbcTemplate.query("SELECT u1, u2, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-						(objType == null ? "" : " type = ? AND ") +
-						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ",
-								(objType == null ? historyObjectRequest.key.size() : historyObjectRequest.key.size() - 1)) +
-						" ORDER BY time, dbid " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit, historyObjectRequest.key.toArray(),
-				new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
-					@Override
-					public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
-						Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
-
-						List<HistoryEdit> historyObject = new ArrayList<>();
-						while (rs.next()) {
-							List<String> users = new ArrayList<>();
-							for (int i = 1; i <= 2; i++) {
-								if (rs.getString(i) != null) {
-									users.add(rs.getString(i));
-								}
-							}
-
-							HistoryEdit historyEdit = new HistoryEdit(
-									users,
-									rs.getString(5),
-									null,
-									formatter.parseObject(rs.getString(4)),
-									formatFullDate(rs.getTimestamp(3)),
-									HistoryDTO.Status.getStatus(rs.getInt(6))
-							);
-							historyObject.add(historyEdit);
-						}
-						result.put(historyObjectRequest.key, historyObject);
-
-						return result;
-					}
-				});
-	}
-
-	public void getHistoryForType(HistoryObjectRequest historyObjectRequest) {
-		historyObjectRequest.historySearchResult = jdbcTemplate.query("SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM "
-						+ OP_OBJ_HISTORY_TABLE + " WHERE type = ?" + " ORDER BY time, dbid " + historyObjectRequest.sort +
-						" LIMIT " + historyObjectRequest.limit, new Object[]{historyObjectRequest.key.get(0)},
-				new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
-					@Override
-					public Map<List<String>, List<HistoryEdit>>  extractData(ResultSet rs) throws SQLException, DataAccessException {
-						Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
-
-						List<List<String>> objIds = new ArrayList<>();
-						List<HistoryEdit> allObjects = new LinkedList<>();
-						while (rs.next()) {
-							List<String> users = new ArrayList<>();
-							for (int i = 1; i <= 2; i++) {
-								if (rs.getString(i) != null) {
-									users.add(rs.getString(i));
-								}
-							}
-							List<String> ids = new ArrayList<>();
-							for (int i = 3; i <= 7; i++) {
-								if (rs.getString(i) != null) {
-									ids.add(rs.getString(i));
-								}
-							}
-							HistoryEdit historyObject = new HistoryEdit(
-									users,
-									rs.getString(10),
-									null,
-									formatter.parseObject(rs.getString(9)),
-									formatFullDate(rs.getTimestamp(8)),
-									HistoryDTO.Status.getStatus(rs.getInt(11))
-							);
-							historyObject.setId(ids);
-
-							allObjects.add(historyObject);
-							if (!objIds.contains(ids)) {
-								objIds.add(ids);
-							}
-						}
-						generateObjMapping(objIds, allObjects, result);
-
-						return result;
-					}
-				});
-	}
-
-	private void generateObjMapping(List<List<String>> objIds, List<HistoryEdit> allObjects, Map<List<String>, List<HistoryEdit>> history) {
-		for (List<String> id : objIds) {
-			List<HistoryEdit> objWithSameId = new LinkedList<>();
-			for (HistoryEdit hdto : allObjects) {
-				if (hdto.getId().equals(id)) {
-					objWithSameId.add(hdto);
-				}
-			}
-			history.put(id, objWithSameId);
-		}
-	}
-
-	private String formatFullDate(Date date) {
-		if (date == null)
-			return null;
-
-		return new DateTime(date).toString(FULL_DATE_FORMAT);
 	}
 
 	public OpOperation getOperationByHash(String hash) {

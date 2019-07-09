@@ -8,10 +8,12 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class JsonMapUtilsTest {
