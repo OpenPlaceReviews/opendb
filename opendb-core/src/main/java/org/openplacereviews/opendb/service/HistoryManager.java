@@ -128,7 +128,7 @@ public class HistoryManager {
 		});
 	}
 
-	public void saveHistoryForBlockOperations(OpBlock opBlock,  HistoryObjectCtx hctx) {
+	public void saveHistoryForBlockOperations(OpBlock opBlock, HistoryObjectCtx hctx) {
 		Date date = new Date(opBlock.getDate(OpBlock.F_DATE));
 		for (OpOperation o : opBlock.getOperations()) {
 			List<Object[]> allBatches = generateHistoryObjBatch(opBlock, o, date, hctx);
@@ -264,7 +264,13 @@ public class HistoryManager {
 		List<Object[]> args = new LinkedList<>();
 
 		if (op.getType().equals(OP_VOTING)) {
-			//TODO add voting op to history!
+			if (hctx != null) {
+				for (String key : hctx.votingObjsCache.keySet()) {
+					if (key.equals(op.getHash())) {
+						args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.votingObjsCache.get(key), op, date, Status.CREATED));
+					}
+				}
+			}
 		} else {
 			args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getCreated(), op, date, Status.CREATED));
 			if (hctx != null) {
@@ -355,6 +361,7 @@ public class HistoryManager {
 	public static class HistoryObjectCtx {
 		final String blockHash;
 		public Map<String, List<OpObject>> deletedObjsCache = new LinkedHashMap<>();
+		public Map<String, List<OpObject>> votingObjsCache = new LinkedHashMap<>();
 
 		public HistoryObjectCtx(String bhash) {
 			blockHash = bhash;
@@ -367,6 +374,15 @@ public class HistoryManager {
 			}
 			list.add(opObject);
 			deletedObjsCache.put(key, list);
+		}
+
+		public void putObjectToVotingCache(String key, OpObject opObject) {
+			List<OpObject> list = votingObjsCache.get(key);
+			if (list == null) {
+				list = new ArrayList<>();
+			}
+			list.add(opObject);
+			votingObjsCache.put(key, list);
 		}
 	}
 

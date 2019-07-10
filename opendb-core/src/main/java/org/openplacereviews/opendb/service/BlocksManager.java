@@ -159,7 +159,6 @@ public class BlocksManager {
 		return false;
 	}
 
-	// TODO -> write tests for voting process
 	public synchronized boolean addOperation(OpOperation op) throws FailedVerificationException {
 		if(blockchain == null) {
 			return false;

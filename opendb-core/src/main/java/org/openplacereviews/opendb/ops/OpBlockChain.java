@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
 import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
 
@@ -393,6 +394,14 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
 		}
+		if (u.getType().equals(OP_VOTING)) {
+			for (String opHash : validationCtx.refObjsCache.keySet()) {
+				if (u.getHash().equals(opHash)) {
+					OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTING);
+					oinf.add(validationCtx.refObjsCache.get(opHash).getId(), validationCtx.refObjsCache.get(opHash));
+				}
+			}
+		}
 	}
 
 	private void atomicSetParent(OpBlockChain parent) {
@@ -732,7 +741,7 @@ public class OpBlockChain {
 
 		opOperation.makeImmutable();
 
-		return op;
+		return opOperation;
 	}
 
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {
@@ -846,7 +855,7 @@ public class OpBlockChain {
 		if (!valid) {
 			return false;
 		}
-		valid = prepareReferencedObjects(u, ctx);
+		valid = prepareReferencedObjects(u, ctx, hctx);
 		if(!valid) {
 			return valid;
 		}
@@ -863,7 +872,7 @@ public class OpBlockChain {
 		return true;
 	}
 
-	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
+	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
 		Map<String, List<String>> refs = u.getRef();
 		if (refs != null) {
 			Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
@@ -885,7 +894,10 @@ public class OpBlockChain {
 				if (oi == null) {
 					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
 				}
-				ctx.refObjsCache.put(refName, oi);
+				if (u.getType().equals(OP_VOTING) && hctx != null) {
+					hctx.putObjectToVotingCache(u.getHash(), oi);
+				}
+				ctx.refObjsCache.put(u.getHash(), oi);
 			}
 		}
 
@@ -954,6 +966,9 @@ public class OpBlockChain {
 				List<String> newVote = ((TreeMap<String, List<String>>) editObject.getChangedEditFields().get(F_VOTES)).get(OP_CHANGE_APPEND);
 				if (loadRefUserObject(newVote) == null) {
 					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
+				}
+				if (newVote.isEmpty()) {
+					return rules.error(u, ErrorType.EDIT_FIELD_CANNOT_BE_EMPTY, u.getHash(), F_VOTES + "." + OP_CHANGE_APPEND);
 				}
 				List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES);
 
