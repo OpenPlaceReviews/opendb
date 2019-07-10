@@ -896,8 +896,10 @@ public class OpBlockChain {
 				}
 				if (u.getType().equals(OP_VOTING) && hctx != null) {
 					hctx.putObjectToVotingCache(u.getHash(), oi);
+					ctx.refObjsCache.put(u.getHash(), oi);
+				} else {
+					ctx.refObjsCache.put(refName, oi);
 				}
-				ctx.refObjsCache.put(u.getHash(), oi);
 			}
 		}
 
