@@ -6,17 +6,21 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.openplacereviews.opendb.OpenDBServer;
+import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,11 +35,10 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperat
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_APPEND;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
 import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
 import static org.openplacereviews.opendb.ops.OpObject.F_CURRENT;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
 
 public class BlocksManagerTest {
 
@@ -116,7 +119,20 @@ public class BlocksManagerTest {
 		OpObject voteObject = blockChain.getObjectByName(OP_VOTE, Arrays.asList(editOp.getRawHash(), OBJ_ID));
 		assertNotNull(voteObject);
 
-		// TODO add validation on OP status
+		assertEquals(OpOperation.Status.VOTING, loadOperationStatus(editOp.getRawHash()));
+	}
+
+	private OpOperation.Status loadOperationStatus(String opHash) {
+		return jdbcTemplate.query("SELECT status FROM " + OPERATIONS_TABLE + " WHERE hash = ?", new ResultSetExtractor<OpOperation.Status>() {
+			@Override
+			public OpOperation.Status extractData(ResultSet rs) throws SQLException, DataAccessException {
+				if (rs.next()) {
+					return OpOperation.Status.getStatus(rs.getInt(1));
+				}
+
+				return null;
+			}
+		}, (Object) SecUtils.getHashBytes(opHash));
 	}
 
 	@Test
@@ -133,7 +149,16 @@ public class BlocksManagerTest {
 		assertEquals(((List<Object>)voteObject.getFieldByExpr("votes")).size(), 2);
 	}
 
-	// TODO add op with not valid vote
+	@Test(expected = IllegalArgumentException.class)
+	public void testAddAlreadyVotedUserToVoteOperation() throws FailedVerificationException {
+		testVotingProcessForVoteOperation();
+
+		OpOperation editOp = generateInitAndEditOp().get(1);
+
+		OpOperation loadOp = generateTwoAppendOperations(editOp.getRawHash()).get(0);
+		loadOp.putObjectValue("hash", "a651b7887142a33cfd57117be59c0d01916e52479fa41cc6a7896bb1491ed6f5");
+		blocksManager.addOperation(loadOp);
+	}
 
 	@Test
 	public void testFinishingVotingProcess() throws FailedVerificationException {
@@ -144,9 +169,21 @@ public class BlocksManagerTest {
 
 		OpObject editedObj = blockChain.getObjectByName(OP_OPERATION, OBJ_ID);
 		assertEquals(2L, editedObj.getFieldByExpr("version"));
+
+		assertEquals(OpOperation.Status.ACTIVE, loadOperationStatus(editOp.getRawHash()));
 	}
 
-	// TODO add op with not valid ref
+	@Test(expected = IllegalArgumentException.class)
+	public void testFinishingVotingProcessWithNotValidRef() throws FailedVerificationException {
+		OpOperation editOp = generateInitAndEditOp().get(1);
+
+		OpOperation finishVoting = generateFinishVotingOp(editOp.getRawHash());
+		TreeMap<String, Object> refVote = new TreeMap<>();
+		refVote.put("v", Arrays.asList(OP_VOTE, "", OBJ_ID));
+		finishVoting.putObjectValue("ref", refVote);
+
+		blocksManager.addOperation(finishVoting);
+	}
 
 	private OpOperation generateFinishVotingOp(String opHash) throws FailedVerificationException {
 		OpOperation finishVoting = new OpOperation();
