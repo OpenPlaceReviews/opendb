@@ -1,6 +1,26 @@
 package org.openplacereviews.opendb.service;
 
-import org.joda.time.DateTime;
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_APPEND;
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_DELETE;
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_INCREMENT;
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_SET;
+import static org.openplacereviews.opendb.service.DBSchemaManager.HISTORY_TABLE_SIZE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.MAX_KEY_SIZE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.USER_KEY_SIZE;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -14,13 +34,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.OpBlockChain.*;
-import static org.openplacereviews.opendb.service.DBSchemaManager.*;
-
 @Service
 public class HistoryManager {
 
@@ -30,6 +43,8 @@ public class HistoryManager {
 	protected static final String HISTORY_BY_USER = "user";
 	protected static final String HISTORY_BY_OBJECT = "object";
 	protected static final String HISTORY_BY_TYPE = "type";
+	
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(OpObject.DATE_FORMAT);
 
 	@Value("${opendb.db.store-history}")
 	private boolean isRunning;
@@ -172,7 +187,7 @@ public class HistoryManager {
 		if (date == null)
 			return null;
 
-		return new DateTime(date).toString(OpObject.DATE_FORMAT);
+		return DATE_FORMAT.format(date);
 	}
 
 	private void generateObjMapping(List<List<String>> objIds, List<HistoryEdit> allObjects, Map<List<String>, List<HistoryEdit>> history) {
