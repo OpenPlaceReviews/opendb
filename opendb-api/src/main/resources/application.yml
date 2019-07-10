@@ -19,6 +19,7 @@ opendb:
     interval: ${OPENDB_REPLICATE_INTERVAL:15}
     url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/}
   db:
+    store-history: ${OPENDB_STORE_HISTORY:true}
     compactCoefficient: ${OPENDB_DB_CF:1.0}
     dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
   storage:

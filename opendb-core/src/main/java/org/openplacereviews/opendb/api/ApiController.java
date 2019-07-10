@@ -2,6 +2,8 @@ package org.openplacereviews.opendb.api;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.service.HistoryManager;
+import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
@@ -29,6 +31,9 @@ public class ApiController {
 
 	@Autowired
 	private BlocksManager manager;
+
+	@Autowired
+	private HistoryManager historyManager;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -198,6 +203,21 @@ public class ApiController {
 			obj = blc.getObjectByName(type, key, key2);
 		}
 		return formatter.fullObjectToJson(obj);
+	}
+
+	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String history(@RequestParam(required = true) String type,
+						  @RequestParam(required = true) List<String> key,
+						  @RequestParam(required = false, defaultValue = "20") int limit,
+						  @RequestParam(required = true) String sort) {
+		if (key.isEmpty() || !historyManager.isRunning()) {
+			return "{}";
+		}
+		HistoryObjectRequest historyObjectRequest = new HistoryObjectRequest(type, key, limit, sort);
+		historyManager.retrieveHistory(historyObjectRequest);
+
+		return formatter.fullObjectToJson(historyObjectRequest.historySearchResult);
 	}
 
 }

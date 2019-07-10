@@ -36,9 +36,12 @@ public class DBSchemaManager {
 	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
 	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
 	protected static String EXT_RESOURCE_TABLE = "resources";
+	protected static String OP_OBJ_HISTORY_TABLE = "op_obj_history";
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
-	private static final int MAX_KEY_SIZE = 5;
+	protected static final int MAX_KEY_SIZE = 5;
+	protected static final int USER_KEY_SIZE = 2;
+	protected static final int HISTORY_TABLE_SIZE = MAX_KEY_SIZE + USER_KEY_SIZE + 6;
 
 	// loaded from config
 	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
@@ -106,6 +109,20 @@ public class DBSchemaManager {
 		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
 		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
 		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
+
+		registerColumn(OP_OBJ_HISTORY_TABLE, "sorder", "serial not null", false);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", true);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", true);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", true);
+		for (int i = 1; i <= USER_KEY_SIZE; i++) {
+			registerColumn(OP_OBJ_HISTORY_TABLE, "u" + i, "text", true);
+		}
+		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
+			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", true);
+		}
+		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", false);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", false);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", false);
 
 		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", true);
 		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", true);
@@ -387,9 +404,12 @@ public class DBSchemaManager {
 				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);
 	}
 
-
-
-
+	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {
+		jdbcTemplate.batchUpdate("INSERT INTO " + table + "(blockhash, ophash, type, time, obj, status," +
+				generatePKString(table, "u%1$d", ",", USER_KEY_SIZE) + "," +
+				generatePKString(table, "p%1$d", ",", MAX_KEY_SIZE) + ") VALUES ("+
+				generatePKString(table, "?", ",", HISTORY_TABLE_SIZE) + ")", args);
+	}
 
 	// Query / insert values
 	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';

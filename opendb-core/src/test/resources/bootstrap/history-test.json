@@ -1,0 +1,58 @@
+[
+  {
+    "type" : "sys.operation",
+    "create": [{
+      "id" : ["osm.place"],
+      "comment" : "Operation to hold osm places",
+      "version" : 1,
+      "arity" : 0,
+      "fields": {
+        "id": "openplacereview id",
+        "osmId": "id of osm place",
+        "tags": "place tags"
+      }
+    }]
+  },
+  {
+    "type" : "osm.place",
+    "create": [{
+      "id" : ["12345662"],
+      "lon" : 12345,
+      "def" : "23434",
+      "lat": "222EC",
+      "tags": [{"v": "1111111", "k": "2222222"}]
+    }]
+  },
+  {
+    "type" : "osm.place",
+    "edit": [{
+      "id" : ["12345662"],
+      "change": {
+        "lon": "increment",
+        "lat": "delete",
+        "tags": {"append" : {"v": "2222222", "k": "333333333"} }
+      },
+      "current" : {
+        "lon" : 12345,
+        "lat": "222EC",
+        "tags": [{"v": "1111111", "k": "2222222"}]
+      }
+    }]
+  },
+  {
+    "type" : "osm.place",
+    "edit": [{
+      "id" : ["12345662"],
+      "change": {
+        "lon": "increment",
+        "def": "delete",
+        "tags": {"append" : {"v1": "2222222", "k1": "333333333"} }
+      },
+      "current" : {
+        "lon" : 12346,
+        "def": "23434",
+        "tags": [{"v": "1111111", "k": "2222222"}, {"v": "2222222", "k": "333333333"}]
+      }
+    }]
+  }
+]

@@ -27,7 +27,7 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 public class ObjectGeneratorTest {
 
 	private static String[] BOOTSTRAP_LIST =
-			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
+			new String[]{"opr-0-test-user", "history-test", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
 					"opr-0-test-grant", "std-validations"};
 
 	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc) throws

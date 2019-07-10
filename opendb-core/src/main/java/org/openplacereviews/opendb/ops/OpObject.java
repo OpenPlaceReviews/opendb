@@ -1,30 +1,16 @@
 package org.openplacereviews.opendb.ops;
 
+import com.google.gson.*;
+import org.openplacereviews.opendb.util.JsonObjectUtils;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
+
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.TimeZone;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.openplacereviews.opendb.util.JsonObjectUtils;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.TechnicalException;
-
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 
 public class OpObject {
 	
@@ -74,6 +60,14 @@ public class OpObject {
 		if (opObject.cacheFields != null && copyCacheFields) {
 			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
 		}
+		if (opObject.parentType != null) {
+			this.parentType = (String) copyingObjects(opObject.parentType);
+		}
+		if (opObject.parentHash != null) {
+			this.parentHash = (String) copyingObjects(opObject.parentHash);
+		}
+		this.isImmutable = false;
+
 		return this;
 	}
 
@@ -86,8 +80,8 @@ public class OpObject {
 		} else if (object instanceof Boolean) {
 			return (Boolean) object;
 		} else if (object instanceof List) {
-			ArrayList<Object> copy = new ArrayList<>();
-			ArrayList<Object> list = (ArrayList<Object>) object;
+			List<Object> copy = new ArrayList<>();
+			List<Object> list = (List<Object>) object;
 			for (Object o : list) {
 				copy.add(copyingObjects(o));
 			}
@@ -99,8 +93,10 @@ public class OpObject {
 				copy.put(key, copyingObjects(map.get(key)));
 			}
 			return copy;
+		} else if (object instanceof OpExprEvaluator) {
+			return new OpExprEvaluator(((OpExprEvaluator) object).getEctx());
 		} else {
-			throw new TechnicalException("Type of object is not supported");
+			throw new UnsupportedOperationException("Type of object is not supported");
 		}
 	}
 	
