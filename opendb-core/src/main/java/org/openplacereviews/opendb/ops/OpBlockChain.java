@@ -894,9 +894,11 @@ public class OpBlockChain {
 				if (oi == null) {
 					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
 				}
-				if (u.getType().equals(OP_VOTING) && hctx != null) {
-					hctx.putObjectToVotingCache(u.getHash(), oi);
+				if (u.getType().equals(OP_VOTING)) {
 					ctx.refObjsCache.put(u.getHash(), oi);
+					if (hctx != null) {
+						hctx.putObjectToVotingCache(u.getHash(), oi);
+					}
 				} else {
 					ctx.refObjsCache.put(refName, oi);
 				}

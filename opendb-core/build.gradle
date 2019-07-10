@@ -21,6 +21,7 @@ publishing {
 
 test {
     exclude '**/service/DBConsensusManagerTest.class'
+    //exclude '**/service/BlocksManagerTest.class'
     exclude '**/service/DBHistoryManagerTest.class'
     exclude '**/service/OpBlockchainDbAccessTest.class'
     exclude '**/service/OpBlockchainGettersDbAccessTest.class'
