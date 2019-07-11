@@ -109,7 +109,6 @@ public class DBSchemaManager {
 		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
 		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
 		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
-		registerColumn(OPERATIONS_TABLE, "status", "int", false);
 
 		registerColumn(OP_OBJ_HISTORY_TABLE, "sorder", "serial not null", false);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", true);

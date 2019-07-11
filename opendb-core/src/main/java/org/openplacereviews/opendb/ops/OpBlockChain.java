@@ -14,9 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
-import static org.openplacereviews.opendb.ops.OpObject.F_VOTES;
+import static org.openplacereviews.opendb.ops.OpObject.*;
+import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
+import static org.openplacereviews.opendb.ops.OpOperation.F_REF_VOTE;
 
 /**
  *  Guidelines of object methods:
@@ -394,11 +395,12 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
 		}
-		if (u.getType().equals(OP_VOTING)) {
-			for (String opHash : validationCtx.refObjsCache.keySet()) {
+		if (u.getRef() != null && u.hasEdited()) {
+			for (String opHash : validationCtx.voteObjsCache.keySet()) {
 				if (u.getHash().equals(opHash)) {
-					OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTING);
-					oinf.add(validationCtx.refObjsCache.get(opHash).getId(), validationCtx.refObjsCache.get(opHash));
+					OpObject voteObj = validationCtx.voteObjsCache.get(opHash);
+					OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTE);
+					oinf.add(voteObj.getId(), voteObj);
 				}
 			}
 		}
@@ -855,7 +857,7 @@ public class OpBlockChain {
 		if (!valid) {
 			return false;
 		}
-		valid = prepareReferencedObjects(u, ctx, hctx);
+		valid = prepareReferencedObjects(u, ctx);
 		if(!valid) {
 			return valid;
 		}
@@ -872,7 +874,7 @@ public class OpBlockChain {
 		return true;
 	}
 
-	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
+	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
 		if (refs != null) {
 			Iterator<Entry<String, List<String>>> it = refs.entrySet().iterator();
@@ -894,14 +896,7 @@ public class OpBlockChain {
 				if (oi == null) {
 					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
 				}
-				if (u.getType().equals(OP_VOTING)) {
-					ctx.refObjsCache.put(u.getHash(), oi);
-					if (hctx != null) {
-						hctx.putObjectToVotingCache(u.getHash(), oi);
-					}
-				} else {
-					ctx.refObjsCache.put(refName, oi);
-				}
+				ctx.refObjsCache.put(refName, oi);
 			}
 		}
 
@@ -966,18 +961,43 @@ public class OpBlockChain {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
 			OpObject newObject = new OpObject(currentObject);
-			if (u.getType().equals(OP_VOTE)) {
-				List<String> newVote = ((TreeMap<String, List<String>>) editObject.getChangedEditFields().get(F_VOTES)).get(OP_CHANGE_APPEND);
-				if (loadRefUserObject(newVote) == null) {
-					return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), newVote);
-				}
-				if (newVote.isEmpty()) {
-					return rules.error(u, ErrorType.EDIT_FIELD_CANNOT_BE_EMPTY, u.getHash(), F_VOTES + "." + OP_CHANGE_APPEND);
-				}
-				List<List<String>> votes = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES);
+			List<String> refObjName = ((List<String>) u.getFieldByExpr(F_REF_VOTE));
+			OpObject newVoteRefObject = null;
+			if (refObjName != null) {
+				if (refObjName.size() > 1) {
+					String objType = refObjName.get(0);
+					List<String> objId = refObjName.subList(1, refObjName.size());
+					OpObject voteRefObject= getObjectByName(objType, objId);
+					if (voteRefObject == null) {
+						return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
+					}
+					if (voteRefObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
+						return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), refObjName);
+					}
 
-				if (votes.contains(newVote)) {
-					return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, u.getHash(), newVote, votes);
+					List<TreeMap<String, Object>> voteEditObject = (List<TreeMap<String, Object>>) voteRefObject.getFieldByExpr(F_EDIT);
+					if (!voteEditObject.contains(editObject.fields)) {
+						return rules.error(u, ErrorType.VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS, u.getHash(), voteEditObject, editObject);
+					} else {
+						newVoteRefObject = new OpObject(voteRefObject);
+						newVoteRefObject.putStringValue(F_STATE, F_FINAL);
+					}
+				}
+			}
+			if (u.getType().equals(OP_VOTE)) {
+				if (currentObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
+					return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
+				}
+				List<List<String>> positiveVoices = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES_POSITIVE);
+				List<List<String>> negativeVoices = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES_NEGATIVE);
+				Map<String, Object> newVoteMap = editObject.getChangedEditFields();
+				for (String key : newVoteMap.keySet()) {
+					Map<String, Object> appendObj = (Map<String, Object>) newVoteMap.get(key);
+					List<String> newVote = (List<String>) appendObj.get(OP_CHANGE_APPEND);
+
+					if (positiveVoices.contains(newVote) || negativeVoices.contains(newVote)) {
+						return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, u.getHash(), newVote, positiveVoices, negativeVoices);
+					}
 				}
 			}
 			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
@@ -1050,6 +1070,9 @@ public class OpBlockChain {
 			}
 			newObject.makeImmutable();
 			ctx.newObjsCache.put(newObject, currentObject);
+			if (newVoteRefObject != null) {
+				ctx.voteObjsCache.put(u.getHash(), newVoteRefObject);
+			}
 		}
 		return true;
 
@@ -1075,6 +1098,7 @@ public class OpBlockChain {
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
+		Map<String, OpObject> voteObjsCache = new HashMap<String, OpObject>();
 
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;

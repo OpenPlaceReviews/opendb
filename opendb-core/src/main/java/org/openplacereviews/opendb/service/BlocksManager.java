@@ -22,9 +22,6 @@ import java.net.URL;
 import java.security.KeyPair;
 import java.util.*;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
-
 @Service
 public class BlocksManager {
 
@@ -159,78 +156,19 @@ public class BlocksManager {
 		return false;
 	}
 
-	public synchronized boolean addOperation(OpOperation op) throws FailedVerificationException {
-		if(blockchain == null) {
+	public synchronized boolean addOperation(OpOperation op) {
+		if (blockchain == null) {
 			return false;
 		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
-		if (!op.hasEdited() || op.getType().equals(OP_VOTE)) {
-			boolean added = blockchain.addOperation(op);
-			if(!existing) {
-				dataManager.insertOperation(op, OpOperation.Status.ACTIVE);
-			}
-			if (added) {
-				if (!createFinishedVotingObject(op)) {
-					throw new IllegalArgumentException("Voting cannot be finished");
-				}
-			}
-			return added;
-		} else {
-			if (!createVoteObject(op)) {
-				throw new IllegalArgumentException("Voting object was not created");
-			}
-			if(!existing) {
-				dataManager.insertOperation(op, OpOperation.Status.VOTING);
-			}
+		boolean added = blockchain.addOperation(op);
+		if (!existing) {
+			dataManager.insertOperation(op);
 		}
 		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
 		// or that operation will be lost in queue and system needs to be restarted
-		return true;
-	}
-
-	private boolean createVoteObject(OpOperation op) throws FailedVerificationException {
-		if (op.hasEdited() && !op.getType().equals(OP_VOTE)) {
-			OpOperation voteOperation = blockchain.generateOpVoteOperation(op, serverUser, serverKeyPair);
-			boolean existing = dataManager.validateExistingOperation(voteOperation);
-			boolean added = blockchain.addOperation(voteOperation);
-			if (!existing) {
-				dataManager.insertOperation(voteOperation, OpOperation.Status.ACTIVE);
-			}
-
-			return added;
-		}
-
-		return true;
-	}
-
-	private boolean createFinishedVotingObject(OpOperation op) {
-		if (op.getType().equals(OP_VOTING)) {
-			Map<String, List<String>> refObjectList = op.getRef();
-			if (refObjectList == null) {
-				return false;
-			}
-
-			for (Map.Entry<String, List<String>> e : refObjectList.entrySet()) {
-				List<String> refObjName = e.getValue();
-				// type is necessary
-				if (refObjName.size() > 1) {
-					String objType = refObjName.get(0);
-					List<String> refKey = refObjName.subList(1, refObjName.size());
-					OpObject refObject = blockchain.getObjectByName(objType, refKey);
-
-					OpOperation opOperation = dataManager.getOperationByHash(SecUtils.HASH_SHA256 + ":" + refObject.getId().get(0));
-					opOperation.makeImmutable();
-
-					blockchain.addOperation(opOperation);
-					dataManager.updateOperationStatus(opOperation, OpOperation.Status.ACTIVE);
-				} else {
-					throw new IllegalArgumentException("Voting must have ref op type with obj id");
-				}
-			}
-		}
-
-		return true;
+		return added;
 	}
 
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
@@ -358,7 +296,7 @@ public class BlocksManager {
 					fullBlock.makeImmutable();
 					for (OpOperation o : fullBlock.getOperations()) {
 						if (!dataManager.validateExistingOperation(o)) {
-							dataManager.insertOperation(o, OpOperation.Status.ACTIVE);
+							dataManager.insertOperation(o);
 						}
 					}
 					replicateOneBlock(fullBlock);

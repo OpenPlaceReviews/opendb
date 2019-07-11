@@ -14,6 +14,7 @@ public class OpOperation extends OpObject {
 	public static final String F_SIGNATURE = "signature";
 
 	public static final String F_REF = "ref";
+	public static final String F_REF_VOTE = "ref.vote";
 	public static final String F_CREATE = "create";
 	public static final String F_DELETE = "delete";
 	public static final String F_EDIT = "edit";

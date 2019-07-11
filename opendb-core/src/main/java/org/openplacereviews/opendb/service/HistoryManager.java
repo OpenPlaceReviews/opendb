@@ -74,6 +74,7 @@ public class HistoryManager {
 				break;
 			}
 			case HISTORY_BY_TYPE: {
+				historyObjectRequest.key = Collections.singletonList(historyObjectRequest.key.get(0));
 				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
 						" WHERE type = ?" + " ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
@@ -201,6 +202,9 @@ public class HistoryManager {
 				historyEdit.deltaChanges = originObject;
 			} else {
 				originObject = generateReverseEditObject(originObject, changes);
+				if (originObject.getFieldByExpr(OpObject.F_STATE) != null) {
+					originObject.setFieldByExpr(OpObject.F_STATE, OpObject.F_OPEN);
+				}
 				historyEdit.deltaChanges = originObject;
 			}
 		}

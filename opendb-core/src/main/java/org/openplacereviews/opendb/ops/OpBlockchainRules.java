@@ -683,9 +683,10 @@ public class OpBlockchainRules {
 		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
-		AMOUNT_VOTES_NOT_ENOUGH_FOR_SUBMITTING_EDIT("Operation '%s': amount votes: '%s'. Expect min amount votes: '%s'"),
-		USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING("Operation '%s': user vote: '%s' votes: '%s'"),
-		EDIT_FIELD_CANNOT_BE_EMPTY("Operation '%s': field '%s' ccannot be empty"),
+
+		USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING("Operation '%s': user vote: '%s' positive votes: '%s', negative voices '%s'"),
+		REF_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),
+		VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
 
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
 		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),

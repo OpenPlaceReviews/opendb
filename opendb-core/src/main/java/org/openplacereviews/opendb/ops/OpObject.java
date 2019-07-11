@@ -28,8 +28,13 @@ public class OpObject {
 	public static final String F_PARENT_HASH = "parentHash";
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
+	public static final String F_STATE = "state";
+	public static final String F_OPEN = "open";
+	public static final String F_FINAL = "final";
 	public static final String F_VOTES = "votes";
-	
+	public static final String F_VOTES_POSITIVE = "votes.positive";
+	public static final String F_VOTES_NEGATIVE = "votes.negative";
+
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	{

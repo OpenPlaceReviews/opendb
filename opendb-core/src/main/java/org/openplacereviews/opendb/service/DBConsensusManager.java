@@ -112,7 +112,7 @@ public class DBConsensusManager {
 
 		LOGGER.info("... Loading operation queue  ...");
 		int[] ops = new int[1];
-		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where blocks is null and status = 0 order by dbid asc ",
+		jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where blocks is null order by dbid asc ",
 				new RowCallbackHandler() {
 
 					@Override
@@ -887,9 +887,6 @@ public class DBConsensusManager {
 	}
 
 	public void insertOperation(OpOperation op) {
-		insertOperation(op, OpOperation.Status.ACTIVE);
-	}
-	public void insertOperation(OpOperation op, OpOperation.Status status) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
 
@@ -901,13 +898,8 @@ public class DBConsensusManager {
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content, status) VALUES (?, ?, ?)",
-				bhash, pGobject, status.getValue());
-	}
-
-	public void updateOperationStatus(OpOperation op, OpOperation.Status status) {
-		byte[] bhash = SecUtils.getHashBytes(op.getHash());
-		jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set status = ? WHERE hash = ?", status.getValue(), bhash);
+		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
+				bhash, pGobject);
 	}
 
 	public OpOperation getOperationByHash(String hash) {
