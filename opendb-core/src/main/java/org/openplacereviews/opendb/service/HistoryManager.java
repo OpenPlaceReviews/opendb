@@ -59,7 +59,7 @@ public class HistoryManager {
 			case HISTORY_BY_USER: {
 				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", historyObjectRequest.key.size()) +
-						" ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+						" ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
 			}
@@ -71,14 +71,14 @@ public class HistoryManager {
 				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						(objType == null ? "" : " type = ? AND ") + dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ",
 						(objType == null ? historyObjectRequest.key.size() : historyObjectRequest.key.size() - 1)) +
-						" ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+						" ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
 			}
 			case HISTORY_BY_TYPE: {
 				historyObjectRequest.key = Collections.singletonList(historyObjectRequest.key.get(0));
 				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
-						" WHERE type = ?" + " ORDER BY time, sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+						" WHERE type = ?" + " ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
 			}
@@ -91,7 +91,7 @@ public class HistoryManager {
 			public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
 
-				List<List<String>> objIds = new ArrayList<>();
+				List<List<String>> objIds = new LinkedList<>();
 				List<HistoryEdit> allObjects = new LinkedList<>();
 				while (rs.next()) {
 					List<String> users = new ArrayList<>();
