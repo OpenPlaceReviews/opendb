@@ -27,37 +27,6 @@ public class OpOperation extends OpObject {
 	private List<OpObject> editedObjects = new LinkedList<OpObject>();
 	protected String type;
 
-	public enum Status {
-		ACTIVE(0),
-		VOTING(1),
-		INACTIVE(2);
-
-		private final int value;
-
-		Status(final int newValue) {
-			value = newValue;
-		}
-
-		public int getValue() { return value; }
-
-		public static Status getStatus(int value) {
-			switch (value) {
-				case 0 : {
-					return ACTIVE;
-				}
-				case 1 : {
-					return VOTING;
-				}
-				case 2: {
-					return INACTIVE;
-				}
-				default: {
-					return null;
-				}
-			}
-		}
-	}
-
 	public OpOperation() {
 	}
 
