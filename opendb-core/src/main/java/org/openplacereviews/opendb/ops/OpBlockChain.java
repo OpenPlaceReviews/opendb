@@ -951,10 +951,9 @@ public class OpBlockChain {
 					if (voteRefObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
 						return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), refObjName);
 					}
-
-					List<TreeMap<String, Object>> voteEditObject = (List<TreeMap<String, Object>>) voteRefObject.getFieldByExpr(F_EDIT);
+					List<Map<String, Object>> voteEditObject = (List<Map<String, Object>>) voteRefObject.getFieldByExpr(F_EDIT);
 					if (!voteEditObject.contains(editObject.fields)) {
-						return rules.error(u, ErrorType.VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS, u.getHash(), voteEditObject, editObject);
+						return rules.error(u, ErrorType.VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS, u.getHash(), voteEditObject, editObject.fields);
 					} else {
 						newVoteRefObject = new OpObject(voteRefObject);
 						newVoteRefObject.putStringValue(F_STATE, F_FINAL);
