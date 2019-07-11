@@ -101,6 +101,7 @@ public class HistoryManager {
 						}
 					}
 					List<String> ids = new ArrayList<>();
+					ids.add(rs.getString(10));
 					for (int i = 3; i <= USER_KEY_SIZE + MAX_KEY_SIZE; i++) {
 						if (rs.getString(i) != null) {
 							ids.add(rs.getString(i));
@@ -196,7 +197,7 @@ public class HistoryManager {
 			originObject = historyEdit.deltaChanges;
 		} else if (historyEdit.getStatus().equals(Status.EDITED) && originObject == null ||
 				historyEdit.getStatus().equals(Status.CREATED) && previousHistoryEdit == null) {
-			originObject = blocksManager.getBlockchain().getObjectByName(historyEdit.objType, historyEdit.id);
+			originObject = blocksManager.getBlockchain().getObjectByName(historyEdit.objType, historyEdit.id.subList(1, historyEdit.id.size()));
 			historyEdit.deltaChanges = originObject;
 		} else {
 			Map<String, Object> changes = previousHistoryEdit.objEdit;
