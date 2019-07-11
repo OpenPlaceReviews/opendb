@@ -1,26 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_APPEND;
-import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_DELETE;
-import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_INCREMENT;
-import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_SET;
-import static org.openplacereviews.opendb.service.DBSchemaManager.HISTORY_TABLE_SIZE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.MAX_KEY_SIZE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.USER_KEY_SIZE;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -34,7 +13,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTING;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static org.openplacereviews.opendb.ops.OpBlockChain.*;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class HistoryManager {
@@ -218,7 +204,8 @@ public class HistoryManager {
 				historyEdit.deltaChanges = originObject;
 			} else {
 				originObject = generateReverseEditObject(originObject, changes);
-				if (originObject.getFieldByExpr(OpObject.F_STATE) != null) {
+				if (originObject.getFieldByExpr(OpObject.F_STATE) != null &&
+						originObject.getFieldByExpr(OpObject.F_STATE).equals(F_FINAL)) {
 					originObject.setFieldByExpr(OpObject.F_STATE, OpObject.F_OPEN);
 				}
 				historyEdit.deltaChanges = originObject;
@@ -283,25 +270,15 @@ public class HistoryManager {
 		byte[] blockHash = SecUtils.getHashBytes(opBlock.getFullHash());
 		List<Object[]> args = new LinkedList<>();
 
-		if (op.getType().equals(OP_VOTING)) {
-			if (hctx != null) {
-				for (String key : hctx.votingObjsCache.keySet()) {
-					if (key.equals(op.getHash())) {
-						args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.votingObjsCache.get(key), op, date, Status.CREATED));
-					}
+		args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getCreated(), op, date, Status.CREATED));
+		if (hctx != null) {
+			for (String key : hctx.deletedObjsCache.keySet()) {
+				if (key.equals(op.getHash())) {
+					args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.deletedObjsCache.get(key), op, date, Status.DELETED));
 				}
 			}
-		} else {
-			args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getCreated(), op, date, Status.CREATED));
-			if (hctx != null) {
-				for (String key : hctx.deletedObjsCache.keySet()) {
-					if (key.equals(op.getHash())) {
-						args.addAll(prepareArgumentsForHistoryBatch(blockHash, hctx.deletedObjsCache.get(key), op, date, Status.DELETED));
-					}
-				}
-			}
-			args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getEdited(), op, date, Status.EDITED));
 		}
+		args.addAll(prepareArgumentsForHistoryBatch(blockHash, op.getEdited(), op, date, Status.EDITED));
 
 		return args;
 	}
@@ -381,7 +358,6 @@ public class HistoryManager {
 	public static class HistoryObjectCtx {
 		final String blockHash;
 		public Map<String, List<OpObject>> deletedObjsCache = new LinkedHashMap<>();
-		public Map<String, List<OpObject>> votingObjsCache = new LinkedHashMap<>();
 
 		public HistoryObjectCtx(String bhash) {
 			blockHash = bhash;
@@ -394,15 +370,6 @@ public class HistoryManager {
 			}
 			list.add(opObject);
 			deletedObjsCache.put(key, list);
-		}
-
-		public void putObjectToVotingCache(String key, OpObject opObject) {
-			List<OpObject> list = votingObjsCache.get(key);
-			if (list == null) {
-				list = new ArrayList<>();
-			}
-			list.add(opObject);
-			votingObjsCache.put(key, list);
 		}
 	}
 

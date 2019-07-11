@@ -16,7 +16,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
 import static org.openplacereviews.opendb.ops.OpObject.*;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
-import static org.openplacereviews.opendb.ops.OpOperation.F_EDITED_OBJECT;
 import static org.openplacereviews.opendb.ops.OpOperation.F_REF_VOTE;
 
 /**
@@ -75,8 +74,6 @@ public class OpBlockChain {
 
 	// 4. operations to be stored like a queue
 	private final Deque<OpOperation> queueOperations = new ConcurrentLinkedDeque<OpOperation>();
-
-	private final Deque<OpOperation> votingOperations = new ConcurrentLinkedDeque<OpOperation>();
 
 	private final Map<String, OpOperation> blockOperations = new ConcurrentHashMap<>();
 
@@ -724,26 +721,6 @@ public class OpBlockChain {
 			}
 		}
 		return parent.getObjectByName(type, o);
-	}
-
-	public OpOperation generateOpVoteOperation(OpOperation op, String signedBy, KeyPair keyPair) throws FailedVerificationException {
-		OpOperation opOperation = new OpOperation();
-		opOperation.setType(OP_VOTE);
-		opOperation.setSignedBy(signedBy);
-
-		OpObject opObject = new OpObject();
-		opObject.putObjectValue(F_EDITED_OBJECT, op.getEdited());
-		opObject.putObjectValue(F_VOTES, Collections.EMPTY_LIST);
-		opObject.setId(op.getRawHash());
-		for (String objId : op.getEdited().get(0).getId()) {
-			opObject.addOrSetStringValue(OpObject.F_ID, objId);
-		}
-		opOperation.addCreated(opObject);
-		rules.generateHashAndSign(opOperation, keyPair);
-
-		opOperation.makeImmutable();
-
-		return opOperation;
 	}
 
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {

@@ -36,17 +36,6 @@
 	},
 	{
 		"type" : "sys.operation",
-		"create" : [{
-			"id" : ["sys.voting"],
-			"comment" : "Operation for creating voting for submitting changes for object",
-			"version" : 0,
-			"fields" : {
-				"ref.v" : "Voting reference for stop voting and accept edit op"
-			}
-		}]
-	},
-	{
-		"type" : "sys.operation",
 		"create": [{
 			"id" : ["sys.signup"],
 			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",

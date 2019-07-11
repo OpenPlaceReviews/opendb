@@ -182,7 +182,7 @@ public class BlocksManagerTest {
 
 	private OpOperation generateFinishVotingOp(String opHash) throws FailedVerificationException {
 		OpOperation finishVoting = new OpOperation();
-		finishVoting.setType(OP_VOTING);
+		//finishVoting.setType(OP_VOTING);
 		finishVoting.setSignedBy(serverName);
 		TreeMap<String, Object> refVote = new TreeMap<>();
 		refVote.put("v", Arrays.asList(OP_VOTE, opHash, OBJ_ID));

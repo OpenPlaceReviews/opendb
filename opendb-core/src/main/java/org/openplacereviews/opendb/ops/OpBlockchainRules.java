@@ -28,7 +28,6 @@ public class OpBlockchainRules {
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;
 	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
-	public static final int MIN_AMOUNT_VOTES_FOR_EDIT_OP = 100;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
 	
@@ -47,7 +46,6 @@ public class OpBlockchainRules {
 	public static final String OP_GRANT = OP_TYPE_SYS + "grant";
 	public static final String OP_VALIDATE = OP_TYPE_SYS + "validate";
 	// voting operation
-	public static final String OP_VOTING = OP_TYPE_SYS + "voting";
 	public static final String OP_VOTE = OP_TYPE_SYS + "vote";
 	// limit external ops
 	public static final String OP_LIMIT = OP_TYPE_SYS + "limit";
