@@ -943,20 +943,22 @@ public class OpBlockChain {
 			if (refObjName != null) {
 				if (refObjName.size() > 1) {
 					String objType = refObjName.get(0);
-					List<String> objId = refObjName.subList(1, refObjName.size());
-					OpObject voteRefObject= getObjectByName(objType, objId);
-					if (voteRefObject == null) {
-						return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
-					}
-					if (voteRefObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
-						return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), refObjName);
-					}
-					List<Map<String, Object>> voteEditObject = (List<Map<String, Object>>) voteRefObject.getFieldByExpr(F_EDIT);
-					if (!voteEditObject.contains(editObject.fields)) {
-						return rules.error(u, ErrorType.VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS, u.getHash(), voteEditObject, editObject.fields);
-					} else {
-						newVoteRefObject = new OpObject(voteRefObject);
-						newVoteRefObject.putStringValue(F_STATE, F_FINAL);
+					if (objType.equals(OP_VOTE)) {
+						List<String> objId = refObjName.subList(1, refObjName.size());
+						OpObject voteRefObject = getObjectByName(objType, objId);
+						if (voteRefObject == null) {
+							return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
+						}
+						if (voteRefObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
+							return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), refObjName);
+						}
+						List<Map<String, Object>> voteEditObject = (List<Map<String, Object>>) voteRefObject.getFieldByExpr(F_EDIT);
+						if (!voteEditObject.contains(editObject.fields)) {
+							return rules.error(u, ErrorType.VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS, u.getHash(), voteEditObject, editObject.fields);
+						} else {
+							newVoteRefObject = new OpObject(voteRefObject);
+							newVoteRefObject.putStringValue(F_STATE, F_FINAL);
+						}
 					}
 				}
 			}

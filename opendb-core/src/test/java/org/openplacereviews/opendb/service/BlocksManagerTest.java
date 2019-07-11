@@ -180,6 +180,38 @@ public class BlocksManagerTest {
 
 	}
 
+	@Test(expected = IllegalArgumentException.class)
+	public void testAddFinishVoteOperationWithNotSameEditOp() throws FailedVerificationException {
+		testVotingProcessForVoteOperation();
+
+		OpOperation finalOp = generateFinalOpWithRef();
+		finalOp.getEdited().clear();
+		finalOp.addEdited(getNotValidEditObj());
+
+		blocksManager.addOperation(finalOp);
+	}
+
+	private OpObject getNotValidEditObj() {
+		OpObject editObj = new OpObject();
+		editObj.setId(OBJ_ID);
+		TreeMap<String, Object> change = new TreeMap<>();
+		change.put("lon", "delete");
+		change.put("lat", "delete");
+		TreeMap<String, Object> appendObj = new TreeMap<>();
+		TreeMap<String, Object> tagsObject = new TreeMap<>();
+		tagsObject.put("v", 2222222);
+		tagsObject.put("k", 333333333);
+		appendObj.put("append", tagsObject);
+		change.put("tags", appendObj);
+		TreeMap<String, Object> current = new TreeMap<>();
+		current.put("lon", 12345);
+		current.put("lat", "222EC");
+		editObj.putObjectValue(F_CHANGE, change);
+		editObj.putObjectValue(F_CURRENT, current);
+
+		return editObj;
+	}
+
 	private OpOperation generateFinalOpWithRef() throws FailedVerificationException {
 		OpOperation finalOp = new OpOperation();
 		finalOp.setType(OP_ID);
