@@ -57,7 +57,18 @@
       },
       "current" : {}
     }]
-  },
+  },{
+  "type" : "sys.vote",
+  "edit" : [{
+    "id" : ["5e91c20bac8c6530f9c2fb3bca34f6f42ab38562f96f5864b81f619e28eea511", "0"],
+    "change" : {
+      "votes.positive" : {
+        "append" : ["sys.login", "openplacereviews","test_1"]
+      }
+    },
+    "current" : {}
+  }]
+},
   {
     "type" : "osm.place",
     "ref" : { "vote" : ["sys.vote", "5e91c20bac8c6530f9c2fb3bca34f6f42ab38562f96f5864b81f619e28eea511", "0"]},
