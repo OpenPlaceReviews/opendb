@@ -28,10 +28,10 @@ public class OpObject {
 	public static final String F_PARENT_HASH = "parentHash";
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
-	
+	public static final OpObject NULL = new OpObject();
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-	{
+	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 	
@@ -41,6 +41,8 @@ public class OpObject {
 	
 	protected transient String parentType;
 	protected transient String parentHash;
+	
+	
 	
 	public OpObject() {}
 	
