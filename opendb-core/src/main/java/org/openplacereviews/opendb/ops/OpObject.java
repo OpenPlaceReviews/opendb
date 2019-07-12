@@ -28,10 +28,13 @@ public class OpObject {
 	public static final String F_PARENT_HASH = "parentHash";
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
+	// voting
 	public static final String F_STATE = "state";
+	public static final String F_OP = "op";
 	public static final String F_OPEN = "open";
 	public static final String F_FINAL = "final";
 	public static final String F_VOTES = "votes";
+	public static final String F_VOTE = "vote";
 	public static final String F_VOTES_POSITIVE = "votes.positive";
 	public static final String F_VOTES_NEGATIVE = "votes.negative";
 
@@ -60,8 +63,6 @@ public class OpObject {
 
 	@SuppressWarnings("unchecked")
 	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
-		this.parentType = opObject.parentType;
-		this.parentHash = opObject.parentHash;
 		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
 		if (opObject.cacheFields != null && copyCacheFields) {
 			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
@@ -215,6 +216,10 @@ public class OpObject {
 	@SuppressWarnings("unchecked")
 	public List<Map<String, Object>> getListStringObjMap(String field) {
 		return (List<Map<String, Object>>) fields.get(field);
+	}
+
+	public Map<String, Object> getStringObjMap(String field) {
+		return (Map<String, Object>) fields.get(field);
 	}
 	
 

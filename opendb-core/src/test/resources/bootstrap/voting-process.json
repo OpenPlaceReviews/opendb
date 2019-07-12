@@ -26,52 +26,89 @@
   {
     "type" : "sys.vote",
     "create" : [{
-      "id":[],
-      "type" : "osm.place",
-      "edit": [{
-        "id" : ["12345662"],
-        "change": {
-          "lon": "increment",
-          "lat": "delete",
-          "tags": {"append" : {"v": "2222222", "k": "333333333"} }
-        },
-        "current" : {
-          "lon" : 12345,
-          "lat": "222EC",
-          "tags": [{"v": "1111111", "k": "2222222"}]
-        }
-      }],
+      "id": ["vote", "osm.place"],
+      "op" :
+      {
+        "type": "osm.place",
+        "edit": [
+          {
+            "id": [
+              "12345662"
+            ],
+            "change": {
+              "lon": "increment",
+              "lat": "delete",
+              "tags": {
+                "append": {
+                  "v": "2222222",
+                  "k": "333333333"
+                }
+              }
+            },
+            "current": {
+              "lon": 12345,
+              "lat": "222EC",
+              "tags": [
+                {
+                  "v": "1111111",
+                  "k": "2222222"
+                }
+              ]
+            }
+          }
+        ]
+      },
       "state" : "open",
       "extra" : {},
-      "votes" : {"positive" : [], "negative" : []}
+      "votes" : {"positive" : [], "negative" : []},
+      "votes1" : {}
     }]
   },
   {
     "type" : "sys.vote",
+    "signed_by" : "openplacereviews",
     "edit" : [{
-      "id" : ["5e91c20bac8c6530f9c2fb3bca34f6f42ab38562f96f5864b81f619e28eea511", "0"],
+      "id" : ["vote", "osm.place"],
       "change" : {
+        //				"votes1" : {
+        //					"append": {
+        //						"user": ["openplacereviews"],
+        //						"vote": 1
+        //					}
+        //				},
         "votes.positive" : {
-          "append" : ["sys.signup", "openplacereviews"]
+          "append" : ["openplacereviews"]
         }
       },
       "current" : {}
-    }]
-  },{
-  "type" : "sys.vote",
-  "edit" : [{
-    "id" : ["5e91c20bac8c6530f9c2fb3bca34f6f42ab38562f96f5864b81f619e28eea511", "0"],
-    "change" : {
-      "votes.negative" : {
-        "append" : ["sys.login", "openplacereviews","test_1"]
-      }
-    },
-    "current" : {}
-  }]
-},
+    }],
+    "hash": "json:sha256:2cb0c6550f432a529b875d09737c7344e5ea972d67dd986b52aedec0faa69c7b",
+    "signature": "ECDSA:base64:MEQCIHADdz3flE+7KixguiI6C55WTJEK2VleEl6tbQ1sj0M/AiAH8Rfm55wvopNZ5CbNVKk2INnRgm5iadAohfROi5meLA=="
+  },
+  {
+    "type" : "sys.vote",
+    "signed_by" : "openplacereviews:test_1",
+    "edit" : [{
+      "id" : ["vote", "osm.place"],
+      "change" : {
+        //				"votes1" : {
+        //					"append": {
+        //						"user" :["openplacereviews:test_1"],
+        //						"vote" : -1
+        //					}
+        //				},
+        "votes.positive" : {
+          "append" : ["openplacereviews:test_1"]
+        }
+      },
+      "current" : {}
+    }],
+    "hash": "json:sha256:d5a723aae590bd9e3fbf681bca688bf9852da8f23cc8eda3049c176d27b56104",
+    "signature": "ECDSA:base64:MEYCIQD5p518kLv+x8dDHLEyXLpyYsMpYJTDgCr1FEQ19v37BgIhAJ9ddajo1xbQa1IYlD7jYJGnNjTnpHM7ljvadT5miYNk"
+  },
   {
     "type" : "osm.place",
-    "ref" : { "vote" : ["sys.vote", "5e91c20bac8c6530f9c2fb3bca34f6f42ab38562f96f5864b81f619e28eea511", "0"]},
+    "ref" : { "vote" : ["sys.vote", "vote", "osm.place"]},
     "edit": [{
       "id" : ["12345662"],
       "change": {
@@ -84,29 +121,6 @@
         "lat": "222EC",
         "tags": [{"v": "1111111", "k": "2222222"}]
       }
-    }]
-  },
-  {
-    "type" : "sys.vote",
-    "create" : [{
-      "id":[],
-      "type" : "osm.place",
-      "edit": [{
-        "id" : ["12345662"],
-        "change": {
-          "lon": "delete",
-          "lat": {
-            "set": {"v" : 2343}
-          }
-        },
-        "current" : {
-          "lon" : 12345,
-          "lat": "222EC"
-        }
-      }],
-      "state" : "open",
-      "extra" : {},
-      "votes" : {"positive" : [], "negative" : []}
     }]
   }
 ]

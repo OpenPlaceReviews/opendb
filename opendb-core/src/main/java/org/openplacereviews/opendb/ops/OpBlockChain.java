@@ -13,10 +13,15 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_LOGIN;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_SIGNUP;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpObject.*;
-import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
-import static org.openplacereviews.opendb.ops.OpOperation.F_REF_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_OP;
+import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
+import static org.openplacereviews.opendb.ops.OpOperation.*;
 
 /**
  *  Guidelines of object methods:
@@ -383,8 +388,12 @@ public class OpBlockChain {
 		List<List<String>> deletedRefs = u.getDeleted();
 		String objType = u.getType();
 
+		// TODO fix error with removing objects!!!!
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
+//			if (oinf.getObjectById(deletedRef) == null)  {
+//				oinf = getOrCreateObjectsByIdMapWithId(objType, deletedRef);
+//			}
 			oinf.add(deletedRef, null);
 		}
 		queueOperations.add(u);
@@ -393,13 +402,9 @@ public class OpBlockChain {
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
 		}
 		if (u.getRef() != null && u.hasEdited()) {
-			for (String opHash : validationCtx.voteObjsCache.keySet()) {
-				if (u.getHash().equals(opHash)) {
-					OpObject voteObj = validationCtx.voteObjsCache.get(opHash);
-					OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTE);
-					oinf.add(voteObj.getId(), voteObj);
-				}
-			}
+			OpObject voteObj = validationCtx.refObjsCache.get(u.getHash());
+			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTE);
+			oinf.add(voteObj.getId(), voteObj);
 		}
 	}
 
@@ -778,6 +783,25 @@ public class OpBlockChain {
 		return oi;
 	}
 
+	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMapWithId(String type, List<String> objId) {
+		// create is allowed only when status is not locked
+		if(nullObject) {
+			return null;
+		}
+		OpPrivateObjectInstancesById oi = objByName.get(type);
+		if(oi.getObjectById(objId) == null) {
+			OpBlockChain opBlockChain = this;
+			while (opBlockChain.parent != null) {
+				oi = opBlockChain.getOrCreateObjectsByIdMap(type);
+				if (oi.getObjectById(objId) != null) {
+					return oi;
+				}
+				opBlockChain = opBlockChain.parent;
+			}
+		}
+		return oi;
+	}
+
 	static int getIndexFromAbsRef(String r) {
 		int i = r.indexOf(':');
 		if (i == -1) {
@@ -875,12 +899,50 @@ public class OpBlockChain {
 				}
 				ctx.refObjsCache.put(refName, oi);
 			}
+
+			OpObject voteObject = ctx.refObjsCache.get(F_VOTE);
+			if (voteObject != null) {
+				if (voteObject.getParentType().equals(OP_VOTE)) {
+					if (voteObject.getStringValue(F_STATE).equals(F_FINAL)) {
+						return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), voteObject);
+					}
+					if (validateOpWithRefVoteOp(u, voteObject)) {
+						OpObject newVoteObject = new OpObject(voteObject);
+						newVoteObject.putStringValue(F_STATE, F_FINAL);
+						ctx.refObjsCache.put(u.getHash(), newVoteObject);
+					} else {
+						return rules.error(u, ErrorType.VOTE_OP_IS_NOT_SAME, u.getHash(), u, voteObject.getStringObjMap(F_OP));
+					}
+				} else {
+					return rules.error(u, ErrorType.REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
+				}
+			}
 		}
 
 		if (getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()) != null) {
 			ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
 		}
 		return true;
+	}
+
+	private boolean validateOpWithRefVoteOp(OpOperation newOp, OpObject voteObject) {
+		OpOperation cpyNewOp = new OpOperation(newOp, false);
+		cpyNewOp = removeOpFieldsForValidationOnEquals(cpyNewOp);
+
+		OpOperation refOp = rules.getFormatter().parseOperation(rules.getFormatter().fullObjectToJson(voteObject.getStringObjMap(F_OP)));
+		refOp = removeOpFieldsForValidationOnEquals(refOp);
+
+		return cpyNewOp.equals(refOp);
+	}
+
+	// remove ref, signature, hash and signedBy for new and ref.op operations
+	private OpOperation removeOpFieldsForValidationOnEquals(OpOperation op) {
+		op.remove(F_REF);
+		op.remove(F_SIGNATURE);
+		op.remove(F_HASH);
+		op.remove(F_SIGNED_BY);
+
+		return op;
 	}
 
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
@@ -937,47 +999,8 @@ public class OpBlockChain {
 			if (currentObject == null) {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
+			prepareEditVoteOp(u, currentObject, editObject);
 			OpObject newObject = new OpObject(currentObject);
-			List<String> refObjName = ((List<String>) u.getFieldByExpr(F_REF_VOTE));
-			OpObject newVoteRefObject = null;
-			if (refObjName != null) {
-				if (refObjName.size() > 1) {
-					String objType = refObjName.get(0);
-					if (objType.equals(OP_VOTE)) {
-						List<String> objId = refObjName.subList(1, refObjName.size());
-						OpObject voteRefObject = getObjectByName(objType, objId);
-						if (voteRefObject == null) {
-							return rules.error(u, ErrorType.REF_OBJ_NOT_FOUND, u.getHash(), refObjName);
-						}
-						if (voteRefObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
-							return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), refObjName);
-						}
-						List<Map<String, Object>> voteEditObject = (List<Map<String, Object>>) voteRefObject.getFieldByExpr(F_EDIT);
-						if (!voteEditObject.contains(editObject.fields)) {
-							return rules.error(u, ErrorType.VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS, u.getHash(), voteEditObject, editObject.fields);
-						} else {
-							newVoteRefObject = new OpObject(voteRefObject);
-							newVoteRefObject.putStringValue(F_STATE, F_FINAL);
-						}
-					}
-				}
-			}
-			if (u.getType().equals(OP_VOTE)) {
-				if (currentObject.getFieldByExpr(F_STATE).equals(F_FINAL)) {
-					return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
-				}
-				List<List<String>> positiveVoices = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES_POSITIVE);
-				List<List<String>> negativeVoices = (List<List<String>>) currentObject.getFieldByExpr(F_VOTES_NEGATIVE);
-				Map<String, Object> newVoteMap = editObject.getChangedEditFields();
-				for (String key : newVoteMap.keySet()) {
-					Map<String, Object> appendObj = (Map<String, Object>) newVoteMap.get(key);
-					List<String> newVote = (List<String>) appendObj.get(OP_CHANGE_APPEND);
-
-					if (positiveVoices.contains(newVote) || negativeVoices.contains(newVote)) {
-						return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, u.getHash(), newVote, positiveVoices, negativeVoices);
-					}
-				}
-			}
 			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
 			if (currentExpectedFields != null) {
 				Iterator<Entry<String, Object>> itEditCurrentFields = currentExpectedFields.entrySet().iterator();
@@ -1011,6 +1034,7 @@ public class OpBlockChain {
 						newObject.setFieldByExpr(fieldExpr, opValue);
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_APPEND.equals(opId)) {
+						// TODO add map support
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
 							List<Object> args = new ArrayList<>(1);
@@ -1048,25 +1072,57 @@ public class OpBlockChain {
 			}
 			newObject.makeImmutable();
 			ctx.newObjsCache.put(newObject, currentObject);
-			if (newVoteRefObject != null) {
-				ctx.voteObjsCache.put(u.getHash(), newVoteRefObject);
-			}
 		}
 		return true;
-
 	}
 
-	private OpObject loadRefUserObject(List<String> refs) {
-		String objType = null;
-		if (refs.size() > 1) {
-			objType = refs.get(0);
+	private boolean prepareEditVoteOp(OpOperation u, OpObject currentObject, OpObject editObject) {
+		if (u.getType().equals(OP_VOTE)) {
+			if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
+				return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
+			}
+			Map<String, Object> votes = editObject.getStringObjMap(F_CHANGE);
+			for (String key : votes.keySet()) {
+				List<String> votedBy = ((Map<String, List<String>>) votes.get(key)).get(OP_CHANGE_APPEND);
+				OpObject user = getObjectByName(OP_SIGNUP, votedBy);
+				if (user == null) {
+					List<String> userId = new ArrayList<>();
+					for (String vote : votedBy) {
+						userId.addAll(Arrays.asList(vote.split(":")));
+					}
+					user = getObjectByName(OP_LOGIN, userId);
+				}
+				if (user == null) {
+					return rules.error(u, ErrorType.VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND, u.getHash(), votedBy);
+				}
+				if (!u.getSignedBy().equals(votedBy)) {
+					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), votedBy);
+				}
+				// TODO validate on voteDuplicate!! change to map?? append not support Map
+//				Map<String, Object> voted1By = ((Map<String, TreeMap<String, Object>>) votes.get(key)).get(OP_CHANGE_APPEND);
+//				List<String> userId = (List<String>) voted1By.get("user");
+//				OpObject user = getObjectByName(OP_SIGNUP, userId);
+//				if (user == null) {
+//					List<String> userIds = new ArrayList<>();
+//					for (String vote : userId) {
+//						userIds.addAll(Arrays.asList(vote.split(":")));
+//					}
+//					user = getObjectByName(OP_LOGIN, userIds);
+//				}
+//				if (user == null) {
+//					return rules.error(u, ErrorType.VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND, u.getHash(), userId);
+//				}
+//				if (!u.getSignedBy().equals(userId)) {
+//					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), userId);
+//				}
+//				Number vote = (Number) voted1By.get(F_VOTE);
+//				if (vote.intValue() != 1 || vote.intValue() != -1) {
+//					//return rules.error(u, ErrorType., u.getHash());
+//				}
+			}
 		}
 
-		if (objType != null) {
-			return getObjectByName(objType, refs.subList(1, refs.size()));
-		}
-
-		return null;
+		return true;
 	}
 
 	// no multi thread issue (used only in synchronized blocks)
@@ -1076,7 +1132,7 @@ public class OpBlockChain {
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
-		Map<String, OpObject> voteObjsCache = new HashMap<String, OpObject>();
+		//Map<String, OpObject> newVoteObj = new HashMap<String, OpObject>();
 
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;

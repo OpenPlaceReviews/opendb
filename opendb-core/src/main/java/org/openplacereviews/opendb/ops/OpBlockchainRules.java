@@ -639,7 +639,6 @@ public class OpBlockchainRules {
 			throw new IllegalArgumentException(e);
 		}
 	}
-
 	
 	public boolean error(OpObject o, ErrorType e, Object... args) {
 		String eMsg = e.getErrorFormat(args);
@@ -684,7 +683,10 @@ public class OpBlockchainRules {
 
 		USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING("Operation '%s': user vote: '%s' positive votes: '%s', negative voices '%s'"),
 		REF_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),
-		VOTE_EDIT_AND_EDIT_OBJ_MUST_BE_EQUALS("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
+		VOTE_OP_IS_NOT_SAME("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
+		VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND("Operation '%s': user '%s' is not found"),
+		VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY("Operation '%s': signed by '%s' by voted by '%s'"),
+		REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE("Operation '%s': ref obj type '%s'"),
 
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
 		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),
