@@ -56,9 +56,13 @@ class OpPrivateObjectInstancesById {
 		if(dbAccess != null) {
 			allObjects = dbAccess.getAllObjects(type, request);
 		}
-		if(request.result.isEmpty()) {
-			request.result.addAll(allObjects.values());
-			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>(objects); 
+		if(request.internalMapToFilterDuplicates == null) {
+			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>(objects);
+			for(OpObject o : objects.values()) {
+				if(o != null) {
+					request.result.add(o);
+				}
+			}
 		} else {
 			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
 			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
