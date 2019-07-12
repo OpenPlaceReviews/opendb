@@ -34,9 +34,9 @@ public class OpObject {
 	public static final String F_OPEN = "open";
 	public static final String F_FINAL = "final";
 	public static final String F_VOTES = "votes";
+	public static final String V_POSITIVE = "positive";
+	public static final String V_NEGATIVE = "negative";
 	public static final String F_VOTE = "vote";
-	public static final String F_VOTES_POSITIVE = "votes.positive";
-	public static final String F_VOTES_NEGATIVE = "votes.negative";
 
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
@@ -274,7 +274,7 @@ public class OpObject {
 		}
 		return (List<String>) o;
 	}
-	
+
 	public void putStringValue(String key, String value) {
 		checkNotImmutable();
 		if(value == null) {

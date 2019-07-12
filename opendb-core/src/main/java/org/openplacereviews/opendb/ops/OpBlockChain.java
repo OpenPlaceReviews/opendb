@@ -1081,6 +1081,9 @@ public class OpBlockChain {
 			if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
 				return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
 			}
+			// TODO change to map?? append not support Map
+			List<List<String>> positiveVotes = (List<List<String>>) currentObject.getStringObjMap(F_VOTES).get(V_POSITIVE);
+			List<List<String>> negativeVotes = (List<List<String>>) currentObject.getStringObjMap(F_VOTES).get(V_NEGATIVE);
 			Map<String, Object> votes = editObject.getStringObjMap(F_CHANGE);
 			for (String key : votes.keySet()) {
 				List<String> votedBy = ((Map<String, List<String>>) votes.get(key)).get(OP_CHANGE_APPEND);
@@ -1098,7 +1101,9 @@ public class OpBlockChain {
 				if (!u.getSignedBy().equals(votedBy)) {
 					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), votedBy);
 				}
-				// TODO validate on voteDuplicate!! change to map?? append not support Map
+				if (positiveVotes.contains(votedBy) || negativeVotes.contains(votedBy)) {
+					return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, u.getHash(), votedBy, positiveVotes, negativeVotes);
+				}
 //				Map<String, Object> voted1By = ((Map<String, TreeMap<String, Object>>) votes.get(key)).get(OP_CHANGE_APPEND);
 //				List<String> userId = (List<String>) voted1By.get("user");
 //				OpObject user = getObjectByName(OP_SIGNUP, userId);

@@ -252,7 +252,7 @@ public class BlocksManagerTest {
 		TreeMap<String, Object> change = new TreeMap<>();
 		TreeMap<String, Object> append = new TreeMap<>();
 		append.put(OP_CHANGE_APPEND.toString(), Arrays.asList("sys.signup", "openplacereviews"));
-		change.put(F_VOTES_POSITIVE, append);
+		change.put("votes.positive", append);
 		firstObject.putObjectValue(F_CHANGE, change);
 		firstObject.putObjectValue(F_CURRENT, Collections.EMPTY_MAP);
 		firstVoteOp.addEdited(firstObject);
@@ -266,7 +266,7 @@ public class BlocksManagerTest {
 		TreeMap<String, Object> change2 = new TreeMap<>();
 		TreeMap<String, Object> append2 = new TreeMap<>();
 		append2.put(OP_CHANGE_APPEND.toString(), Arrays.asList("sys.login", "openplacereviews", "test_1"));
-		change2.put(F_VOTES_NEGATIVE, append2);
+		change2.put("votes.negative", append2);
 		secondObj.putObjectValue(F_CHANGE, change2);
 		secondObj.putObjectValue(F_CURRENT, Collections.EMPTY_MAP);
 		secondVoteOp.addEdited(secondObj);
