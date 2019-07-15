@@ -65,6 +65,10 @@
     }]
   },
   {
+    "type": "sys.vote",
+    "delete" : [[12345662]]
+  },
+  {
     "type" : "sys.vote",
     "signed_by" : "openplacereviews",
     "edit" : [{

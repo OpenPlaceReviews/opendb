@@ -29,14 +29,14 @@ public class OpObject {
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
 	// voting
-	public static final String F_STATE = "state";
 	public static final String F_OP = "op";
+	public static final String F_STATE = "state";
 	public static final String F_OPEN = "open";
 	public static final String F_FINAL = "final";
+	public static final String F_VOTE = "vote";
 	public static final String F_VOTES = "votes";
 	public static final String V_POSITIVE = "positive";
 	public static final String V_NEGATIVE = "negative";
-	public static final String F_VOTE = "vote";
 
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);

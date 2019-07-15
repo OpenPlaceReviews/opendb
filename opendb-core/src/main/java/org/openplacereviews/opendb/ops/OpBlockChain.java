@@ -391,9 +391,6 @@ public class OpBlockChain {
 		// TODO fix error with removing objects!!!!
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-//			if (oinf.getObjectById(deletedRef) == null)  {
-//				oinf = getOrCreateObjectsByIdMapWithId(objType, deletedRef);
-//			}
 			oinf.add(deletedRef, null);
 		}
 		queueOperations.add(u);
@@ -783,25 +780,6 @@ public class OpBlockChain {
 		return oi;
 	}
 
-	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMapWithId(String type, List<String> objId) {
-		// create is allowed only when status is not locked
-		if(nullObject) {
-			return null;
-		}
-		OpPrivateObjectInstancesById oi = objByName.get(type);
-		if(oi.getObjectById(objId) == null) {
-			OpBlockChain opBlockChain = this;
-			while (opBlockChain.parent != null) {
-				oi = opBlockChain.getOrCreateObjectsByIdMap(type);
-				if (oi.getObjectById(objId) != null) {
-					return oi;
-				}
-				opBlockChain = opBlockChain.parent;
-			}
-		}
-		return oi;
-	}
-
 	static int getIndexFromAbsRef(String r) {
 		int i = r.indexOf(':');
 		if (i == -1) {
@@ -916,6 +894,7 @@ public class OpBlockChain {
 				} else {
 					return rules.error(u, ErrorType.REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
 				}
+				// TODO add hash to ref vote with hash op
 			}
 		}
 
@@ -1137,7 +1116,6 @@ public class OpBlockChain {
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
-		//Map<String, OpObject> newVoteObj = new HashMap<String, OpObject>();
 
 		public LocalValidationCtx(String bhash) {
 			blockHash = bhash;
