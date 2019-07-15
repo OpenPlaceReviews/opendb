@@ -234,10 +234,20 @@ public class HistoryManager {
 				Object previousObj = getValueForField(fieldExpr, currentEdit);
 				prevObj.setFieldByExpr(fieldExpr, previousObj);
 			} else if (OP_CHANGE_APPEND.equals(opId)) {
-				List<Object> currentObj = (List<Object>) prevObj.getFieldByExpr(fieldExpr);
-				Object appendObj = getValueForField(fieldExpr, changeEdit);
-				currentObj.remove(appendObj);
-				prevObj.setFieldByExpr(fieldExpr, currentObj);
+				Object o = prevObj.getFieldByExpr(fieldExpr);
+				if (o instanceof List) {
+					List<Object> currentObj = (List<Object>) o;
+					Object appendObj = getValueForField(fieldExpr, changeEdit);
+					currentObj.remove(appendObj);
+					prevObj.setFieldByExpr(fieldExpr, currentObj);
+				} else if (o instanceof Map) {
+					Map<Object, Object> currentObj = (Map<Object, Object>) o;
+					Map<Object, Object> appendObj = (Map<Object, Object>) getValueForField(fieldExpr, changeEdit);
+					for (Object key : appendObj.keySet()) {
+						currentObj.remove(appendObj.get(key));
+					}
+					prevObj.setFieldByExpr(fieldExpr, currentObj);
+				}
 			} else if (OP_CHANGE_SET.equals(opId)) {
 				prevObj.setFieldByExpr(fieldExpr, null);
 			} else if (OP_CHANGE_INCREMENT.equals(opId)) {

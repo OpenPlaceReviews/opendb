@@ -35,8 +35,7 @@ public class OpObject {
 	public static final String F_FINAL = "final";
 	public static final String F_VOTE = "vote";
 	public static final String F_VOTES = "votes";
-	public static final String V_POSITIVE = "positive";
-	public static final String V_NEGATIVE = "negative";
+	public static final String F_USER = "user";
 
 	public static final OpObject NULL = new OpObject();
 
@@ -97,10 +96,21 @@ public class OpObject {
 			}
 			return copy;
 		} else if (object instanceof Map) {
-			Map<String, Object> copy = new LinkedHashMap<>();
-			Map<String, Object> map = (Map<String, Object>) object;
-			for (String key : map.keySet()) {
-				copy.put(key, copyingObjects(map.get(key)));
+			Map<Object, Object> copy = new LinkedHashMap<>();
+			Map<Object, Object> map = (Map<Object, Object>) object;
+			for (Object o : map.keySet()) {
+				if (o instanceof List) {
+					Map<List<String>, Object> mapWithListKey = (Map<List<String>, Object>) object;
+
+					for (List<String> key : mapWithListKey.keySet()) {
+						copy.put(key, copyingObjects(mapWithListKey.get(key)));
+					}
+				} else {
+					Map<String, Object> mapWithoutListKey = (Map<String, Object>) object;
+					for (String key : mapWithoutListKey.keySet()) {
+						copy.put(key, copyingObjects(mapWithoutListKey.get(key)));
+					}
+				}
 			}
 			return copy;
 		} else if (object instanceof OpObject) {

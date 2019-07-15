@@ -20,9 +20,6 @@ import static org.openplacereviews.opendb.ops.OpObject.F_OP;
 import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
 import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
 import static org.openplacereviews.opendb.ops.OpOperation.*;
-import static org.openplacereviews.opendb.ops.OpOperation.F_VOTES;
-import static org.openplacereviews.opendb.ops.OpOperation.V_NEGATIVE;
-import static org.openplacereviews.opendb.ops.OpOperation.V_POSITIVE;
 
 /**
  *  Guidelines of object methods:
@@ -1012,7 +1009,6 @@ public class OpBlockChain {
 						newObject.setFieldByExpr(fieldExpr, opValue);
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_APPEND.equals(opId)) {
-						// TODO add map support
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
 							List<Object> args = new ArrayList<>(1);
@@ -1020,10 +1016,16 @@ public class OpBlockChain {
 							newObject.setFieldByExpr(fieldExpr, args);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof List) {
-							((List)oldObject).add(opValue);
+							((List) oldObject).add(opValue);
 							checkCurrentFieldSpecified = true;
+						} else if (oldObject instanceof Map) {
+							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
+							if (value != null) {
+								((Map<List<String>, Object>) oldObject).put((List<String>) value.get(F_USER), value.get(F_VOTE));
+								checkCurrentFieldSpecified = true;
+							}
 						} else {
-							throw new UnsupportedOperationException("Operation Append supported only for list");
+							throw new UnsupportedOperationException("Operation Append supported only for list and map");
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
@@ -1059,49 +1061,28 @@ public class OpBlockChain {
 			if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
 				return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
 			}
-			// TODO change to map?? append not support Map
-			List<List<String>> positiveVotes = (List<List<String>>) currentObject.getStringObjMap(F_VOTES).get(V_POSITIVE);
-			List<List<String>> negativeVotes = (List<List<String>>) currentObject.getStringObjMap(F_VOTES).get(V_NEGATIVE);
 			Map<String, Object> votes = editObject.getStringObjMap(F_CHANGE);
 			for (String key : votes.keySet()) {
-				List<String> votedBy = ((Map<String, List<String>>) votes.get(key)).get(OP_CHANGE_APPEND);
-				OpObject user = getObjectByName(OP_SIGNUP, votedBy);
+				Map<String, Object> voted1By = ((Map<String, TreeMap<String, Object>>) votes.get(key)).get(OP_CHANGE_APPEND);
+				List<String> userId = (List<String>) voted1By.get(F_USER);
+				OpObject user = getObjectByName(OP_SIGNUP, userId);
 				if (user == null) {
-					List<String> userId = new ArrayList<>();
-					for (String vote : votedBy) {
-						userId.addAll(Arrays.asList(vote.split(":")));
+					List<String> userIds = new ArrayList<>();
+					for (String vote : userId) {
+						userIds.addAll(Arrays.asList(vote.split(":")));
 					}
-					user = getObjectByName(OP_LOGIN, userId);
+					user = getObjectByName(OP_LOGIN, userIds);
 				}
 				if (user == null) {
-					return rules.error(u, ErrorType.VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND, u.getHash(), votedBy);
+					return rules.error(u, ErrorType.VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND, u.getHash(), userId);
 				}
-				if (!u.getSignedBy().equals(votedBy)) {
-					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), votedBy);
+				if (!u.getSignedBy().equals(userId)) {
+					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), userId);
 				}
-				if (positiveVotes.contains(votedBy) || negativeVotes.contains(votedBy)) {
-					return rules.error(u, ErrorType.USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING, u.getHash(), votedBy, positiveVotes, negativeVotes);
+				Number vote = (Number) voted1By.get(F_VOTE);
+				if (!(vote.intValue() == 1 || vote.intValue() == -1)) {
+					return rules.error(u, ErrorType.NOT_ALLOWED_VOTE_VALUE_FOR_VOTE_OP, u.getHash(), vote.intValue());
 				}
-//				Map<String, Object> voted1By = ((Map<String, TreeMap<String, Object>>) votes.get(key)).get(OP_CHANGE_APPEND);
-//				List<String> userId = (List<String>) voted1By.get("user");
-//				OpObject user = getObjectByName(OP_SIGNUP, userId);
-//				if (user == null) {
-//					List<String> userIds = new ArrayList<>();
-//					for (String vote : userId) {
-//						userIds.addAll(Arrays.asList(vote.split(":")));
-//					}
-//					user = getObjectByName(OP_LOGIN, userIds);
-//				}
-//				if (user == null) {
-//					return rules.error(u, ErrorType.VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND, u.getHash(), userId);
-//				}
-//				if (!u.getSignedBy().equals(userId)) {
-//					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), userId);
-//				}
-//				Number vote = (Number) voted1By.get(F_VOTE);
-//				if (vote.intValue() != 1 || vote.intValue() != -1) {
-//					//return rules.error(u, ErrorType., u.getHash());
-//				}
 			}
 		}
 

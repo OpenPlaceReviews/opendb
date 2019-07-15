@@ -685,6 +685,7 @@ public class OpBlockchainRules {
 		REF_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),
 		VOTE_OP_IS_NOT_SAME("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
 		VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND("Operation '%s': user '%s' is not found"),
+		NOT_ALLOWED_VOTE_VALUE_FOR_VOTE_OP("Operation '%s': not allowed vote value, allowed votes values: 1 and -1"),
 		VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY("Operation '%s': signed by '%s' by voted by '%s'"),
 		REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE("Operation '%s': ref obj type '%s'"),
 

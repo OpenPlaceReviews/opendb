@@ -60,13 +60,8 @@
       },
       "state" : "open",
       "extra" : {},
-      "votes" : {"positive" : [], "negative" : []},
-      "votes1" : {}
+      "votes" : {}
     }]
-  },
-  {
-    "type": "sys.vote",
-    "delete" : [[12345662]]
   },
   {
     "type" : "sys.vote",
@@ -74,20 +69,17 @@
     "edit" : [{
       "id" : ["vote", "osm.place"],
       "change" : {
-        //				"votes1" : {
-        //					"append": {
-        //						"user": ["openplacereviews"],
-        //						"vote": 1
-        //					}
-        //				},
-        "votes.positive" : {
-          "append" : ["openplacereviews"]
+        "votes" : {
+          "append": {
+            "user": ["openplacereviews"],
+            "vote": 1
+          }
         }
       },
       "current" : {}
     }],
-    "hash": "json:sha256:2cb0c6550f432a529b875d09737c7344e5ea972d67dd986b52aedec0faa69c7b",
-    "signature": "ECDSA:base64:MEQCIHADdz3flE+7KixguiI6C55WTJEK2VleEl6tbQ1sj0M/AiAH8Rfm55wvopNZ5CbNVKk2INnRgm5iadAohfROi5meLA=="
+    "hash": "json:sha256:0cd121b4afe185290bfb1a4076a71c5a789aae66af088b7379a8a45485e74399",
+    "signature": "ECDSA:base64:MEUCIBLHD/7v3emdDfnK0rebH1qgQlr0DZ1Sz2L1zJlXIadaAiEAl4/SgRm2pXi9z/8oApVU51fcI7YXKmt+gqCqbwvgzzI="
   },
   {
     "type" : "sys.vote",
@@ -95,20 +87,17 @@
     "edit" : [{
       "id" : ["vote", "osm.place"],
       "change" : {
-        //				"votes1" : {
-        //					"append": {
-        //						"user" :["openplacereviews:test_1"],
-        //						"vote" : -1
-        //					}
-        //				},
-        "votes.positive" : {
-          "append" : ["openplacereviews:test_1"]
+        "votes" : {
+          "append": {
+            "user" :["openplacereviews:test_1"],
+            "vote" : -1
+          }
         }
       },
       "current" : {}
     }],
-    "hash": "json:sha256:d5a723aae590bd9e3fbf681bca688bf9852da8f23cc8eda3049c176d27b56104",
-    "signature": "ECDSA:base64:MEYCIQD5p518kLv+x8dDHLEyXLpyYsMpYJTDgCr1FEQ19v37BgIhAJ9ddajo1xbQa1IYlD7jYJGnNjTnpHM7ljvadT5miYNk"
+    "hash": "json:sha256:8ce4a56dd31ae2a43ac61c33c4ac2211221f0cee04ee0c594b2a06ffac4bc088",
+    "signature": "ECDSA:base64:MEUCIQC3zX/Ug0R8ahxfC4PMrqgam6iVSv3/IlRhqMrtl+0LAwIgLtRRa/6B2Re9ffNpPVauIz736XJg03vggSczqUfqfKg="
   },
   {
     "type" : "osm.place",
@@ -125,6 +114,20 @@
         "lat": "222EC",
         "tags": [{"v": "1111111", "k": "2222222"}]
       }
+    }]
+  },
+  {
+    "type": "osm.place",
+    "delete" : [["12345662"]]
+  },
+  {
+    "type" : "osm.place",
+    "create": [{
+      "id" : ["12345663"],
+      "lon" : 12345,
+      "def" : "23434",
+      "lat": "222EC",
+      "tags": [{"v": "1111111", "k": "2222222"}]
     }]
   }
 ]
