@@ -318,10 +318,6 @@ public class OpBlockchainRules {
 		}
 		for (OpExprEvaluator s : vld) {
 			if (!s.evaluateBoolean(ctx)) {
-				System.out.println(o.getId());
-				System.out.println(o.getCreated());
-				System.out.println(o.getDeleted());
-				System.out.println(o.getEdited());
 				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(),
 						rule.getStringValue(F_ERROR_MESSAGE));
 			}
