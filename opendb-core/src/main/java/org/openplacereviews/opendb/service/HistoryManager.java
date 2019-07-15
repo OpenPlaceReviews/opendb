@@ -20,6 +20,7 @@ import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
 import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
@@ -208,6 +209,7 @@ public class HistoryManager {
 				if (originObject.getFieldByExpr(OpObject.F_STATE) != null &&
 						originObject.getFieldByExpr(OpObject.F_STATE).equals(F_FINAL)) {
 					originObject.setFieldByExpr(OpObject.F_STATE, OpObject.F_OPEN);
+					originObject.remove(F_SUBMITTED_OP_HASH);
 				}
 				historyEdit.deltaChanges = originObject;
 			}

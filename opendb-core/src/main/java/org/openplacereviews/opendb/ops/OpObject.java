@@ -35,6 +35,9 @@ public class OpObject {
 	public static final String F_FINAL = "final";
 	public static final String F_VOTE = "vote";
 	public static final String F_VOTES = "votes";
+	public static final String F_SUBMITTED_OP_HASH = "submittedOpHash";
+	public static final String F_POSITIVE_VOTES = "positive_votes";
+	public static final String F_NEGATIVE_VOTES = "negative_votes";
 	public static final String F_USER = "user";
 
 	public static final OpObject NULL = new OpObject();
@@ -233,6 +236,10 @@ public class OpObject {
 
 	public Map<String, Object> getStringObjMap(String field) {
 		return (Map<String, Object>) fields.get(field);
+	}
+
+	public Map<List<String>, Object> getStringListObjMap(String field) {
+		return (Map<List<String>, Object>) fields.get(field);
 	}
 	
 

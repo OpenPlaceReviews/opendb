@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.util.*;
 
+import static org.openplacereviews.opendb.ops.OpObject.*;
+
 /**
  * State less blockchain rules to validate roles and calculate hashes
  */
@@ -270,8 +272,7 @@ public class OpBlockchainRules {
 		}
 		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
 		ArrayList<OpObject> dls = new ArrayList<>();
-		dls.addAll(ctx.deletedObjsCache);
-		for(OpObject oldObj : ctx.newObjsCache.values()) {
+		for(OpObject oldObj : ctx.deletedObjsCache) {
 			if(oldObj != null) {
 				dls.add(oldObj);
 			}
@@ -302,10 +303,9 @@ public class OpBlockchainRules {
 		for(int i = 0; i < deletedArray.size(); i++) {
 			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getParentType());
 		}
-		JsonObject refsMap = formatter.toJsonElement(refObjsCache).getAsJsonObject();
-		for(String key : refObjsCache.keySet()) {
-			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
-		}
+		Map<String, OpObject> tempRefCache = refObjsCache;
+		tempRefCache = getStringOpObjectMapForVoteOp(refObjsCache, tempRefCache);
+		JsonObject refsMap = formatter.toJsonElement(tempRefCache).getAsJsonObject();
 		JsonArray newArray = (JsonArray) formatter.toJsonElement(newObjsArray);
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
 		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, newArray, deletedArray, refsMap);
@@ -318,11 +318,35 @@ public class OpBlockchainRules {
 		}
 		for (OpExprEvaluator s : vld) {
 			if (!s.evaluateBoolean(ctx)) {
+				System.out.println(o.getId());
+				System.out.println(o.getCreated());
+				System.out.println(o.getDeleted());
+				System.out.println(o.getEdited());
 				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(),
 						rule.getStringValue(F_ERROR_MESSAGE));
 			}
 		}
 		return true;
+	}
+
+	private Map<String, OpObject> getStringOpObjectMapForVoteOp(Map<String, OpObject> refObjsCache, Map<String, OpObject> tempRefCache) {
+		OpObject refVote = refObjsCache.get(F_VOTE);
+		if (refVote != null) {
+			tempRefCache = new HashMap<>(refObjsCache);
+			refVote = new OpObject(refVote);
+			int p = 0, n = 0;
+			for (Map.Entry<List<String>, Object> e : refVote.getStringListObjMap(F_VOTES).entrySet()) {
+				if (((Number) e.getValue()).intValue() == 1) {
+					p++;
+				} else {
+					n++;
+				}
+			}
+			refVote.putObjectValue(F_POSITIVE_VOTES, p);
+			refVote.putObjectValue(F_NEGATIVE_VOTES, n);
+			tempRefCache.put(F_VOTE, refVote);
+		}
+		return tempRefCache;
 	}
 
 	@SuppressWarnings("unchecked")

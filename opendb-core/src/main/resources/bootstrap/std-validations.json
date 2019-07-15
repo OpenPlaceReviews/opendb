@@ -80,7 +80,7 @@
 	{
 		"type" : "sys.validate",
 		"create" : [{
-			"id" : ["sysvalidate_check_previous_role_for_change"],
+			"id" : ["sys_validate_check_previous_role_for_change"],
 			"type" : ["sys.validate"],
 			"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
 			"role" : "none",
@@ -104,7 +104,6 @@
 			]
 		}]
 	},
-	//TODO add validation rule -> change by edit
 	{
 		"type" : "sys.validate",
 		"create" : [{
@@ -117,6 +116,21 @@
 			],
 			"validate" : [
 				"auth:has_sig_roles(this, .old.0.owner_role)"
+			]
+		}]
+	},
+	{//example validation for voting
+		"type" : "sys.validate",
+		"create" : [{
+			"id" : ["min_votes_value_for_osm_place_operation"],
+			"type" : ["osm.place"],
+			"comment" : "Check the minimum votes for edit op",
+			"role" : "none",
+			"if" : [
+				"std:eq(std:size(.ref.vote), 1)"
+			],
+			"validate" : [
+				"std:eq(.ref.vote.positive_votes, 2)"
 			]
 		}]
 	},
