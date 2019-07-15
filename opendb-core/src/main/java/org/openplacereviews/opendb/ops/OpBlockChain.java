@@ -1,6 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
-import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.*;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
@@ -13,15 +13,16 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_LOGIN;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_SIGNUP;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
 import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
 import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
 import static org.openplacereviews.opendb.ops.OpObject.F_OP;
 import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
 import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
 import static org.openplacereviews.opendb.ops.OpOperation.*;
+import static org.openplacereviews.opendb.ops.OpOperation.F_VOTES;
+import static org.openplacereviews.opendb.ops.OpOperation.V_NEGATIVE;
+import static org.openplacereviews.opendb.ops.OpOperation.V_POSITIVE;
 
 /**
  *  Guidelines of object methods:
@@ -387,8 +388,6 @@ public class OpBlockChain {
 	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
 		List<List<String>> deletedRefs = u.getDeleted();
 		String objType = u.getType();
-
-		// TODO fix error with removing objects!!!!
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(deletedRef, null);
@@ -769,7 +768,7 @@ public class OpBlockChain {
 
 	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMap(String type) {
 		// create is allowed only when status is not locked
-		if(nullObject) {
+		if (nullObject) {
 			return null;
 		}
 		OpPrivateObjectInstancesById oi = objByName.get(type);

@@ -38,9 +38,10 @@ public class OpObject {
 	public static final String V_POSITIVE = "positive";
 	public static final String V_NEGATIVE = "negative";
 
+	public static final OpObject NULL = new OpObject();
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-	{
+	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 	
@@ -50,6 +51,8 @@ public class OpObject {
 	
 	protected transient String parentType;
 	protected transient String parentHash;
+	
+	
 	
 	public OpObject() {}
 	
