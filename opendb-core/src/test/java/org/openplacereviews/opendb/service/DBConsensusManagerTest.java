@@ -160,7 +160,7 @@ public class DBConsensusManagerTest {
 		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
 			amount[0] = rs.getLong(1);
 		});
-		assertEquals(38, amount[0]);
+		assertEquals(39, amount[0]);
 
 		dbConsensusManager.unloadSuperblockFromDB(blockChain);
 
@@ -191,7 +191,7 @@ public class DBConsensusManagerTest {
 			amount[0] = rs.getLong(1);
 		});
 
-		assertEquals(38, amount[0]);
+		assertEquals(39, amount[0]);
 	}
 
 	@Test

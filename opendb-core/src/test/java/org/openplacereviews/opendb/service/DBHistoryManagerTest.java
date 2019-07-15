@@ -84,7 +84,7 @@ public class DBHistoryManagerTest {
 		);
 		historyManager.retrieveHistory(historyObjectRequest);
 
-		List<HistoryManager.HistoryEdit> historyObject = historyObjectRequest.historySearchResult.get(Arrays.asList("12345662"));
+		List<HistoryManager.HistoryEdit> historyObject = historyObjectRequest.historySearchResult.get(Arrays.asList("osm.place","12345662"));
 		assertEquals(3, historyObject.size());
 
 	}
