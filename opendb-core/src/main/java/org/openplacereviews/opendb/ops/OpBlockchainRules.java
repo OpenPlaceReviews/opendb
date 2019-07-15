@@ -279,9 +279,11 @@ public class OpBlockchainRules {
 		}
 
 		List<OpObject> toValidate = validationRules.get(o.getType());
+		Map<String, OpObject> tempRefCache = ctx.refObjsCache;
+		tempRefCache = getStringOpObjectMapForVoteOp(ctx.refObjsCache, tempRefCache);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, tempRefCache, timer)) {
 					return false;
 				}
 			}
@@ -289,7 +291,7 @@ public class OpBlockchainRules {
 		toValidate = validationRules.get(WILDCARD_RULE);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, tempRefCache, timer)) {
 					return false;
 				}
 			}
@@ -303,9 +305,7 @@ public class OpBlockchainRules {
 		for(int i = 0; i < deletedArray.size(); i++) {
 			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getParentType());
 		}
-		Map<String, OpObject> tempRefCache = refObjsCache;
-		tempRefCache = getStringOpObjectMapForVoteOp(refObjsCache, tempRefCache);
-		JsonObject refsMap = formatter.toJsonElement(tempRefCache).getAsJsonObject();
+		JsonObject refsMap = formatter.toJsonElement(refObjsCache).getAsJsonObject();
 		JsonArray newArray = (JsonArray) formatter.toJsonElement(newObjsArray);
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
 		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, newArray, deletedArray, refsMap);
