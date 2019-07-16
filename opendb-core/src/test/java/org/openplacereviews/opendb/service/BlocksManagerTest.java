@@ -6,6 +6,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.openplacereviews.opendb.OpenDBServer;
+import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -223,6 +224,24 @@ public class BlocksManagerTest {
 		assertNull(object);
 
 		blocksManager.addOperation(generateRemoveOp(OBJ_ID + 1));
+	}
+
+	// TODO simulate more objs for test
+	@Test
+	public void testDBCompactAfterRemovingObj() throws FailedVerificationException {
+		for (OpOperation op : generateStartOperationAndObject()) {
+			assertTrue(blocksManager.addOperation(op));
+		}
+
+		OpBlock opBlock = blocksManager.createBlock();
+		assertNotNull(opBlock);
+
+		OpObject object = blockChain.getObjectByName(OP_ID, OBJ_ID);
+		assertNotNull(object);
+
+		assertTrue(blocksManager.addOperation(generateRemoveOp(OBJ_ID)));
+		opBlock = blocksManager.createBlock();
+		assertNotNull(opBlock);
 	}
 
 	private OpOperation generateRemoveOp(String id) throws FailedVerificationException {

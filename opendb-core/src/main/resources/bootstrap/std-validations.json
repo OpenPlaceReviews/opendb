@@ -130,7 +130,8 @@
 				"std:eq(std:size(.ref.vote), 1)"
 			],
 			"validate" : [
-				"std:eq(.ref.vote.positive_votes, 2)"
+				"std:eq(.ref.vote.positive_votes, 2)",
+				"std:le(.ref.vote.negative_votes, .ref.vote.positive_votes)"
 			]
 		}]
 	},
