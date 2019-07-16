@@ -1,7 +1,9 @@
 package org.openplacereviews.opendb.ops;
 
 import com.google.gson.*;
+import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.OpExprEvaluator;
 
 import java.lang.reflect.Type;
 import java.text.ParseException;
@@ -24,9 +26,12 @@ public class OpObject {
 	public static final String F_TIMESTAMP_ADDED = "timestamp";
 	public static final String F_PARENT_TYPE = "parentType";
 	public static final String F_PARENT_HASH = "parentHash";
+	public static final String F_CHANGE = "change";
+	public static final String F_CURRENT = "current";
+	public static final OpObject NULL = new OpObject();
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-	{
+	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 	
@@ -37,6 +42,8 @@ public class OpObject {
 	protected transient String parentType;
 	protected transient String parentHash;
 	
+	
+	
 	public OpObject() {}
 	
 	public OpObject(OpObject cp) {
@@ -44,10 +51,54 @@ public class OpObject {
 	}
 	
 	public OpObject(OpObject cp, boolean copyCacheFields) {
-		this.fields.putAll(cp.fields);
-		if(copyCacheFields && cp.cacheFields != null) {
-			this.cacheFields = new ConcurrentHashMap<String, Object>();
-			this.cacheFields.putAll(cp.cacheFields);
+		createOpObjectCopy(cp, copyCacheFields);
+	}
+
+	@SuppressWarnings("unchecked")
+	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
+		this.parentType = opObject.parentType;
+		this.parentHash = opObject.parentHash;
+		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
+		if (opObject.cacheFields != null && copyCacheFields) {
+			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
+		}
+		if (opObject.parentType != null) {
+			this.parentType = (String) copyingObjects(opObject.parentType);
+		}
+		if (opObject.parentHash != null) {
+			this.parentHash = (String) copyingObjects(opObject.parentHash);
+		}
+		this.isImmutable = false;
+
+		return this;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object copyingObjects(Object object) {
+		if (object instanceof Number) {
+			return (Number) object;
+		} else if (object instanceof String) {
+			return (String) object;
+		} else if (object instanceof Boolean) {
+			return (Boolean) object;
+		} else if (object instanceof List) {
+			List<Object> copy = new ArrayList<>();
+			List<Object> list = (List<Object>) object;
+			for (Object o : list) {
+				copy.add(copyingObjects(o));
+			}
+			return copy;
+		} else if (object instanceof Map) {
+			Map<String, Object> copy = new LinkedHashMap<>();
+			Map<String, Object> map = (Map<String, Object>) object;
+			for (String key : map.keySet()) {
+				copy.put(key, copyingObjects(map.get(key)));
+			}
+			return copy;
+		} else if (object instanceof OpExprEvaluator) {
+			return new OpExprEvaluator(((OpExprEvaluator) object).getEctx());
+		} else {
+			throw new UnsupportedOperationException("Type of object is not supported");
 		}
 	}
 	
@@ -83,6 +134,26 @@ public class OpObject {
 	public OpObject makeImmutable() {
 		isImmutable = true;
 		return this;
+	}
+
+	public Object getFieldByExpr(String field) {
+		if (field.contains(".") || field.contains("[") || field.contains("]")) {
+			String[] fieldSequence = field.split("\\.");
+			return JsonObjectUtils.getField(this.fields, fieldSequence);
+		}
+
+		return fields.get(field);
+	}
+
+	public void setFieldByExpr(String field, Object object) {
+		if (field.contains(".") || field.contains("[") || field.contains("]")) {
+			String[] fieldSequence = field.split("\\.");
+			JsonObjectUtils.setField(this.fields, fieldSequence, object);
+		} else if (object == null) {
+			fields.remove(field);
+		} else {
+			fields.put(field, object);
+		}
 	}
 	
 	public Object getCacheObject(String f) {
@@ -228,6 +299,16 @@ public class OpObject {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getChangedEditFields() {
+		return (Map<String, Object>) fields.get(F_CHANGE);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getCurrentEditFields() {
+		return (Map<String, Object>) fields.get(F_CURRENT);
+	}
+	
 	public void putObjectValue(String key, Object value) {
 		checkNotImmutable();
 		if(value == null) {
@@ -339,6 +420,10 @@ public class OpObject {
 
 
 	}
+
+	
+
+	
 
 
 }

@@ -186,7 +186,7 @@ public class OpBlockchainRulesSysValidationTest {
 		vld.measure(ValidationTimer.OP_PREPARATION);
 
 		exceptionRule.expect(IllegalArgumentException.class);
-		blc.getRules().validateRules(blc, opOperation, new ArrayList<>(), new HashMap<>(), vld);
+		blc.getRules().validateRules(blc, opOperation, new OpBlockChain.LocalValidationCtx(null), vld);
 	}
 
 
@@ -489,7 +489,7 @@ public class OpBlockchainRulesSysValidationTest {
 		// generate role with owner_role = administrator
 		OpOperation opOperation = getOpRoleOperation(role, ownerRole, comment, serverName);
 
-		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
+		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
 
 		blc.addOperation(opOperation);
@@ -497,11 +497,17 @@ public class OpBlockchainRulesSysValidationTest {
 		// change comment and owner_role for user role
 		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, serverName);
 		opOperation.addOtherSignedBy(serverName);
-		opOperation.addDeleted(Collections.singletonList(role));
+
+		// create delete op
+		OpOperation deleteOperation = new OpOperation();
+		deleteOperation.setType(OpBlockchainRules.OP_ROLE);
+		deleteOperation.addDeleted(Collections.singletonList(role));
+		generateHashAndSignForOperation(deleteOperation, blc, true, serverKeyPair);
+		deleteOperation.makeImmutable();
+		blc.addOperation(deleteOperation);
 
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
-
 		blc.addOperation(opOperation);
 	}
 
@@ -561,9 +567,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		blc.addOperation(opOperation);
 
-		// checking to change role by not role owner
-		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
-		opOperation.addDeleted(Collections.singletonList(role));
+		opOperation = getOpDeletedRoleOperation(role, username);
 
 		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
 		opOperation.makeImmutable();
@@ -594,7 +598,19 @@ public class OpBlockchainRulesSysValidationTest {
 
 		blc.addOperation(grantOperation);
 
+		// checking to change role by not role owner
+		opOperation = getOpRoleOperation(role, newOwnerRole, newComment, username);
+
+		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
+		opOperation.makeImmutable();
 		// checking to change role by granted owner
+		blc.addOperation(opOperation);
+
+		opOperation = getOpDeletedRoleOperation(role, username);
+
+		generateHashAndSignForOperation(opOperation, blc, false, userKeyPair);
+		opOperation.makeImmutable();
+
 		blc.addOperation(opOperation);
 	}
 
@@ -686,13 +702,20 @@ public class OpBlockchainRulesSysValidationTest {
 		OpOperation grantOperation = new OpOperation();
 		grantOperation.setSignedBy(name);
 		grantOperation.setType(OpBlockchainRules.OP_VALIDATE);
-		grantOperation.addDeleted(Collections.singletonList(validationName));
 		grantOperation.addCreated(opObject);
 
 		generateHashAndSignForOperation(grantOperation, blc, false, serverKeyPair);
 		grantOperation.makeImmutable();
-
 		blc.addOperation(grantOperation);
+
+		OpOperation delGrantOperation = new OpOperation();
+		delGrantOperation.setSignedBy(name);
+		delGrantOperation.setType(OpBlockchainRules.OP_VALIDATE);
+		delGrantOperation.addDeleted(Collections.singletonList(validationName));
+
+		generateHashAndSignForOperation(delGrantOperation, blc, false, serverKeyPair);
+		delGrantOperation.makeImmutable();
+		blc.addOperation(delGrantOperation);
 	}
 
 	//////////////////////////////////////////////////////// SYS.OPERATION ///////////////////////////////////////////////////////
@@ -1049,4 +1072,15 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.addCreated(opObject);
 		return opOperation;
 	}
+
+	private OpOperation getOpDeletedRoleOperation(String role, String signedBy) {
+		OpOperation opOperation = new OpOperation();
+		opOperation.addOtherSignedBy(signedBy);
+		opOperation.setType(OpBlockchainRules.OP_ROLE);
+		opOperation.addDeleted(Arrays.asList(role));
+
+		return opOperation;
+	}
+
+
 }

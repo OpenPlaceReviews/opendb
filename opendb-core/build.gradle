@@ -20,7 +20,10 @@ publishing {
 }
 
 test {
-    exclude '**/service'
+    exclude '**/service/DBConsensusManagerTest.class'
+    exclude '**/service/DBHistoryManagerTest.class'
+    exclude '**/service/OpBlockchainDbAccessTest.class'
+    exclude '**/service/OpBlockchainGettersDbAccessTest.class'
 }
 
 task embeddedPostgresTest(type: Test) {
@@ -67,7 +70,7 @@ dependencies {
     implementation group: 'net.jodah', name: 'failsafe', version: '2.0.0'
     // https://mvnrepository.com/artifact/commons-io/commons-io
     implementation group: 'commons-io', name: 'commons-io', version: '2.6'
-    // https://mvnrepository.com/artifact/com.google.guava/guava
+    implementation group: 'joda-time', name: 'joda-time', version: '2.10.2'
     implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
     implementation group: 'commons-codec', name: 'commons-codec', version: '1.12'
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.60'

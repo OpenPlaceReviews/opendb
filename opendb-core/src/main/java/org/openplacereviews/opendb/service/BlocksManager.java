@@ -42,6 +42,9 @@ public class BlocksManager {
 	private DBConsensusManager dataManager;
 
 	@Autowired
+	private HistoryManager historyManager;
+
+	@Autowired
 	private IPFSFileManager extResourceService;
 
 	protected List<String> bootstrapList = new ArrayList<>();
@@ -183,8 +186,9 @@ public class BlocksManager {
 		
 		int tmAddOps = timer.startExtra();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
 		for (OpOperation o : candidates) {
-			if(!blc.addOperation(o)) {
+			if(!blc.addOperation(o, hctx)) {
 				return null;
 			}
 		}
@@ -198,15 +202,19 @@ public class BlocksManager {
 		if(opBlock == null) {
 			return null;
 		}
+
 		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
 		
-		return replicateValidBlock(timer, blc, opBlock);
+		return replicateValidBlock(timer, blc, opBlock, hctx);
 	}
 
-	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock) {
+	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		int tmDbSave = timer.startExtra();
 		dataManager.insertBlock(opBlock);
+		if (historyManager.isRunning()) {
+			historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+		}
 		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
@@ -317,11 +325,12 @@ public class BlocksManager {
 		timer.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		OpBlock res;
-		res = blc.replicateBlock(block);
+		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		res = blc.replicateBlock(block, hctx);
 		if(res == null) {
 			return false;
 		}
-		res = replicateValidBlock(timer, blc, res);
+		res = replicateValidBlock(timer, blc, res, hctx);
 		if(res == null) {
 			return false;
 		}
@@ -496,6 +505,7 @@ public class BlocksManager {
 	public void setBootstrapList(List<String> bootstrapList) {
 		this.bootstrapList = bootstrapList;
 	}
+
 	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
 		int size = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();

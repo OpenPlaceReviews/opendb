@@ -1,18 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,8 +9,14 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.*;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainGettersTest {
@@ -114,7 +109,7 @@ public class OpBlockchainGettersTest {
 	@Test
 	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperblockObjects(OpBlockChain opBlockChain) {
-		final int amountLoadedObjects = 6;
+		final int amountLoadedObjects = 7;
 		Map<String, Map<CompoundKey, OpObject>> superBlockObject = opBlockChain.getSuperblockObjects();
 
 		assertEquals(amountLoadedObjects, superBlockObject.size());
@@ -204,7 +199,7 @@ public class OpBlockchainGettersTest {
 
 		blc.getObjects(OpBlockchainRules.OP_OPERATION, r);
 
-		assertEquals(6, r.result.size());
+		assertEquals(7, r.result.size());
 	}
 
 	@Test

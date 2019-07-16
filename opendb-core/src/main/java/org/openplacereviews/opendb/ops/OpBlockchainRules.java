@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlockChain.LocalValidationCtx;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
@@ -26,6 +27,7 @@ public class OpBlockchainRules {
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 1024;
+	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
 	
@@ -225,8 +227,7 @@ public class OpBlockchainRules {
 	}
 
 	
-	public boolean validateRules(OpBlockChain blockchain, OpOperation o,
-			List<OpObject> deletedObjsCache, Map<String, OpObject> refObjsCache, ValidationTimer timer) {
+	public boolean validateRules(OpBlockChain blockchain, OpOperation o, LocalValidationCtx ctx, ValidationTimer timer) {
 		if(OpBlockchainRules.OP_VALIDATE.equals(o.getType())) {
 			// validate expression
 			for(OpObject obj : o.getCreated()) {
@@ -266,10 +267,18 @@ public class OpBlockchainRules {
 			}
 		}
 		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
+		ArrayList<OpObject> dls = new ArrayList<>();
+		dls.addAll(ctx.deletedObjsCache);
+		for(OpObject oldObj : ctx.newObjsCache.values()) {
+			if(oldObj != null) {
+				dls.add(oldObj);
+			}
+		}
+
 		List<OpObject> toValidate = validationRules.get(o.getType());
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, deletedObjsCache, refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
 					return false;
 				}
 			}
@@ -277,7 +286,7 @@ public class OpBlockchainRules {
 		toValidate = validationRules.get(WILDCARD_RULE);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, deletedObjsCache, refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
 					return false;
 				}
 			}
@@ -285,7 +294,7 @@ public class OpBlockchainRules {
 		return true;
 	}
 
-	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, List<OpObject> deletedObjsCache,
+	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, Set<OpObject> newObjsArray, List<OpObject> deletedObjsCache,
 			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
 		JsonArray deletedArray = (JsonArray) formatter.toJsonElement(deletedObjsCache);
 		for(int i = 0; i < deletedArray.size(); i++) {
@@ -295,8 +304,9 @@ public class OpBlockchainRules {
 		for(String key : refObjsCache.keySet()) {
 			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
 		}
+		JsonArray newArray = (JsonArray) formatter.toJsonElement(newObjsArray);
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
-		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, deletedArray, refsMap);
+		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, newArray, deletedArray, refsMap);
 		List<OpExprEvaluator> vld = getValidateExpresions(F_VALIDATE, rule);
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(OpExprEvaluator s : ifs) {
@@ -473,9 +483,11 @@ public class OpBlockchainRules {
 		boolean signByItself = false;
 		String signupName = "";
 		if(OpBlockchainRules.OP_SIGNUP.equals(ob.getType()) && ob.getCreated().size() == 1) {
-			signupName =  ob.getCreated().get(0).getId().get(0);
-			OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
-			signByItself = obj == null || obj.getStringValue(F_AUTH_METHOD).equals(METHOD_OAUTH);
+			if (!ob.getCreated().get(0).getId().isEmpty()) {
+				signupName = ob.getCreated().get(0).getId().get(0);
+				OpObject obj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signupName);
+				signByItself = obj == null || obj.getStringValue(F_AUTH_METHOD).equals(METHOD_OAUTH);
+			}
 		}
 		// 1st signup could be signed by itself
 		for (int i = 0; i < sigs.size(); i++) {
@@ -503,8 +515,7 @@ public class OpBlockchainRules {
 	}
 	
 	
-	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, List<OpObject> deletedObjsCache,
-			Map<String, OpObject> refObjsCache, ValidationTimer vld) {
+	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, LocalValidationCtx ctx, ValidationTimer vld) {
 		if(!OUtils.equals(calculateOperationHash(u, false), u.getHash())) {
 			return error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
 		}
@@ -520,7 +531,7 @@ public class OpBlockchainRules {
 			return valid;
 		}
 		int timerRoles = vld.startExtra();
-		valid = validateRules(opBlockChain, u, deletedObjsCache, refObjsCache, vld);
+		valid = validateRules(opBlockChain, u, ctx, vld);
 		vld.measure(timerRoles, ValidationTimer.OP_SIG);
 		
 		if(!valid) {
@@ -658,10 +669,15 @@ public class OpBlockchainRules {
 		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
 		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
 		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
+
+		LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED("Operation '%s': exceeded amount of created objects"),
 		
 		NEW_OBJ_DOUBLE_CREATED("Operation '%s': object '%s' was already created"),
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
-		DEL_OBJ_DOUBLE_DELETED("Operation '%s': object '%s' was already deleted at block '%s'"),
+		OBJ_MODIFIED_TWICE_IN_SAME_OPERATION("Operation '%s': object '%s' was modified twice in the same operation"),
+		EDIT_OBJ_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
+		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
+		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 		
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),

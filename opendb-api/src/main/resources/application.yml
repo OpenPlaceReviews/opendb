@@ -19,6 +19,7 @@ opendb:
     interval: ${OPENDB_REPLICATE_INTERVAL:15}
     url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/}
   db:
+    store-history: ${OPENDB_STORE_HISTORY:true}
     compactCoefficient: ${OPENDB_DB_CF:1.0}
     dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
   storage:
@@ -33,7 +34,7 @@ opendb:
       obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
       obj_grants: { "types" : ["sys.grant"], "keysize":2 }
       obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
-#      obj_osm: { "types": ["user.osm.place"], "keysize":1 , "columns": [{"name" : "osmid", "field" : "osmId", "type" : "jsonb"}],
+#      obj_osm: { "types": ["osm.place"], "keysize":1 , "columns": [{"name" : "osmid", "field" : "osmId", "type" : "jsonb"}],
 #                    "indices":[{"column":"osmid", "field":"id", "type":"GIN"},{"column":"p1", "field": , "type":"GIN"}] }
   files-backup:
     directory: ${FILE_BLOCKS_DIR:blocks}

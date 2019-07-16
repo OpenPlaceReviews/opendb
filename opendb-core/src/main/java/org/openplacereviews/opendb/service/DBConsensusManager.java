@@ -131,7 +131,6 @@ public class DBConsensusManager {
 		return blcQueue;
 	}
 
-
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent,
 									final OpBlockchainRules rules) {
 		if (topBlockInfo.size() == 0) {
@@ -221,16 +220,6 @@ public class DBConsensusManager {
 		return res;
 	}
 
-	private String generateCoalesceQueryForCustomFields(List<CustomIndexDto> customIndexDtoList) {
-		StringBuilder str = new StringBuilder();
-		for (CustomIndexDto c: customIndexDtoList) {
-			str.append(", coalesce(r1.").append(c.column).append(", r2.").append(c.column).append(")");
-		}
-
-		return str.toString();
-	}
-
-
 	protected class SuperblockDbAccess implements BlockDbAccessInterface {
 
 		protected final String superBlockHash;
@@ -278,7 +267,7 @@ public class DBConsensusManager {
 				}
 				String s = "select content, type, ophash from " + table +
 						" where superblock = ? and type = ? and " +
-						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) + 
+						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) +
 						" order by sblockid desc";
 				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
 
@@ -354,7 +343,7 @@ public class DBConsensusManager {
 				o[1] = SecUtils.getHashBytes(rawHash);
 				String sql = "select d.content from " + OPERATIONS_TABLE + " d "
 						+ " where d.superblock = ? and d.hash = ? ";
-				OpOperation[] op = new OpOperation[1]; 	
+				OpOperation[] op = new OpOperation[1];
 				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
 
 					@Override
@@ -364,7 +353,7 @@ public class DBConsensusManager {
 						}
 					}
 
-					
+
 				});
 				return op[0];
 			} finally {
@@ -610,7 +599,7 @@ public class DBConsensusManager {
 					order++;
 				}
 			}
-			
+
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
@@ -774,6 +763,7 @@ public class DBConsensusManager {
 									+ " set blocks = array_remove(blocks, ?) where hash = ?",
 							blockHash, SecUtils.getHashBytes(o.getRawHash()));
 				}
+				jdbcTemplate.update("DELETE FROM " + OP_OBJ_HISTORY_TABLE + " WHERE blockhash = ?", SecUtils.getHashBytes(block.getFullHash()));
 				orphanedBlocks.remove(block.getRawHash());
 				blocks.remove(block.getRawHash());
 			}
@@ -913,6 +903,7 @@ public class DBConsensusManager {
 	public void insertOperation(OpOperation op) {
 		PGobject pGobject = new PGobject();
 		pGobject.setType("jsonb");
+
 		String js = formatter.opToJson(op);
 		try {
 			pGobject.setValue(js);
@@ -920,6 +911,7 @@ public class DBConsensusManager {
 			throw new IllegalArgumentException(e);
 		}
 		byte[] bhash = SecUtils.getHashBytes(op.getHash());
+
 		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
 				bhash, pGobject);
 	}
