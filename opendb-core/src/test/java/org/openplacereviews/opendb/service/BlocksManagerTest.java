@@ -26,12 +26,12 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
 import static org.openplacereviews.opendb.ops.OpObject.*;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
 import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
-import static org.openplacereviews.opendb.ops.OpOperation.F_TYPE;
 
 public class BlocksManagerTest {
 
@@ -206,18 +206,30 @@ public class BlocksManagerTest {
 		OpObject object = blockChain.getObjectByName(OP_ID, OBJ_ID);
 		assertNotNull(object);
 
-		assertTrue(blocksManager.addOperation(generateRemoveOp()));
+		assertTrue(blocksManager.addOperation(generateRemoveOp(OBJ_ID)));
 		assertFalse(blockChain.getQueueOperations().isEmpty());
 
 		object = blockChain.getObjectByName(OP_ID, OBJ_ID);
 		assertNull(object);
 	}
 
-	private OpOperation generateRemoveOp() throws FailedVerificationException {
+	@Test(expected = IllegalArgumentException.class)
+	public void testRemovingNotExistingObject() throws FailedVerificationException {
+		for (OpOperation op : generateStartOperationAndObject()) {
+			assertTrue(blocksManager.addOperation(op));
+		}
+
+		OpObject object = blockChain.getObjectByName(OP_ID, OBJ_ID + 1);
+		assertNull(object);
+
+		blocksManager.addOperation(generateRemoveOp(OBJ_ID + 1));
+	}
+
+	private OpOperation generateRemoveOp(String id) throws FailedVerificationException {
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OP_ID);
 		opOperation.setSignedBy(serverName);
-		opOperation.putObjectValue("delete", Collections.singletonList(Collections.singletonList(OBJ_ID)));
+		opOperation.putObjectValue("delete", Collections.singletonList(Collections.singletonList(id)));
 		blockChain.getRules().generateHashAndSign(opOperation, serverKeyPair);
 
 		return opOperation;
@@ -353,8 +365,8 @@ public class BlocksManagerTest {
 		createObj.putObjectValue(F_VOTES, Collections.EMPTY_MAP);
 
 		TreeMap<String, Object> editOpObj = new TreeMap<>();
-		TreeMap<String, Object> editObj = new TreeMap<>();
-		editObj.put(F_ID, OBJ_ID);
+		OpObject editObj = new OpObject();
+		editObj.setId(OBJ_ID);
 		TreeMap<String, Object> change = new TreeMap<>();
 		change.put("lon", "increment");
 		change.put("lat", "delete");
@@ -367,8 +379,9 @@ public class BlocksManagerTest {
 		TreeMap<String, Object> current = new TreeMap<>();
 		current.put("lon", 12345);
 		current.put("lat", "222EC");
-		editObj.put(F_CHANGE, change);
-		editObj.put(F_CURRENT, current);
+		editObj.putObjectValue(F_CHANGE, change);
+		editObj.setParentOp(OP_ID, "c30cc3145c5a1c08ed6504925e8ff92ed8640135249a5f45b6e09eb059b34648");
+		editObj.putObjectValue(F_CURRENT, current);
 
 		editOpObj.put(F_TYPE, OP_ID);
 		editOpObj.put(F_EDIT, Arrays.asList(editObj));
