@@ -58,8 +58,15 @@ public class BlocksManagerTest {
 	private FileBackupManager fileBackupManager;
 
 	@Spy
+	private IPFSFileManager ipfsFileManager;
+
+	@Spy
 	private JsonFormatter formatter;
 
+	@Spy
+	private LogOperationService logOperationService;
+
+	@Spy
 	private HistoryManager historyManager = new HistoryManager();
 	private BlocksManager blocksManager = new BlocksManager();
 	private OpBlockChain blockChain;
@@ -82,10 +89,16 @@ public class BlocksManagerTest {
 		ReflectionTestUtils.setField(historyManager, "formatter", formatter);
 		ReflectionTestUtils.setField(blocksManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blocksManager, "serverUser", serverName);
+		ReflectionTestUtils.setField(blocksManager, "formatter", formatter);
+		ReflectionTestUtils.setField(blocksManager, "historyManager", historyManager);
+		ReflectionTestUtils.setField(blocksManager, "extResourceService", ipfsFileManager);
+		ReflectionTestUtils.setField(blocksManager, "logSystem", logOperationService);
 		Mockito.doNothing().when(fileBackupManager).init();
+		Mockito.doNothing().when(ipfsFileManager).processOperations(any());
 
 		Mockito.doCallRealMethod().when(dbSchemaManager).initializeDatabaseSchema(metadataDb, jdbcTemplate);
-		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
+		Mockito.doNothing().when(dbConsensusManager).insertBlock(any());
+		Mockito.doCallRealMethod().when(dbConsensusManager).insertOperation(any());
 
 		generateMetadataDB(metadataDb, jdbcTemplate);
 		blockChain = dbConsensusManager.init(metadataDb);
@@ -152,7 +165,6 @@ public class BlocksManagerTest {
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	@Ignore
 	public void testFinishingVotingProcessWithNotValidRef() throws FailedVerificationException {
 		testVotingProcessForVoteOperation();
 
@@ -164,7 +176,6 @@ public class BlocksManagerTest {
 		blocksManager.addOperation(finalOp);
 	}
 
-	@Ignore
 	@Test(expected = IllegalArgumentException.class)
 	public void testVoteForFinishedVoteOp() throws FailedVerificationException {
 		testFinishingVotingProcess();
@@ -175,7 +186,6 @@ public class BlocksManagerTest {
 
 	}
 
-	@Ignore
 	@Test(expected = IllegalArgumentException.class)
 	public void testAddFinishVoteOperationWithNotSameEditOp() throws FailedVerificationException {
 		testVotingProcessForVoteOperation();
@@ -185,6 +195,32 @@ public class BlocksManagerTest {
 		finalOp.addEdited(getNotValidEditObj());
 
 		blocksManager.addOperation(finalOp);
+	}
+
+	@Test
+	public void testRemovingObject() throws FailedVerificationException {
+		for (OpOperation op : generateStartOperationAndObject()) {
+			assertTrue(blocksManager.addOperation(op));
+		}
+
+		OpObject object = blockChain.getObjectByName(OP_ID, OBJ_ID);
+		assertNotNull(object);
+
+		assertTrue(blocksManager.addOperation(generateRemoveOp()));
+		assertFalse(blockChain.getQueueOperations().isEmpty());
+
+		object = blockChain.getObjectByName(OP_ID, OBJ_ID);
+		assertNull(object);
+	}
+
+	private OpOperation generateRemoveOp() throws FailedVerificationException {
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType(OP_ID);
+		opOperation.setSignedBy(serverName);
+		opOperation.putObjectValue("delete", Collections.singletonList(Collections.singletonList(OBJ_ID)));
+		blockChain.getRules().generateHashAndSign(opOperation, serverKeyPair);
+
+		return opOperation;
 	}
 
 	private OpObject getNotValidEditObj() {
