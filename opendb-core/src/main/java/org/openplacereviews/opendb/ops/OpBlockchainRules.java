@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.util.*;
 
-import static org.openplacereviews.opendb.ops.OpObject.*;
-
 /**
  * State less blockchain rules to validate roles and calculate hashes
  */
@@ -279,11 +277,9 @@ public class OpBlockchainRules {
 		}
 
 		List<OpObject> toValidate = validationRules.get(o.getType());
-		Map<String, OpObject> tempRefCache = ctx.refObjsCache;
-		tempRefCache = getStringOpObjectMapForVoteOp(ctx.refObjsCache, tempRefCache);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, tempRefCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
 					return false;
 				}
 			}
@@ -291,7 +287,7 @@ public class OpBlockchainRules {
 		toValidate = validationRules.get(WILDCARD_RULE);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, tempRefCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
 					return false;
 				}
 			}
@@ -323,26 +319,6 @@ public class OpBlockchainRules {
 			}
 		}
 		return true;
-	}
-
-	private Map<String, OpObject> getStringOpObjectMapForVoteOp(Map<String, OpObject> refObjsCache, Map<String, OpObject> tempRefCache) {
-		OpObject refVote = refObjsCache.get(F_VOTE);
-		if (refVote != null) {
-			tempRefCache = new HashMap<>(refObjsCache);
-			refVote = new OpObject(refVote);
-			int p = 0, n = 0;
-			for (Map.Entry<List<String>, Object> e : refVote.getStringListObjMap(F_VOTES).entrySet()) {
-				if (((Number) e.getValue()).intValue() == 1) {
-					p++;
-				} else {
-					n++;
-				}
-			}
-			refVote.putObjectValue(F_POSITIVE_VOTES, p);
-			refVote.putObjectValue(F_NEGATIVE_VOTES, n);
-			tempRefCache.put(F_VOTE, refVote);
-		}
-		return tempRefCache;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -701,12 +677,7 @@ public class OpBlockchainRules {
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 
-		USER_CAN_VOTE_ONLY_ONE_TIME_FOR_EACH_VOTING("Operation '%s': user vote: '%s' positive votes: '%s', negative voices '%s'"),
 		REF_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),
-		VOTE_OP_IS_NOT_SAME("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
-		VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND("Operation '%s': user '%s' is not found"),
-		NOT_ALLOWED_VOTE_VALUE_FOR_VOTE_OP("Operation '%s': not allowed vote value, allowed votes values: 1 and -1"),
-		VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY("Operation '%s': signed by '%s' but voted by '%s'"),
 		REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE("Operation '%s': ref obj type '%s'"),
 
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),

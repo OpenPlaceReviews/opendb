@@ -14,12 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
-import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
-import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
-import static org.openplacereviews.opendb.ops.OpObject.F_OP;
-import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
-import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
-import static org.openplacereviews.opendb.ops.OpOperation.*;
+import static org.openplacereviews.opendb.ops.OpObject.*;
+import static org.openplacereviews.opendb.ops.OpOperation.F_SUBMITTED_OP_HASH;
+import static org.openplacereviews.opendb.ops.OpOperation.F_USER;
 
 /**
  *  Guidelines of object methods:
@@ -394,7 +391,7 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
 		}
-		if (u.getRef() != null && u.hasEdited()) {
+		if (u.getRef() != null && u.getRef().get(F_VOTE) != null) {
 			OpObject voteObj = validationCtx.refObjsCache.get(F_VOTE);
 			if (voteObj != null && voteObj.getStringValue(F_SUBMITTED_OP_HASH).equals(u.getRawHash())) {
 				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTE);
@@ -878,18 +875,14 @@ public class OpBlockChain {
 
 			OpObject voteObject = ctx.refObjsCache.get(F_VOTE);
 			if (voteObject != null) {
-				if (voteObject.getParentType().equals(OP_VOTE)) {
-					if (voteObject.getStringValue(F_STATE).equals(F_FINAL)) {
+				if (OP_VOTE.equals(voteObject.getParentType())) {
+					if (F_FINAL.equals(voteObject.getStringValue(F_STATE))) {
 						return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), voteObject);
 					}
-					if (validateOpWithRefVoteOp(u, voteObject)) {
-						OpObject newVoteObject = new OpObject(voteObject);
-						newVoteObject.putStringValue(F_STATE, F_FINAL);
-						newVoteObject.putStringValue(F_SUBMITTED_OP_HASH, u.getRawHash());
-						ctx.refObjsCache.put(F_VOTE, newVoteObject);
-					} else {
-						return rules.error(u, ErrorType.VOTE_OP_IS_NOT_SAME, u.getHash(), u, voteObject.getStringObjMap(F_OP));
-					}
+					OpObject newVoteObject = new OpObject(voteObject);
+					newVoteObject.putStringValue(F_STATE, F_FINAL);
+					newVoteObject.putStringValue(F_SUBMITTED_OP_HASH, u.getRawHash());
+					ctx.refObjsCache.put(F_VOTE, newVoteObject);
 				} else {
 					return rules.error(u, ErrorType.REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
 				}
@@ -900,26 +893,6 @@ public class OpBlockChain {
 			ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
 		}
 		return true;
-	}
-
-	private boolean validateOpWithRefVoteOp(OpOperation newOp, OpObject voteObject) {
-		OpOperation cpyNewOp = new OpOperation(newOp, false);
-		cpyNewOp = removeOpFieldsForValidationOnEquals(cpyNewOp);
-
-		OpOperation refOp = rules.getFormatter().parseOperation(rules.getFormatter().fullObjectToJson(voteObject.getStringObjMap(F_OP)));
-		refOp = removeOpFieldsForValidationOnEquals(refOp);
-
-		return cpyNewOp.equals(refOp);
-	}
-
-	// remove ref, signature, hash and signedBy for new and ref.op operations
-	private OpOperation removeOpFieldsForValidationOnEquals(OpOperation op) {
-		op.remove(F_REF);
-		op.remove(F_SIGNATURE);
-		op.remove(F_HASH);
-		op.remove(F_SIGNED_BY);
-
-		return op;
 	}
 
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
@@ -976,7 +949,11 @@ public class OpBlockChain {
 			if (currentObject == null) {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
-			prepareEditVoteOp(u, currentObject, editObject);
+			if (u.getType().equals(OP_VOTE)) {
+				if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
+					return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
+				}
+			}
 			OpObject newObject = new OpObject(currentObject);
 			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
 			if (currentExpectedFields != null) {
@@ -1023,7 +1000,7 @@ public class OpBlockChain {
 						} else if (oldObject instanceof Map) {
 							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
 							if (value != null) {
-								((Map<List<String>, Object>) oldObject).put((List<String>) value.get(F_USER), value.get(F_VOTE));
+								((Map<String, Object>) oldObject).put(String.valueOf(value.get(F_USER)), value.get(F_VOTE));
 								checkCurrentFieldSpecified = true;
 							}
 						} else {
@@ -1055,39 +1032,6 @@ public class OpBlockChain {
 			newObject.makeImmutable();
 			ctx.newObjsCache.put(newObject, currentObject);
 		}
-		return true;
-	}
-
-	private boolean prepareEditVoteOp(OpOperation u, OpObject currentObject, OpObject editObject) {
-		if (u.getType().equals(OP_VOTE)) {
-			if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
-				return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
-			}
-			Map<String, Object> votes = editObject.getStringObjMap(F_CHANGE);
-			for (String key : votes.keySet()) {
-				Map<String, Object> votedBy = ((Map<String, TreeMap<String, Object>>) votes.get(key)).get(OP_CHANGE_APPEND);
-				List<String> userId = (List<String>) votedBy.get(F_USER);
-				OpObject user = getObjectByName(OP_SIGNUP, userId);
-				if (user == null) {
-					List<String> userIds = new ArrayList<>();
-					for (String vote : userId) {
-						userIds.addAll(Arrays.asList(vote.split(":")));
-					}
-					user = getObjectByName(OP_LOGIN, userIds);
-				}
-				if (user == null) {
-					return rules.error(u, ErrorType.VOTE_REF_USER_FOR_VOTE_OP_IS_NOT_FOUND, u.getHash(), userId);
-				}
-				if (!u.getSignedBy().equals(userId)) {
-					return rules.error(u, ErrorType.VOTE_FOR_OP_IS_NOT_EQUAL_SIGNED_BY, u.getHash(), u.getSignedBy(), userId);
-				}
-				Number vote = (Number) votedBy.get(F_VOTE);
-				if (!(vote.intValue() == 1 || vote.intValue() == -1)) {
-					return rules.error(u, ErrorType.NOT_ALLOWED_VOTE_VALUE_FOR_VOTE_OP, u.getHash(), vote.intValue());
-				}
-			}
-		}
-
 		return true;
 	}
 

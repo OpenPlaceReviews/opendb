@@ -119,6 +119,51 @@
 			]
 		}]
 	},
+	{
+		"type" : "sys.validate",
+		"create" : [{
+			"id" : ["check_vote_and_signed_by_for_vote_op"],
+			"type" : ["sys.vote"],
+			"comment" : "",
+			"role" : "none",
+			"if" : [
+				"std:eq(op:get_operation_type(this), 'edit')"
+			],
+			"validate" : [
+				"std:eq(vote:get_fields_changed(this), arr:append('votes.', .signed_by))"
+			]
+		}]
+	},{
+	"type" : "sys.validate",
+	"create" : [{
+		"id" : ["check_role_for_creating_vote_op"],
+		"type" : ["sys.vote"],
+		"comment" : "",
+		"role" : "none",
+		"if" : [
+			"std:eq(op:get_operation_type(this), 'create')"
+		],
+		"validate" : [
+			"auth:has_sig_roles(this, 'administrator')"
+		]
+	}]
+},
+	{
+		"type" : "sys.validate",
+		"create" : [{
+			"id" : ["check_op_is_same_as_vote_ref"],
+			"type" : ["*"],
+			"comment" : "",
+			"role" : "none",
+			"if" : [
+				"std:eq(std:size(.ref), 2)",
+				"ref:contain(.ref, 'vote')"
+			],
+			"validate" : [
+				"vote:check_op_is_same_as_vote_ref(this, .ref.vote)"
+			]
+		}]
+	},
 	{//example validation for voting
 		"type" : "sys.validate",
 		"create" : [{
@@ -127,11 +172,11 @@
 			"comment" : "Check the minimum votes for edit op",
 			"role" : "none",
 			"if" : [
-				"std:eq(std:size(.ref.vote), 1)"
+				"std:eq(std:size(.ref), 2)",
+				"ref:contain(.ref, 'vote')"
 			],
 			"validate" : [
-				"std:eq(.ref.vote.positive_votes, 2)",
-				"std:le(.ref.vote.negative_votes, .ref.vote.positive_votes)"
+				"std:eq(vote:calculate_votes(.ref.vote), 0)"
 			]
 		}]
 	},

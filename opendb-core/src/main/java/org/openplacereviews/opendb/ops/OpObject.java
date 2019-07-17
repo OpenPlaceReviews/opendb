@@ -36,8 +36,6 @@ public class OpObject {
 	public static final String F_VOTE = "vote";
 	public static final String F_VOTES = "votes";
 	public static final String F_SUBMITTED_OP_HASH = "submittedOpHash";
-	public static final String F_POSITIVE_VOTES = "positive_votes";
-	public static final String F_NEGATIVE_VOTES = "negative_votes";
 	public static final String F_USER = "user";
 
 	public static final OpObject NULL = new OpObject();

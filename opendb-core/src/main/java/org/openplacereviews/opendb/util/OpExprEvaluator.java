@@ -1,9 +1,6 @@
 package org.openplacereviews.opendb.util;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -18,6 +15,8 @@ import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
 import java.util.*;
+
+import static org.openplacereviews.opendb.ops.OpOperation.*;
 
 public class OpExprEvaluator {
 
@@ -43,6 +42,13 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_SET_MINUS = "set:minus";
 
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
+
+	public static final String FUNCTION_GET_FIELDS_CHANGED = "vote:get_fields_changed";
+	public static final String FUNCTION_GET_OPERATION_TYPE = "op:get_operation_type";
+	public static final String FUNCTION_CHECK_OP_IS_SAME_AS_VOTE_REF = "vote:check_op_is_same_as_vote_ref";
+	public static final String FUNCTION_CALCULATE_VOTES = "vote:calculate_votes";
+	public static final String FUNCTION_APPEND = "arr:append";
+	public static final String FUNCTION_CONTAIN_REF= "ref:contain";
 
 	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
@@ -105,6 +111,7 @@ public class OpExprEvaluator {
 	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
 		Number n1, n2;
 		Object obj1, obj2;
+		JsonObject object, object1;
 		switch (functionName) {
 		case FUNCTION_M_MULT:
 			n1 = (Number) getObjArgument(functionName, args, 0);
@@ -276,6 +283,92 @@ public class OpExprEvaluator {
 			}
 
 			return 1;
+		case FUNCTION_GET_FIELDS_CHANGED:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException("vote:get_fields_changed support only JsonObject");
+			}
+			object = ((JsonObject) obj1);
+			if (object.get(F_EDIT) == null) {
+				throw new UnsupportedOperationException("vote:get_fields_changed must to contains edit list");
+			}
+
+			JsonArray objList = (JsonArray) object.get(F_EDIT);
+			JsonArray arrayChangedFields = new JsonArray();
+			for (JsonElement o : objList) {
+				JsonObject changedMap =  o.getAsJsonObject().get(F_CHANGE).getAsJsonObject();
+
+				for (Map.Entry<String, JsonElement> e : changedMap.entrySet()) {
+					String fieldExpr = e.getKey();
+					Object op = e.getValue();
+					Object opValue = null;
+					if (op instanceof JsonObject) {
+						Map.Entry<String, JsonElement> ee = ((JsonObject) op).entrySet().iterator().next();
+						JsonObject appendObj = ee.getValue().getAsJsonObject();
+						if (appendObj.get(F_USER) != null) {
+							opValue = getStringObject(appendObj.get(F_USER).getAsJsonArray());
+						}
+					}
+
+					arrayChangedFields.add(fieldExpr + "." + opValue);
+				}
+			}
+
+			return arrayChangedFields;
+		case FUNCTION_GET_OPERATION_TYPE:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException("op:get_operation_type support only JsonObject");
+			}
+			object = ((JsonObject) obj1);
+			if (object.get(F_EDIT) != null) {
+				return "edit";
+			}
+			if (object.get(F_CREATE) != null) {
+				return "create";
+			}
+			if (object.get(F_DELETE) != null) {
+				return "delete";
+			}
+			throw new UnsupportedOperationException("op:get_operation_type: op doesn't have any ops type");
+		case FUNCTION_CHECK_OP_IS_SAME_AS_VOTE_REF:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			object = createCopyAndRemoveFields((JsonObject) obj1);
+			object1 = createCopyAndRemoveFields(((JsonObject) obj2).get(F_OP).getAsJsonObject());
+
+			return object.equals(object1) ? 1 : 0;
+		case FUNCTION_CALCULATE_VOTES:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException("vote:calculate_votes support only JsonObject");
+			}
+
+			int amountVotes = 0;
+			object = ((JsonObject) obj1).get(F_VOTES).getAsJsonObject();
+			for (Map.Entry<String, JsonElement> e : object.entrySet()) {
+				amountVotes += e.getValue().getAsInt();
+			}
+
+			return amountVotes;
+		case FUNCTION_APPEND:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			String str1, str2;
+			str1 = getStringObject(obj1);
+			str2 = getStringObject(obj2);
+
+			JsonArray appList = new JsonArray();
+			appList.add(str1 + str2);
+			return appList;
+		case FUNCTION_CONTAIN_REF:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			Set<String> refKey = ((JsonObject) obj1).keySet();
+			if (!refKey.contains(String.valueOf(obj2))) {
+				return 0;
+			}
+			return 1;
 		case FUNCTION_SET_MINUS:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			obj2 = getObjArgument(functionName, args, 1, false);
@@ -356,6 +449,44 @@ public class OpExprEvaluator {
 			break;
 		}
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
+	}
+
+	private JsonObject createCopyAndRemoveFields(JsonObject object) {
+		JsonObject newObj = createCopyJsonObject(object);
+		newObj.remove(F_REF);
+		newObj.remove(F_SIGNATURE);
+		newObj.remove(F_SIGNED_BY);
+		newObj.remove(F_HASH);
+		newObj.remove("new");
+		newObj.remove("old");
+
+		return newObj;
+	}
+
+	private JsonObject createCopyJsonObject(JsonObject object) {
+		try {
+			Gson gson = new Gson();
+			return gson.fromJson(gson.toJson(object, JsonObject.class), JsonObject.class);
+		} catch (Exception e) {
+			throw new UnsupportedOperationException(String.format("Error while copying JsonObject: '%s'", object));
+		}
+	}
+
+	private String getStringObject(Object obj2) {
+		StringBuilder str = new StringBuilder();
+		if (obj2 instanceof String) {
+			str = new StringBuilder((String) obj2);
+		} else if (isJsonArrayObj(obj2)) {
+			JsonArray array = (JsonArray) obj2;
+			for (int i = 0; i < array.size(); i++) {
+				if (str.toString().equals("")) {
+					str.append(toStringPrimitive(array.get(i).getAsString()));
+				} else {
+					str.append(":").append(toStringPrimitive(array.get(i).getAsString()));
+				}
+			}
+		}
+		return str.toString();
 	}
 
 	private boolean checkSignaturesHasRole(String sign, String roleToCheck, EvaluationContext ctx) {
