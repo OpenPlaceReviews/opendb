@@ -1,22 +1,34 @@
 package org.openplacereviews.opendb.ops;
 
-import org.openplacereviews.opendb.ops.OpBlockchainRules.*;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
+import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
+import static org.openplacereviews.opendb.ops.OpObject.F_USER;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
+
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.security.KeyPair;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
-import static org.openplacereviews.opendb.ops.OpObject.*;
-import static org.openplacereviews.opendb.ops.OpOperation.F_SUBMITTED_OP_HASH;
-import static org.openplacereviews.opendb.ops.OpOperation.F_USER;
 
 /**
  *  Guidelines of object methods:
@@ -877,14 +889,14 @@ public class OpBlockChain {
 			if (voteObject != null) {
 				if (OP_VOTE.equals(voteObject.getParentType())) {
 					if (F_FINAL.equals(voteObject.getStringValue(F_STATE))) {
-						return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), voteObject);
+						return rules.error(u, ErrorType.VOTE_VOTING_OBJ_IS_FINAL, u.getHash(), voteObject);
 					}
 					OpObject newVoteObject = new OpObject(voteObject);
 					newVoteObject.putStringValue(F_STATE, F_FINAL);
 					newVoteObject.putStringValue(F_SUBMITTED_OP_HASH, u.getRawHash());
 					ctx.refObjsCache.put(F_VOTE, newVoteObject);
 				} else {
-					return rules.error(u, ErrorType.REF_FOR_VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
+					return rules.error(u, ErrorType.VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
 				}
 			}
 		}
@@ -951,7 +963,7 @@ public class OpBlockChain {
 			}
 			if (u.getType().equals(OP_VOTE)) {
 				if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
-					return rules.error(u, ErrorType.REF_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
+					return rules.error(u, ErrorType.VOTE_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
 				}
 			}
 			OpObject newObject = new OpObject(currentObject);

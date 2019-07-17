@@ -23,6 +23,7 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
 	public static final String FUNCTION_STR_COMBINE = "str:combine";
+	public static final String FUNCTION_STR_CONCAT = "str:concat";
 
 	public static final String FUNCTION_M_PLUS = "m:plus";
 	public static final String FUNCTION_M_MULT = "m:mult";
@@ -42,12 +43,11 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_SET_MINUS = "set:minus";
 
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
-
-	public static final String FUNCTION_GET_FIELDS_CHANGED = "vote:get_fields_changed";
-	public static final String FUNCTION_GET_OPERATION_TYPE = "op:get_operation_type";
-	public static final String FUNCTION_CHECK_OP_IS_SAME_AS_VOTE_REF = "vote:check_op_is_same_as_vote_ref";
+	
+	public static final String FUNCTION_OP_OPERATION_TYPE = "op:op_type";
+	public static final String FUNCTION_OP_FIELDS_CHANGED = "op:fields_changed";
+	
 	public static final String FUNCTION_CALCULATE_VOTES = "vote:calculate_votes";
-	public static final String FUNCTION_APPEND = "arr:append";
 	public static final String FUNCTION_CONTAIN_REF= "ref:contain";
 
 	public static final String FUNCTION_BLC_FIND = "blc:find";
@@ -173,6 +173,13 @@ public class OpExprEvaluator {
 				}
 			}
 			return ffs;
+		case FUNCTION_STR_CONCAT: {
+			String res = getStringObject(getObjArgument(functionName, args, 0, false));
+			for(int i =1 ; i <args.size(); i++) {
+				res += getStringObject(getObjArgument(functionName, args, i, false));
+			}
+			return res;
+		}
 		case FUNCTION_STR_COMBINE:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			String s1 = getStringArgument(functionName, args, 1);
@@ -283,14 +290,14 @@ public class OpExprEvaluator {
 			}
 
 			return 1;
-		case FUNCTION_GET_FIELDS_CHANGED:
+		case FUNCTION_OP_FIELDS_CHANGED:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			if (!(obj1 instanceof JsonObject)) {
-				throw new UnsupportedOperationException("vote:get_fields_changed support only JsonObject");
+				throw new UnsupportedOperationException(FUNCTION_OP_FIELDS_CHANGED + " support only JsonObject");
 			}
 			object = ((JsonObject) obj1);
 			if (object.get(F_EDIT) == null) {
-				throw new UnsupportedOperationException("vote:get_fields_changed must to contains edit list");
+				throw new UnsupportedOperationException(FUNCTION_OP_FIELDS_CHANGED + " must to contains edit list");
 			}
 
 			JsonArray objList = (JsonArray) object.get(F_EDIT);
@@ -301,43 +308,45 @@ public class OpExprEvaluator {
 				for (Map.Entry<String, JsonElement> e : changedMap.entrySet()) {
 					String fieldExpr = e.getKey();
 					Object op = e.getValue();
-					Object opValue = null;
 					if (op instanceof JsonObject) {
-						Map.Entry<String, JsonElement> ee = ((JsonObject) op).entrySet().iterator().next();
-						JsonObject appendObj = ee.getValue().getAsJsonObject();
-						if (appendObj.get(F_USER) != null) {
-							opValue = getStringObject(appendObj.get(F_USER).getAsJsonArray());
+						for(Map.Entry<String, JsonElement> ee : ((JsonObject) op).entrySet()) {
+							if(ee.equals(OpBlockChain.OP_CHANGE_APPEND)) {
+								arrayChangedFields.add(fieldExpr);
+							} else if(ee.equals(OpBlockChain.OP_CHANGE_SET)) {
+								arrayChangedFields.add(fieldExpr);
+							} else {
+								throw new UnsupportedOperationException();
+							}
+						}
+					} else {
+						if(OpBlockChain.OP_CHANGE_INCREMENT.equals(op)) {
+							arrayChangedFields.add(fieldExpr);
+						} else if(OpBlockChain.OP_CHANGE_DELETE.equals(op)) {
+							arrayChangedFields.add(fieldExpr);
+						} else {
+							throw new UnsupportedOperationException();
 						}
 					}
-
-					arrayChangedFields.add(fieldExpr + "." + opValue);
 				}
 			}
-
 			return arrayChangedFields;
-		case FUNCTION_GET_OPERATION_TYPE:
+		case FUNCTION_OP_OPERATION_TYPE:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			if (!(obj1 instanceof JsonObject)) {
 				throw new UnsupportedOperationException("op:get_operation_type support only JsonObject");
 			}
 			object = ((JsonObject) obj1);
 			if (object.get(F_EDIT) != null) {
-				return "edit";
+				return F_EDIT;
 			}
 			if (object.get(F_CREATE) != null) {
-				return "create";
+				return F_CREATE;
 			}
 			if (object.get(F_DELETE) != null) {
-				return "delete";
+				return F_DELETE;
 			}
 			throw new UnsupportedOperationException("op:get_operation_type: op doesn't have any ops type");
-		case FUNCTION_CHECK_OP_IS_SAME_AS_VOTE_REF:
-			obj1 = getObjArgument(functionName, args, 0, false);
-			obj2 = getObjArgument(functionName, args, 1, false);
-			object = createCopyAndRemoveFields((JsonObject) obj1);
-			object1 = createCopyAndRemoveFields(((JsonObject) obj2).get(F_OP).getAsJsonObject());
 
-			return object.equals(object1) ? 1 : 0;
 		case FUNCTION_CALCULATE_VOTES:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			if (!(obj1 instanceof JsonObject)) {
@@ -351,16 +360,6 @@ public class OpExprEvaluator {
 			}
 
 			return amountVotes;
-		case FUNCTION_APPEND:
-			obj1 = getObjArgument(functionName, args, 0, false);
-			obj2 = getObjArgument(functionName, args, 1, false);
-			String str1, str2;
-			str1 = getStringObject(obj1);
-			str2 = getStringObject(obj2);
-
-			JsonArray appList = new JsonArray();
-			appList.add(str1 + str2);
-			return appList;
 		case FUNCTION_CONTAIN_REF:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			obj2 = getObjArgument(functionName, args, 1, false);

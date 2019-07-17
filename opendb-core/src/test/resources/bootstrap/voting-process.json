@@ -69,12 +69,7 @@
     "edit" : [{
       "id" : ["vote", "osm.place"],
       "change" : {
-        "votes" : {
-          "append": {
-            "user": ["openplacereviews"],
-            "vote": 1
-          }
-        }
+        "votes.openplacereviews" : { "set": 1 }
       },
       "current" : {}
     }],
@@ -87,12 +82,7 @@
     "edit" : [{
       "id" : ["vote", "osm.place"],
       "change" : {
-        "votes" : {
-          "append": {
-            "user" :["openplacereviews:test_1"],
-            "vote" : -1
-          }
-        }
+        "votes.openplacereviews:test_1" : { "set": -1 }
       },
       "current" : {}
     }],
