@@ -1,16 +1,30 @@
 package org.openplacereviews.opendb.ops;
 
-import com.google.gson.*;
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
 
-import java.lang.reflect.Type;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 public class OpObject {
 	
@@ -68,15 +82,9 @@ public class OpObject {
 	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
 		this.parentType = opObject.parentType;
 		this.parentHash = opObject.parentHash;
-		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
+		this.fields = (Map<String, Object>) copyingObjects(opObject.fields, copyCacheFields);
 		if (opObject.cacheFields != null && copyCacheFields) {
-			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
-		}
-		if (opObject.parentType != null) {
-			this.parentType = (String) copyingObjects(opObject.parentType);
-		}
-		if (opObject.parentHash != null) {
-			this.parentHash = (String) copyingObjects(opObject.parentHash);
+			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields, copyCacheFields);
 		}
 		this.isImmutable = false;
 
@@ -84,7 +92,7 @@ public class OpObject {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Object copyingObjects(Object object) {
+	private Object copyingObjects(Object object, boolean copyCacheFields) {
 		if (object instanceof Number) {
 			return (Number) object;
 		} else if (object instanceof String) {
@@ -95,14 +103,14 @@ public class OpObject {
 			List<Object> copy = new ArrayList<>();
 			List<Object> list = (List<Object>) object;
 			for (Object o : list) {
-				copy.add(copyingObjects(o));
+				copy.add(copyingObjects(o, copyCacheFields));
 			}
 			return copy;
 		} else if (object instanceof Map) {
 			Map<Object, Object> copy = new LinkedHashMap<>();
 			Map<Object, Object> map = (Map<Object, Object>) object;
 			for (Object o : map.keySet()) {
-				copy.put(o, copyingObjects(map.get(o)));
+				copy.put(o, copyingObjects(map.get(o), copyCacheFields));
 			}
 			return copy;
 		} else if (object instanceof OpObject) {
@@ -223,10 +231,12 @@ public class OpObject {
 		return (List<Map<String, Object>>) fields.get(field);
 	}
 
+	@SuppressWarnings("unchecked")
 	public Map<String, Object> getStringObjMap(String field) {
 		return (Map<String, Object>) fields.get(field);
 	}
 
+	@SuppressWarnings("unchecked")
 	public Map<List<String>, Object> getStringListObjMap(String field) {
 		return (Map<List<String>, Object>) fields.get(field);
 	}
