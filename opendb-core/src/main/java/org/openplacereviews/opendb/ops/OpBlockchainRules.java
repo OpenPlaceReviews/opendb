@@ -270,7 +270,7 @@ public class OpBlockchainRules {
 		}
 		Map<String, List<OpObject>> validationRules = getValidationRules(blockchain);
 		ArrayList<OpObject> dls = new ArrayList<>();
-		for(OpObject oldObj : ctx.deletedObjsCache) {
+		for(OpObject oldObj : ctx.newObjsCache.values()) {
 			if(oldObj != null) {
 				dls.add(oldObj);
 			}

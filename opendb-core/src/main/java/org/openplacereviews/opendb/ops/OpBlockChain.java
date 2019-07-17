@@ -931,7 +931,7 @@ public class OpBlockChain {
 			if(!ctx.ids.add(newObject.getId())) {
 				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(), newObject.getId());
 			}
-			ctx.newObjsCache.put(newObject, newObject);
+			ctx.newObjsCache.put(newObject, null);
 		}
 		return true;
 	}
