@@ -66,6 +66,8 @@ public class OpObject {
 
 	@SuppressWarnings("unchecked")
 	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
+		this.parentType = opObject.parentType;
+		this.parentHash = opObject.parentHash;
 		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
 		if (opObject.cacheFields != null && copyCacheFields) {
 			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
@@ -100,22 +102,11 @@ public class OpObject {
 			Map<Object, Object> copy = new LinkedHashMap<>();
 			Map<Object, Object> map = (Map<Object, Object>) object;
 			for (Object o : map.keySet()) {
-				if (o instanceof List) {
-					Map<List<String>, Object> mapWithListKey = (Map<List<String>, Object>) object;
-
-					for (List<String> key : mapWithListKey.keySet()) {
-						copy.put(key, copyingObjects(mapWithListKey.get(key)));
-					}
-				} else {
-					Map<String, Object> mapWithoutListKey = (Map<String, Object>) object;
-					for (String key : mapWithoutListKey.keySet()) {
-						copy.put(key, copyingObjects(mapWithoutListKey.get(key)));
-					}
-				}
+				copy.put(o, copyingObjects(map.get(o)));
 			}
 			return copy;
 		} else if (object instanceof OpObject) {
-			return (OpObject) object;
+			return copyingObjects(object);
 		} else if (object instanceof OpExprEvaluator) {
 			return new OpExprEvaluator(((OpExprEvaluator) object).getEctx());
 		} else {
