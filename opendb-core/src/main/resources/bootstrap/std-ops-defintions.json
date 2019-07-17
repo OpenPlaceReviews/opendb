@@ -20,38 +20,12 @@
 			"id" : ["sys.vote"],
 			"comment" : "Operation for creating vote process",
 			"version" : 0,
+			"arity" : 0,
 			"fields" : {
-				"create": [
-					{
-						"id" : ["id for this op"],
-						"type" : "type of edited object",
-						"edit": {
-							"id" : "unique name of edited object",
-							"change" : {
-
-							},
-							"current" : {
-
-							}
-						},
-						"state" : "open/final",
-						"extra" : "not required",
-						"votes" : {
-							"positive" : ["Array with user object id"],
-							"negative" : ["Array with user object id"]
-						}
-					}
-				],
-				"edit": {
-					"id" : "unique name for this proposal",
-					"change" : {
-						"votes" : "increment"
-					},
-					"current" : {
-						"votes" : "current amount votes"
-					}
-				},
-				"votes" : "integer number describing amount if votes"
+				"op": "operation that should be submitted to blockchain after vote", 
+				"state" : "open/final/draft/...",
+				"extra" : "not required",
+				"votes" : "map with user key (signed by) and set value "
 			}
 		}]
 	},
