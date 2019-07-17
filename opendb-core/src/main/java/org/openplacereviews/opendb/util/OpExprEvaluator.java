@@ -29,6 +29,7 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_M_MULT = "m:mult";
 	public static final String FUNCTION_M_DIV = "m:div";
 	public static final String FUNCTION_M_MINUS = "m:minus";
+	public static final String FUNCTION_M_FIELDS_INT_SUM =  "m:fields_int_sum";
 
 	public static final String FUNCTION_STD_EQ = "std:eq";
 	public static final String FUNCTION_STD_NEQ = "std:neq";
@@ -41,16 +42,13 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_SET_IN = "set:in";
 	public static final String FUNCTION_SET_ALL = "set:all";
 	public static final String FUNCTION_SET_MINUS = "set:minus";
+	public static final String FUNCTION_SET_CONTAINS_KEY = "set:contains_key";
 
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
 	
 	public static final String FUNCTION_OP_OPERATION_TYPE = "op:op_type";
 	public static final String FUNCTION_OP_FIELDS_CHANGED = "op:fields_changed";
 	
-	public static final String FUNCTION_CALCULATE_VOTES = "vote:calculate_votes";
-	public static final String FUNCTION_CONTAIN_REF= "ref:contain";
-
-	public static final String FUNCTION_BLC_FIND = "blc:find";
 	
 	public static final String F_NEW = "new";
 	public static final String F_OLD = "old";
@@ -150,18 +148,6 @@ public class OpExprEvaluator {
 				return n1.longValue() - n2.longValue();
 			}
 			return n1.doubleValue() - n2.doubleValue();
-		case FUNCTION_BLC_FIND:
-			if (args.size() > 3) {
-				throw new UnsupportedOperationException("blc:find Not supported multiple args yet");
-			} else if (args.size() == 3) {
-				return ctx.blc.getObjectByName(getStringArgument(functionName, args, 0),
-						getStringArgument(functionName, args, 1), getStringArgument(functionName, args, 2));
-			} else if (args.size() == 2) {
-				return ctx.blc.getObjectByName(getStringArgument(functionName, args, 0),
-						getStringArgument(functionName, args, 1));
-			} else {
-				throw new UnsupportedOperationException("blc:find not enough arguments");
-			}
 		case FUNCTION_STR_FIRST:
 		case FUNCTION_STR_SECOND:
 			String ffs = getStringArgument(functionName, args, 0);
@@ -333,7 +319,7 @@ public class OpExprEvaluator {
 		case FUNCTION_OP_OPERATION_TYPE:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			if (!(obj1 instanceof JsonObject)) {
-				throw new UnsupportedOperationException("op:get_operation_type support only JsonObject");
+				throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " support only JsonObject");
 			}
 			object = ((JsonObject) obj1);
 			if (object.get(F_EDIT) != null) {
@@ -345,22 +331,21 @@ public class OpExprEvaluator {
 			if (object.get(F_DELETE) != null) {
 				return F_DELETE;
 			}
-			throw new UnsupportedOperationException("op:get_operation_type: op doesn't have any ops type");
+			throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " op doesn't have any ops type");
 
-		case FUNCTION_CALCULATE_VOTES:
+		case FUNCTION_M_FIELDS_INT_SUM:
 			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
 			if (!(obj1 instanceof JsonObject)) {
-				throw new UnsupportedOperationException("vote:calculate_votes support only JsonObject");
+				throw new UnsupportedOperationException(FUNCTION_M_FIELDS_INT_SUM + " support only JsonObject");
 			}
-
-			int amountVotes = 0;
-			object = ((JsonObject) obj1).get(F_VOTES).getAsJsonObject();
+			int sum = 0;
+			object = ((JsonObject) obj1).get(getStringObject(obj2)).getAsJsonObject();
 			for (Map.Entry<String, JsonElement> e : object.entrySet()) {
-				amountVotes += e.getValue().getAsInt();
+				sum += e.getValue().getAsInt();
 			}
-
-			return amountVotes;
-		case FUNCTION_CONTAIN_REF:
+			return sum;
+		case FUNCTION_SET_CONTAINS_KEY:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			obj2 = getObjArgument(functionName, args, 1, false);
 			Set<String> refKey = ((JsonObject) obj1).keySet();
