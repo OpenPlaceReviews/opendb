@@ -127,10 +127,10 @@
 			"comment" : "",
 			"role" : "none",
 			"if" : [
-				"std:eq(op:get_operation_type(this), 'edit')"
+				"std:eq(op:fields_changed(this), 'edit')"
 			],
 			"validate" : [
-				"std:eq(vote:get_fields_changed(this), arr:append('votes.', .signed_by))"
+				"std:eq(op:fields_changed(this), str:concat('votes.', .signed_by))"
 			]
 		}]
 	},
