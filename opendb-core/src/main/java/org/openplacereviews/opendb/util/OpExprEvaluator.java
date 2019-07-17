@@ -1,7 +1,22 @@
 package org.openplacereviews.opendb.util;
 
-import com.google.gson.*;
-import org.antlr.v4.runtime.*;
+import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
+import static org.openplacereviews.opendb.ops.OpOperation.F_CREATE;
+import static org.openplacereviews.opendb.ops.OpOperation.F_DELETE;
+import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -14,9 +29,10 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.OpOperation.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 public class OpExprEvaluator {
 
@@ -435,26 +451,6 @@ public class OpExprEvaluator {
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
 	}
 
-	private JsonObject createCopyAndRemoveFields(JsonObject object) {
-		JsonObject newObj = createCopyJsonObject(object);
-		newObj.remove(F_REF);
-		newObj.remove(F_SIGNATURE);
-		newObj.remove(F_SIGNED_BY);
-		newObj.remove(F_HASH);
-		newObj.remove("new");
-		newObj.remove("old");
-
-		return newObj;
-	}
-
-	private JsonObject createCopyJsonObject(JsonObject object) {
-		try {
-			Gson gson = new Gson();
-			return gson.fromJson(gson.toJson(object, JsonObject.class), JsonObject.class);
-		} catch (Exception e) {
-			throw new UnsupportedOperationException(String.format("Error while copying JsonObject: '%s'", object));
-		}
-	}
 
 	private String getStringObject(Object obj2) {
 		StringBuilder str = new StringBuilder();
