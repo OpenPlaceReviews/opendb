@@ -106,7 +106,7 @@ public class OpObject {
 			}
 			return copy;
 		} else if (object instanceof OpObject) {
-			return copyingObjects(object);
+			return new OpObject((OpObject) object);
 		} else if (object instanceof OpExprEvaluator) {
 			return new OpExprEvaluator(((OpExprEvaluator) object).getEctx());
 		} else {
