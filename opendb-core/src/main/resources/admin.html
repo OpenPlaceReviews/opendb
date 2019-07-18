@@ -480,6 +480,11 @@
                 delete clone.eval;
                 if(clone.create) {
                     for(var ik = 0; ik < clone.create.length; ik++ ) {
+                        if(clone.create[ik].changesForObject) {
+                            for(var il = 0; il < clone.create[ik].changesForObject.length; il++ ) {
+                                delete clone.create[ik].changesForObject[il].eval;
+                            }
+                        }
                         delete clone.create[ik].eval;
                     }
                 }

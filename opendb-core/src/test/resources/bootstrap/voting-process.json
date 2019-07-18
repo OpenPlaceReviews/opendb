@@ -1,0 +1,165 @@
+[
+  {
+    "type" : "sys.operation",
+    "create": [{
+      "id" : ["osm.place"],
+      "comment" : "Operation to hold osm places",
+      "version" : 1,
+      "arity" : 0,
+      "fields": {
+        "id": "openplacereview id",
+        "osmId": "id of osm place",
+        "tags": "place tags"
+      }
+    }]
+  },
+  {
+    "type" : "osm.place",
+    "create": [{
+      "id" : ["12345662"],
+      "lon" : 12345,
+      "def" : "23434",
+      "lat": "222EC",
+      "tags": [{"v": "1111111", "k": "2222222"}]
+    }]
+  },
+  {
+    "type" : "sys.vote",
+    "create" : [{
+      "id": ["vote", "osm.place"],
+      "op" :
+      {
+        "type": "osm.place",
+        "edit": [
+          {
+            "id": [
+              "12345662"
+            ],
+            "change": {
+              "lon": "increment",
+              "lat": "delete",
+              "tags": {
+                "append": {
+                  "v": "2222222",
+                  "k": "333333333"
+                }
+              }
+            },
+            "current": {
+              "lon": 12345,
+              "lat": "222EC",
+              "tags": [
+                {
+                  "v": "1111111",
+                  "k": "2222222"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "state" : "open",
+      "extra" : {},
+      "votes" : {}
+    }]
+  },
+  {
+    "type" : "sys.vote",
+    "signed_by" : "openplacereviews",
+    "edit" : [{
+      "id" : ["vote", "osm.place"],
+      "change" : {
+        "votes.openplacereviews" : { "set": 1 }
+      },
+      "current" : {}
+    }],
+    "hash": "json:sha256:38139222f293aea8e3814475b04c75834db91f7444464758c47f54469a6a7882",
+    "signature": "ECDSA:base64:MEYCIQDZwkkoa5aA0RoNAGB8xkynIO4qZM31ZMzAIRLpb9k3pwIhAJ/IrfvOPgodlLLgStSSAKchafKGDVl4upp4bTDBm/K9"
+  },
+  {
+    "type" : "sys.vote",
+    "signed_by" : "openplacereviews:test_1",
+    "edit" : [{
+      "id" : ["vote", "osm.place"],
+      "change" : {
+        "votes.openplacereviews:test_1" : { "set": -1 }
+      },
+      "current" : {}
+    }],
+    "hash": "json:sha256:0e7ad5f766d0b83d15170134054e6fe29a0e33413a4cdc627dc6672bb50a5d70",
+    "signature": "ECDSA:base64:MEUCIQC0rb1HaANs4vPsk6+zP4jzyb8E+gFgZukKh7YQ1LlrMAIgDe70KSmowfJkLxJf8+QBCTG2/kl/oD3uFAXGCKvxV84="
+  },
+  {
+    "type" : "osm.place",
+    "ref" : { "vote" : ["sys.vote", "vote", "osm.place"]},
+    "edit": [{
+      "id" : ["12345662"],
+      "change": {
+        "lon": "increment",
+        "lat": "delete",
+        "tags": {"append" : {"v": "2222222", "k": "333333333"} }
+      },
+      "current" : {
+        "lon" : 12345,
+        "lat": "222EC",
+        "tags": [{"v": "1111111", "k": "2222222"}]
+      }
+    }]
+  },
+  {
+    "type" : "osm.place",
+    "create": [{
+      "id" : ["12345664"],
+      "lon" : 12345,
+      "def" : "23434",
+      "lat": "222EC",
+      "tags": [{"v": "1111111", "k": "2222222"}]
+    }]
+  },
+  {
+    "type": "osm.place",
+    "delete" : [["12345662"]]
+  },
+  {
+    "type" : "osm.place",
+    "create": [{
+      "id" : ["22222"],
+      "lon" : 12345,
+      "def" : "23434",
+      "lat": "222EC",
+      "tags": [{"v": "1111111", "k": "2222222"}]
+    }]
+  },
+
+  {
+    "type" : "sys.validate",
+    "create" : [{
+      "id" : ["check_role_for_creating_vote_op"],
+      "type" : ["sys.vote"],
+      "comment" : "",
+      "role" : "none",
+      "if" : [
+        "std:eq(op:op_type(this), 'create')"
+      ],
+      "validate" : [
+        "auth:has_sig_roles(this, 'administrator')"
+      ]
+    }]
+  },
+  {
+    "type" : "sys.validate",
+    "create" : [{
+      "id" : ["min_votes_value_for_osm_place_operation"],
+      "type" : ["osm.place"],
+      "comment" : "Check the minimum votes for edit op",
+      "role" : "none",
+      "if" : [
+        "std:eq(std:size(.ref), 2)",
+        "ref:contain(.ref, 'vote')"
+      ],
+      "validate" : [
+        "std:eq(vote:calculate_votes(.ref.vote), 0)"
+      ]
+    }]
+  }
+]

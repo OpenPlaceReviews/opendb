@@ -3,12 +3,7 @@ package org.openplacereviews.opendb.ops;
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class OpOperation extends OpObject {
 
@@ -38,6 +33,9 @@ public class OpOperation extends OpObject {
 		this.type = cp.type;
 		for(OpObject o : cp.createdObjects) {
 			this.createdObjects.add(new OpObject(o, copyCacheFields));
+		}
+		for(OpObject o : cp.editedObjects) {
+			this.editedObjects.add(new OpObject(o, copyCacheFields));
 		}
 	}
 

@@ -22,7 +22,6 @@ import java.net.URL;
 import java.security.KeyPair;
 import java.util.*;
 
-
 @Service
 public class BlocksManager {
 
@@ -156,22 +155,22 @@ public class BlocksManager {
 		}
 		return false;
 	}
-	
+
 	public synchronized boolean addOperation(OpOperation op) {
-		if(blockchain == null) {
+		if (blockchain == null) {
 			return false;
 		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
 		boolean added = blockchain.addOperation(op);
-		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
-		// or that operation will be lost in queue and system needs to be restarted
-		if(!existing) {
+		if (!existing) {
 			dataManager.insertOperation(op);
 		}
+		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
+		// or that operation will be lost in queue and system needs to be restarted
 		return added;
 	}
-	
+
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops

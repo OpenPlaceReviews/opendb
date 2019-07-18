@@ -16,6 +16,21 @@
 	},
 	{
 		"type" : "sys.operation",
+		"create" : [{
+			"id" : ["sys.vote"],
+			"comment" : "Operation for creating vote process",
+			"version" : 0,
+			"arity" : 0,
+			"fields" : {
+				"op": "operation that should be submitted to blockchain after vote", 
+				"state" : "open/final/draft/...",
+				"extra" : "not required",
+				"votes" : "map with user key (signed by) and set value "
+			}
+		}]
+	},
+	{
+		"type" : "sys.operation",
 		"create": [{
 			"id" : ["sys.signup"],
 			"comment" : "Operation to signup new users with different methods such as password, provided secure key or oauth.",

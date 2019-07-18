@@ -28,6 +28,16 @@ public class OpObject {
 	public static final String F_PARENT_HASH = "parentHash";
 	public static final String F_CHANGE = "change";
 	public static final String F_CURRENT = "current";
+	// voting
+	public static final String F_OP = "op";
+	public static final String F_STATE = "state";
+	public static final String F_OPEN = "open";
+	public static final String F_FINAL = "final";
+	public static final String F_VOTE = "vote";
+	public static final String F_VOTES = "votes";
+	public static final String F_SUBMITTED_OP_HASH = "submittedOpHash";
+	public static final String F_USER = "user";
+
 	public static final OpObject NULL = new OpObject();
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
@@ -58,15 +68,9 @@ public class OpObject {
 	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
 		this.parentType = opObject.parentType;
 		this.parentHash = opObject.parentHash;
-		this.fields = (Map<String, Object>) copyingObjects(opObject.fields);
+		this.fields = (Map<String, Object>) copyingObjects(opObject.fields, copyCacheFields);
 		if (opObject.cacheFields != null && copyCacheFields) {
-			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields);
-		}
-		if (opObject.parentType != null) {
-			this.parentType = (String) copyingObjects(opObject.parentType);
-		}
-		if (opObject.parentHash != null) {
-			this.parentHash = (String) copyingObjects(opObject.parentHash);
+			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields, copyCacheFields);
 		}
 		this.isImmutable = false;
 
@@ -74,7 +78,7 @@ public class OpObject {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Object copyingObjects(Object object) {
+	private Object copyingObjects(Object object, boolean copyCacheFields) {
 		if (object instanceof Number) {
 			return (Number) object;
 		} else if (object instanceof String) {
@@ -85,16 +89,18 @@ public class OpObject {
 			List<Object> copy = new ArrayList<>();
 			List<Object> list = (List<Object>) object;
 			for (Object o : list) {
-				copy.add(copyingObjects(o));
+				copy.add(copyingObjects(o, copyCacheFields));
 			}
 			return copy;
 		} else if (object instanceof Map) {
-			Map<String, Object> copy = new LinkedHashMap<>();
-			Map<String, Object> map = (Map<String, Object>) object;
-			for (String key : map.keySet()) {
-				copy.put(key, copyingObjects(map.get(key)));
+			Map<Object, Object> copy = new LinkedHashMap<>();
+			Map<Object, Object> map = (Map<Object, Object>) object;
+			for (Object o : map.keySet()) {
+				copy.put(o, copyingObjects(map.get(o), copyCacheFields));
 			}
 			return copy;
+		} else if (object instanceof OpObject) {
+			return new OpObject((OpObject) object);
 		} else if (object instanceof OpExprEvaluator) {
 			return new OpExprEvaluator(((OpExprEvaluator) object).getEctx());
 		} else {
@@ -148,7 +154,11 @@ public class OpObject {
 	public void setFieldByExpr(String field, Object object) {
 		if (field.contains(".") || field.contains("[") || field.contains("]")) {
 			String[] fieldSequence = field.split("\\.");
-			JsonObjectUtils.setField(this.fields, fieldSequence, object);
+			if (object == null) {
+				JsonObjectUtils.deleteField(this.fields, Arrays.asList(fieldSequence));
+			} else {
+				JsonObjectUtils.setField(this.fields, fieldSequence, object);
+			}
 		} else if (object == null) {
 			fields.remove(field);
 		} else {
@@ -210,6 +220,16 @@ public class OpObject {
 	public List<Map<String, Object>> getListStringObjMap(String field) {
 		return (List<Map<String, Object>>) fields.get(field);
 	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getStringObjMap(String field) {
+		return (Map<String, Object>) fields.get(field);
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<List<String>, Object> getStringListObjMap(String field) {
+		return (Map<List<String>, Object>) fields.get(field);
+	}
 	
 
 	public long getDate(String field) {
@@ -263,7 +283,7 @@ public class OpObject {
 		}
 		return (List<String>) o;
 	}
-	
+
 	public void putStringValue(String key, String value) {
 		checkNotImmutable();
 		if(value == null) {

@@ -19,16 +19,21 @@ import org.openplacereviews.opendb.ops.OpOperation;
 
 import java.util.*;
 
+import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
+import static org.openplacereviews.opendb.ops.OpOperation.*;
+
 public class OpExprEvaluator {
 
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
 	public static final String FUNCTION_STR_COMBINE = "str:combine";
+	public static final String FUNCTION_STR_CONCAT = "str:concat";
 
 	public static final String FUNCTION_M_PLUS = "m:plus";
 	public static final String FUNCTION_M_MULT = "m:mult";
 	public static final String FUNCTION_M_DIV = "m:div";
 	public static final String FUNCTION_M_MINUS = "m:minus";
+	public static final String FUNCTION_M_FIELDS_INT_SUM =  "m:fields_int_sum";
 
 	public static final String FUNCTION_STD_EQ = "std:eq";
 	public static final String FUNCTION_STD_NEQ = "std:neq";
@@ -41,10 +46,13 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_SET_IN = "set:in";
 	public static final String FUNCTION_SET_ALL = "set:all";
 	public static final String FUNCTION_SET_MINUS = "set:minus";
+	public static final String FUNCTION_SET_CONTAINS_KEY = "set:contains_key";
 
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
-
-	public static final String FUNCTION_BLC_FIND = "blc:find";
+	
+	public static final String FUNCTION_OP_OPERATION_TYPE = "op:op_type";
+	public static final String FUNCTION_OP_FIELDS_CHANGED = "op:fields_changed";
+	
 	
 	public static final String F_NEW = "new";
 	public static final String F_OLD = "old";
@@ -105,6 +113,7 @@ public class OpExprEvaluator {
 	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
 		Number n1, n2;
 		Object obj1, obj2;
+		JsonObject object, object1;
 		switch (functionName) {
 		case FUNCTION_M_MULT:
 			n1 = (Number) getObjArgument(functionName, args, 0);
@@ -143,18 +152,6 @@ public class OpExprEvaluator {
 				return n1.longValue() - n2.longValue();
 			}
 			return n1.doubleValue() - n2.doubleValue();
-		case FUNCTION_BLC_FIND:
-			if (args.size() > 3) {
-				throw new UnsupportedOperationException("blc:find Not supported multiple args yet");
-			} else if (args.size() == 3) {
-				return ctx.blc.getObjectByName(getStringArgument(functionName, args, 0),
-						getStringArgument(functionName, args, 1), getStringArgument(functionName, args, 2));
-			} else if (args.size() == 2) {
-				return ctx.blc.getObjectByName(getStringArgument(functionName, args, 0),
-						getStringArgument(functionName, args, 1));
-			} else {
-				throw new UnsupportedOperationException("blc:find not enough arguments");
-			}
 		case FUNCTION_STR_FIRST:
 		case FUNCTION_STR_SECOND:
 			String ffs = getStringArgument(functionName, args, 0);
@@ -166,6 +163,13 @@ public class OpExprEvaluator {
 				}
 			}
 			return ffs;
+		case FUNCTION_STR_CONCAT: {
+			String res = getStringObject(getObjArgument(functionName, args, 0, false));
+			for(int i =1 ; i <args.size(); i++) {
+				res += getStringObject(getObjArgument(functionName, args, i, false));
+			}
+			return res;
+		}
 		case FUNCTION_STR_COMBINE:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			String s1 = getStringArgument(functionName, args, 1);
@@ -276,6 +280,83 @@ public class OpExprEvaluator {
 			}
 
 			return 1;
+		case FUNCTION_OP_FIELDS_CHANGED:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException(FUNCTION_OP_FIELDS_CHANGED + " support only JsonObject");
+			}
+			object = ((JsonObject) obj1);
+			if (object.get(F_EDIT) == null) {
+				throw new UnsupportedOperationException(FUNCTION_OP_FIELDS_CHANGED + " must to contains edit list");
+			}
+
+			JsonArray objList = (JsonArray) object.get(F_EDIT);
+			JsonArray arrayChangedFields = new JsonArray();
+			for (JsonElement o : objList) {
+				JsonObject changedMap =  o.getAsJsonObject().get(F_CHANGE).getAsJsonObject();
+
+				for (Map.Entry<String, JsonElement> e : changedMap.entrySet()) {
+					String fieldExpr = e.getKey();
+					Object op = e.getValue();
+					if (op instanceof JsonObject) {
+						for(Map.Entry<String, JsonElement> ee : ((JsonObject) op).entrySet()) {
+							if(ee.getKey().equals(OpBlockChain.OP_CHANGE_APPEND)) {
+								arrayChangedFields.add(fieldExpr);
+							} else if(ee.getKey().equals(OpBlockChain.OP_CHANGE_SET)) {
+								arrayChangedFields.add(fieldExpr);
+							} else {
+								throw new UnsupportedOperationException();
+							}
+						}
+					} else {
+						if(OpBlockChain.OP_CHANGE_INCREMENT.equals(op)) {
+							arrayChangedFields.add(fieldExpr);
+						} else if(OpBlockChain.OP_CHANGE_DELETE.equals(op)) {
+							arrayChangedFields.add(fieldExpr);
+						} else {
+							throw new UnsupportedOperationException();
+						}
+					}
+				}
+			}
+			return arrayChangedFields;
+		case FUNCTION_OP_OPERATION_TYPE:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " support only JsonObject");
+			}
+			object = ((JsonObject) obj1);
+			if (object.get(F_EDIT) != null) {
+				return F_EDIT;
+			}
+			if (object.get(F_CREATE) != null) {
+				return F_CREATE;
+			}
+			if (object.get(F_DELETE) != null) {
+				return F_DELETE;
+			}
+			throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " op doesn't have any ops type");
+
+		case FUNCTION_M_FIELDS_INT_SUM:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException(FUNCTION_M_FIELDS_INT_SUM + " support only JsonObject");
+			}
+			int sum = 0;
+			object = ((JsonObject) obj1).get(getStringObject(obj2)).getAsJsonObject();
+			for (Map.Entry<String, JsonElement> e : object.entrySet()) {
+				sum += e.getValue().getAsInt();
+			}
+			return sum;
+		case FUNCTION_SET_CONTAINS_KEY:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			Set<String> refKey = ((JsonObject) obj1).keySet();
+			if (!refKey.contains(String.valueOf(obj2))) {
+				return 0;
+			}
+			return 1;
 		case FUNCTION_SET_MINUS:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			obj2 = getObjArgument(functionName, args, 1, false);
@@ -356,6 +437,24 @@ public class OpExprEvaluator {
 			break;
 		}
 		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
+	}
+
+
+	private String getStringObject(Object obj2) {
+		StringBuilder str = new StringBuilder();
+		if (obj2 instanceof String) {
+			str = new StringBuilder((String) obj2);
+		} else if (isJsonArrayObj(obj2)) {
+			JsonArray array = (JsonArray) obj2;
+			for (int i = 0; i < array.size(); i++) {
+				if (str.toString().equals("")) {
+					str.append(toStringPrimitive(array.get(i).getAsString()));
+				} else {
+					str.append(":").append(toStringPrimitive(array.get(i).getAsString()));
+				}
+			}
+		}
+		return str.toString();
 	}
 
 	private boolean checkSignaturesHasRole(String sign, String roleToCheck, EvaluationContext ctx) {
