@@ -1,34 +1,24 @@
 package org.openplacereviews.opendb.ops;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
-import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
-import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
-import static org.openplacereviews.opendb.ops.OpObject.F_USER;
-import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
-
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.security.KeyPair;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
+import static org.openplacereviews.opendb.ops.OpBlock.F_HASH;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNATURE;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNED_BY;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.*;
+import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 
 /**
  *  Guidelines of object methods:
@@ -891,10 +881,14 @@ public class OpBlockChain {
 					if (F_FINAL.equals(voteObject.getStringValue(F_STATE))) {
 						return rules.error(u, ErrorType.VOTE_VOTING_OBJ_IS_FINAL, u.getHash(), voteObject);
 					}
-					OpObject newVoteObject = new OpObject(voteObject);
-					newVoteObject.putStringValue(F_STATE, F_FINAL);
-					newVoteObject.putStringValue(F_SUBMITTED_OP_HASH, u.getRawHash());
-					ctx.refObjsCache.put(F_VOTE, newVoteObject);
+					if (validateCurrentOpWithRefVoteOp(u, voteObject)) {
+						OpObject newVoteObject = new OpObject(voteObject);
+						newVoteObject.putStringValue(F_STATE, F_FINAL);
+						newVoteObject.putStringValue(F_SUBMITTED_OP_HASH, u.getRawHash());
+						ctx.refObjsCache.put(F_VOTE, newVoteObject);
+					} else {
+						return rules.error(u, ErrorType.VOTE_OP_IS_NOT_SAME, u.getHash(), u, voteObject.getStringObjMap(F_OP));
+					}
 				} else {
 					return rules.error(u, ErrorType.VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
 				}
@@ -905,6 +899,24 @@ public class OpBlockChain {
 			ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
 		}
 		return true;
+	}
+
+	private boolean validateCurrentOpWithRefVoteOp(OpOperation newOp, OpObject voteObject) {
+		OpOperation cpyNewOp = removeOpFieldsForValidation(new OpOperation(newOp, false));
+		OpOperation refOp = removeOpFieldsForValidation(rules.getFormatter().parseOperation(
+				rules.getFormatter().fullObjectToJson(voteObject.getStringObjMap(F_OP))));
+
+		return cpyNewOp.equals(refOp);
+	}
+
+	// remove ref, signature, hash and signedBy for new and ref.op operations
+	private OpOperation removeOpFieldsForValidation(OpOperation op) {
+		op.remove(F_REF);
+		op.remove(F_SIGNATURE);
+		op.remove(F_HASH);
+		op.remove(F_SIGNED_BY);
+
+		return op;
 	}
 
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
@@ -1033,8 +1045,8 @@ public class OpBlockChain {
 						throw new UnsupportedOperationException(
 								String.format("Operation %s is not supported for change", opId));
 					}
-					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
-							&& currentObject.getFieldByExpr(fieldExpr) == null) {
+					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(getFieldWithoutValue(fieldExpr))
+							&& currentObject.getFieldByExpr(getFieldWithoutValue(fieldExpr)) == null) {
 						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
@@ -1045,6 +1057,14 @@ public class OpBlockChain {
 			ctx.newObjsCache.put(newObject, currentObject);
 		}
 		return true;
+	}
+
+	private String getFieldWithoutValue(String fieldExpr) {
+		if (fieldExpr.contains(".")) {
+			return fieldExpr.split("\\.")[0];
+		}
+
+		return fieldExpr;
 	}
 
 	// no multi thread issue (used only in synchronized blocks)

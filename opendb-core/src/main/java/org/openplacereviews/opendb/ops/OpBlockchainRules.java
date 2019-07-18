@@ -680,6 +680,7 @@ public class OpBlockchainRules {
 
 		VOTE_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),
 		VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE("Operation '%s': ref obj type '%s'"),
+		VOTE_OP_IS_NOT_SAME("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
 
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
 		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),

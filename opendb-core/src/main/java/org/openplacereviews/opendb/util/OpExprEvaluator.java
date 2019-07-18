@@ -1,22 +1,10 @@
 package org.openplacereviews.opendb.util;
 
-import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_CREATE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_DELETE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.BaseErrorListener;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Recognizer;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -29,10 +17,10 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import java.util.*;
+
+import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
+import static org.openplacereviews.opendb.ops.OpOperation.*;
 
 public class OpExprEvaluator {
 
@@ -312,9 +300,9 @@ public class OpExprEvaluator {
 					Object op = e.getValue();
 					if (op instanceof JsonObject) {
 						for(Map.Entry<String, JsonElement> ee : ((JsonObject) op).entrySet()) {
-							if(ee.equals(OpBlockChain.OP_CHANGE_APPEND)) {
+							if(ee.getKey().equals(OpBlockChain.OP_CHANGE_APPEND)) {
 								arrayChangedFields.add(fieldExpr);
-							} else if(ee.equals(OpBlockChain.OP_CHANGE_SET)) {
+							} else if(ee.getKey().equals(OpBlockChain.OP_CHANGE_SET)) {
 								arrayChangedFields.add(fieldExpr);
 							} else {
 								throw new UnsupportedOperationException();

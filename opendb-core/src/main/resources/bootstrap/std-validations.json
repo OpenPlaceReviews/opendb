@@ -127,14 +127,13 @@
 			"comment" : "",
 			"role" : "none",
 			"if" : [
-				"std:eq(op:fields_changed(this), 'edit')"
+				"std:eq(op:op_type(this), 'edit')"
 			],
 			"validate" : [
 				"std:eq(op:fields_changed(this), str:concat('votes.', .signed_by))"
 			]
 		}]
 	},
-	
 	{
 		"type" : "sys.validate",
 		"create" : [{
