@@ -35,7 +35,7 @@ opendb:
       obj_grants: { "types" : ["sys.grant"], "keysize":2 }
       obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
 #      obj_osm: { "types": ["user.osm.place"], "keysize":1 , "columns": [{"name": "osmid", "field": "osmId", "type": "jsonb"}],
-#                 "indices":[{"column":"osmid", "field":"id", "type":"GIN"},{"column":"p1", "field": , "type":"GIN"}, {"column":"type", "field": , "type":"GIN"}] }
+#                 "indices":[{"column":"osmid", "field":"id", "type":"GIN"},{"column":"p1", "field": , "type":""}, {"column":"type", "field": , "type":""}] }
   files-backup:
     directory: ${FILE_BLOCKS_DIR:blocks}
   block-create:
