@@ -146,7 +146,7 @@
       ]
     }]
   },
-  {//example validation for voting
+  {
     "type" : "sys.validate",
     "create" : [{
       "id" : ["min_votes_value_for_osm_place_operation"],
