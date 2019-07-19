@@ -38,7 +38,6 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_STD_EQ = "std:eq";
 	public static final String FUNCTION_STD_NEQ = "std:neq";
 	public static final String FUNCTION_STD_LEQ = "std:leq";
-	public static final String FUNCTION_STD_MEQ = "std:meq";
 	public static final String FUNCTION_STD_LE = "std:le";
 	public static final String FUNCTION_STD_SIZE = "std:size";
 	public static final String FUNCTION_STD_OR = "std:or";
@@ -206,13 +205,6 @@ public class OpExprEvaluator {
 				return n1.longValue() <= n2.longValue() ? 1 : 0;
 			}
 			return n1.doubleValue() <= n2.doubleValue() ? 1 : 0;
-		case FUNCTION_STD_MEQ:
-			n1 = (Number) getObjArgument(functionName, args, 0);
-			n2 = (Number) getObjArgument(functionName, args, 1);
-			if (n1.doubleValue() == Math.ceil(n1.doubleValue()) && n2.doubleValue() == Math.ceil(n2.doubleValue())) {
-				return n1.longValue() >= n2.longValue() ? 1 : 0;
-			}
-			return n1.doubleValue() >= n2.doubleValue() ? 1 : 0;
 		case FUNCTION_STD_LE:
 			n1 = (Number) getObjArgument(functionName, args, 0);
 			n2 = (Number) getObjArgument(functionName, args, 1);
