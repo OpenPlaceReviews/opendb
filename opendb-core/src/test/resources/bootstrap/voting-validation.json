@@ -19,7 +19,7 @@
     "create": [{
       "id" : ["check_votes_state_for_vote_operation"],
       "type" : ["sys.vote"],
-      "comment" : "Check state foe votes",
+      "comment" : "Check state for votes",
       "role" : "none",
       "if" : [
         "std:eq(op:op_type(this), 'edit')"
