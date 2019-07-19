@@ -511,11 +511,22 @@ public class OpExprEvaluator {
 	}
 
 	private int objEquals(Object obj1, Object obj2) {
-		Number n1;
-		Number n2;
-		if (obj1 instanceof Number && obj2 instanceof Number) {
+		Number n1 = null;
+		Number n2 = null;
+		if (obj1 instanceof Number) {
 			n1 = (Number) obj1;
+		}
+		if (obj2 instanceof Number) {
 			n2 = (Number) obj2;
+		}
+		if (obj1 instanceof JsonPrimitive && ((JsonPrimitive) obj1).isNumber()) {
+			n1 = ((JsonPrimitive) obj1).getAsNumber();
+		}
+		if (obj2 instanceof JsonPrimitive && ((JsonPrimitive) obj2).isNumber()) {
+			n2 = ((JsonPrimitive) obj2).getAsNumber();
+		}
+		
+		if (n1 != null && n2 != null) {
 			if (n1.doubleValue() == Math.ceil(n1.doubleValue()) && n2.doubleValue() == Math.ceil(n2.doubleValue())) {
 				return n1.longValue() == n2.longValue() ? 1 : 0;
 			}
