@@ -441,13 +441,6 @@ public class OpExprEvaluator {
 						}
 					}
 				}
-				if (isJsonArrayObj(obj1) && obj2 instanceof Number) {
-					Number p1 = (Number) obj2;
-					if (((JsonArray) obj1).contains(new JsonPrimitive(p1))) {
-						return 1;
-					}
-					return 0;
-				}
 				return objEquals(obj1, obj2);
 			}
 		default:
