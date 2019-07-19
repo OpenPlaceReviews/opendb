@@ -30,9 +30,16 @@ public class ObjectGeneratorTest {
 			new String[]{"opr-0-test-user", "history-test", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
 					"opr-0-test-grant", "std-validations"};
 
-	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc) throws
+	private static String[] USER_LIST =
+			new String[]{"opr-0-test-user"};
+
+	public static void generateUserOperations(JsonFormatter formatter, OpBlockChain blc) throws
 			FailedVerificationException {
-		for (String f : BOOTSTRAP_LIST) {
+		addOperationFromList(formatter, blc, USER_LIST);
+	}
+
+	private static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {
+		for (String f : userList) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
 					OpOperation[].class);
@@ -45,6 +52,10 @@ public class ObjectGeneratorTest {
 				blc.addOperation(o);
 			}
 		}
+	}
+
+	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc) throws FailedVerificationException {
+		addOperationFromList(formatter, blc, BOOTSTRAP_LIST);
 	}
 
 	public static void generate30Blocks(JsonFormatter formatter, OpBlockChain blc,

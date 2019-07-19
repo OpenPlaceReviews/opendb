@@ -5,11 +5,7 @@ import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.OUtils;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,14 +62,14 @@ class OpPrivateObjectInstancesById {
 		if (dbAccess != null) {
 			allObjects = dbAccess.getAllObjects(type, request);
 		}
-		if (request.internalMapToFilterDuplicates == null) {
-			if (objects.size() > 0) {
-				request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>(objects);
-				for (OpObject o : objects.values()) {
-					if (o != OpObject.NULL) {
-						request.result.add(o);
-					}
+		if(request.internalMapToFilterDuplicates == null) {
+			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>();
+			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
+			for (OpObject o : objects.values()) {
+				if (o != OpObject.NULL) {
+					request.result.add(o);
 				}
+				mp.put(new CompoundKey(0, o.getId()), o);
 			}
 		} else {
 			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
@@ -81,7 +77,9 @@ class OpPrivateObjectInstancesById {
 			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> k = it.next();
 				if (!mp.containsKey(k.getKey())) {
-					request.result.add(k.getValue());
+					if (k.getValue() != OpObject.NULL) {
+						request.result.add(k.getValue());
+					}
 					mp.put(k.getKey(), k.getValue());
 				}
 			}

@@ -13,6 +13,13 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import static org.openplacereviews.opendb.ops.OpBlock.F_HASH;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNATURE;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNED_BY;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.*;
+import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
+
 /**
  *  Guidelines of object methods:
  *  1. This object doesn't expose any of the internal representation i.e. doesn't expose internal arrays or anything for modification
@@ -379,12 +386,19 @@ public class OpBlockChain {
 		String objType = u.getType();
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-			oinf.add(deletedRef, null);
+			oinf.add(deletedRef, OpObject.NULL);
 		}
 		queueOperations.add(u);
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
+		}
+		if (u.getRef() != null && u.getRef().get(F_VOTE) != null) {
+			OpObject voteObj = validationCtx.refObjsCache.get(F_VOTE);
+			if (voteObj != null && voteObj.getStringValue(F_SUBMITTED_OP_HASH).equals(u.getRawHash())) {
+				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(OP_VOTE);
+				oinf.add(voteObj.getId(), voteObj);
+			}
 		}
 	}
 
@@ -708,7 +722,6 @@ public class OpBlockChain {
 		return parent.getObjectByName(type, o);
 	}
 
-
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {
 		if(request.objToSetCache != null) {
 			request.objToSetCache.setCacheObject(cacheObject, request.editVersion);
@@ -837,8 +850,6 @@ public class OpBlockChain {
 		return true;
 	}
 
-
-
 	private boolean prepareReferencedObjects(OpOperation u, LocalValidationCtx ctx) {
 		Map<String, List<String>> refs = u.getRef();
 		if (refs != null) {
@@ -863,12 +874,49 @@ public class OpBlockChain {
 				}
 				ctx.refObjsCache.put(refName, oi);
 			}
+
+			OpObject voteObject = ctx.refObjsCache.get(F_VOTE);
+			if (voteObject != null) {
+				if (OP_VOTE.equals(voteObject.getParentType())) {
+					if (F_FINAL.equals(voteObject.getStringValue(F_STATE))) {
+						return rules.error(u, ErrorType.VOTE_VOTING_OBJ_IS_FINAL, u.getHash(), voteObject);
+					}
+					if (validateCurrentOpWithRefVoteOp(u, voteObject)) {
+						OpObject newVoteObject = new OpObject(voteObject);
+						newVoteObject.putStringValue(F_STATE, F_FINAL);
+						newVoteObject.putStringValue(F_SUBMITTED_OP_HASH, u.getRawHash());
+						ctx.refObjsCache.put(F_VOTE, newVoteObject);
+					} else {
+						return rules.error(u, ErrorType.VOTE_OP_IS_NOT_SAME, u.getHash(), u, voteObject.getStringObjMap(F_OP));
+					}
+				} else {
+					return rules.error(u, ErrorType.VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE, u.getHash(), voteObject.getParentType());
+				}
+			}
 		}
 
 		if (getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()) != null) {
 			ctx.refObjsCache.put("op", getObjectByName(OpBlockchainRules.OP_OPERATION, u.getType()));
 		}
 		return true;
+	}
+
+	private boolean validateCurrentOpWithRefVoteOp(OpOperation newOp, OpObject voteObject) {
+		OpOperation cpyNewOp = removeOpFieldsForValidation(new OpOperation(newOp, false));
+		OpOperation refOp = removeOpFieldsForValidation(rules.getFormatter().parseOperation(
+				rules.getFormatter().fullObjectToJson(voteObject.getStringObjMap(F_OP))));
+
+		return cpyNewOp.equals(refOp);
+	}
+
+	// remove ref, signature, hash and signedBy for new and ref.op operations
+	private OpOperation removeOpFieldsForValidation(OpOperation op) {
+		op.remove(F_REF);
+		op.remove(F_SIGNATURE);
+		op.remove(F_HASH);
+		op.remove(F_SIGNED_BY);
+
+		return op;
 	}
 
 	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
@@ -922,10 +970,15 @@ public class OpBlockChain {
 				return rules.error(u, ErrorType.OBJ_MODIFIED_TWICE_IN_SAME_OPERATION, u.getHash(), id);
 			}
 			OpObject currentObject = getObjectByName(u.getType(), id);
-			OpObject newObject = new OpObject(currentObject);
 			if (currentObject == null) {
 				return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), id);
 			}
+			if (u.getType().equals(OP_VOTE)) {
+				if (currentObject.getStringValue(F_STATE).equals(F_FINAL)) {
+					return rules.error(u, ErrorType.VOTE_VOTING_OBJ_IS_FINAL, u.getHash(), currentObject.getId());
+				}
+			}
+			OpObject newObject = new OpObject(currentObject);
 			Map<String, Object> currentExpectedFields = editObject.getCurrentEditFields();
 			if (currentExpectedFields != null) {
 				Iterator<Entry<String, Object>> itEditCurrentFields = currentExpectedFields.entrySet().iterator();
@@ -966,10 +1019,16 @@ public class OpBlockChain {
 							newObject.setFieldByExpr(fieldExpr, args);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof List) {
-							((List)oldObject).add(opValue);
+							((List) oldObject).add(opValue);
 							checkCurrentFieldSpecified = true;
+						} else if (oldObject instanceof Map) {
+							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
+							if (value != null) {
+								((Map<String, Object>) oldObject).put(String.valueOf(value.get(F_USER)), value.get(F_VOTE));
+								checkCurrentFieldSpecified = true;
+							}
 						} else {
-							throw new UnsupportedOperationException("Operation Append supported only for list");
+							throw new UnsupportedOperationException("Operation Append supported only for list and map");
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
@@ -986,8 +1045,8 @@ public class OpBlockChain {
 						throw new UnsupportedOperationException(
 								String.format("Operation %s is not supported for change", opId));
 					}
-					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(fieldExpr)
-							&& currentObject.getFieldByExpr(fieldExpr) == null) {
+					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(getFieldWithoutValue(fieldExpr))
+							&& currentObject.getFieldByExpr(getFieldWithoutValue(fieldExpr)) == null) {
 						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
@@ -998,7 +1057,14 @@ public class OpBlockChain {
 			ctx.newObjsCache.put(newObject, currentObject);
 		}
 		return true;
+	}
 
+	private String getFieldWithoutValue(String fieldExpr) {
+		if (fieldExpr.contains(".")) {
+			return fieldExpr.split("\\.")[0];
+		}
+
+		return fieldExpr;
 	}
 
 	// no multi thread issue (used only in synchronized blocks)

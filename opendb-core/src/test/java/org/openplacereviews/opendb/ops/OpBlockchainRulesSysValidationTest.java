@@ -657,7 +657,7 @@ public class OpBlockchainRulesSysValidationTest {
 	@Test
 	public void testSysValidateExpectError_SysValidateCheckPreviousRoleForChange() throws FailedVerificationException {
 		OpObject loadedObject =
-				blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, "sysvalidate_check_previous_role_for_change");
+				blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, "sys_validate_check_previous_role_for_change");
 		assertNotNull(loadedObject);
 
 		String newId = "openplacereviews", comment = "Some comment";
@@ -687,7 +687,7 @@ public class OpBlockchainRulesSysValidationTest {
 	 */
 	@Test
 	public void testSysValidateSuccessCheckPreviousRoleForChange() throws FailedVerificationException {
-		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment =
+		String name = "openplacereviewsPWD", validationName = "sys_validate_check_previous_role_for_change", comment =
 				"Some comment";
 
 		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
@@ -945,7 +945,7 @@ public class OpBlockchainRulesSysValidationTest {
 	 */
 	@Test
 	public void testCheck_AllOpArityNewDel() throws FailedVerificationException {
-		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment =
+		String name = "openplacereviewsPWD", validationName = "sys_validate_check_previous_role_for_change", comment =
 				"Some comment";
 
 		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
@@ -978,7 +978,7 @@ public class OpBlockchainRulesSysValidationTest {
 	 */
 	@Test
 	public void testCheck_AllOpAritySameTypeAndId() throws FailedVerificationException {
-		String name = "openplacereviewsPWD", validationName = "sysvalidate_check_previous_role_for_change", comment =
+		String name = "openplacereviewsPWD", validationName = "sys_validate_check_previous_role_for_change", comment =
 				"Some comment";
 
 		OpObject loadedObject = blc.getObjectByName(OpBlockchainRules.OP_VALIDATE, validationName);
@@ -1013,6 +1013,7 @@ public class OpBlockchainRulesSysValidationTest {
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
+		opObject.putStringValue(F_TYPE, OP_SIGNUP);
 		opObject.putStringValue(OpObject.F_NAME, name);
 		opObject.putStringValue(F_ALGO, SecUtils.ALGO_EC);
 		opObject.putStringValue(OpBlockchainRules.F_PUBKEY,

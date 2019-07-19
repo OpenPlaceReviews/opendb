@@ -21,6 +21,7 @@ publishing {
 
 test {
     exclude '**/service/DBConsensusManagerTest.class'
+    exclude '**/service/BlocksManagerTest.class'
     exclude '**/service/DBHistoryManagerTest.class'
     exclude '**/service/OpBlockchainDbAccessTest.class'
     exclude '**/service/OpBlockchainGettersDbAccessTest.class'
@@ -66,11 +67,9 @@ dependencies {
     implementation "com.github.ipfs:java-ipfs-api:v1.2.3"
     implementation "com.mashape.unirest:unirest-java:1.4.9"
 
-    // https://mvnrepository.com/artifact/net.jodah/failsafe
     implementation group: 'net.jodah', name: 'failsafe', version: '2.0.0'
-    // https://mvnrepository.com/artifact/commons-io/commons-io
     implementation group: 'commons-io', name: 'commons-io', version: '2.6'
-    implementation group: 'joda-time', name: 'joda-time', version: '2.10.2'
+
     implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
     implementation group: 'commons-codec', name: 'commons-codec', version: '1.12'
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.60'

@@ -80,7 +80,7 @@
 	{
 		"type" : "sys.validate",
 		"create" : [{
-			"id" : ["sysvalidate_check_previous_role_for_change"],
+			"id" : ["sys_validate_check_previous_role_for_change"],
 			"type" : ["sys.validate"],
 			"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
 			"role" : "none",
@@ -104,7 +104,6 @@
 			]
 		}]
 	},
-	//TODO add validation rule -> change by edit
 	{
 		"type" : "sys.validate",
 		"create" : [{
@@ -117,6 +116,21 @@
 			],
 			"validate" : [
 				"auth:has_sig_roles(this, .old.0.owner_role)"
+			]
+		}]
+	},
+	{
+		"type" : "sys.validate",
+		"create" : [{
+			"id" : ["check_vote_and_signed_by_for_vote_op"],
+			"type" : ["sys.vote"],
+			"comment" : "",
+			"role" : "none",
+			"if" : [
+				"std:eq(op:op_type(this), 'edit')"
+			],
+			"validate" : [
+				"std:eq(op:fields_changed(this), str:concat('votes.', .signed_by))"
 			]
 		}]
 	},

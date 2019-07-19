@@ -45,7 +45,9 @@ public class OpBlockchainRules {
 	public static final String OP_ROLE = OP_TYPE_SYS + "role";
 	public static final String OP_GRANT = OP_TYPE_SYS + "grant";
 	public static final String OP_VALIDATE = OP_TYPE_SYS + "validate";
-	// limit external ops 
+	// voting operation
+	public static final String OP_VOTE = OP_TYPE_SYS + "vote";
+	// limit external ops
 	public static final String OP_LIMIT = OP_TYPE_SYS + "limit";
 	// ddl?
 	public static final String OP_TABLE = OP_TYPE_SYS + "table";
@@ -301,9 +303,6 @@ public class OpBlockchainRules {
 			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getParentType());
 		}
 		JsonObject refsMap = formatter.toJsonElement(refObjsCache).getAsJsonObject();
-		for(String key : refObjsCache.keySet()) {
-			((JsonObject) refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
-		}
 		JsonArray newArray = (JsonArray) formatter.toJsonElement(newObjsArray);
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
 		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, newArray, deletedArray, refsMap);
@@ -637,7 +636,6 @@ public class OpBlockchainRules {
 			throw new IllegalArgumentException(e);
 		}
 	}
-
 	
 	public boolean error(OpObject o, ErrorType e, Object... args) {
 		String eMsg = e.getErrorFormat(args);
@@ -679,7 +677,11 @@ public class OpBlockchainRules {
 		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
-		
+
+		VOTE_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),
+		VOTE_OP_SUPPORT_ONLY_SYS_VOTE_TYPE("Operation '%s': ref obj type '%s'"),
+		VOTE_OP_IS_NOT_SAME("Operation '%s': vote edit obj: '%s' is not equal current obj edit: '%s'"),
+
 		OP_VALIDATION_FAILED("Operation '%s': failed validation rule '%s'. %s"),
 		OP_INVALID_VALIDATE_EXPRESSION("Operation '%s': validate expression couldn't be parsed. %s"),
 		
@@ -690,8 +692,8 @@ public class OpBlockchainRules {
 		MGMT_CANT_DELETE_NON_LAST_OPERATIONS("Operation '%s' couldn't be validated cause the parent operation '%s' is going to be deleted"),
 		MGMT_REPLICATION_IO_FAILED("Replication sync has failed"),
 		MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED("Replication: replication of '%s' block has failed"),
-		MGMT_REPLICATION_BLOCK_CONFLICTS("Replication: replication has conflicting blocks '%s'-there vs '%s'-here: '%s'")
-		;
+		MGMT_REPLICATION_BLOCK_CONFLICTS("Replication: replication has conflicting blocks '%s'-there vs '%s'-here: '%s'");
+
 		private final String msg;
 
 		ErrorType(String msg) {

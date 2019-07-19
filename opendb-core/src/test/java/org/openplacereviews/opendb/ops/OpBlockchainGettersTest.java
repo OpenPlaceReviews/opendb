@@ -193,16 +193,6 @@ public class OpBlockchainGettersTest {
 	}
 
 	@Test
-	public void testSimpleFunctionEval() {
-		OpBlockChain.ObjectsSearchRequest r = new OpBlockChain.ObjectsSearchRequest();
-		r.limit = 100;
-
-		blc.getObjects(OpBlockchainRules.OP_OPERATION, r);
-
-		assertEquals(7, r.result.size());
-	}
-
-	@Test
 	public void testSimpleFunctionEval2() {
 		OpBlockChain.ObjectsSearchRequest r = new OpBlockChain.ObjectsSearchRequest();
 		r.limit = 100;
