@@ -25,7 +25,7 @@
         "std:eq(op:op_type(this), 'edit')"
       ],
       "validate" : [
-        "set:in(set:all(-1, 0, 1), op:op_object(this, 'edit','change', op:fields_changed(this), 'set'))"
+        "set:in(op:obj_get(this.edit.change.votes,  str:first(.signed_by)).set , set:all(-1, 0, 1))"
       ]
     }]
   },
@@ -55,7 +55,7 @@
         "std:eq(op:op_type(this), 'edit')"
       ],
       "validate" : [
-        "std:eq(op:fields_changed(this), str:concat('votes.', .signed_by))"
+        "std:eq(op:fields_changed(this), str:concat('votes.', str:first(.signed_by)))"
       ]
     }]
   }
