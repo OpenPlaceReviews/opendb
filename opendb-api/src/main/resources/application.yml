@@ -34,8 +34,10 @@ opendb:
       obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
       obj_grants: { "types" : ["sys.grant"], "keysize":2 }
       obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
-#      obj_osm: { "types": ["user.osm.place"], "keysize":1 , "columns": [{"name": "osmid", "field": "osmId", "type": "jsonb"}],
-#                 "indices":[{"column":"osmid", "field":"id", "type":"GIN"},{"column":"p1", "field": , "type":"GIN"}, {"column":"type", "field": , "type":"GIN"}] }
+#      obj_osm: { "types": ["user.osm.place"], "keysize":1 , "columns": [{"name": "osmid", "field": "osm.id", "type": "jsonb"}, {"name":"tags_v","field":"tags.v", "type":"jsonb"},
+#                                                                        {"name":"tags_k_l","field":"tags.k.l", "type":"jsonb"}],
+#                 "indices":[{"column":"osmid", "field":"id", "type":"GIN"},{"column":"p1", "field": , "type":""}, {"column":"type", "field": , "type":""},
+#                            {"column":"tags_v", "field":"v","type":"GIN"},{"column":"tags_k_l", "field":"l","type":"GIN"}] }
   files-backup:
     directory: ${FILE_BLOCKS_DIR:blocks}
   block-create:

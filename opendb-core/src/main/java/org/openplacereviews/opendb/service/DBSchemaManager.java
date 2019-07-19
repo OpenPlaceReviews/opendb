@@ -403,6 +403,10 @@ public class DBSchemaManager {
 				indexType = GIST;
 				break;
 			}
+			case "": {
+				indexType = INDEXED;
+				break;
+			}
 		}
 		return indexType;
 	}
@@ -452,7 +456,7 @@ public class DBSchemaManager {
 				return String.format("create index %s_%s_gin_ind on %s using gin (to_tsvector('english', %s));\n", c.tableName, c.colName,
 						c.tableName, c.colName);
 			} else  {
-				return String.format("create index %s_%s_gin_ind on %s using gin ((%s->'%s'));\n", c.tableName, c.colName,
+				return String.format("create index %s_%s_gin_ind on %s using gin (((%s->>'%s')::jsonb));\n", c.tableName, c.colName,
 						c.tableName, c.colName, c.indexedField);
 			}
 		} else if (c.index.equals(GIST)) {
@@ -461,6 +465,86 @@ public class DBSchemaManager {
 		}
 
 		return null;
+	}
+
+	public String generateQueryForExtractingDataByIndices(String table, String column, Object[] args) {
+		ColumnDef columnDef = null;
+		List<ColumnDef> clfs = schema.get(table);
+		if (clfs == null) {
+			throw new IllegalArgumentException("Table definition wa not found");
+		}
+		for (ColumnDef cld : clfs) {
+			if (cld.colName.equals(column)) {
+				columnDef = cld;
+				break;
+			}
+		}
+
+		if (columnDef == null) {
+			throw new IllegalArgumentException("Index type is not specified");
+		}
+
+		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, args);
+	}
+
+	private String getOnlyColumnType(String table, String column) {
+		String columnType = "";
+
+		for (ColumnDef cld : schema.get(table)) {
+			if (cld.colName.equals(column)) {
+				columnType = cld.colType.contains(" ") ? cld.colType.split(" ")[0] : cld.colType;
+				break;
+			}
+		}
+
+		return columnType;
+	}
+	public Object[] generateArgs(String table, String column, String key) {
+		Object[] args = new Object[1];
+		String columnType = getOnlyColumnType(table, column);
+
+		switch (columnType) {
+			case "bytea": {
+				String[] keySplit = null;
+				if (key.contains(":")) {
+					keySplit = key.split(":");
+				}
+				return new Object[]{"\\x" + ((keySplit == null) ? key : keySplit[keySplit.length - 1]) };
+			}
+			case "jsonb": {
+				PGobject pGobject = new PGobject();
+				pGobject.setType("jsonb");
+				try {
+					pGobject.setValue(key);
+				} catch (SQLException e) {
+					throw new IllegalArgumentException(e);
+				}
+				args[0] = pGobject;
+				break;
+			}
+			default: {
+				args[0] = key;
+			}
+		}
+
+		return args;
+	}
+
+	private String getExpressionSignWithColumnName(ColumnDef columnDef, Object[] args) {
+		switch (columnDef.index) {
+			case INDEXED : {
+				return columnDef.colName + " = '" + args[0] + "'";
+			}
+			case GIN : {
+				return columnDef.colName + " @> '[{\"" + columnDef.indexedField +"\": " + Arrays.toString(new Object[]{args[0]}) + "}]'";
+			}
+			case GIST : {
+				throw new IllegalArgumentException("GIST index not implemented");
+			}
+			default: {
+				return columnDef.colName + " = '" + args[0] + "'";
+			}
+		}
 	}
 
 	private boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
@@ -501,7 +585,7 @@ public class DBSchemaManager {
 				try {
 					PGobject content = new PGobject();
 					content.setType("jsonb");
-					content.setValue(formatter.fullObjectToJson(obj.getObjectValue(customIndexDTO.field)));
+					content.setValue(formatter.fullObjectToJson(getObjectByFieldName(obj, customIndexDTO.field, getLastFieldValue(customIndexDTO.field))));
 					return content;
 				} catch (Exception e) {
 					return null;
@@ -541,6 +625,58 @@ public class DBSchemaManager {
 		}
 	}
 
+	private String getLastFieldValue(String fied) {
+		if (fied.contains(".")) {
+			String[] finalNames = fied.split("\\.");
+			return finalNames[finalNames.length - 1];
+		}
+		return fied;
+	}
+
+	public Object getObjectByFieldName(Object opObject, String field, String finalName) {
+		if (field.contains(".")) {
+			String[] fields = field.split("\\.", 2);
+			Object loadedObj = getObjectForField(opObject, fields[0]);
+			loadedObj = getObjectByFieldName(loadedObj, fields[1], finalName);
+			return loadedObj;
+		} else {
+			Object loadedObj = getObjectForField(opObject, field);
+			if (loadedObj instanceof List) {
+				Map<String, Object> res = new HashMap<>();
+				res.put(finalName, loadedObj);
+				return Collections.singletonList(res);
+			} else if (loadedObj instanceof Map) {
+				return Collections.singletonList(loadedObj);
+			} else {
+				return loadedObj;
+			}
+		}
+	}
+
+	public Object getObjectForField(Object obj, String field) {
+		if (obj instanceof  OpObject) {
+			return ((OpObject) obj).getObjectValue(field);
+		}
+		if (obj instanceof Map) {
+			Map<String, Object> res = (Map<String, Object>) obj;
+			return res.get(field);
+		} else if (obj instanceof List) {
+			List<Object> objectList = (List<Object>) obj;
+			List<Object> loadedObjs = new LinkedList<>();
+			for (Object o : objectList) {
+				Object lObject = getObjectForField(o, field);
+				if (lObject instanceof List) {
+					loadedObjs.addAll((List) lObject);
+				} else {
+					loadedObjs.add(lObject);
+				}
+			}
+			return loadedObjs;
+		} else {
+			return obj;
+		}
+	}
+
 	public static class CustomIndexDto {
 		public String column;
 		private String field;
@@ -568,6 +704,36 @@ public class DBSchemaManager {
 
 			return customIndexDTO;
 		}
+	}
+
+	public HashMap<String, Object> getMapIndicesForTable(String table) {
+		HashMap<String, Object> tableColumnIndices = new HashMap();
+
+		if (table == null) {
+			for (String key : schema.keySet()) {
+				List<ColumnDef> cdfs = schema.get(key);
+				Set<String> indices = new HashSet<>();
+				for (ColumnDef cdf : cdfs) {
+					if (cdf.index != NOT_INDEXED) {
+						indices.add(cdf.colName);
+					}
+				}
+				tableColumnIndices.put(key, indices);
+			}
+		} else {
+			List<ColumnDef> cdfs = schema.get(table);
+			if (cdfs != null) {
+				Set<String> indices = new HashSet<>();
+				for (ColumnDef cdf : cdfs) {
+					if (cdf.index != NOT_INDEXED) {
+						indices.add(cdf.colName);
+					}
+				}
+				tableColumnIndices.put(table, indices);
+			}
+		}
+
+		return tableColumnIndices;
 	}
 
 	public List<CustomIndexDto> generateCustomColumnsForTable(String table) {

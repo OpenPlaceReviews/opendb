@@ -87,6 +87,25 @@ public class DBConsensusManager {
 		return dbManagedChain.getSuperBlockHash();
 	}
 
+	public Map<String, Object> getMapIndicesForTable(String table) {
+		return dbSchema.getMapIndicesForTable(table);
+	}
+
+	public List<OpObject> getListOpObjectByIndices(String table, String column, String key) {
+		Object[] args = dbSchema.generateArgs(table, column, key);
+		return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, args), new ResultSetExtractor<List<OpObject>>() {
+			@Override
+			public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				List<OpObject> res = new LinkedList<>();
+				while (rs.next()) {
+					res.add(formatter.parseObject(rs.getString(1)));
+				}
+
+				return res;
+			}
+		});
+	}
+
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);

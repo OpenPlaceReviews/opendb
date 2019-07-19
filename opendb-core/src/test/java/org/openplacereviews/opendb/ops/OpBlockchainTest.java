@@ -7,6 +7,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.openplacereviews.opendb.service.DBSchemaManager;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
 
@@ -24,6 +25,7 @@ public class OpBlockchainTest {
 	public ExpectedException exceptionRule = ExpectedException.none();
 
 	public OpBlockChain blc;
+	public DBSchemaManager dbSchemaManager = new DBSchemaManager();
 
 	private Object[] parametersWithBlockchainAndBlock() throws FailedVerificationException {
 		beforeEachTestMethod();
@@ -425,6 +427,29 @@ public class OpBlockchainTest {
 		copy.setId("test1");
 		assertFalse(copy.isImmutable());
 		assertNotEquals(copy.getId(), old.getId());
+	}
+
+	@Test
+	public void testGettingObj() {
+		OpObject object = generateTestOpObject();
+		Object res = dbSchemaManager.getObjectByFieldName(object, "tags.k.t", "t");
+		assertEquals("[{t=[22222222]}]", res.toString());
+	}
+
+	private OpObject generateTestOpObject() {
+		OpObject opObject = new OpObject();
+		opObject.setId("some id");
+		opObject.putObjectValue("osmId", Arrays.asList("3erfsdfsdfs", "34234232"));
+		opObject.putObjectValue("lon", 12345);
+		opObject.putObjectValue("lat", "222EC");
+		Map<String, Object> tagsMap = new HashMap<>();
+		tagsMap.put("v", 11111111);
+		Map<String, Object> tagsklMap = new HashMap<>();
+		tagsklMap.put("l", Arrays.asList("2343","434r4232"));
+		tagsklMap.put("t", 22222222);
+		tagsMap.put("k", tagsklMap);
+		opObject.putObjectValue("tags", Collections.singletonList(tagsMap));
+		return opObject;
 	}
 
 }
