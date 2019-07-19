@@ -7,11 +7,10 @@
       "comment" : "Check the minimum votes for edit op",
       "role" : "none",
       "if" : [
-        "std:eq(std:size(.ref), 2)",
         "set:contains_key(.ref, 'vote')"
       ],
       "validate" : [
-        "std:meq(m:fields_int_sum(.ref.vote, 'votes'), 0)"
+        "std:le(0, m:fields_int_sum(.ref.vote, 'votes'))"
       ]
     }]
   },
