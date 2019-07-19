@@ -341,7 +341,7 @@ public class OpExprEvaluator {
 			obj1 = getObjArgument(functionName, args, 0, false);
 			Object obj = obj1;
 			for (int i = 1; i < args.size(); i++) {
-				if (!(obj1 instanceof JsonObject)) {
+				if (!(obj instanceof JsonObject)) {
 					throw new UnsupportedOperationException(FUNCTION_OP_GET_OBJECT_BY_FIELD + " support only JsonObject");
 				}
 				obj = getField(obj, getStringObject(args.get(i)));
