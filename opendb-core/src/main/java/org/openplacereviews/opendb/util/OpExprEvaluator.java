@@ -51,7 +51,7 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
 	
 	public static final String FUNCTION_OP_OPERATION_TYPE = "op:op_type";
-	public static final String FUNCTION_OP_GET_OBJECT_BY_FIELD = "op:op_object";
+	public static final String FUNCTION_OP_GET_OBJECT_BY_FIELD = "op:obj_get";
 	public static final String FUNCTION_OP_FIELDS_CHANGED = "op:fields_changed";
 	
 	
