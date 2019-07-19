@@ -339,23 +339,13 @@ public class OpExprEvaluator {
 			throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " op doesn't have any ops type");
 		case FUNCTION_OP_GET_OBJECT_BY_FIELD:
 			obj1 = getObjArgument(functionName, args, 0, false);
-			List<Object> keys;
-			if (args.size() > 2) {
-				keys = new ArrayList<>(args.subList(1, args.size()));
-			} else {
-				keys = new ArrayList<>(Arrays.asList(((String) args.get(1)).split("\\.")));
-			}
-			if (!(obj1 instanceof JsonObject)) {
-				throw new UnsupportedOperationException(FUNCTION_M_FIELDS_INT_SUM + " support only JsonObject");
-			}
 			Object obj = obj1;
-			for (int i = 0; i < keys.size(); i++) {
-				obj = getField(obj, getStringObject(keys.get(i)));
+			for (int i = 1; i < args.size(); i++) {
+				if (!(obj1 instanceof JsonObject)) {
+					throw new UnsupportedOperationException(FUNCTION_OP_GET_OBJECT_BY_FIELD + " support only JsonObject");
+				}
+				obj = getField(obj, getStringObject(args.get(i)));
 			}
-			if (obj == null) {
-				throw new IllegalArgumentException("Cannot to find object by fields: " + keys + " for obj: " + obj1);
-			}
-
 			return obj;
 		case FUNCTION_M_FIELDS_INT_SUM:
 			obj1 = getObjArgument(functionName, args, 0, false);
