@@ -38,6 +38,7 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_STD_EQ = "std:eq";
 	public static final String FUNCTION_STD_NEQ = "std:neq";
 	public static final String FUNCTION_STD_LEQ = "std:leq";
+	public static final String FUNCTION_STD_MEQ = "std:meq";
 	public static final String FUNCTION_STD_LE = "std:le";
 	public static final String FUNCTION_STD_SIZE = "std:size";
 	public static final String FUNCTION_STD_OR = "std:or";
@@ -51,6 +52,7 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_AUTH_HAS_SIG_ROLES = "auth:has_sig_roles";
 	
 	public static final String FUNCTION_OP_OPERATION_TYPE = "op:op_type";
+	public static final String FUNCTION_OP_GET_OBJECT_BY_FIELD = "op:op_object";
 	public static final String FUNCTION_OP_FIELDS_CHANGED = "op:fields_changed";
 	
 	
@@ -165,7 +167,7 @@ public class OpExprEvaluator {
 			return ffs;
 		case FUNCTION_STR_CONCAT: {
 			String res = getStringObject(getObjArgument(functionName, args, 0, false));
-			for(int i =1 ; i <args.size(); i++) {
+			for(int i = 1 ; i <args.size(); i++) {
 				res += getStringObject(getObjArgument(functionName, args, i, false));
 			}
 			return res;
@@ -204,6 +206,13 @@ public class OpExprEvaluator {
 				return n1.longValue() <= n2.longValue() ? 1 : 0;
 			}
 			return n1.doubleValue() <= n2.doubleValue() ? 1 : 0;
+		case FUNCTION_STD_MEQ:
+			n1 = (Number) getObjArgument(functionName, args, 0);
+			n2 = (Number) getObjArgument(functionName, args, 1);
+			if (n1.doubleValue() == Math.ceil(n1.doubleValue()) && n2.doubleValue() == Math.ceil(n2.doubleValue())) {
+				return n1.longValue() >= n2.longValue() ? 1 : 0;
+			}
+			return n1.doubleValue() >= n2.doubleValue() ? 1 : 0;
 		case FUNCTION_STD_LE:
 			n1 = (Number) getObjArgument(functionName, args, 0);
 			n2 = (Number) getObjArgument(functionName, args, 1);
@@ -336,7 +345,26 @@ public class OpExprEvaluator {
 				return F_DELETE;
 			}
 			throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " op doesn't have any ops type");
+		case FUNCTION_OP_GET_OBJECT_BY_FIELD:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			List<Object> keys;
+			if (args.size() > 2) {
+				keys = new ArrayList<>(args.subList(1, args.size()));
+			} else {
+				keys = new ArrayList<>(Arrays.asList(((String) args.get(1)).split("\\.")));
+			}
+			if (!(obj1 instanceof JsonObject)) {
+				throw new UnsupportedOperationException(FUNCTION_M_FIELDS_INT_SUM + " support only JsonObject");
+			}
+			Object obj = obj1;
+			for (int i = 0; i < keys.size(); i++) {
+				obj = getField(obj, getStringObject(keys.get(i)));
+			}
+			if (obj == null) {
+				throw new IllegalArgumentException("Cannot to find object by fields: " + keys + " for obj: " + obj1);
+			}
 
+			return obj;
 		case FUNCTION_M_FIELDS_INT_SUM:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			obj2 = getObjArgument(functionName, args, 1, false);
@@ -430,6 +458,13 @@ public class OpExprEvaluator {
 							return 1;
 						}
 					}
+				}
+				if (isJsonArrayObj(obj1) && obj2 instanceof Number) {
+					Number p1 = (Number) obj2;
+					if (((JsonArray) obj1).contains(new JsonPrimitive(p1))) {
+						return 1;
+					}
+					return 0;
 				}
 				return objEquals(obj1, obj2);
 			}

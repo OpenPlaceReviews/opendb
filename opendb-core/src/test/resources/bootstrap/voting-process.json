@@ -129,37 +129,5 @@
       "lat": "222EC",
       "tags": [{"v": "1111111", "k": "2222222"}]
     }]
-  },
-
-  {
-    "type" : "sys.validate",
-    "create" : [{
-      "id" : ["check_role_for_creating_vote_op"],
-      "type" : ["sys.vote"],
-      "comment" : "",
-      "role" : "none",
-      "if" : [
-        "std:eq(op:op_type(this), 'create')"
-      ],
-      "validate" : [
-        "auth:has_sig_roles(this, 'administrator')"
-      ]
-    }]
-  },
-  {
-    "type" : "sys.validate",
-    "create" : [{
-      "id" : ["min_votes_value_for_osm_place_operation"],
-      "type" : ["osm.place"],
-      "comment" : "Check the minimum votes for edit op",
-      "role" : "none",
-      "if" : [
-        "std:eq(std:size(.ref), 2)",
-        "ref:contain(.ref, 'vote')"
-      ],
-      "validate" : [
-        "std:eq(vote:calculate_votes(.ref.vote), 0)"
-      ]
-    }]
   }
 ]

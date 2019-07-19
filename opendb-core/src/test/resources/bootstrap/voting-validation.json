@@ -1,0 +1,48 @@
+[
+  {
+    "type" : "sys.validate",
+    "create": [{
+      "id" : ["min_votes_value_for_osm_place_operation"],
+      "type" : ["osm.place"],
+      "comment" : "Check the minimum votes for edit op",
+      "role" : "none",
+      "if" : [
+        "std:eq(std:size(.ref), 2)",
+        "set:contains_key(.ref, 'vote')"
+      ],
+      "validate" : [
+        "std:meq(m:fields_int_sum(.ref.vote, 'votes'), 1)"
+      ]
+    }]
+  },
+  {
+    "type" : "sys.validate",
+    "create": [{
+      "id" : ["check_votes_state_for_vote_operation"],
+      "type" : ["sys.vote"],
+      "comment" : "Check state foe votes",
+      "role" : "none",
+      "if" : [
+        "std:eq(op:op_type(this), 'edit')"
+      ],
+      "validate" : [
+        "set:in(set:all(-1, 0, 1), op:op_object(this, 'edit','change', op:fields_changed(this), 'set'))"
+      ]
+    }]
+  },
+  {
+    "type" : "sys.validate",
+    "create" : [{
+      "id" : ["check_role_for_creating_vote_op"],
+      "type" : ["sys.vote"],
+      "comment" : "",
+      "role" : "none",
+      "if" : [
+        "std:eq(op:op_type(this), 'create')"
+      ],
+      "validate" : [
+        "auth:has_sig_roles(this, 'administrator')"
+      ]
+    }]
+  }
+]
