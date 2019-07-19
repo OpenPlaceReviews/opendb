@@ -33,9 +33,30 @@ public class ObjectGeneratorTest {
 	private static String[] USER_LIST =
 			new String[]{"opr-0-test-user"};
 
+	private static String[] VOTING_LIST =
+			new String[]{"opr-0-test-user", "std-roles", "opr-0-test-grant", "voting-validation"};
+
 	public static void generateUserOperations(JsonFormatter formatter, OpBlockChain blc) throws
 			FailedVerificationException {
 		addOperationFromList(formatter, blc, USER_LIST);
+	}
+
+	public static void generateVotingOperations(JsonFormatter formatter, OpBlockChain blc) throws
+			FailedVerificationException {
+		addOperationFromList(formatter, blc, VOTING_LIST);
+	}
+
+	public static OpOperation[] getVotingOperations(JsonFormatter formatter,  OpBlockChain blc) throws FailedVerificationException {
+		OpOperation[] lst = formatter.fromJson(
+				new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/voting-process.json")),
+				OpOperation[].class);
+		for (OpOperation o : lst) {
+			if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
+				o.setSignedBy(serverName);
+				o = blc.getRules().generateHashAndSign(o, serverKeyPair);
+			}
+		}
+		return lst;
 	}
 
 	private static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {
