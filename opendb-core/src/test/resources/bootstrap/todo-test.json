@@ -3,9 +3,7 @@
 		"block_id":-1,
 		"date":"2019-02-15T00:00:00.000Z",
 		"ops": [
-			// test double objects could not be created
 			{"type" : "sys.role","create" : [{ "id" : ["none5"]}, { "id" : ["none4"]}]},
-			// test none could not be created
 			{"type" : "sys.role","create" : [{ "id" : ["none"]} ]},
 
 
