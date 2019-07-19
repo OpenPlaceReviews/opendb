@@ -467,7 +467,7 @@ public class DBSchemaManager {
 		return null;
 	}
 
-	public String generateQueryForExtractingDataByIndices(String table, String column, Object[] args) {
+	public String generateQueryForExtractingDataByIndices(String table, String column, String key) {
 		ColumnDef columnDef = null;
 		List<ColumnDef> clfs = schema.get(table);
 		if (clfs == null) {
@@ -484,7 +484,7 @@ public class DBSchemaManager {
 			throw new IllegalArgumentException("Index type is not specified");
 		}
 
-		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, args);
+		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, generateArgs(table, column, key));
 	}
 
 	private String getOnlyColumnType(String table, String column) {
@@ -499,8 +499,9 @@ public class DBSchemaManager {
 
 		return columnType;
 	}
-	public Object[] generateArgs(String table, String column, String key) {
-		Object[] args = new Object[1];
+
+	public Object generateArgs(String table, String column, String key) {
+		Object args;
 		String columnType = getOnlyColumnType(table, column);
 
 		switch (columnType) {
@@ -509,7 +510,8 @@ public class DBSchemaManager {
 				if (key.contains(":")) {
 					keySplit = key.split(":");
 				}
-				return new Object[]{"\\x" + ((keySplit == null) ? key : keySplit[keySplit.length - 1]) };
+				args = "\\x" + ((keySplit == null) ? key : keySplit[keySplit.length - 1]);
+				break;
 			}
 			case "jsonb": {
 				PGobject pGobject = new PGobject();
@@ -519,30 +521,30 @@ public class DBSchemaManager {
 				} catch (SQLException e) {
 					throw new IllegalArgumentException(e);
 				}
-				args[0] = pGobject;
+				args = pGobject;
 				break;
 			}
 			default: {
-				args[0] = key;
+				return key;
 			}
 		}
 
 		return args;
 	}
 
-	private String getExpressionSignWithColumnName(ColumnDef columnDef, Object[] args) {
+	private String getExpressionSignWithColumnName(ColumnDef columnDef, Object args) {
 		switch (columnDef.index) {
 			case INDEXED : {
-				return columnDef.colName + " = '" + args[0] + "'";
+				return columnDef.colName + " = '" + args + "'";
 			}
 			case GIN : {
-				return columnDef.colName + " @> '[{\"" + columnDef.indexedField +"\": " + Arrays.toString(new Object[]{args[0]}) + "}]'";
+				return columnDef.colName + " @> '[{\"" + columnDef.indexedField + "\": " + Arrays.toString(new Object[]{args}) + "}]'";
 			}
 			case GIST : {
 				throw new IllegalArgumentException("GIST index not implemented");
 			}
 			default: {
-				return columnDef.colName + " = '" + args[0] + "'";
+				return columnDef.colName + " = '" + args + "'";
 			}
 		}
 	}
