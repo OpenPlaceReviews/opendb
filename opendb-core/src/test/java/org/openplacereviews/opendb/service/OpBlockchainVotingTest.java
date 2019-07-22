@@ -142,20 +142,6 @@ public class OpBlockchainVotingTest {
 		return voteOp;
 	}
 
-	//{
-	//    "type" : "sys.vote",
-	//    "signed_by" : "openplacereviews",
-	//    "edit" : [{
-	//      "id" : ["vote", "osm.place"],
-	//      "change" : {
-	//        "votes.openplacereviews" : { "set": 1 }
-	//      },
-	//      "current" : {}
-	//    }],
-	//    "hash": "json:sha256:38139222f293aea8e3814475b04c75834db91f7444464758c47f54469a6a7882",
-	//    "signature": "ECDSA:base64:MEYCIQDZwkkoa5aA0RoNAGB8xkynIO4qZM31ZMzAIRLpb9k3pwIhAJ/IrfvOPgodlLLgStSSAKchafKGDVl4upp4bTDBm/K9"
-	//  }
-
 	private OpOperation generateCreateVoteOpWithUser(String username) throws FailedVerificationException {
 		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
 		String password = "149814981498a";
