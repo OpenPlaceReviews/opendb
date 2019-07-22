@@ -1,3 +1,4 @@
 include 'opendb-core'
 include 'opendb-api'
+enableFeaturePreview('STABLE_PUBLISHING')
 

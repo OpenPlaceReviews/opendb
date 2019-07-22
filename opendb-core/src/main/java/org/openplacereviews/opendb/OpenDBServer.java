@@ -37,7 +37,7 @@ public class OpenDBServer {
 	@Value("${spring.servlet.multipart.max-request-size}")
 	public String maxRequestSize;
 	@Autowired
-	BlocksManager blocksManager;
+	protected BlocksManager blocksManager;
 	@Autowired
 	DBConsensusManager dbDataManager;
 	@Autowired
