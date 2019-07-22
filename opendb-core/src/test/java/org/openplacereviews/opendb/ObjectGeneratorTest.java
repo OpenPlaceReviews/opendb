@@ -18,6 +18,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -46,17 +47,17 @@ public class ObjectGeneratorTest {
 		addOperationFromList(formatter, blc, VOTING_LIST);
 	}
 
-	public static OpOperation[] getVotingOperations(JsonFormatter formatter,  OpBlockChain blc) throws FailedVerificationException {
+	public static List<OpOperation> getVotingOperations(JsonFormatter formatter,  OpBlockChain blc, int amount) throws FailedVerificationException {
 		OpOperation[] lst = formatter.fromJson(
 				new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/voting-process.json")),
 				OpOperation[].class);
-		for (OpOperation o : lst) {
-			if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
-				o.setSignedBy(serverName);
-				o = blc.getRules().generateHashAndSign(o, serverKeyPair);
+		for (int i = 0 ; i < amount; i++) {
+			if (!OUtils.isEmpty(serverName) && lst[i].getSignedBy().isEmpty()) {
+				lst[i].setSignedBy(serverName);
+				lst[i] = blc.getRules().generateHashAndSign(lst[i], serverKeyPair);
 			}
 		}
-		return lst;
+		return Arrays.asList(lst).subList(0, amount);
 	}
 
 	private static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {

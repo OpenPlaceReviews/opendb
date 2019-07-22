@@ -26,6 +26,7 @@ public class OpExprEvaluator {
 
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
+	public static final String FUNCTION_STR_ALL = "str:all";
 	public static final String FUNCTION_STR_COMBINE = "str:combine";
 	public static final String FUNCTION_STR_CONCAT = "str:concat";
 
@@ -155,11 +156,12 @@ public class OpExprEvaluator {
 			return n1.doubleValue() - n2.doubleValue();
 		case FUNCTION_STR_FIRST:
 		case FUNCTION_STR_SECOND:
+		case FUNCTION_STR_ALL:
 			String ffs = getStringArgument(functionName, args, 0);
 			if (ffs != null) {
 				int indexOf = ffs.indexOf(':');
 				if (indexOf != -1) {
-					return functionName.equals(FUNCTION_STR_FIRST) ? ffs.substring(0, indexOf) : ffs
+					return functionName.equals(FUNCTION_STR_ALL) ? ffs : functionName.equals(FUNCTION_STR_FIRST) ? ffs.substring(0, indexOf) : ffs
 							.substring(indexOf + 1);
 				}
 			}
@@ -209,7 +211,7 @@ public class OpExprEvaluator {
 			n1 = (Number) getObjArgument(functionName, args, 0);
 			n2 = (Number) getObjArgument(functionName, args, 1);
 			if (n1.doubleValue() == Math.ceil(n1.doubleValue()) && n2.doubleValue() == Math.ceil(n2.doubleValue())) {
-				return n1.longValue() < n2.longValue();
+				return n1.longValue() < n2.longValue() ? 1 : 0;
 			}
 			return n1.doubleValue() < n2.doubleValue() ? 1 : 0;
 		case FUNCTION_STD_SIZE:
