@@ -18,6 +18,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,9 +34,30 @@ public class ObjectGeneratorTest {
 	private static String[] USER_LIST =
 			new String[]{"opr-0-test-user"};
 
+	private static String[] VOTING_LIST =
+			new String[]{"opr-0-test-user", "std-roles", "opr-0-test-grant", "voting-validation"};
+
 	public static void generateUserOperations(JsonFormatter formatter, OpBlockChain blc) throws
 			FailedVerificationException {
 		addOperationFromList(formatter, blc, USER_LIST);
+	}
+
+	public static void generateVotingOperations(JsonFormatter formatter, OpBlockChain blc) throws
+			FailedVerificationException {
+		addOperationFromList(formatter, blc, VOTING_LIST);
+	}
+
+	public static List<OpOperation> getVotingOperations(JsonFormatter formatter,  OpBlockChain blc, int amount) throws FailedVerificationException {
+		OpOperation[] lst = formatter.fromJson(
+				new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/voting-process.json")),
+				OpOperation[].class);
+		for (int i = 0 ; i < amount; i++) {
+			if (!OUtils.isEmpty(serverName) && lst[i].getSignedBy().isEmpty()) {
+				lst[i].setSignedBy(serverName);
+				lst[i] = blc.getRules().generateHashAndSign(lst[i], serverKeyPair);
+			}
+		}
+		return Arrays.asList(lst).subList(0, amount);
 	}
 
 	private static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {

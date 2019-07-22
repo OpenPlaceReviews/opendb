@@ -82,12 +82,12 @@
     "edit" : [{
       "id" : ["vote", "osm.place"],
       "change" : {
-        "votes.openplacereviews:test_1" : { "set": -1 }
+        "votes.openplacereviews:test_1" : { "set": 1 }
       },
       "current" : {}
     }],
-    "hash": "json:sha256:0e7ad5f766d0b83d15170134054e6fe29a0e33413a4cdc627dc6672bb50a5d70",
-    "signature": "ECDSA:base64:MEUCIQC0rb1HaANs4vPsk6+zP4jzyb8E+gFgZukKh7YQ1LlrMAIgDe70KSmowfJkLxJf8+QBCTG2/kl/oD3uFAXGCKvxV84="
+    "hash": "json:sha256:78cbdb06234b61b66e6b288b83766ce84ed3bfbf53809040e8562d20191b4fc2",
+    "signature": "ECDSA:base64:MEQCIHssMFOfseCtPZryspxOKvr9E3teCKqcGa4WuVsKwUYqAiBNyMQdVYF9LTWcgUXGTw+/rKxOG6vgbRkqKPHKyrPKaQ=="
   },
   {
     "type" : "osm.place",
@@ -117,10 +117,6 @@
     }]
   },
   {
-    "type": "osm.place",
-    "delete" : [["12345662"]]
-  },
-  {
     "type" : "osm.place",
     "create": [{
       "id" : ["22222"],
@@ -130,36 +126,8 @@
       "tags": [{"v": "1111111", "k": "2222222"}]
     }]
   },
-
   {
-    "type" : "sys.validate",
-    "create" : [{
-      "id" : ["check_role_for_creating_vote_op"],
-      "type" : ["sys.vote"],
-      "comment" : "",
-      "role" : "none",
-      "if" : [
-        "std:eq(op:op_type(this), 'create')"
-      ],
-      "validate" : [
-        "auth:has_sig_roles(this, 'administrator')"
-      ]
-    }]
-  },
-  {
-    "type" : "sys.validate",
-    "create" : [{
-      "id" : ["min_votes_value_for_osm_place_operation"],
-      "type" : ["osm.place"],
-      "comment" : "Check the minimum votes for edit op",
-      "role" : "none",
-      "if" : [
-        "std:eq(std:size(.ref), 2)",
-        "ref:contain(.ref, 'vote')"
-      ],
-      "validate" : [
-        "std:eq(vote:calculate_votes(.ref.vote), 0)"
-      ]
-    }]
+    "type": "osm.place",
+    "delete" : [["22222"]]
   }
 ]
