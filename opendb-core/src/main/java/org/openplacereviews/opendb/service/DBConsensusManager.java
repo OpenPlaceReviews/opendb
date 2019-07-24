@@ -656,7 +656,7 @@ public class DBConsensusManager {
 			CompoundKey pkey = e.getKey();
 			OpObject obj = e.getValue();
 			if (obj == null) {
-				break;
+				continue;
 			}
 			long l = opsId.get(obj.getParentHash());
 			int sblockid = OUtils.first(l);
