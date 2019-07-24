@@ -655,6 +655,9 @@ public class DBConsensusManager {
 			Entry<CompoundKey, OpObject> e = it.next();
 			CompoundKey pkey = e.getKey();
 			OpObject obj = e.getValue();
+			if (obj == null) {
+				break;
+			}
 			long l = opsId.get(obj.getParentHash());
 			int sblockid = OUtils.first(l);
 			int sorder = OUtils.second(l);
