@@ -72,7 +72,7 @@ public class JsonFormatter {
 	                map.put(entry.getKey(), read(entry.getValue()));
 	            }
 	            return map;
-	        }else if( in.isJsonPrimitive()){
+	        }else if(in.isJsonPrimitive()){
 	            JsonPrimitive prim = in.getAsJsonPrimitive();
 	            if(prim.isBoolean()){
 	                return prim.getAsBoolean();
@@ -82,12 +82,13 @@ public class JsonFormatter {
 	                Number num = prim.getAsNumber();
 	                // here you can handle double int/long values
 	                // and return any type you want
-	                // this solution will transform 3.0 float to long values
-	                if(Math.ceil(num.doubleValue())  == num.longValue())
-	                   return num.longValue();
-	                else{
-	                    return num.doubleValue();
-	                }
+	                // this solution will transform 3.0 float to long values, and transform 3.01 to long also
+//	                if(Math.ceil(num.doubleValue())  == num.longValue())
+//	                   return num.longValue();
+//	                else {
+//	                    return num.doubleValue();
+//	                }
+					return num.doubleValue();
 	            }
 	        }
 	        return null;
