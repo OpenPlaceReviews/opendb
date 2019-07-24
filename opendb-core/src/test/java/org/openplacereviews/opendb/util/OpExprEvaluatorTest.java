@@ -143,9 +143,9 @@ public class OpExprEvaluatorTest {
 
 	@Test
 	public void testFunction_Std_le() {
-		assertEquals(true, evaluateExpr("std:le(0,1)"));
-		assertEquals(false, evaluateExpr("std:le(1,1)"));
-		assertEquals(false, evaluateExpr("std:le(6,3)"));
+		assertEquals(1, evaluateExpr("std:le(0,1)"));
+		assertEquals(0, evaluateExpr("std:le(1,1)"));
+		assertEquals(0, evaluateExpr("std:le(6,3)"));
 		evaluateExprForException("std:le(this.a, this.c.0)");
 	}
 

@@ -131,7 +131,7 @@
 				"std:eq(op:op_type(this), 'edit')"
 			],
 			"validate" : [
-				"std:eq(op:fields_changed(this), str:concat('votes.', .signed_by))"
+				"std:eq(op:fields_changed(this), str:concat('votes.', str:all(.signed_by)))"
 			]
 		}]
 	},
