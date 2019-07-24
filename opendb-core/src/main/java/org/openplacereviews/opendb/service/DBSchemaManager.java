@@ -517,6 +517,9 @@ public class DBSchemaManager {
 				PGobject pGobject = new PGobject();
 				pGobject.setType("jsonb");
 				try {
+					if (!key.startsWith("\"")) {
+						key = "\"" + key + "\"";
+					}
 					pGobject.setValue(key);
 				} catch (SQLException e) {
 					throw new IllegalArgumentException(e);
@@ -587,7 +590,8 @@ public class DBSchemaManager {
 				try {
 					PGobject content = new PGobject();
 					content.setType("jsonb");
-					content.setValue(formatter.fullObjectToJson(getObjectByFieldName(obj, customIndexDTO.field, getLastFieldValue(customIndexDTO.field))));
+					Object res = getObjectByFieldName(obj, customIndexDTO.field, getLastFieldValue(customIndexDTO.field));
+					content.setValue(res == null ? null : formatter.fullObjectToJson(res));
 					return content;
 				} catch (Exception e) {
 					return null;
@@ -639,10 +643,12 @@ public class DBSchemaManager {
 		if (field.contains(".")) {
 			String[] fields = field.split("\\.", 2);
 			Object loadedObj = getObjectForField(opObject, fields[0]);
-			loadedObj = getObjectByFieldName(loadedObj, fields[1], finalName);
-			return loadedObj;
+			return getObjectByFieldName(loadedObj, fields[1], finalName);
 		} else {
 			Object loadedObj = getObjectForField(opObject, field);
+			if (loadedObj == null) {
+				return null;
+			}
 			if (loadedObj instanceof List) {
 				Map<String, Object> res = new HashMap<>();
 				res.put(finalName, loadedObj);
@@ -650,7 +656,9 @@ public class DBSchemaManager {
 			} else if (loadedObj instanceof Map) {
 				return Collections.singletonList(loadedObj);
 			} else {
-				return loadedObj;
+				Map<String, Object> res = new HashMap<>();
+				res.put(finalName, Collections.singletonList(loadedObj));
+				return Collections.singletonList(res);
 			}
 		}
 	}
