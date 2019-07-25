@@ -753,7 +753,11 @@ public class DBSchemaManager {
 				Map<String, List<String>> indices = new HashMap<>();
 				for (ColumnDef cdf : cdfs) {
 					if (cdf.index != NOT_INDEXED) {
-						indices.put(cdf.colName, cdf.indexedField);
+						if (cdf.indexedField == null) {
+							indices.put(cdf.colName, Collections.EMPTY_LIST);
+						} else {
+							indices.put(cdf.colName, cdf.indexedField);
+						}
 					}
 				}
 				tableColumnIndices.put(key, indices);
@@ -764,7 +768,11 @@ public class DBSchemaManager {
 				Map<String, List<String>> indices = new HashMap<>();
 				for (ColumnDef cdf : cdfs) {
 					if (cdf.index != NOT_INDEXED) {
-						indices.put(cdf.colName, cdf.indexedField);
+						if (cdf.indexedField == null) {
+							indices.put(cdf.colName, Collections.EMPTY_LIST);
+						} else {
+							indices.put(cdf.colName, cdf.indexedField);
+						}
 					}
 				}
 				tableColumnIndices.put(table, indices);

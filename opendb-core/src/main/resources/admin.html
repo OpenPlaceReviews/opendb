@@ -624,6 +624,7 @@
             loadObjectsData();
         });
         $("#table-indices-list").change(function() {
+            globalInit = false;
             loadIndexData();
         });
         $("#index-table-list").change(function() {
