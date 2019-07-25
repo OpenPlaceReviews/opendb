@@ -426,7 +426,7 @@ public class DBSchemaManager {
 				}
 				clb.append(c.colName).append(" ").append(c.colType);
 				if(c.index != NOT_INDEXED) {
-					indx.addAll(generateIndexQuery(c));
+					indx.add(generateIndexQuery(c));
 				}
 			}
 			String createTable = String.format("create table %s (%s)", tableName, clb.toString());
@@ -451,25 +451,16 @@ public class DBSchemaManager {
 		}
 	}
 
-	private List<String> generateIndexQuery(ColumnDef c) {
+	private String generateIndexQuery(ColumnDef c) {
 		if (c.index.equals(INDEXED)) {
-			return Collections.singletonList(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-					c.tableName, c.colName));
+			return String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
+					c.tableName, c.colName);
 		} else if (c.index.equals(GIN)) {
-			if (c.indexedField == null || c.indexedField.isEmpty()) {
-				return Collections.singletonList(String.format("create index %s_%s_gin_ind on %s using gin (to_tsvector('english', %s));\n", c.tableName, c.colName,
-						c.tableName, c.colName));
-			} else  {
-				List<String> indices = new ArrayList<>();
-				for (int i = 0; i < c.indexedField.size(); i++) {
-					indices.add(String.format("create index %s_%s_%s_gin_ind on %s using gin (((%s->>'%s')::jsonb));\n", c.tableName, c.colName, c.indexedField.get(i),
-							c.tableName, c.colName, c.indexedField.get(i)));
-				}
-				return indices;
-			}
+				return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", c.tableName, c.colName,
+						c.tableName, c.colName);
 		} else if (c.index.equals(GIST)) {
-				return Collections.singletonList(String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
-						c.tableName, c.colName));
+				return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
+						c.tableName, c.colName);
 		}
 
 		return null;
