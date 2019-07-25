@@ -91,14 +91,16 @@
         <h3>Table</h3>
         <label>Select table:&nbsp;</label><select id="table-indices-list">
     </select>
-        <h3>Indices</h3>
-        <label>Select index:&nbsp;</label><select id="index-table-list">
+        <h3>Column</h3>
+        <label>Select column:&nbsp;</label><select id="index-table-list">
+    </select>
+        <h3>Index</h3>
+        <label>Select index:&nbsp;</label><select id="column-index-table-list">
     </select>
         <label>Input search key:</label><input type="text" id="index-search-field"/>
         <input type="submit" value="Search by key" id="load-table-index-btn">
         <ul id="index-obj-list">
         </ul>
-
     </div>
 
     <div id="errors" class="tab-pane fade">
@@ -385,6 +387,8 @@
     }
     
     var globalTables = {};
+    var globalColumns = {};
+    var globalInit = false;
     function loadIndexData() {
         let selectTable = $("#table-indices-list").val();
         if (selectTable == null) {
@@ -400,11 +404,37 @@
         } else if (selectTable != null && globalTables[selectTable]) {
             var items = "";
             let obj = globalTables[selectTable];
-            for (var i = 0; i <obj.length; i++) {
-                items += "<option value = '" + obj[i] + "' " +
-                    (selectTable == obj[i] ? "selected" : "") + ">" + obj[i] + "</option>";
+            if (globalInit == false) {
+                for (var key in obj) {
+                    globalColumns[key] = obj[key];
+                    items += "<option value = '" + key + "' " +
+                        (selectTable == key ? "selected" : "") + ">" + key + "</option>";
+                }
+                globalInit = true;
+                $("#index-table-list").html(items);
             }
-            $("#index-table-list").html(items);
+            let selectColumn = $("#index-table-list").val();
+            if (selectColumn == null) {
+                let columnItems = "";
+                for (var key in obj) {
+                    var list = obj[key];
+                    for (var i = 0; i <list.length; i++) {
+                        globalColumns[key] = obj[key];
+                        columnItems += "<option value = '" + key + "' " +
+                            (selectColumn == key ? "selected" : "") + ">" + key + "</option>";
+                    }
+                }
+                $("#column-index-table-list").html(columnItems);
+            } else if (selectColumn != null && globalColumns[selectColumn]) {
+                let columnItems = "";
+                let obj1 = globalColumns[selectColumn];
+                for (var i = 0; i <obj1.length; i++) {
+                    columnItems += "<option value = '" + obj1[i] + "' " +
+                        (selectColumn == obj1[i] ? "selected" : "") + ">" + obj1[i] + "</option>";
+                }
+                $("#column-index-table-list").html(columnItems);
+            }
+
         }
     }
 
@@ -596,6 +626,9 @@
         $("#table-indices-list").change(function() {
             loadIndexData();
         });
+        $("#index-table-list").change(function() {
+            loadIndexData();
+        });
 
         $("#block-create-btn").click(function(){
             $.post("/api/mgmt/create", {})
@@ -666,6 +699,7 @@
             var obj = {
                 "table":$("#table-indices-list").val(),
                 "column":$("#index-table-list").val(),
+                "index":$("#column-index-table-list").val(),
                 "key":$("#index-search-field").val()
             }
             $.get("/api/indices", obj)

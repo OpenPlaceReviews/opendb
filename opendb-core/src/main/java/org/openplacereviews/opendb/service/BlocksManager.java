@@ -505,8 +505,8 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getListOpObjectByIndices(String table, String column, String key) {
-		return dataManager.getListOpObjectByIndices(table, column, key);
+	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) {
+		return dataManager.getListOpObjectByIndices(table, column, index, key);
 	}
 
 	public void setBootstrapList(List<String> bootstrapList) {

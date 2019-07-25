@@ -91,8 +91,8 @@ public class DBConsensusManager {
 		return dbSchema.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getListOpObjectByIndices(String table, String column, String key) {
-		return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, key), new ResultSetExtractor<List<OpObject>>() {
+	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) {
+		return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
 			@Override
 			public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				List<OpObject> res = new LinkedList<>();

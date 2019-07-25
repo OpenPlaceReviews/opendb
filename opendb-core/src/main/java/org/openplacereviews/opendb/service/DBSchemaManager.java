@@ -75,7 +75,7 @@ public class DBSchemaManager {
 		String colName;
 		String colType;
 		IndexType index;
-		String indexedField;
+		List<String> indexedField;
 	}
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType indexType) {
@@ -350,13 +350,17 @@ public class DBSchemaManager {
 			}
 
 			List<CustomIndexDto> indices = null;
-			LinkedHashMap<String, LinkedHashMap<String, String>> indexMap = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(tableName).get("indices");
+			LinkedHashMap<String, LinkedHashMap<String, Object>> indexMap = (LinkedHashMap<String, LinkedHashMap<String, Object>>) objtables.get(tableName).get("indices");
 			if (indexMap != null) {
 				indices = new ArrayList<>();
-				for (Map.Entry<String, LinkedHashMap<String, String>> entry : indexMap.entrySet()) {
-					LinkedHashMap<String, String> index = entry.getValue();
-
-					indices.add(CustomIndexDto.of(index.get("column"), index.get("field"), index.get("type")));
+				for (Map.Entry<String, LinkedHashMap<String, Object>> entry : indexMap.entrySet()) {
+					LinkedHashMap<String, Object> index = entry.getValue();
+					List<String> indicesList = new ArrayList<>();
+					LinkedHashMap<String, String> fieldList = ((LinkedHashMap<String, String>) index.get("field"));
+					if (fieldList != null) {
+						indicesList.addAll(fieldList.values());
+					}
+					indices.add(CustomIndexDto.of(index.get("column").toString(), indicesList, index.get("type").toString()));
 				}
 			}
 
@@ -422,7 +426,7 @@ public class DBSchemaManager {
 				}
 				clb.append(c.colName).append(" ").append(c.colType);
 				if(c.index != NOT_INDEXED) {
-					indx.add(generateIndexQuery(c));
+					indx.addAll(generateIndexQuery(c));
 				}
 			}
 			String createTable = String.format("create table %s (%s)", tableName, clb.toString());
@@ -447,27 +451,31 @@ public class DBSchemaManager {
 		}
 	}
 
-	private String generateIndexQuery(ColumnDef c) {
+	private List<String> generateIndexQuery(ColumnDef c) {
 		if (c.index.equals(INDEXED)) {
-			return String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-					c.tableName, c.colName);
+			return Collections.singletonList(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
+					c.tableName, c.colName));
 		} else if (c.index.equals(GIN)) {
 			if (c.indexedField == null || c.indexedField.isEmpty()) {
-				return String.format("create index %s_%s_gin_ind on %s using gin (to_tsvector('english', %s));\n", c.tableName, c.colName,
-						c.tableName, c.colName);
+				return Collections.singletonList(String.format("create index %s_%s_gin_ind on %s using gin (to_tsvector('english', %s));\n", c.tableName, c.colName,
+						c.tableName, c.colName));
 			} else  {
-				return String.format("create index %s_%s_gin_ind on %s using gin (((%s->>'%s')::jsonb));\n", c.tableName, c.colName,
-						c.tableName, c.colName, c.indexedField);
+				List<String> indices = new ArrayList<>();
+				for (int i = 0; i < c.indexedField.size(); i++) {
+					indices.add(String.format("create index %s_%s_%s_gin_ind on %s using gin (((%s->>'%s')::jsonb));\n", c.tableName, c.colName, c.indexedField.get(i),
+							c.tableName, c.colName, c.indexedField.get(i)));
+				}
+				return indices;
 			}
 		} else if (c.index.equals(GIST)) {
-				return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
-						c.tableName, c.colName);
+				return Collections.singletonList(String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
+						c.tableName, c.colName));
 		}
 
 		return null;
 	}
 
-	public String generateQueryForExtractingDataByIndices(String table, String column, String key) {
+	public String generateQueryForExtractingDataByIndices(String table, String column, String index, String key) {
 		ColumnDef columnDef = null;
 		List<ColumnDef> clfs = schema.get(table);
 		if (clfs == null) {
@@ -484,7 +492,7 @@ public class DBSchemaManager {
 			throw new IllegalArgumentException("Index type is not specified");
 		}
 
-		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, generateArgs(table, column, key));
+		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, index, generateArgs(table, column, key));
 	}
 
 	private String getOnlyColumnType(String table, String column) {
@@ -535,13 +543,13 @@ public class DBSchemaManager {
 		return args;
 	}
 
-	private String getExpressionSignWithColumnName(ColumnDef columnDef, Object args) {
+	private String getExpressionSignWithColumnName(ColumnDef columnDef, String index, Object args) {
 		switch (columnDef.index) {
 			case INDEXED : {
 				return columnDef.colName + " = '" + args + "'";
 			}
 			case GIN : {
-				return columnDef.colName + " @> '[{\"" + columnDef.indexedField + "\": " + Arrays.toString(new Object[]{args}) + "}]'";
+				return columnDef.colName + " @> '[{\"" + index + "\": " + Arrays.toString(new Object[]{args}) + "}]'";
 			}
 			case GIST : {
 				throw new IllegalArgumentException("GIST index not implemented");
@@ -590,8 +598,23 @@ public class DBSchemaManager {
 				try {
 					PGobject content = new PGobject();
 					content.setType("jsonb");
-					Object res = getObjectByFieldName(obj, customIndexDTO.field, getLastFieldValue(customIndexDTO.field));
-					content.setValue(res == null ? null : formatter.fullObjectToJson(res));
+					Object[] res = new Object[customIndexDTO.field.size()];
+					int amountTags = 0, reInd = 0;;
+					for (int i = 0; i < customIndexDTO.field.size(); i++) {
+						Object o = getObjectByFieldName(obj, customIndexDTO.field.get(i), getLastFieldValue(customIndexDTO.field.get(i)));
+						if (o != null) {
+							res[i] = o;
+							amountTags++;
+						}
+					}
+					Object[] re = new Object[amountTags];
+					for (Object o : res) {
+						if (o != null) {
+							re[reInd] = o;
+							reInd++;
+						}
+					}
+					content.setValue(amountTags > 0 ? formatter.fullObjectToJson(re) : null);
 					return content;
 				} catch (Exception e) {
 					return null;
@@ -599,28 +622,28 @@ public class DBSchemaManager {
 			}
 			case "text" : {
 				try {
-					return obj.getStringValue(customIndexDTO.field);
+					return obj.getStringValue(customIndexDTO.field.get(0));
 				} catch (Exception e) {
 					return null;
 				}
 			}
 			case "bytea" : {
 				try {
-					return SecUtils.getHashBytes(obj.getStringValue(customIndexDTO.field));
+					return SecUtils.getHashBytes(obj.getStringValue(customIndexDTO.field.get(0)));
 				} catch (Exception e) {
 					return null;
 				}
 			}
 			case "integer" : {
 				try {
-					return obj.getIntValue(customIndexDTO.field, 0);
+					return obj.getIntValue(customIndexDTO.field.get(0), 0);
 				} catch (Exception e) {
 					return null;
 				}
 			}
 			case "bigint" : {
 				try {
-					return obj.getLongValue(customIndexDTO.field, 0);
+					return obj.getLongValue(customIndexDTO.field.get(0), 0);
 				} catch (Exception e) {
 					return null;
 				}
@@ -650,15 +673,18 @@ public class DBSchemaManager {
 				return null;
 			}
 			if (loadedObj instanceof List) {
-				Map<String, Object> res = new HashMap<>();
-				res.put(finalName, loadedObj);
-				return Collections.singletonList(res);
+				if (!((List<Object>) loadedObj).isEmpty()) {
+					Map<String, Object> res = new HashMap<>();
+					res.put(finalName, loadedObj);
+					return res;
+				}
+				return null;
 			} else if (loadedObj instanceof Map) {
 				return Collections.singletonList(loadedObj);
 			} else {
 				Map<String, Object> res = new HashMap<>();
 				res.put(finalName, Collections.singletonList(loadedObj));
-				return Collections.singletonList(res);
+				return res;
 			}
 		}
 	}
@@ -675,10 +701,12 @@ public class DBSchemaManager {
 			List<Object> loadedObjs = new LinkedList<>();
 			for (Object o : objectList) {
 				Object lObject = getObjectForField(o, field);
-				if (lObject instanceof List) {
-					loadedObjs.addAll((List) lObject);
-				} else {
-					loadedObjs.add(lObject);
+				if (lObject != null && o != lObject) {
+					if (lObject instanceof List) {
+						loadedObjs.addAll((List) lObject);
+					} else {
+						loadedObjs.add(lObject);
+					}
 				}
 			}
 			return loadedObjs;
@@ -689,7 +717,7 @@ public class DBSchemaManager {
 
 	public static class CustomIndexDto {
 		public String column;
-		private String field;
+		private List<String> field;
 		private String type;
 		private String hash;
 		private String content;
@@ -698,7 +726,7 @@ public class DBSchemaManager {
 
 		}
 
-		public static CustomIndexDto of(String column, String field, String type) {
+		public static CustomIndexDto of(String column, List<String> field, String type) {
 			CustomIndexDto customIndexDTO = new CustomIndexDto();
 			customIndexDTO.column = column;
 			customIndexDTO.field = field;
@@ -722,10 +750,10 @@ public class DBSchemaManager {
 		if (table == null) {
 			for (String key : schema.keySet()) {
 				List<ColumnDef> cdfs = schema.get(key);
-				Set<String> indices = new HashSet<>();
+				Map<String, List<String>> indices = new HashMap<>();
 				for (ColumnDef cdf : cdfs) {
 					if (cdf.index != NOT_INDEXED) {
-						indices.add(cdf.colName);
+						indices.put(cdf.colName, cdf.indexedField);
 					}
 				}
 				tableColumnIndices.put(key, indices);
@@ -733,10 +761,10 @@ public class DBSchemaManager {
 		} else {
 			List<ColumnDef> cdfs = schema.get(table);
 			if (cdfs != null) {
-				Set<String> indices = new HashSet<>();
+				Map<String, List<String>> indices = new HashMap<>();
 				for (ColumnDef cdf : cdfs) {
 					if (cdf.index != NOT_INDEXED) {
-						indices.add(cdf.colName);
+						indices.put(cdf.colName, cdf.indexedField);
 					}
 				}
 				tableColumnIndices.put(table, indices);
@@ -753,12 +781,17 @@ public class DBSchemaManager {
 			return columns;
 		}
 
-		LinkedHashMap<String, LinkedHashMap<String, String>> cii = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(table).get("columns");
+		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) objtables.get(table).get("columns");
 		if (cii != null) {
-			for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
-				LinkedHashMap<String, String> arrayColumns = entry.getValue();
+			for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
+				LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+				List<String> columnList = new ArrayList<>();
+				LinkedHashMap<String, String> fieldList = ((LinkedHashMap<String, String>) arrayColumns.get("field"));
+				if (fieldList != null) {
+					columnList.addAll(fieldList.values());
+				}
 
-				columns.add(CustomIndexDto.of(arrayColumns.get("name"), arrayColumns.get("field"), arrayColumns.get("type")));
+				columns.add(CustomIndexDto.of(arrayColumns.get("name").toString(), columnList, arrayColumns.get("type").toString()));
 			}
 		}
 
