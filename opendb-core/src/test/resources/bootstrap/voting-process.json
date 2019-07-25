@@ -18,6 +18,7 @@
     "create": [{
       "id" : ["12345662"],
       "lon" : 12345,
+      "lon1" : 2.0,
       "def" : "23434",
       "lat": "222EC",
       "tags": [{"v": "1111111", "k": "2222222"}]
@@ -74,7 +75,7 @@
       "current" : {}
     }],
     "hash": "json:sha256:38139222f293aea8e3814475b04c75834db91f7444464758c47f54469a6a7882",
-    "signature": "ECDSA:base64:MEYCIQDZwkkoa5aA0RoNAGB8xkynIO4qZM31ZMzAIRLpb9k3pwIhAJ/IrfvOPgodlLLgStSSAKchafKGDVl4upp4bTDBm/K9"
+    "signature": "ECDSA:base64:MEUCIFHWSlb8Qa30FelN1/qzm2JBJ1SWCJV+X602vgEXEug9AiEAmEHcjdgn/nMdm+yyi4VPVOBm1/DoV2Ax5WY6R4ml0bY="
   },
   {
     "type" : "sys.vote",
@@ -87,7 +88,7 @@
       "current" : {}
     }],
     "hash": "json:sha256:78cbdb06234b61b66e6b288b83766ce84ed3bfbf53809040e8562d20191b4fc2",
-    "signature": "ECDSA:base64:MEQCIHssMFOfseCtPZryspxOKvr9E3teCKqcGa4WuVsKwUYqAiBNyMQdVYF9LTWcgUXGTw+/rKxOG6vgbRkqKPHKyrPKaQ=="
+    "signature": "ECDSA:base64:MEUCIQCMwKfu8CQ/fqRYLES0cjWfWgo7gf7oNg8tcZHxxrDNlAIgcveZndhnrDuE1FCkU5AW2DwFDpxMKMBEfEiHeTNtvOw="
   },
   {
     "type" : "osm.place",

@@ -48,7 +48,7 @@ public class JsonFormatter {
 		
 	}
 	
-	public static class MapDeserializerDoubleAsIntFix implements JsonDeserializer<TreeMap<String, Object>>{
+	public static class MapDeserializerDoubleAsIntFix implements JsonDeserializer<TreeMap<String, Object>> {
 
 	    @Override  @SuppressWarnings("unchecked")
 	    public TreeMap<String, Object> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
@@ -82,13 +82,12 @@ public class JsonFormatter {
 	                Number num = prim.getAsNumber();
 	                // here you can handle double int/long values
 	                // and return any type you want
-	                // this solution will transform 3.0 float to long values, and transform 3.01 to long also
-//	                if(Math.ceil(num.doubleValue())  == num.longValue())
-//	                   return num.longValue();
-//	                else {
-//	                    return num.doubleValue();
-//	                }
-					return num.doubleValue();
+	                // this solution will transform 3.0 float to long values
+	                if(Math.ceil(num.doubleValue())  == num.longValue() && (!num.toString().contains(".") || num.toString().split("\\.")[1].length() <= 1))
+	                   return num.longValue();
+	                else {
+	                    return num.doubleValue();
+	                }
 	            }
 	        }
 	        return null;
