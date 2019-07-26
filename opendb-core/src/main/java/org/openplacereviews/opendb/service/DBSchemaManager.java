@@ -342,7 +342,7 @@ public class DBSchemaManager {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void prepareObjTableMapping() {
+	public void prepareObjTableMapping() {
 		for(String tableName : objtables.keySet()) {
 			Integer i = (Integer) objtables.get(tableName).get("keysize");
 			if(i == null) {
@@ -645,7 +645,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	private String getLastFieldValue(String fied) {
+	public String getLastFieldValue(String fied) {
 		if (fied.contains(".")) {
 			String[] finalNames = fied.split("\\.");
 			return finalNames[finalNames.length - 1];
