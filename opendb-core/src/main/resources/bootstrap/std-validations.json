@@ -11,22 +11,23 @@
 			]
 		}]
 	},
-	{
-		"type" : "sys.validate",
-		"create" : [{
-			"id" : ["all_op_arity_new_del"],
-			"type" : ["*"],
-			"comment" : "Validate operation arity",
-			"role" : "none",
-			"if" : [
-				"std:eq(.ref.op.arity, 0)"
-			],
-			"validate" : [
-				"std:leq(std:size(.new),1)",
-				"std:leq(std:size(.old),1)"
-			]
-		}]
-	},
+	// TODO change validation rule, doesn't work!!
+//	{
+//		"type" : "sys.validate",
+//		"create" : [{
+//			"id" : ["all_op_arity_new_del"],
+//			"type" : ["*"],
+//			"comment" : "Validate operation arity",
+//			"role" : "none",
+//			"if" : [
+//				"std:eq(.ref.op.arity, 0)"
+//			],
+//			"validate" : [
+//				"std:leq(std:size(.new),1)",
+//				"std:leq(std:size(.old),1)"
+//			]
+//		}]
+//	},
 	{
 		"type" : "sys.validate",
 		"create" : [{

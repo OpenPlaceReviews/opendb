@@ -10,7 +10,7 @@
 			"pubkey": "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ=="
 		}],
 		"hash": "json:sha256:5e7aac0f29a9737f7fc4cdecb4a635f7563b3e3fffeb117618b2ed468e46704d",
-		"signature": "ECDSA:base64:MEUCIAIsnKgYRuAsIkzLEqArCHbuZ/LQacqd4eIJl4cB4K82AiEArX9u7yD+I5+Lj4EZMfnF60scJbk4JEt7uNfPtYLlRvQ="
+		"signature": "ECDSA:base64:MEYCIQDc5jp0pPdleEQb4PLBRF5+nS+bVPhW1MyMRKqIrylMYAIhAKuKbsXPWMbQ/Dt5salzpGuN/k7AfVQ/zzcBpRDSoaXW"
 	},
 	{
 		"type"  : "sys.role",
@@ -57,5 +57,6 @@
 			"id" : ["openplacereviewsPWD"],
 			"roles" : ["none"]
 		}]
-	}
+	},
+	{"type":"operation1","new":[{"id":"dsds345rfd","osmId":[{"id":"159","timestamp":0}],"tags":[{"k":"addr:city","v":"York"},{"k":"addr:housenumber","v":"29-30"},{"k":"addr:postcode","v":"YO1 8RS"},{"k":"addr:street","v":"Parliament Street"},{"k":"branch","v":"York - Parliament Street"},{"k":"name","v":"Vodafone"},{"k":"opening_hours","v":"Mo-Sa 09:00-17:30; Su 10:30-16:30"},{"k":"opening_hours:url","v":"https://www.vodafone.co.uk/find-a-store/index.htm?sssourcesiteid=vodafoneuk&amp;cid=rdr-4437-02"},{"k":"operator","v":"Vodafone Limited"},{"k":"shop","v":"mobile_phone"}]},{"id":"fdsf345trfd","osmId":[{"id":"1000","timestamp":0}],"tags":[{"k":"comment","v":"ООО АСП-ГРУПП, ИНН 7735108290, до 22:45 c 2014-05-23"},{"k":"name","v":"Десяточка"},{"k":"opening_hours","v":"08:30-22:45"},{"k":"shop","v":"supermarket"}]}]}
 ]

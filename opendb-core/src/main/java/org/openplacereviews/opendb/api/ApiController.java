@@ -205,6 +205,23 @@ public class ApiController {
 		return formatter.fullObjectToJson(obj);
 	}
 
+	@GetMapping(path = "/indices-by-table", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String getIndices(@RequestParam(required = false) String table) {
+		Map<String, Object> tableIndices = manager.getMapIndicesForTable(table);
+
+		return formatter.fullObjectToJson(tableIndices);
+	}
+
+	@GetMapping(path = "/indices", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String objectsByIndex(@RequestParam(required = true) String table,
+								 @RequestParam(required = true) String column,
+								 @RequestParam(required = false) String index,
+								 @RequestParam(required = true) String key) {
+		return formatter.fullObjectToJson(manager.getListOpObjectByIndices(table, column, index, key));
+	}
+
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,

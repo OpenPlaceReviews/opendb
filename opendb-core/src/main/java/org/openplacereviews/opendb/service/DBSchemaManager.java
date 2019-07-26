@@ -6,7 +6,6 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
@@ -20,6 +19,11 @@ import org.springframework.stereotype.Service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.*;
+
 
 @Service
 @ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
@@ -63,14 +67,18 @@ public class DBSchemaManager {
 	}
 	
 	// SCHEMA DEFINITION
+	public enum IndexType {
+		NOT_INDEXED, INDEXED, GIN, GIST
+	}
 	private static class ColumnDef {
 		String tableName;
 		String colName;
 		String colType;
-		boolean index;
+		IndexType index;
+		List<String> indexedField;
 	}
 
-	private static void registerColumn(String tableName, String colName, String colType, boolean index) {
+	private static void registerColumn(String tableName, String colName, String colType, IndexType indexType) {
 		List<ColumnDef> lst = schema.get(tableName);
 		if (lst == null) {
 			lst = new ArrayList<ColumnDef>();
@@ -80,76 +88,97 @@ public class DBSchemaManager {
 		cd.tableName = tableName;
 		cd.colName = colName;
 		cd.colType = colType;
-		cd.index = index;
+		cd.index = indexType;
+		lst.add(cd);
+	}
+
+	private static void registerColumn(String tableName, String colName, String colType, List<CustomIndexDto> customIndices, IndexType basicIndexType) {
+		List<ColumnDef> lst = schema.get(tableName);
+		if (lst == null) {
+			lst = new ArrayList<ColumnDef>();
+			schema.put(tableName, lst);
+		}
+		ColumnDef cd = new ColumnDef();
+		cd.tableName = tableName;
+		cd.colName = colName;
+		cd.colType = colType;
+		cd.index = basicIndexType;
+
+		if (customIndices != null) {
+			CustomIndexDto indexInfo = getIndexInfoByColumnName(colName, customIndices);
+			if (indexInfo != null) {
+				cd.index = getIndexTypeByNameColumn(indexInfo, basicIndexType);
+				cd.indexedField = indexInfo.field;
+			}
+		}
 		lst.add(cd);
 	}
 
 	static {
-		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", true);
-		registerColumn(SETTINGS_TABLE, "value", "text", false);
-		registerColumn(SETTINGS_TABLE, "content", "jsonb", false);
-		
-		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(BLOCKS_TABLE, "phash", "bytea", false);
-		registerColumn(BLOCKS_TABLE, "blockid", "int", true);
-		registerColumn(BLOCKS_TABLE, "superblock", "bytea", true);
-		registerColumn(BLOCKS_TABLE, "header", "jsonb", false);
-		registerColumn(BLOCKS_TABLE, "content", "jsonb", false);
+		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", INDEXED);
+		registerColumn(SETTINGS_TABLE, "value", "text", NOT_INDEXED);
+		registerColumn(SETTINGS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", false);
-		registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", true);
-		registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", false);
-		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", false);
+		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(BLOCKS_TABLE, "phash", "bytea", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "blockid", "int", INDEXED);
+		registerColumn(BLOCKS_TABLE, "superblock", "bytea", INDEXED);
+		registerColumn(BLOCKS_TABLE, "header", "jsonb", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", false);
-		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", true);
-		registerColumn(OPERATIONS_TABLE, "sblockid", "int", true);
-		registerColumn(OPERATIONS_TABLE, "sorder", "int", true);
-		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", false);
-		registerColumn(OPERATIONS_TABLE, "content", "jsonb", false);
+		registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", NOT_INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
+		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OP_OBJ_HISTORY_TABLE, "sorder", "serial not null", false);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", true);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", true);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", true);
+		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", NOT_INDEXED);
+		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "sblockid", "int", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "sorder", "int", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", NOT_INDEXED);
+		registerColumn(OPERATIONS_TABLE, "content", "jsonb", NOT_INDEXED);
+
+		registerColumn(OP_OBJ_HISTORY_TABLE, "sorder", "serial not null", NOT_INDEXED);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", INDEXED);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", INDEXED);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", INDEXED);
 		for (int i = 1; i <= USER_KEY_SIZE; i++) {
-			registerColumn(OP_OBJ_HISTORY_TABLE, "u" + i, "text", true);
+			registerColumn(OP_OBJ_HISTORY_TABLE, "u" + i, "text", INDEXED);
 		}
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
-			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", true);
+			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", INDEXED);
 		}
-		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", false);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", false);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", false);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", NOT_INDEXED);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", NOT_INDEXED);
+		registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", NOT_INDEXED);
 
-		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", true);
-		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", true);
-		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", false);
-		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", false);
+		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
+		registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "cid", "text", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
+		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
 
-		registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", true);
-		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", false);
-		registerColumn(EXT_RESOURCE_TABLE, "cid", "text", false);
-		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", false);
-		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", false);
-
-		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
+		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE, null);
 
 	}
 
-	private static void registerObjTable(String tbName, int maxKeySize) {
-		registerColumn(tbName, "type", "text", true);
+	private static void registerObjTable(String tbName, int maxKeySize, List<CustomIndexDto> customIndexDtoList) {
+		registerColumn(tbName, "type", "text", customIndexDtoList, INDEXED);
 		for (int i = 1; i <= maxKeySize; i++) {
-			registerColumn(tbName, "p" + i, "text", true);
+			registerColumn(tbName, "p" + i, "text", customIndexDtoList, INDEXED);
 		}
-		registerColumn(tbName, "ophash", "bytea", true);
-		registerColumn(tbName, "superblock", "bytea", true);
-		registerColumn(tbName, "sblockid", "int", true);
-		registerColumn(tbName, "sorder", "int", true);
-		registerColumn(tbName, "content", "jsonb", false);
+		registerColumn(tbName, "ophash", "bytea", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "superblock", "bytea", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "sblockid", "int", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "sorder", "int", customIndexDtoList, INDEXED);
+		registerColumn(tbName, "content", "jsonb", customIndexDtoList, NOT_INDEXED);
 	}
 
 	public TreeMap<String, Map<String, Object>> getObjtables() {
@@ -266,24 +295,78 @@ public class DBSchemaManager {
 			for(int i = 1; i <= keySize; i++) {
 				pks += ", p" +i; 
 			}
+
+			List<CustomIndexDto> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
+				List<CustomIndexDto> indexList = new ArrayList<>();
+				while (rs.next()) {
+					indexList.add(CustomIndexDto.of(rs.getString(1), rs.getString(2)));
+				}
+				return indexList;
+			}, type);
+
 			int update = jdbcTemplate.update(
-					"WITH moved_rows AS ( DELETE FROM " + prevTable + " a WHERE type = ? RETURNING a.*) " + 
+					"WITH moved_rows AS ( DELETE FROM " + prevTable + " a WHERE type = ? RETURNING a.*) " +
 					"INSERT INTO " + tableName + "(type, ophash, superblock, sblockid, sorder, content " + pks + ") " +
-					"SELECT type, ophash, superblock, sblockid, sorder, content " + pks + " FROM moved_rows", type);
+					"SELECT type, ophash, superblock, sblockid, sorder, content" + pks + " FROM moved_rows", type);
+
+			List<CustomIndexDto> customIndexDtoList = generateCustomColumnsForTable(tableName);
+
+			StringBuilder columnsForUpdating = new StringBuilder();
+			for (CustomIndexDto c : customIndexDtoList) {
+				if (columnsForUpdating.length() == 0) {
+					columnsForUpdating.append(c.column).append(" = ?");
+				} else {
+					columnsForUpdating.append(",").append(c.column).append(" = ?");
+				}
+			}
+
+			if (valuesForUpdating != null) {
+				valuesForUpdating.forEach(customIndexDto -> {
+					OpObject opObject = formatter.parseObject(customIndexDto.content);
+					Object[] args = new Object[customIndexDtoList.size() + 1];
+					AtomicInteger i = new AtomicInteger();
+
+					customIndexDtoList.forEach(indexField -> {
+						args[i.get()] = getColumnValue(indexField, opObject);
+						i.getAndIncrement();
+					});
+					args[i.get()] = SecUtils.getHashBytes(customIndexDto.hash);
+
+					jdbcTemplate.update(
+							"UPDATE " + tableName + " SET " + columnsForUpdating + " WHERE ophash = ? ", args);
+				});
+			}
+
 			LOGGER.info(String.format("Migrate %d objects of type '%s'.", update, type));
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private void prepareObjTableMapping() {
+	public void prepareObjTableMapping() {
 		for(String tableName : objtables.keySet()) {
 			Integer i = (Integer) objtables.get(tableName).get("keysize");
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
+
+			List<CustomIndexDto> indices = null;
+			LinkedHashMap<String, LinkedHashMap<String, Object>> indexMap = (LinkedHashMap<String, LinkedHashMap<String, Object>>) objtables.get(tableName).get("indices");
+			if (indexMap != null) {
+				indices = new ArrayList<>();
+				for (Map.Entry<String, LinkedHashMap<String, Object>> entry : indexMap.entrySet()) {
+					LinkedHashMap<String, Object> index = entry.getValue();
+					List<String> indicesList = new ArrayList<>();
+					LinkedHashMap<String, String> fieldList = ((LinkedHashMap<String, String>) index.get("field"));
+					if (fieldList != null) {
+						indicesList.addAll(fieldList.values());
+					}
+					indices.add(CustomIndexDto.of(index.get("column").toString(), indicesList, index.get("type").toString()));
+				}
+			}
+
 			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
 			objTableDefs.put(tableName, ott);
-			registerObjTable(tableName, i);
+			registerObjTable(tableName, i, indices);
 			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
 			if(tps != null) {
 				for(String type : tps.values()) {
@@ -291,8 +374,45 @@ public class DBSchemaManager {
 					ott.types.add(type);
 				}
 			}
+
+			LinkedHashMap<String, LinkedHashMap<String, String>> cii = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(tableName).get("columns");
+			if (cii != null) {
+				for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
+					LinkedHashMap<String, String> arrayColumns = entry.getValue();
+
+					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), indices, NOT_INDEXED);
+				}
+			}
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
+	}
+
+	private static CustomIndexDto getIndexInfoByColumnName(String columnName, List<CustomIndexDto> customIndexDtoList) {
+		for (CustomIndexDto indexInfo : customIndexDtoList) {
+			if (indexInfo.column.equals(columnName)) {
+				return indexInfo;
+			}
+		}
+		return null;
+	}
+
+	private static IndexType getIndexTypeByNameColumn(CustomIndexDto customIndexDTO, IndexType basicIndexType) {
+		IndexType indexType = basicIndexType;
+		switch (customIndexDTO.type) {
+			case "GIN": {
+				indexType = GIN;
+				break;
+			}
+			case "GIST": {
+				indexType = GIST;
+				break;
+			}
+			case "": {
+				indexType = INDEXED;
+				break;
+			}
+		}
+		return indexType;
 	}
 
 	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
@@ -305,9 +425,8 @@ public class DBSchemaManager {
 					clb.append(", ");
 				}
 				clb.append(c.colName).append(" ").append(c.colType);
-				if (c.index) {
-					indx.add(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-							c.tableName, c.colName));
+				if(c.index != NOT_INDEXED) {
+					indx.add(generateIndexQuery(c));
 				}
 			}
 			String createTable = String.format("create table %s (%s)", tableName, clb.toString());
@@ -328,6 +447,106 @@ public class DBSchemaManager {
 					throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ",
 							c.colName, tableName));
 				}
+			}
+		}
+	}
+
+	private String generateIndexQuery(ColumnDef c) {
+		if (c.index.equals(INDEXED)) {
+			return String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
+					c.tableName, c.colName);
+		} else if (c.index.equals(GIN)) {
+				return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", c.tableName, c.colName,
+						c.tableName, c.colName);
+		} else if (c.index.equals(GIST)) {
+				return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
+						c.tableName, c.colName);
+		}
+
+		return null;
+	}
+
+	public String generateQueryForExtractingDataByIndices(String table, String column, String index, String key) {
+		ColumnDef columnDef = null;
+		List<ColumnDef> clfs = schema.get(table);
+		if (clfs == null) {
+			throw new IllegalArgumentException("Table definition wa not found");
+		}
+		for (ColumnDef cld : clfs) {
+			if (cld.colName.equals(column)) {
+				columnDef = cld;
+				break;
+			}
+		}
+
+		if (columnDef == null) {
+			throw new IllegalArgumentException("Index type is not specified");
+		}
+
+		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, index, generateArgs(table, column, key));
+	}
+
+	private String getOnlyColumnType(String table, String column) {
+		String columnType = "";
+
+		for (ColumnDef cld : schema.get(table)) {
+			if (cld.colName.equals(column)) {
+				columnType = cld.colType.contains(" ") ? cld.colType.split(" ")[0] : cld.colType;
+				break;
+			}
+		}
+
+		return columnType;
+	}
+
+	public Object generateArgs(String table, String column, String key) {
+		Object args;
+		String columnType = getOnlyColumnType(table, column);
+
+		switch (columnType) {
+			case "bytea": {
+				String[] keySplit = null;
+				if (key.contains(":")) {
+					keySplit = key.split(":");
+				}
+				args = "\\x" + ((keySplit == null) ? key : keySplit[keySplit.length - 1]);
+				break;
+			}
+			case "jsonb": {
+				PGobject pGobject = new PGobject();
+				pGobject.setType("jsonb");
+				try {
+					if (!key.startsWith("\"")) {
+						key = "\"" + key + "\"";
+					}
+					pGobject.setValue(key);
+				} catch (SQLException e) {
+					throw new IllegalArgumentException(e);
+				}
+				args = pGobject;
+				break;
+			}
+			default: {
+				return key;
+			}
+		}
+
+		return args;
+	}
+
+	private String getExpressionSignWithColumnName(ColumnDef columnDef, String index, Object args) {
+		switch (columnDef.index) {
+			case INDEXED : {
+				return columnDef.colName + " = '" + args + "'";
+			}
+			case GIN : {
+				return columnDef.colName + " @> '[{\"" + index + "\": " + Arrays.toString(new Object[]{args}) + "}]'";
+			}
+			case GIST : {
+				throw new IllegalArgumentException("GIST index not implemented");
+			}
+			default: {
+				return columnDef.colName + " = '" + args + "'";
 			}
 		}
 	}
@@ -364,44 +583,237 @@ public class DBSchemaManager {
 		return s;
 	}
 
-	
-	
-	public void insertObjIntoTable(String type, CompoundKey pkey, OpObject obj, byte[] superBlockHash, 
-			int sblockid, int sorder, JdbcTemplate jdbcTemplate) {
-		String table = getTableByType(type);
-		int ksize = getKeySizeByType(type);
-		if (pkey.size() > ksize) {
-			throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+	public Object getColumnValue(CustomIndexDto customIndexDTO, OpObject obj) {
+		switch (customIndexDTO.type) {
+			case "jsonb" : {
+				try {
+					PGobject content = new PGobject();
+					content.setType("jsonb");
+					Object[] res = new Object[customIndexDTO.field.size()];
+					int amountTags = 0, reInd = 0;;
+					for (int i = 0; i < customIndexDTO.field.size(); i++) {
+						Object o = getObjectByFieldName(obj, customIndexDTO.field.get(i), getLastFieldValue(customIndexDTO.field.get(i)));
+						if (o != null) {
+							res[i] = o;
+							amountTags++;
+						}
+					}
+					Object[] re = new Object[amountTags];
+					for (Object o : res) {
+						if (o != null) {
+							re[reInd] = o;
+							reInd++;
+						}
+					}
+					content.setValue(amountTags > 0 ? formatter.fullObjectToJson(re) : null);
+					return content;
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "text" : {
+				try {
+					return obj.getStringValue(customIndexDTO.field.get(0));
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "bytea" : {
+				try {
+					return SecUtils.getHashBytes(obj.getStringValue(customIndexDTO.field.get(0)));
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "integer" : {
+				try {
+					return obj.getIntValue(customIndexDTO.field.get(0), 0);
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			case "bigint" : {
+				try {
+					return obj.getLongValue(customIndexDTO.field.get(0), 0);
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			default: {
+				return null;
+			}
 		}
-		
-		Object[] args = new Object[6 + ksize];
-		args[0] = type;
-		String ophash = obj.getParentHash();
-		args[1] = SecUtils.getHashBytes(ophash);
-		args[2] = superBlockHash;
-		
-		args[3] = sblockid;
-		args[4] = sorder;
-		PGobject contentObj = new PGobject();
-		contentObj.setType("jsonb");
-		try {
-			contentObj.setValue(formatter.objToJson(obj));
-		} catch (SQLException es) {
-			throw new IllegalArgumentException(es);
-		}
-		args[5] = contentObj;
-		pkey.toArray(args, 6);
-		
-
-		jdbcTemplate.update("INSERT INTO " + table
-				+ "(type,ophash,superblock,sblockid,sorder,content," + generatePKString(table, "p%1$d", ",")+") "
-				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);		
 	}
 
-	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {
+	public String getLastFieldValue(String fied) {
+		if (fied.contains(".")) {
+			String[] finalNames = fied.split("\\.");
+			return finalNames[finalNames.length - 1];
+		}
+		return fied;
+	}
+
+	public Object getObjectByFieldName(Object opObject, String field, String finalName) {
+		if (field.contains(".")) {
+			String[] fields = field.split("\\.", 2);
+			Object loadedObj = getObjectForField(opObject, fields[0]);
+			return getObjectByFieldName(loadedObj, fields[1], finalName);
+		} else {
+			Object loadedObj = getObjectForField(opObject, field);
+			if (loadedObj == null) {
+				return null;
+			}
+			if (loadedObj instanceof List) {
+				if (!((List<Object>) loadedObj).isEmpty()) {
+					Map<String, Object> res = new HashMap<>();
+					res.put(finalName, loadedObj);
+					return res;
+				}
+				return null;
+			} else if (loadedObj instanceof Map) {
+				return Collections.singletonList(loadedObj);
+			} else {
+				Map<String, Object> res = new HashMap<>();
+				res.put(finalName, Collections.singletonList(loadedObj));
+				return res;
+			}
+		}
+	}
+
+	public Object getObjectForField(Object obj, String field) {
+		if (obj instanceof  OpObject) {
+			return ((OpObject) obj).getObjectValue(field);
+		}
+		if (obj instanceof Map) {
+			Map<String, Object> res = (Map<String, Object>) obj;
+			return res.get(field);
+		} else if (obj instanceof List) {
+			List<Object> objectList = (List<Object>) obj;
+			List<Object> loadedObjs = new LinkedList<>();
+			for (Object o : objectList) {
+				Object lObject = getObjectForField(o, field);
+				if (lObject != null && o != lObject) {
+					if (lObject instanceof List) {
+						loadedObjs.addAll((List) lObject);
+					} else {
+						loadedObjs.add(lObject);
+					}
+				}
+			}
+			return loadedObjs;
+		} else {
+			return obj;
+		}
+	}
+
+	public static class CustomIndexDto {
+		public String column;
+		private List<String> field;
+		private String type;
+		private String hash;
+		private String content;
+
+		private CustomIndexDto() {
+
+		}
+
+		public static CustomIndexDto of(String column, List<String> field, String type) {
+			CustomIndexDto customIndexDTO = new CustomIndexDto();
+			customIndexDTO.column = column;
+			customIndexDTO.field = field;
+			customIndexDTO.type = type;
+
+			return customIndexDTO;
+		}
+
+		public static CustomIndexDto of(String ophash, String content) {
+			CustomIndexDto customIndexDTO = new CustomIndexDto();
+			customIndexDTO.hash = ophash;
+			customIndexDTO.content = content;
+
+			return customIndexDTO;
+		}
+	}
+
+	public HashMap<String, Object> getMapIndicesForTable(String table) {
+		HashMap<String, Object> tableColumnIndices = new HashMap();
+
+		if (table == null) {
+			for (String key : schema.keySet()) {
+				List<ColumnDef> cdfs = schema.get(key);
+				Map<String, List<String>> indices = new HashMap<>();
+				for (ColumnDef cdf : cdfs) {
+					if (cdf.index != NOT_INDEXED) {
+						if (cdf.indexedField == null) {
+							indices.put(cdf.colName, Collections.EMPTY_LIST);
+						} else {
+							indices.put(cdf.colName, cdf.indexedField);
+						}
+					}
+				}
+				tableColumnIndices.put(key, indices);
+			}
+		} else {
+			List<ColumnDef> cdfs = schema.get(table);
+			if (cdfs != null) {
+				Map<String, List<String>> indices = new HashMap<>();
+				for (ColumnDef cdf : cdfs) {
+					if (cdf.index != NOT_INDEXED) {
+						if (cdf.indexedField == null) {
+							indices.put(cdf.colName, Collections.EMPTY_LIST);
+						} else {
+							indices.put(cdf.colName, cdf.indexedField);
+						}
+					}
+				}
+				tableColumnIndices.put(table, indices);
+			}
+		}
+
+		return tableColumnIndices;
+	}
+
+	public List<CustomIndexDto> generateCustomColumnsForTable(String table) {
+		List<CustomIndexDto> columns = new ArrayList<>();
+
+		if (table.equals(OBJS_TABLE)) {
+			return columns;
+		}
+
+		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) objtables.get(table).get("columns");
+		if (cii != null) {
+			for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
+				LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+				List<String> columnList = new ArrayList<>();
+				LinkedHashMap<String, String> fieldList = ((LinkedHashMap<String, String>) arrayColumns.get("field"));
+				if (fieldList != null) {
+					columnList.addAll(fieldList.values());
+				}
+
+				columns.add(CustomIndexDto.of(arrayColumns.get("name").toString(), columnList, arrayColumns.get("type").toString()));
+			}
+		}
+
+		return columns;
+	}
+
+	public String generateColumnNames(List<CustomIndexDto> columns) {
+		AtomicReference<String> customColumns = new AtomicReference<>("");
+		columns.forEach(column -> {
+			if (customColumns.get().isEmpty()) {
+				customColumns.set(customColumns.get() + column.column);
+			} else {
+				customColumns.set(customColumns.get() + ", " + column.column);
+			}
+		});
+
+		return customColumns.get();
+	}
+
+	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, String columns, AtomicReference<String> amountValuesForCustomColumns) {
 		jdbcTemplate.batchUpdate("INSERT INTO " + table
-				+ "(type,ophash,superblock,sblockid,sorder,content," + generatePKString(table, "p%1$d", ",")+") "
-				+ " values(?,?,?,?,?,?," + generatePKString(table, "?", ",")+ ")", args);
+				+ "(type,ophash,superblock,sblockid,sorder,content" + (columns.isEmpty() ? "," : "," + columns + ",") + generatePKString(table, "p%1$d", ",") + ") "
+				+ " values(?,?,?,?,?,?," + amountValuesForCustomColumns + generatePKString(table, "?", ",") + ")", args);
 	}
 
 	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {
@@ -428,7 +840,7 @@ public class DBSchemaManager {
 					clb.append(", ");
 				}
 				clb.append(c.colName).append(" ").append(c.colType);
-				if (c.index) {
+				if (c.index.equals(INDEXED)) {
 					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
 							c.tableName, c.colName));
 				}

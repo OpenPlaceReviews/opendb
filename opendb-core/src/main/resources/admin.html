@@ -18,6 +18,7 @@
     <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
     <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
+    <li><a data-toggle="tab" href="#indices" id="indices-tab">Indices</a></li>
     <li><a data-toggle="tab" href="#history" id="history-tab">History</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
     <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
@@ -84,6 +85,22 @@
         <ul id="objects-list">
         </ul>
 
+    </div>
+
+    <div id="indices" class="tab-pane fade">
+        <h3>Table</h3>
+        <label>Select table:&nbsp;</label><select id="table-indices-list">
+    </select>
+        <h3>Column</h3>
+        <label>Select column:&nbsp;</label><select id="index-table-list">
+    </select>
+        <h3>Index</h3>
+        <label>Select index:&nbsp;</label><select id="column-index-table-list">
+    </select>
+        <label>Input search key:</label><input type="text" id="index-search-field"/>
+        <input type="submit" value="Search by key" id="load-table-index-btn">
+        <ul id="index-obj-list">
+        </ul>
     </div>
 
     <div id="errors" class="tab-pane fade">
@@ -267,6 +284,7 @@
         loadStatusData();
         loadQueueData();
         loadObjectsData();
+        loadIndexData();
         loadBlocksData();
         loadErrorsData();
         loadIpfsStatusData();
@@ -365,6 +383,58 @@
                 }
                 $("#objects-list").html(items);
             });
+        }
+    }
+    
+    var globalTables = {};
+    var globalColumns = {};
+    var globalInit = false;
+    function loadIndexData() {
+        let selectTable = $("#table-indices-list").val();
+        if (selectTable == null) {
+            $.getJSON("/api/indices-by-table", function (data) {
+                var itemsTable = "";
+                for (var key in data) {
+                    globalTables[key] = data[key];
+                    itemsTable += "<option value = '" + key + "' " +
+                        (selectTable == key ? "selected" : "") + ">" + key + "</option>";
+                }
+                $("#table-indices-list").html(itemsTable);
+            });
+        } else if (selectTable != null && globalTables[selectTable]) {
+            var items = "";
+            let obj = globalTables[selectTable];
+            if (globalInit == false) {
+                for (var key in obj) {
+                    globalColumns[key] = obj[key];
+                    items += "<option value = '" + key + "' " +
+                        (selectTable == key ? "selected" : "") + ">" + key + "</option>";
+                }
+                globalInit = true;
+                $("#index-table-list").html(items);
+            }
+            let selectColumn = $("#index-table-list").val();
+            if (selectColumn == null) {
+                let columnItems = "";
+                for (var key in obj) {
+                    var list = obj[key];
+                    for (var i = 0; i <list.length; i++) {
+                        globalColumns[key] = obj[key];
+                        columnItems += "<option value = '" + key + "' " +
+                            (selectColumn == key ? "selected" : "") + ">" + key + "</option>";
+                    }
+                }
+                $("#column-index-table-list").html(columnItems);
+            } else if (selectColumn != null && globalColumns[selectColumn]) {
+                let columnItems = "";
+                let obj1 = globalColumns[selectColumn];
+                for (var i = 0; i <obj1.length; i++) {
+                    columnItems += "<option value = '" + obj1[i] + "' " +
+                        (selectColumn == obj1[i] ? "selected" : "") + ">" + obj1[i] + "</option>";
+                }
+                $("#column-index-table-list").html(columnItems);
+            }
+
         }
     }
 
@@ -553,6 +623,13 @@
         $("#objects-type-list").change(function() {
             loadObjectsData();
         });
+        $("#table-indices-list").change(function() {
+            globalInit = false;
+            loadIndexData();
+        });
+        $("#index-table-list").change(function() {
+            loadIndexData();
+        });
 
         $("#block-create-btn").click(function(){
             $.post("/api/mgmt/create", {})
@@ -619,6 +696,26 @@
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
         });
 
+        $("#load-table-index-btn").click(function () {
+            var obj = {
+                "table":$("#table-indices-list").val(),
+                "column":$("#index-table-list").val(),
+                "index":$("#column-index-table-list").val(),
+                "key":$("#index-search-field").val()
+            }
+            $.get("/api/indices", obj)
+                .done(function (data) {
+                    var items = "";
+                    for (var i = 0; i < data.length; i++) {
+                        var obj = data[i];
+                        items += "<br><summary><b>OBJ ID: " + obj.id  +"</b></summary><pre>" +
+                            JSON.stringify(obj, null, 4) + "</pre>";
+                    }
+                    $("#index-obj-list").html(items);
+                })
+                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+        });
+
         $("#load-history-btn").click(function () {
            var obj = {
                "type":$("#history-type-list").val(),
@@ -626,7 +723,6 @@
                "limit":$("#history-limit-field").val(),
                "sort":$('.history-checkbox-sort:checked').val()
            };
-           console.log($('.history-checkbox-sort:checked').val());
            $.get("/api/history", obj)
                .done(function(data) {
                    var items = "";

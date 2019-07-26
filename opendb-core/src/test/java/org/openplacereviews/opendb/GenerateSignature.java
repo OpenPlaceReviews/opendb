@@ -11,22 +11,16 @@ public class GenerateSignature {
 	public static void main(String[] args) throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();
 		String msg = "{\n" +
-				"\t\t\"type\" : \"sys.vote\",\n" +
-				"\t\t\"signed_by\" : \"openplacereviews:test_1\",\n" +
-				"\t\t\"edit\" : [{\n" +
-				"\t\t\t\"id\" : [\"vote\", \"osm.place\"],\n" +
-				"\t\t\t\"change\" : {\n" +
-				"\t\t\t\t\"votes\" : {\n" +
-				"\t\t\t\t\t\"append\": {\n" +
-				"\t\t\t\t\t\t\"user\" :[\"openplacereviews:test_2\"],\n" +
-				"\t\t\t\t\t\t\"vote\" : -1\n" +
-				"\t\t\t\t\t}\n" +
-				"\t\t\t\t}\n" +
-				"\t\t\t},\n" +
-				"\t\t\t\"current\" : {}\n" +
-				"\t\t}],\n" +
-				"\t\t\"hash\": \"json:sha256:8ce4a56dd31ae2a43ac61c33c4ac2211221f0cee04ee0c594b2a06ffac4bc088\",\n" +
-				"\t\t\"signature\": \"ECDSA:base64:MEUCIQC3zX/Ug0R8ahxfC4PMrqgam6iVSv3/IlRhqMrtl+0LAwIgLtRRa/6B2Re9ffNpPVauIz736XJg03vggSczqUfqfKg=\"\n" +
+				"\t\t\"type\"  : \"sys.signup1\",\n" +
+				"\t\t\"signed_by\": \"openplacereviews1\",\n" +
+				"\t\t\"new\": [{\n" +
+				"\t\t\t\"id\": [\"openplacereviews11\"],\n" +
+				"\t\t\t\"name\" : \"openplacereviews12\",\n" +
+				"\t\t\t\"osm_id\":\"123234\",\n" +
+				"\t\t\t\"algo\": \"EC\",\n" +
+				"\t\t\t\"auth_method\": \"pwd\",\n" +
+				"\t\t\t\"pubkey\": \"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==\"\n" +
+				"\t\t}]\n" +
 				"\t}";
 
 		OpOperation opOperation = formatter.parseOperation(msg);

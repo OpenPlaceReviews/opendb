@@ -28,6 +28,8 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -83,6 +85,24 @@ public class DBConsensusManager {
 
 	public String getSuperblockHash() {
 		return dbManagedChain.getSuperBlockHash();
+	}
+
+	public Map<String, Object> getMapIndicesForTable(String table) {
+		return dbSchema.getMapIndicesForTable(table);
+	}
+
+	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) {
+		return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
+			@Override
+			public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				List<OpObject> res = new LinkedList<>();
+				while (rs.next()) {
+					res.add(formatter.parseObject(rs.getString(1)));
+				}
+
+				return res;
+			}
+		});
 	}
 
 	// mainchain could change
@@ -601,9 +621,14 @@ public class DBConsensusManager {
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
-				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId);
 				String table = dbSchema.getTableByType(type);
-				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate);
+				List<CustomIndexDto> customIndexDtoList = dbSchema.generateCustomColumnsForTable(table);
+				String columns = dbSchema.generateColumnNames(customIndexDtoList);
+				AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
+				customIndexDtoList.forEach(customIndexDto -> amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,"));
+
+				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, customIndexDtoList);
+				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, columns, amountValuesForCustomColumns);
 			}
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 					blc.getRules());
@@ -621,7 +646,7 @@ public class DBConsensusManager {
 	}
 
 	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
-												   byte[] superBlockHash, Map<String, Long> opsId) {
+												   byte[] superBlockHash, Map<String, Long> opsId, List<CustomIndexDto> customIndexDtoList) {
 
 		List<Object[]> insertBatch = new ArrayList<>(objects.size());
 		int ksize = dbSchema.getKeySizeByType(type);
@@ -630,6 +655,9 @@ public class DBConsensusManager {
 			Entry<CompoundKey, OpObject> e = it.next();
 			CompoundKey pkey = e.getKey();
 			OpObject obj = e.getValue();
+			if (obj == null) {
+				continue;
+			}
 			long l = opsId.get(obj.getParentHash());
 			int sblockid = OUtils.first(l);
 			int sorder = OUtils.second(l);
@@ -638,7 +666,7 @@ public class DBConsensusManager {
 				throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
 			}
 
-			Object[] args = new Object[6 + ksize];
+			Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
 			args[0] = type;
 			String ophash = obj.getParentHash();
 			args[1] = SecUtils.getHashBytes(ophash);
@@ -654,7 +682,14 @@ public class DBConsensusManager {
 				throw new IllegalArgumentException(es);
 			}
 			args[5] = contentObj;
-			pkey.toArray(args, 6);
+
+			AtomicInteger i = new AtomicInteger(6);
+			customIndexDtoList.forEach(customIndexDto -> {
+				args[i.get()] = dbSchema.getColumnValue(customIndexDto, obj);
+				i.getAndIncrement();
+			});
+
+			pkey.toArray(args, i.get());
 
 			insertBatch.add(args);
 		}
