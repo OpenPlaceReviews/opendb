@@ -578,9 +578,10 @@
             });
                 items += "<br><li><b>Operation</b>: " + op.type;
                 items += "<br><b>Hash</b>: " + op.hash;
-                items += "<br><b>Added/removed objects</b>: " +
+                items += "<br><b>Added/removed/edited objects</b>: " +
                     (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
-                    (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0"));
+                    (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + " / " +
+                    (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0"));
                 if(op.create && op.create.length > 0) {
                     items += "<br><b>Name</b>: " + op.create[0].id;
                 } else if(op.delete && op.delete.length > 0) {

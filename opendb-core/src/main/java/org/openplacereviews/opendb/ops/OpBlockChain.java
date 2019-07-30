@@ -728,6 +728,18 @@ public class OpBlockChain {
 		}
 	}
 
+	public void getObjectHeaders(String type, ObjectsSearchRequest request) {
+		if (isNullBlock()) {
+			return;
+		}
+		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
+		if(oi == null) {
+			parent.getObjectHeaders(type, request);
+		} else {
+			fetchAllObjectHeaders(type, request);
+		}
+	}
+
 	public void getObjects(String type, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;
@@ -760,6 +772,19 @@ public class OpBlockChain {
 		}
 		if(request.limit == -1 || request.result.size() < request.limit) {
 			parent.fetchAllObjects(type, request);
+		}
+	}
+
+	private void fetchAllObjectHeaders(String type, ObjectsSearchRequest request) {
+		if(isNullBlock()) {
+			return;
+		}
+		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
+		if(o != null) {
+			o.fetchAllObjectHeaders(request);
+		}
+		if(request.limit == -1 || request.resultWithHeaders.size() < request.limit) {
+			parent.fetchAllObjectHeaders(type, request);
 		}
 	}
 
@@ -1100,6 +1125,7 @@ public class OpBlockChain {
 		public boolean requestCache = false;
 
 		public List<OpObject> result = new ArrayList<OpObject>();
+		public HashSet<List<String>> resultWithHeaders = new HashSet<>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
 
