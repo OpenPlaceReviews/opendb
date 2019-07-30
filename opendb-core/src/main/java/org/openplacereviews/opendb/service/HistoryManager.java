@@ -251,7 +251,8 @@ public class HistoryManager {
 					prevObj.setFieldByExpr(fieldExpr, currentObj);
 				}
 			} else if (OP_CHANGE_SET.equals(opId)) {
-				prevObj.setFieldByExpr(fieldExpr, null);
+				Object previousObject = getValueForField(fieldExpr, currentEdit);
+				prevObj.setFieldByExpr(fieldExpr, previousObject);
 			} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 				Object currentValue = prevObj.getFieldByExpr(fieldExpr);
 				prevObj.setFieldByExpr(fieldExpr, ((Number) currentValue).longValue() - 1);
