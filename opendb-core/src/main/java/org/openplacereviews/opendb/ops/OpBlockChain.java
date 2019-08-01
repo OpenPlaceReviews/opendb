@@ -1049,7 +1049,7 @@ public class OpBlockChain {
 						} else if (oldObject instanceof Map) {
 							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
 							if (value != null) {
-								((Map<String, Object>) oldObject).put(String.valueOf(value.get(F_USER)), value.get(F_VOTE));
+								((Map<String, Object>) oldObject).putAll(value);
 								checkCurrentFieldSpecified = true;
 							}
 						} else {
@@ -1078,6 +1078,7 @@ public class OpBlockChain {
 					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr);
 				}
 			}
+			newObject.parentHash = u.getRawHash();
 			newObject.makeImmutable();
 			ctx.newObjsCache.put(newObject, currentObject);
 		}
