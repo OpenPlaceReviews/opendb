@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.google.openlocationcode.OpenLocationCode;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -54,7 +55,9 @@ public class OpExprEvaluator {
 	public static final String FUNCTION_OP_OPERATION_TYPE = "op:op_type";
 	public static final String FUNCTION_OP_GET_OBJECT_BY_FIELD = "op:obj_get";
 	public static final String FUNCTION_OP_FIELDS_CHANGED = "op:fields_changed";
-	
+	public static final String FUNCTION_OP_PLACE_ID = "op:place_id";
+	public static final String FUNCTION_OP_NAME_SIMPLIFY = "op:name_simplify";
+
 	
 	public static final String F_NEW = "new";
 	public static final String F_OLD = "old";
@@ -339,6 +342,24 @@ public class OpExprEvaluator {
 				return F_DELETE;
 			}
 			throw new UnsupportedOperationException(FUNCTION_OP_OPERATION_TYPE + " op doesn't have any ops type");
+		case FUNCTION_OP_PLACE_ID:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+			Object obj3 = getObjArgument(functionName, args, 2, false);
+
+			if (obj1 instanceof Number && obj2 instanceof Number) {
+				return generateStrId((double) obj1, (double) obj2, (String) obj3);
+			}
+			return null;
+		case FUNCTION_OP_NAME_SIMPLIFY:
+			obj1 = getObjArgument(functionName, args, 0, false);
+			obj2 = getObjArgument(functionName, args, 1, false);
+
+			if (obj2 == null) {
+				return obj1;
+			}
+
+			return obj1 + ((String)obj2).replaceAll(" ", "");
 		case FUNCTION_OP_GET_OBJECT_BY_FIELD:
 			obj1 = getObjArgument(functionName, args, 0, false);
 			Object obj = obj1;
@@ -671,6 +692,20 @@ public class OpExprEvaluator {
 			s += "  ";
 		}
 		return s;
+	}
+
+	private static final int CODE_LENGTH = 6;
+	public static String encode(double latitude, double longitude) {
+		String code = OpenLocationCode.encode(latitude, longitude, CODE_LENGTH);
+		return code.substring(0, CODE_LENGTH);
+	}
+	public static Object generateStrId(double latitude, double longitude, String onlyEncode) {
+		String code = encode(latitude, longitude);
+		if (onlyEncode.equals("true")) {
+			return code;
+		}
+		Integer suffix = new Random().nextInt(Integer.MAX_VALUE);
+		return Arrays.asList(code, String.valueOf(suffix));
 	}
 
 	private Object unwrap(JsonElement j) {
