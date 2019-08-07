@@ -411,13 +411,10 @@ public class OpExprEvaluator {
 					arrayRes.add((JsonElement) o);
 				} else if (o instanceof Number) {
 					arrayRes.add((Number) o);
-				} else if (o instanceof List) {
-					List<String> list = (List<String>) o;
-					for (String s : list) {
-						arrayRes.add(s);
-					}
 				} else {
-					arrayRes.add((String) o);
+					if (o != null) {
+						arrayRes.add((String) o);
+					}
 				}
 			}
 			return arrayRes;

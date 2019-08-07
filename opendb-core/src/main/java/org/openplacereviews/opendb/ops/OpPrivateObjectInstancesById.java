@@ -106,7 +106,7 @@ class OpPrivateObjectInstancesById {
 			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> k = it.next();
-				if (!mp.containsKey(k.getValue().getId())) {
+				if (!mp.containsKey(k.getKey())) {
 					if (k.getValue() != OpObject.NULL) {
 						request.resultWithHeaders.add(k.getValue().getId());
 					}

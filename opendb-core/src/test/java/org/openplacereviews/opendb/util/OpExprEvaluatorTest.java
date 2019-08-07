@@ -4,16 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import org.junit.Test;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
 import java.security.KeyPair;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -225,33 +222,6 @@ public class OpExprEvaluatorTest {
 		assertEquals(1, OpExprEvaluator.parseExpression("auth:has_sig_roles(this, set:all('administrator', 'master'))").evaluateObject(ectx));
 		assertEquals(0, OpExprEvaluator.parseExpression("auth:has_sig_roles(this, 'owner')").evaluateObject(ectx));
 		assertEquals(0, OpExprEvaluator.parseExpression("auth:has_sig_roles(this, set:all('administrator', 'owner'))").evaluateObject(ectx));
-	}
-
-	@Test
-	public void testGeneratingPlaceId() throws FailedVerificationException {
-		JsonFormatter jsonFormatter = new JsonFormatter();
-		OpBlockChain blc = generateBlockchain();
-
-		OpOperation opOperation = new OpOperation();
-		OpObject opObject = jsonFormatter.parseObject("{\"osm\": [{\"id\": [\"6588793399\"], \"lat\": -4.4069492, \"lon\": 15.3241579, \"tags\": {\"name\": \"Chez Putsia\", \"amenity\": \"pub\", \"building\": \"yes\", \"addr:city\": \"Kinshasa\", \"addr:street\": \"Boulevard Salongo\", \"building:levels\": \"1\", \"building:condition\": \"poor\", \"is_in:admin_level7\": \"Lemba\", \"is_in:admin_level8\": \"Livulu\"}, \"type\": \"node\"}]}");
-		opOperation.addCreated(opObject);
-
-		Map<String, Object> ctx = new HashMap<>();
-		ctx.put("lat", opObject.getFieldByExpr("osm[0].lat"));
-		ctx.put("lon", opObject.getFieldByExpr("osm[0].lon"));
-		ctx.put("name", opObject.getFieldByExpr("osm[0].tags.name"));
-
-		OpExprEvaluator.EvaluationContext ectx = new OpExprEvaluator.EvaluationContext(blc,
-				jsonFormatter.toJsonElement(ctx).getAsJsonObject(), jsonFormatter.toJsonElement(opObject), null, null);
-
-		Object result = OpExprEvaluator.parseExpression("op:place_id(.lat,.lon, 'false')").evaluateObject(ectx);
-		System.out.println(result);
-
-		result = OpExprEvaluator.parseExpression(".name").evaluateObject(ectx);
-		System.out.println(result);
-
-		result = OpExprEvaluator.parseExpression("str:concat(op:place_id(.lat,.lon, 'true'), str:concat('###', op:name_simplify('v1', .name)))").evaluateObject(ectx);
-		System.out.println(result);
 	}
 
 	public Collection<String> getNameTags(Map<String, String> tags) {
