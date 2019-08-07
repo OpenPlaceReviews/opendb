@@ -17,6 +17,7 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
+import javax.activation.UnsupportedDataTypeException;
 import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
@@ -112,7 +113,7 @@ public class OpExprEvaluator {
 		return new OpExprEvaluator(ectx);
 	}
 
-	private Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
+	protected Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) throws UnsupportedDataTypeException {
 		Number n1, n2;
 		Object obj1, obj2;
 		JsonObject object, object1;
@@ -410,6 +411,11 @@ public class OpExprEvaluator {
 					arrayRes.add((JsonElement) o);
 				} else if (o instanceof Number) {
 					arrayRes.add((Number) o);
+				} else if (o instanceof List) {
+					List<String> list = (List<String>) o;
+					for (String s : list) {
+						arrayRes.add(s);
+					}
 				} else {
 					arrayRes.add((String) o);
 				}
@@ -449,7 +455,7 @@ public class OpExprEvaluator {
 		default:
 			break;
 		}
-		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
+		throw new UnsupportedDataTypeException(String.format("Unsupported function '%s'", functionName));
 	}
 
 
@@ -552,7 +558,7 @@ public class OpExprEvaluator {
 		return o instanceof JsonArray;
 	}
 
-	private String getStringArgument(String functionName, List<Object> args, int i) {
+	protected String getStringArgument(String functionName, List<Object> args, int i) {
 		Object o = getObjArgument(functionName, args, i);
 		return o == null ? null : o.toString();
 	}
@@ -561,7 +567,7 @@ public class OpExprEvaluator {
 		return getObjArgument(functionName, args, i, true);
 	}
 
-	private Object getObjArgument(String functionName, List<Object> args, int i, boolean expandSingleArray) {
+	protected Object getObjArgument(String functionName, List<Object> args, int i, boolean expandSingleArray) {
 		validateSize(functionName, args, i);
 		Object obj = args.get(i);
 		if (obj instanceof JsonArray && expandSingleArray) {
@@ -586,7 +592,7 @@ public class OpExprEvaluator {
 		}
 	}
 
-	private Object eval(ExpressionContext expr, EvaluationContext ctx) {
+	protected Object eval(ExpressionContext expr, EvaluationContext ctx) {
 		ParseTree child = expr.getChild(0);
 		if (child instanceof TerminalNode) {
 			TerminalNode t = ((TerminalNode) child);
@@ -633,7 +639,13 @@ public class OpExprEvaluator {
 				}
 			}
 			ctx.exprNested++;
-			Object funcRes = callFunction(functionName, args, ctx);
+			Object funcRes;
+			try {
+				funcRes = callFunction(functionName, args, ctx);
+			} catch (UnsupportedDataTypeException e) {
+				throw new UnsupportedOperationException(e);
+			}
+
 			if (TRACE_EXPRESSIONS) {
 				System.out.println("EXPR:  " + traceExpr.toString() + " = " + funcRes);
 			}

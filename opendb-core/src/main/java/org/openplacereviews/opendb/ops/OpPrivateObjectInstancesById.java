@@ -97,7 +97,7 @@ class OpPrivateObjectInstancesById {
 			Map<CompoundKey, List<String>> mp = (Map<CompoundKey, List<String>>) request.internalMapToFilterDuplicates;
 			for (OpObject o : objects.values()) {
 				if (o != OpObject.NULL) {
-					request.resultWithHeaders.add(o.getStringList(request.field));
+					request.resultWithHeaders.add(o.getId());
 				}
 				mp.put(new CompoundKey(0, o.getId()), o.getId());
 			}
@@ -106,9 +106,9 @@ class OpPrivateObjectInstancesById {
 			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> k = it.next();
-				if (!mp.containsKey(k.getValue().getStringList(request.field))) {
+				if (!mp.containsKey(k.getValue().getId())) {
 					if (k.getValue() != OpObject.NULL) {
-						request.resultWithHeaders.add(k.getValue().getStringList(request.field));
+						request.resultWithHeaders.add(k.getValue().getId());
 					}
 					mp.put(k.getKey(), k.getValue());
 				}

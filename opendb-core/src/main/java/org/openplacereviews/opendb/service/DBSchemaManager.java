@@ -692,6 +692,9 @@ public class DBSchemaManager {
 			List<Object> loadedObjs = new LinkedList<>();
 			for (Object o : objectList) {
 				Object lObject = getObjectForField(o, field);
+				if (lObject instanceof Number) {
+					lObject = ((Number)lObject).toString();
+				}
 				if (lObject != null && o != lObject) {
 					if (lObject instanceof List) {
 						loadedObjs.addAll((List) lObject);

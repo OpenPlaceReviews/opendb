@@ -1129,7 +1129,6 @@ public class OpBlockChain {
 		public HashSet<List<String>> resultWithHeaders = new HashSet<>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
-		public String field;
 
 		Object internalMapToFilterDuplicates;
 		OpPrivateObjectInstancesById objToSetCache;
