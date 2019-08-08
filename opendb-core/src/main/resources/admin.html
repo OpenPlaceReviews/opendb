@@ -20,6 +20,7 @@
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
     <li><a data-toggle="tab" href="#indices" id="indices-tab">Indices</a></li>
     <li><a data-toggle="tab" href="#history" id="history-tab">History</a></li>
+    <li><a data-toggle="tab" href="#bot" id="bot-tab">Bots</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
     <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
 </ul>
@@ -113,15 +114,15 @@
     <div id="history" class="tab-pane fade">
         <h3>History</h3>
         <label>Select history type:&nbsp;</label><select id="history-type-list">
-            <option value="user">User</option>
-            <option value="object">Object</option>
-            <option value="type">Type</option>
+        <option value="user">User</option>
+        <option value="object">Object</option>
+        <option value="type">Type</option>
     </select>
         <br>
         <label>Time sorting ASC/DESC:&nbsp;</label>
         <div>
-           <label>ASC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="ASC" id="load-history-sort-asc"/>
-           <label>DESC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="DESC" id="load-history-sort-desc" checked/>
+            <label>ASC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="ASC" id="load-history-sort-asc"/>
+            <label>DESC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="DESC" id="load-history-sort-desc" checked/>
         </div>
         <label>Input search key:</label><input type="text" id="history-search-field"/>
         <br>
@@ -130,6 +131,18 @@
         <input type="submit" value="Load history" id="load-history-btn">
         <br>
         <ul id="history-list"></ul>
+    </div>
+
+    <div id="bot" class="tab-pane fade">
+        <h3>Bots</h3>
+        <label>Select bot:</label><select id="bot-list">
+    </select>
+        <br>
+        <input type="submit" value="start bot" id="start-bot-btn">
+        <input type="submit" value="stop bot" id="stop-bot-btn">
+        <input type="submit" value="load bot stats" id="load-bot-stats-btn">
+        <br><br>
+        <table id="bot-table" border="1" gridHeight="auto" style="width:400px"></table>
     </div>
 
     <div id="ipfs" class="tab-pane fade">
@@ -282,6 +295,7 @@
 
     function loadAllData() {
         loadStatusData();
+        loadBotData();
         loadQueueData();
         loadObjectsData();
         loadIndexData();
@@ -296,12 +310,14 @@
             $("#admin-actions").show();
             $("#admin-login-div").hide();
             $("#reg").show();
+            $("#bot-tab").show();
             $("#reg-tab").show();
             $("#ipfs-tab").show();
         } else {
             $("#admin-actions").hide();
             $("#admin-login-div").show();
             $("#reg-tab").hide();
+            $("#bot-tab").hide();
             $("#reg").hide();
             $("#ipfs-tab").hide();
         }
@@ -385,7 +401,7 @@
             });
         }
     }
-    
+
     var globalTables = {};
     var globalColumns = {};
     var globalInit = false;
@@ -534,6 +550,17 @@
                     $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
                 };
             });
+        });
+    }
+    function loadBotData() {
+        let selectBot = $("#bot-list").val();
+        $.getJSON("/api/bot", function (data) {
+            var botItems = "";
+            for (var key in data) {
+                botItems += "<option value = '" + data[key] + "' " +
+                    (selectBot == data[key] ? "selected" : "") + ">" + data[key] + "</option>";
+            }
+            $("#bot-list").html(botItems);
         });
     }
     function loadQueueData() {
@@ -717,44 +744,82 @@
                 .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
         });
 
-        $("#load-history-btn").click(function () {
-           var obj = {
-               "type":$("#history-type-list").val(),
-               "key":$("#history-search-field").val(),
-               "limit":$("#history-limit-field").val(),
-               "sort":$('.history-checkbox-sort:checked').val()
-           };
-           $.get("/api/history", obj)
-               .done(function(data) {
-                   var items = "";
-                   for (var key in data) {
-                       if (data.hasOwnProperty(key)) {
-                           let arrays = data[key];
-                           items += "<br><li><b>Object id</b>: " + key;
+        $("#start-bot-btn").click(function () {
+            var obj = {
+                "botName":$("#bot-list").val()
+            };
+            $.get("/api/bot/start", obj)
+                .done(function (data) {$("#result").html(data)})
+                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+        });
 
-                           for (var i = 0; i < arrays.length; i++) {
-                           items +="<div class='tabcontent'>";
-                           items += "<br><b>Status</b>: " + arrays[i].status;
-                           items += "<br><b>User</b>: " + arrays[i].userId;
-                           items += "<br><b>Type</b>: " + arrays[i].objType;
-                           items += "<br><b>Date</b>: " + arrays[i].date;
-                           if ('deltaChanges' in arrays[i]) {
-                               items += "<br><details><summary><b>DeltaChanges: </b></summary><pre>" +
-                                   JSON.stringify(arrays[i].deltaChanges, null, 4) + "</pre></details>";
-                           }
-                           if ('objEdit' in arrays[i]) {
-                               items += "<details><summary><b>ObjEdit: </b></summary><pre>" +
-                                   JSON.stringify(arrays[i].objEdit, null, 4) + "</pre></details>";
-                           }
-                           items += "</li></div>";
-                           console.log(items);
-                           }
-                       }
-                   }
-                   $("#history-list").html(items);
-                   loadData();
-                   })
-               .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+        $("#stop-bot-btn").click(function () {
+            var obj = {
+                "botName":$("#bot-list").val()
+            };
+            $.get("/api/bot/stop", obj)
+                .done(function (data) {$("#result").html(data)})
+                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+        });
+
+        $("#load-bot-stats-btn").click(function () {
+            $.get("/api/bot/stats")
+                .done(function (data) {
+                    var rows =
+                        "<tr>" +
+                        "<td>Name</td>" +
+                        "<td>Status</td>" +
+                        "</tr>";
+                    for (var key in data) {
+                        rows +=
+                            "<tr>" +
+                            "<td>  " + key + "  </td>" +
+                            "<td>  " + data[key] + "  </td>" +
+                            "</tr>";
+                    }
+                    $("#bot-table").html(rows);
+                })
+                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+        });
+
+        $("#load-history-btn").click(function () {
+            var obj = {
+                "type":$("#history-type-list").val(),
+                "key":$("#history-search-field").val(),
+                "limit":$("#history-limit-field").val(),
+                "sort":$('.history-checkbox-sort:checked').val()
+            };
+            $.get("/api/history", obj)
+                .done(function(data) {
+                    var items = "";
+                    for (var key in data) {
+                        if (data.hasOwnProperty(key)) {
+                            let arrays = data[key];
+                            items += "<br><li><b>Object id</b>: " + key;
+
+                            for (var i = 0; i < arrays.length; i++) {
+                                items +="<div class='tabcontent'>";
+                                items += "<br><b>Status</b>: " + arrays[i].status;
+                                items += "<br><b>User</b>: " + arrays[i].userId;
+                                items += "<br><b>Type</b>: " + arrays[i].objType;
+                                items += "<br><b>Date</b>: " + arrays[i].date;
+                                if ('deltaChanges' in arrays[i]) {
+                                    items += "<br><details><summary><b>DeltaChanges: </b></summary><pre>" +
+                                        JSON.stringify(arrays[i].deltaChanges, null, 4) + "</pre></details>";
+                                }
+                                if ('objEdit' in arrays[i]) {
+                                    items += "<details><summary><b>ObjEdit: </b></summary><pre>" +
+                                        JSON.stringify(arrays[i].objEdit, null, 4) + "</pre></details>";
+                                }
+                                items += "</li></div>";
+                                console.log(items);
+                            }
+                        }
+                    }
+                    $("#history-list").html(items);
+                    loadData();
+                })
+                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
         });
 
         $("#add-file-btn").click(function () {
@@ -885,7 +950,7 @@
         // convert ArrayBuffer to Array
         const hashArray = Array.from(new Uint8Array(hashBuffer));
 
-        // convert bytes to hex string                  
+        // convert bytes to hex string
         const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('');
         return hashHex;
     }

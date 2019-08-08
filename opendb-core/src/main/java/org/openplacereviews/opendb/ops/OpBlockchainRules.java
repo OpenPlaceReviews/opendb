@@ -53,6 +53,8 @@ public class OpBlockchainRules {
 	public static final String OP_TABLE = OP_TYPE_SYS + "table";
 	// meta  & mapping
 	public static final String OP_OPERATION = OP_TYPE_SYS + "operation";
+	// bot
+	public static final String OP_BOT = OP_TYPE_SYS + "bot";
 	
 	public static final String F_DIGEST = "digest"; // signature
 	public static final String F_ALGO = "algo"; // login, signup, signature
