@@ -505,25 +505,16 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getObjectByIndex(String table, String column, String index, String key) {
+	public List<OpObject> getObjectsByIndex(String table, String column, String index, String key) {
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
 
-		String type = dataManager.getTypesByTable(table).get(0);
+		List<String> types = dataManager.getTypesByTable(table);
 		String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
-		blockchain.retrieveObjectsByIndex(table, type, searchByField, index, key, objectsSearchRequest);
-
-		TreeMap<String, Object> keyMap = new TreeMap<>();
-		keyMap.put(index, Collections.singletonList(key));
-
-		List<OpObject> filteredObjects = new ArrayList<>();
-		for (OpObject opObject : objectsSearchRequest.result) {
-			if (keyMap.equals(dataManager.getObjectByFieldName(opObject, searchByField, index))) {
-				filteredObjects.add(opObject);
-			}
+		for (String type : types) {
+			blockchain.retrieveObjectsByIndex(searchByField, table, type, column, index, key, objectsSearchRequest);
 		}
 
-		objectsSearchRequest.dbResult.addAll(filteredObjects);
-		return objectsSearchRequest.dbResult;
+		return objectsSearchRequest.result;
 	}
 
 	public void setBootstrapList(List<String> bootstrapList) {

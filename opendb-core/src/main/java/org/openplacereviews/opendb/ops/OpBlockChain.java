@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.ops;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.service.DBSchemaManager;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -788,20 +789,29 @@ public class OpBlockChain {
 		}
 	}
 
-	public void retrieveObjectsByIndex(String table, String type, String column, String field, String key, ObjectsSearchRequest request) {
+	public void retrieveObjectsByIndex(String searchByField, String table, String type, String column, String field, String key, ObjectsSearchRequest request) {
 		if (isNullBlock()) {
 			return;
 		}
 		if (dbAccess != null) {
-			request.dbResult.addAll(dbAccess.getObjectsByIndex(table, column, field, key));
-			parent.retrieveObjectsByIndex(table, type, column, field, key, request);
+			request.result.addAll(dbAccess.getObjectsByIndex(table, column, field, key));
+			parent.retrieveObjectsByIndex(searchByField, table, type, column, field, key, request);
 		} else {
 			OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
-			if (oi == null) {
-				parent.retrieveObjectsByIndex(table, type, column, field, key, request);
-			} else {
-				fetchAllObjects(type, request);
+			if (oi != null) {
+				for (OpObject opObject : oi.getAllObjects().values()) {
+					Map<String, List> mapObject = (Map<String, List>) DBSchemaManager.getObjectByFieldName(opObject, searchByField, field);
+					if (mapObject != null) {
+						for (Object s : mapObject.get(field)) {
+							if (String.valueOf(s).equals(key) && !request.result.contains(opObject)) {
+								request.result.add(opObject);
+							}
+						}
+					}
+				}
 			}
+
+			parent.retrieveObjectsByIndex(searchByField, table, type, column, field, key, request);
 		}
 	}
 
@@ -1157,7 +1167,6 @@ public class OpBlockChain {
 		public boolean requestCache = false;
 
 		public List<OpObject> result = new ArrayList<OpObject>();
-		public List<OpObject> dbResult = new ArrayList<OpObject>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
 

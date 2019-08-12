@@ -483,7 +483,7 @@ public class DBSchemaManager {
 			throw new IllegalArgumentException("Index type is not specified");
 		}
 
-		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, index, generateArgs(table, column, key));
+		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, index, generateArgs(table, column, key)) + " AND superblock = ?";
 	}
 
 	private String getOnlyColumnType(String table, String column) {
@@ -653,7 +653,7 @@ public class DBSchemaManager {
 		return fied;
 	}
 
-	public Object getObjectByFieldName(Object opObject, String field, String finalName) {
+	public static Object getObjectByFieldName(Object opObject, String field, String finalName) {
 		if (field.contains(".")) {
 			String[] fields = field.split("\\.", 2);
 			Object loadedObj = getObjectForField(opObject, fields[0]);
@@ -680,7 +680,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	public Object getObjectForField(Object obj, String field) {
+	private static Object getObjectForField(Object obj, String field) {
 		if (obj instanceof  OpObject) {
 			return ((OpObject) obj).getObjectValue(field);
 		}

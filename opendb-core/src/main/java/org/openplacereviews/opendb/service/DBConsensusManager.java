@@ -96,9 +96,6 @@ public class DBConsensusManager {
 		return new ArrayList<>(mapObject.values());
 	}
 
-	public Object getObjectByFieldName(Object opObject, String field, String finalName) {
-		return dbSchema.getObjectByFieldName(opObject, field, finalName);
-	}
 
 	public String getFieldForSearchByIndex(String table, String column, String index) {
 		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) dbSchema.getObjtables().get(table).get("columns");
@@ -373,7 +370,7 @@ public class DBConsensusManager {
 
 					return res;
 				}
-			});
+			}, new Object[] {sbhash});
 		}
 
 		@Override
