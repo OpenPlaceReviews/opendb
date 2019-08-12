@@ -17,7 +17,6 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 
-import javax.activation.UnsupportedDataTypeException;
 import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
@@ -113,10 +112,10 @@ public class OpExprEvaluator {
 		return new OpExprEvaluator(ectx);
 	}
 
-	protected Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) throws UnsupportedDataTypeException {
+	protected Object callFunction(String functionName, List<Object> args, EvaluationContext ctx) {
 		Number n1, n2;
 		Object obj1, obj2;
-		JsonObject object, object1;
+		JsonObject object;
 		switch (functionName) {
 		case FUNCTION_M_MULT:
 			n1 = (Number) getObjArgument(functionName, args, 0);
@@ -452,7 +451,7 @@ public class OpExprEvaluator {
 		default:
 			break;
 		}
-		throw new UnsupportedDataTypeException(String.format("Unsupported function '%s'", functionName));
+		throw new UnsupportedOperationException(String.format("Unsupported function '%s'", functionName));
 	}
 
 
