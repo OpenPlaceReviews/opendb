@@ -731,29 +731,6 @@ public class OpBlockChain {
 		}
 	}
 
-
-	public void getObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
-		if(isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
-		if(oi == null) {
-			parent.getObjectsByOpHash(type, listOpHash, request);
-		} else {
-			request.editVersion = oi.getEditVersion();
-			request.objToSetCache = oi;
-			if (request.requestCache) {
-				CacheObject co = oi.getCacheObject();
-				if (co != null && co.cacheVersion == request.editVersion) {
-					request.cacheObject = co.cacheObject;
-					request.cacheVersion = co.cacheVersion;
-					return;
-				}
-			}
-			fetchAllObjectsByOpHash(type, listOpHash, request);
-		}
-	}
-
 	private void fetchAllObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;
