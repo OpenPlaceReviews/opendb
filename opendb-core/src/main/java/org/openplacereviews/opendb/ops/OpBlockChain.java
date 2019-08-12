@@ -794,6 +794,23 @@ public class OpBlockChain {
 		}
 	}
 
+	public void retrieveObjectsByIndex(String type, String column, String field, String key, ObjectsSearchRequest request) {
+		if (isNullBlock()) {
+			return;
+		}
+		if (dbAccess != null) {
+			request.result.addAll(dbAccess.getObjectsByIndex(type, column, field, key));
+		} else {
+			OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
+			if (oi == null) {
+				parent.retrieveObjectsByIndex(type, column, field, key, request);
+			} else {
+				//retrieveAllObjectsByIndex();
+				fetchAllObjects(type, request);
+			}
+		}
+	}
+
 	private void fetchAllObjects(String type, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;
@@ -807,6 +824,7 @@ public class OpBlockChain {
 		}
 	}
 
+	@Deprecated
 	private void fetchAllObjectHeaders(String type, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;
@@ -1143,6 +1161,8 @@ public class OpBlockChain {
 		OpObject getObjectById(String type, CompoundKey k);
 
 		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
+
+		List<OpObject> getObjectsByIndex(String type, String column, String field, String key);
 
 		OpOperation getOperation(String rawHash);
 

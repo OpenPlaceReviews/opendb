@@ -117,20 +117,6 @@ public class DBConsensusManager {
 		return null;
 	}
 
-	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) {
-		return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
-			@Override
-			public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
-				List<OpObject> res = new LinkedList<>();
-				while (rs.next()) {
-					res.add(formatter.parseObject(rs.getString(1)));
-				}
-
-				return res;
-			}
-		});
-	}
-
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
@@ -373,6 +359,22 @@ public class DBConsensusManager {
 			} finally {
 				readLock.unlock();
 			}
+		}
+
+		@Override
+		public List<OpObject> getObjectsByIndex(String type, String column, String index, String key) {
+			String table = dbSchema.getTableByType(type);
+			return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
+				@Override
+				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
+					List<OpObject> res = new LinkedList<>();
+					while (rs.next()) {
+						res.add(formatter.parseObject(rs.getString(1)));
+					}
+
+					return res;
+				}
+			});
 		}
 
 		@Override

@@ -505,11 +505,8 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<String> getTest() {
-		return dataManager.getNotSuperblockOperations();
-	}
-
 	public List<OpObject> getObjectByIndex(String table, String column, String index, String key) {
+
 		List<OpObject> opObjectList = new ArrayList<>();
 		List<OpObject> filteredObjects = new LinkedList<>();
 		if (index != null && !index.equals("")) {
@@ -533,13 +530,9 @@ public class BlocksManager {
 			}
 		}
 
-		filteredObjects.addAll(getListOpObjectByIndices(table, column, index, key));
+		//filteredObjects.addAll(getListOpObjectByIndices(table, column, index, key));
 
 		return filteredObjects;
-	}
-
-	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) { // db -> obj_opr_place.tags_osmid.id= , runtime -> obj_type,
-		return dataManager.getListOpObjectByIndices(table, column, index, key);
 	}
 
 	public void setBootstrapList(List<String> bootstrapList) {
