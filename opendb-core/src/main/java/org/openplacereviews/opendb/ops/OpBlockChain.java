@@ -1,21 +1,38 @@
 package org.openplacereviews.opendb.ops;
 
+import static org.openplacereviews.opendb.ops.OpBlock.F_HASH;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNATURE;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNED_BY;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_OP;
+import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
+import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
+import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
+
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.security.KeyPair;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
-import static org.openplacereviews.opendb.ops.OpBlock.*;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 
 /**
  *  Guidelines of object methods:
@@ -725,17 +742,6 @@ public class OpBlockChain {
 		}
 	}
 
-	public void getObjectHeaders(String type, ObjectsSearchRequest request) {
-		if (isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
-		if(oi == null) {
-			parent.getObjectHeaders(type, request);
-		} else {
-			fetchAllObjectHeaders(type, request);
-		}
-	}
 
 	public void getObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
@@ -804,19 +810,6 @@ public class OpBlockChain {
 		}
 		if(request.limit == -1 || request.result.size() < request.limit) {
 			parent.fetchAllObjects(type, request);
-		}
-	}
-
-	private void fetchAllObjectHeaders(String type, ObjectsSearchRequest request) {
-		if(isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
-		if(o != null) {
-			o.fetchAllObjectHeaders(request);
-		}
-		if(request.limit == -1 || request.resultWithHeaders.size() < request.limit) {
-			parent.fetchAllObjectHeaders(type, request);
 		}
 	}
 
@@ -1158,7 +1151,6 @@ public class OpBlockChain {
 		public boolean requestCache = false;
 
 		public List<OpObject> result = new ArrayList<OpObject>();
-		public HashSet<List<String>> resultWithHeaders = new HashSet<>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
 
