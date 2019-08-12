@@ -635,12 +635,7 @@ public class OpExprEvaluator {
 				}
 			}
 			ctx.exprNested++;
-			Object funcRes;
-			try {
-				funcRes = callFunction(functionName, args, ctx);
-			} catch (UnsupportedDataTypeException e) {
-				throw new UnsupportedOperationException(e);
-			}
+			Object funcRes = callFunction(functionName, args, ctx);
 
 			if (TRACE_EXPRESSIONS) {
 				System.out.println("EXPR:  " + traceExpr.toString() + " = " + funcRes);
