@@ -13,11 +13,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static org.openplacereviews.opendb.ops.OpBlock.F_HASH;
-import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNATURE;
-import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNED_BY;
+import static org.openplacereviews.opendb.ops.OpBlock.*;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpObject.*;
 import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 
 /**
@@ -737,6 +734,41 @@ public class OpBlockChain {
 			parent.getObjectHeaders(type, request);
 		} else {
 			fetchAllObjectHeaders(type, request);
+		}
+	}
+
+	public void getObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
+		if(isNullBlock()) {
+			return;
+		}
+		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
+		if(oi == null) {
+			parent.getObjectsByOpHash(type, listOpHash, request);
+		} else {
+			request.editVersion = oi.getEditVersion();
+			request.objToSetCache = oi;
+			if (request.requestCache) {
+				CacheObject co = oi.getCacheObject();
+				if (co != null && co.cacheVersion == request.editVersion) {
+					request.cacheObject = co.cacheObject;
+					request.cacheVersion = co.cacheVersion;
+					return;
+				}
+			}
+			fetchAllObjectsByOpHash(type, listOpHash, request);
+		}
+	}
+
+	private void fetchAllObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
+		if(isNullBlock()) {
+			return;
+		}
+		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
+		if(o != null) {
+			o.fetchAllObjectsByOpHash(listOpHash, request);
+		}
+		if(request.limit == -1 || request.result.size() < request.limit) {
+			parent.fetchAllObjectsByOpHash(type, listOpHash, request);
 		}
 	}
 

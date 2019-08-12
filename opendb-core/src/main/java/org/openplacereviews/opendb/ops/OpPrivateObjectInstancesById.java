@@ -55,6 +55,35 @@ class OpPrivateObjectInstancesById {
 		return objects;
 	}
 
+	public void fetchAllObjectsByOpHash(List<String> listOpHash, ObjectsSearchRequest request) {
+		Map<CompoundKey, OpObject> allObjects = objects;
+		if (dbAccess != null) {
+			allObjects = dbAccess.getAllObjects(type, request);
+		}
+		if(request.internalMapToFilterDuplicates == null) {
+			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>();
+			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
+			for (OpObject o : objects.values()) {
+				if (o != OpObject.NULL && listOpHash.contains(o.getParentHash())) {
+					request.result.add(o);
+				}
+				mp.put(new CompoundKey(0, o.getId()), o);
+			}
+		} else {
+			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
+			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<CompoundKey, OpObject> k = it.next();
+				if (!mp.containsKey(k.getKey())) {
+					if (k.getValue() != OpObject.NULL && listOpHash.contains(k.getValue().getParentHash())) {
+						request.result.add(k.getValue());
+					}
+					mp.put(k.getKey(), k.getValue());
+				}
+			}
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public void fetchAllObjects(ObjectsSearchRequest request) {
 

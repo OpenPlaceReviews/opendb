@@ -505,7 +505,40 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) {
+	public List<String> getTest() {
+		return dataManager.getNotSuperblockOperations();
+	}
+
+	public List<OpObject> getObjectByIndex(String table, String column, String index, String key) {
+		List<OpObject> opObjectList = new ArrayList<>();
+		List<OpObject> filteredObjects = new LinkedList<>();
+		if (index != null && !index.equals("")) {
+			List<String> types = dataManager.getTypesByTable(table);
+			List<String> opHash = dataManager.getNotSuperblockOperations();
+
+			OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
+			for (String type : types) {
+				blockchain.getObjectsByOpHash(type, opHash, objectsSearchRequest);
+				opObjectList.addAll(objectsSearchRequest.result);
+				objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
+			}
+			TreeMap<String, Object> keyMap = new TreeMap<>();
+			keyMap.put(index, Collections.singletonList(key));
+
+			String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
+			for (OpObject opObject : opObjectList) {
+				if (keyMap.equals(dataManager.getObjectByFieldName(opObject, searchByField, index))) {
+					filteredObjects.add(opObject);
+				}
+			}
+		}
+
+		filteredObjects.addAll(getListOpObjectByIndices(table, column, index, key));
+
+		return filteredObjects;
+	}
+
+	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) { // db -> obj_opr_place.tags_osmid.id= , runtime -> obj_type,
 		return dataManager.getListOpObjectByIndices(table, column, index, key);
 	}
 

@@ -91,6 +91,32 @@ public class DBConsensusManager {
 		return dbSchema.getMapIndicesForTable(table);
 	}
 
+	public List<String> getTypesByTable(String table) {
+		Map<String, String> mapObject = (Map<String, String>) dbSchema.getObjtables().get(table).get("types");
+		return new ArrayList<>(mapObject.values());
+	}
+
+	public Object getObjectByFieldName(Object opObject, String field, String finalName) {
+		return dbSchema.getObjectByFieldName(opObject, field, finalName);
+	}
+
+	public String getFieldForSearchByIndex(String table, String column, String index) {
+		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) dbSchema.getObjtables().get(table).get("columns");
+		for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
+			LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+			if (column.equals(arrayColumns.get("name"))) {
+				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
+				for (String field : fields.values()) {
+					if (dbSchema.getLastFieldValue(field).equals(index)) {
+						return field;
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
 	public List<OpObject> getListOpObjectByIndices(String table, String column, String index, String key) {
 		return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
 			@Override
@@ -945,6 +971,20 @@ public class DBConsensusManager {
 			}
 		});
 		return res[0];
+	}
+
+	public List<String> getNotSuperblockOperations() {
+		List<String> opOperations = new ArrayList<>();
+		jdbcTemplate.query("SELECT hash from " + OPERATIONS_TABLE + " WHERE superblock IS NULL", new RowCallbackHandler() {
+			@Override
+			public void processRow(ResultSet rs) throws SQLException {
+				while (rs.next()) {
+					opOperations.add(SecUtils.hexify(rs.getBytes(1)));
+				}
+			}
+		});
+
+		return opOperations;
 	}
 
 

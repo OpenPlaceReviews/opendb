@@ -219,7 +219,7 @@ public class ApiController {
 								 @RequestParam(required = true) String column,
 								 @RequestParam(required = false) String index,
 								 @RequestParam(required = true) String key) {
-		return formatter.fullObjectToJson(manager.getListOpObjectByIndices(table, column, index, key));
+		return formatter.fullObjectToJson(manager.getObjectByIndex(table, column, index, key));
 	}
 
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")

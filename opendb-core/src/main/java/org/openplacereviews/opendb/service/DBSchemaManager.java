@@ -645,7 +645,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	private String getLastFieldValue(String fied) {
+	public String getLastFieldValue(String fied) {
 		if (fied.contains(".")) {
 			String[] finalNames = fied.split("\\.");
 			return finalNames[finalNames.length - 1];
@@ -742,7 +742,7 @@ public class DBSchemaManager {
 		HashMap<String, Object> tableColumnIndices = new HashMap();
 
 		if (table == null) {
-			for (String key : schema.keySet()) {
+			for (String key : objtables.keySet()) {
 				List<ColumnDef> cdfs = schema.get(key);
 				Map<String, List<String>> indices = new HashMap<>();
 				for (ColumnDef cdf : cdfs) {
