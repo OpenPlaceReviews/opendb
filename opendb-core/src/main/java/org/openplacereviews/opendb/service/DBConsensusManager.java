@@ -362,8 +362,7 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public List<OpObject> getObjectsByIndex(String type, String column, String index, String key) {
-			String table = dbSchema.getTableByType(type);
+		public List<OpObject> getObjectsByIndex(String table, String column, String index, String key) {
 			return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
 				@Override
 				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {

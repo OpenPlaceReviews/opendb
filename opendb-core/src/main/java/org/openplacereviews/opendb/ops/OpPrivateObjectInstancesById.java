@@ -115,36 +115,6 @@ class OpPrivateObjectInstancesById {
 		}
 	}
 
-	public void fetchAllObjectHeaders(ObjectsSearchRequest request) {
-
-		Map<CompoundKey, OpObject> allObjects = objects;
-		if (dbAccess != null) {
-			allObjects = dbAccess.getAllObjects(type, request);
-		}
-		if(request.internalMapToFilterDuplicates == null) {
-			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>();
-			Map<CompoundKey, List<String>> mp = (Map<CompoundKey, List<String>>) request.internalMapToFilterDuplicates;
-			for (OpObject o : objects.values()) {
-				if (o != OpObject.NULL) {
-					request.resultWithHeaders.add(o.getId());
-				}
-				mp.put(new CompoundKey(0, o.getId()), o.getId());
-			}
-		} else {
-			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
-			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
-			while (it.hasNext()) {
-				Entry<CompoundKey, OpObject> k = it.next();
-				if (!mp.containsKey(k.getKey())) {
-					if (k.getValue() != OpObject.NULL) {
-						request.resultWithHeaders.add(k.getValue().getId());
-					}
-					mp.put(k.getKey(), k.getValue());
-				}
-			}
-		}
-	}
-
 	private OpObject getByKey(CompoundKey k) {
 		if (dbAccess != null) {
 			return dbAccess.getObjectById(type, k);

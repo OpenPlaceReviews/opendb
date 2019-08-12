@@ -506,33 +506,24 @@ public class BlocksManager {
 	}
 
 	public List<OpObject> getObjectByIndex(String table, String column, String index, String key) {
+		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
 
-		List<OpObject> opObjectList = new ArrayList<>();
-		List<OpObject> filteredObjects = new LinkedList<>();
-		if (index != null && !index.equals("")) {
-			List<String> types = dataManager.getTypesByTable(table);
-			List<String> opHash = dataManager.getNotSuperblockOperations();
+		String type = dataManager.getTypesByTable(table).get(0);
+		String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
+		blockchain.retrieveObjectsByIndex(table, type, searchByField, index, key, objectsSearchRequest);
 
-			OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-			for (String type : types) {
-				blockchain.getObjectsByOpHash(type, opHash, objectsSearchRequest);
-				opObjectList.addAll(objectsSearchRequest.result);
-				objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-			}
-			TreeMap<String, Object> keyMap = new TreeMap<>();
-			keyMap.put(index, Collections.singletonList(key));
+		TreeMap<String, Object> keyMap = new TreeMap<>();
+		keyMap.put(index, Collections.singletonList(key));
 
-			String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
-			for (OpObject opObject : opObjectList) {
-				if (keyMap.equals(dataManager.getObjectByFieldName(opObject, searchByField, index))) {
-					filteredObjects.add(opObject);
-				}
+		List<OpObject> filteredObjects = new ArrayList<>();
+		for (OpObject opObject : objectsSearchRequest.result) {
+			if (keyMap.equals(dataManager.getObjectByFieldName(opObject, searchByField, index))) {
+				filteredObjects.add(opObject);
 			}
 		}
 
-		//filteredObjects.addAll(getListOpObjectByIndices(table, column, index, key));
-
-		return filteredObjects;
+		objectsSearchRequest.dbResult.addAll(filteredObjects);
+		return objectsSearchRequest.dbResult;
 	}
 
 	public void setBootstrapList(List<String> bootstrapList) {

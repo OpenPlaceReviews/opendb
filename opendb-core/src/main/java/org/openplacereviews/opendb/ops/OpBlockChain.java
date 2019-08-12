@@ -15,6 +15,11 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static org.openplacereviews.opendb.ops.OpBlock.*;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_OP;
+import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
+import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
 import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 
 /**
@@ -725,17 +730,6 @@ public class OpBlockChain {
 		}
 	}
 
-	public void getObjectHeaders(String type, ObjectsSearchRequest request) {
-		if (isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
-		if(oi == null) {
-			parent.getObjectHeaders(type, request);
-		} else {
-			fetchAllObjectHeaders(type, request);
-		}
-	}
 
 	public void getObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
@@ -794,18 +788,18 @@ public class OpBlockChain {
 		}
 	}
 
-	public void retrieveObjectsByIndex(String type, String column, String field, String key, ObjectsSearchRequest request) {
+	public void retrieveObjectsByIndex(String table, String type, String column, String field, String key, ObjectsSearchRequest request) {
 		if (isNullBlock()) {
 			return;
 		}
 		if (dbAccess != null) {
-			request.result.addAll(dbAccess.getObjectsByIndex(type, column, field, key));
+			request.dbResult.addAll(dbAccess.getObjectsByIndex(table, column, field, key));
+			parent.retrieveObjectsByIndex(table, type, column, field, key, request);
 		} else {
 			OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 			if (oi == null) {
-				parent.retrieveObjectsByIndex(type, column, field, key, request);
+				parent.retrieveObjectsByIndex(table, type, column, field, key, request);
 			} else {
-				//retrieveAllObjectsByIndex();
 				fetchAllObjects(type, request);
 			}
 		}
@@ -823,21 +817,6 @@ public class OpBlockChain {
 			parent.fetchAllObjects(type, request);
 		}
 	}
-
-	@Deprecated
-	private void fetchAllObjectHeaders(String type, ObjectsSearchRequest request) {
-		if(isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
-		if(o != null) {
-			o.fetchAllObjectHeaders(request);
-		}
-		if(request.limit == -1 || request.resultWithHeaders.size() < request.limit) {
-			parent.fetchAllObjectHeaders(type, request);
-		}
-	}
-
 
 	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMap(String type) {
 		// create is allowed only when status is not locked
@@ -1162,7 +1141,7 @@ public class OpBlockChain {
 
 		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
 
-		List<OpObject> getObjectsByIndex(String type, String column, String field, String key);
+		List<OpObject> getObjectsByIndex(String table, String column, String field, String key);
 
 		OpOperation getOperation(String rawHash);
 
@@ -1178,7 +1157,7 @@ public class OpBlockChain {
 		public boolean requestCache = false;
 
 		public List<OpObject> result = new ArrayList<OpObject>();
-		public HashSet<List<String>> resultWithHeaders = new HashSet<>();
+		public List<OpObject> dbResult = new ArrayList<OpObject>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
 
