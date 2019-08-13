@@ -499,9 +499,10 @@
         let selectBot = $("#bot-list").val();
         $.getJSON("/api/bot", function (data) {
             var botItems = "";
-            for (var key in data) {
-                botItems += "<option value = '" + data[key] + "' " +
-                    (selectBot == data[key] ? "selected" : "") + ">" + data[key] + "</option>";
+            for (var i = 0; i < data.length; i++) {
+                let bot = data[i];
+                botItems += "<option value = '" + bot["id"] + "' " +
+                    (selectBot == bot["id"] ? "selected" : "") + ">" + bot["id"] + "</option>";
             }
             $("#bot-list").html(botItems);
         });

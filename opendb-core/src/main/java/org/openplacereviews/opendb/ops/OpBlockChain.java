@@ -763,11 +763,13 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 			if (oi != null) {
 				for (OpObject opObject : oi.getAllObjects().values()) {
-					Map<String, List> mapObject = (Map<String, List>) opObject.getIndexObjectByField(searchByField, index);
-					if (mapObject != null) {
-						for (Object s : mapObject.get(index)) {
-							if (String.valueOf(s).equals(key) && !request.result.contains(opObject)) {
-								request.result.add(opObject);
+					if (opObject != OpObject.NULL && opObject != null) {
+						Map<String, List> mapObject = (Map<String, List>) opObject.getIndexObjectByField(searchByField, index);
+						if (mapObject != null) {
+							for (Object s : mapObject.get(index)) {
+								if (String.valueOf(s).equals(key) && !request.result.contains(opObject)) {
+									request.result.add(opObject);
+								}
 							}
 						}
 					}
