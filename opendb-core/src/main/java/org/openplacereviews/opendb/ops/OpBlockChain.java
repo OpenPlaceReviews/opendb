@@ -1049,7 +1049,7 @@ public class OpBlockChain {
 							newObject.setFieldByExpr(fieldExpr, args);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof List) {
-							((List) oldObject).add(opValue);
+							((List<Object>) oldObject).add(opValue);
 							checkCurrentFieldSpecified = true;
 						} else if (oldObject instanceof Map) {
 							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;

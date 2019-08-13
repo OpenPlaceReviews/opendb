@@ -228,6 +228,7 @@ public class JsonObjectUtils {
 		return prevValue;
 	}
 
+	@SuppressWarnings("unchecked")
 	public static Object getIndexObjectByField(Object opObject, String field, String finalName) {
 		if (field.contains(".")) {
 			String[] fields = field.split("\\.", 2);
@@ -258,6 +259,7 @@ public class JsonObjectUtils {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private static Object getIndexObjectForField(Object obj, String field) {
 		if (obj instanceof Map) {
 			Map<String, Object> res = (Map<String, Object>) obj;
