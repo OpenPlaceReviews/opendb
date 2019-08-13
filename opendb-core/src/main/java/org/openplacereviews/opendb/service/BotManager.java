@@ -7,7 +7,6 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Constructor;
@@ -65,10 +64,9 @@ public class BotManager {
 				try {
 
 					Class<?> bot = Class.forName(bi.api);
-					Constructor<?> constructor = bot.getConstructor(BlocksManager.class, OpObject.class,
-							JdbcTemplate.class);
+					Constructor<?> constructor = bot.getConstructor(OpObject.class);
 					bi.instance = (IOpenDBBot<?>) constructor.newInstance(vld);
-					beanFactory.autowireBean(bot);
+					beanFactory.autowireBean(bi.getInstance());
 				} catch (Exception e) {
 					LOGGER.error(String.format("Error while creating bot %s instance version %d, api %s", bi.id,
 							bi.version, bi.api), e);
