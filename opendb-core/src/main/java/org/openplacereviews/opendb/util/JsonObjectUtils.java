@@ -231,10 +231,10 @@ public class JsonObjectUtils {
 	public static Object getIndexObjectByField(Object opObject, String field, String finalName) {
 		if (field.contains(".")) {
 			String[] fields = field.split("\\.", 2);
-			Object loadedObj = getObjectForField(opObject, fields[0]);
+			Object loadedObj = getIndexObjectForField(opObject, fields[0]);
 			return getIndexObjectByField(loadedObj, fields[1], finalName);
 		} else {
-			Object loadedObj = getObjectForField(opObject, field);
+			Object loadedObj = getIndexObjectForField(opObject, field);
 			if (loadedObj == null) {
 				return null;
 			}
@@ -258,7 +258,7 @@ public class JsonObjectUtils {
 		}
 	}
 
-	private static Object getObjectForField(Object obj, String field) {
+	private static Object getIndexObjectForField(Object obj, String field) {
 		if (obj instanceof Map) {
 			Map<String, Object> res = (Map<String, Object>) obj;
 			return res.get(field);
@@ -266,7 +266,7 @@ public class JsonObjectUtils {
 			List<Object> objectList = (List<Object>) obj;
 			List<Object> loadedObjs = new LinkedList<>();
 			for (Object o : objectList) {
-				Object lObject = getObjectForField(o, field);
+				Object lObject = getIndexObjectForField(o, field);
 				if (lObject instanceof Number) {
 					lObject = ((Number)lObject).toString();
 				}
