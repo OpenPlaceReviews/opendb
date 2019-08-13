@@ -143,30 +143,35 @@
 			{
 				"id": ["sys.bot"],
 				"arity": 0,
+				"version" : 0,
 				"fields" : {
 					"id" : ["bot id"],
-					"url" : {
-						"overpass_timestamp" : "url for getting timestamp",
-						"overpass": "url for getting places"
-					},
-					"opr": {
+					"api": "Implementation: java-package.ClassName",
+					"version" : "Version of bot, whenver any field of configuration is changed version should be incremented",
+					"threads" : "Number of threads allowed to be allocated for bot",
+					"blockchain-config" : {
 						"places_per_operation": 250,
 						"operations_per_block": 16,
 						"type": "opr.place"
 					},
-					"mapping": {},
-					"rules": {},
-					"api": "java-package.ClassName;",
-					"version" : 1,
-					"threads" : 0,
-					"bot-state": [
-						{
+					"config": {
+						"description" : "Bot specific properties for specific api",
+						"url" : {
+							"overpass_timestamp" : "url for getting timestamp",
+							"overpass": "url for getting places"
+						},
+						"mapping": {},
+						"rules": {}
+					},
+					"bot-state": {
+						"description" : "Bot specific state to be stored",
+						"example" : {
 							"date": "sync date",
 							"tags": {
 								"tagName" : "bbox"
 							}
 						}
-					]
+					}
 				}
 			}
 		]
