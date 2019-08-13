@@ -234,24 +234,24 @@ public class JsonObjectUtils {
 
 	@SuppressWarnings("unchecked")
 	public static List<Object> getIndexObjectByField(Object obj, List<String> field, List<Object> res) {
+		if(obj == null) {
+			return res;
+		}
 		if(field.size() == 0) {
+			if(res == null) {
+				res = new ArrayList<Object>();
+			}
 			res.add(obj);
 			return res;
 		}
 		if (obj instanceof Map) {
 			String fieldFirst = field.get(0);
-			if (field.size() > 1) {
-				Object value = ((Map<String, Object>) obj).get(fieldFirst);
-				return getIndexObjectByField(value, field.subList(1, field.size()), res);
-			} else {
-				Object value = ((Map<String, Object>) obj).get(fieldFirst);
-				res.add(value);
-			}
+			Object value = ((Map<String, Object>) obj).get(fieldFirst);
+			return getIndexObjectByField(value, field.subList(1, field.size()), res);
 		} else if(obj instanceof Collection) {
 			for(Object o : ((Collection<Object>)obj)) {
-				getIndexObjectByField(o, field, res);
+				res = getIndexObjectByField(o, field, res);
 			}
-			
 		} else {
 			// we need extract but there no field 
 			LOGGER.warn(String.format("Can't access field %s for object %s", field, obj));

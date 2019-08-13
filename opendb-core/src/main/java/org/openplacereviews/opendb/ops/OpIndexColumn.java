@@ -3,21 +3,16 @@ package org.openplacereviews.opendb.ops;
 import java.util.Collections;
 import java.util.List;
 
+import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.service.DBSchemaManager.ColumnDef;
+import org.openplacereviews.opendb.util.JsonObjectUtils;
+import org.openplacereviews.opendb.util.OUtils;
 
 public class OpIndexColumn {
 	private final String indexId;
 	private final String opType;
 	private final ColumnDef columnDef;
 	private List<String> fieldsExpression = Collections.emptyList();
-	
-	
-	// 
-	String tableName;
-	String colName;
-	String colType;
-	IndexType index;
-	
 	
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
@@ -42,30 +37,27 @@ public class OpIndexColumn {
 		return fieldsExpression;
 	}
 	
-	public String getTableName() {
-		return columnDef.tableName;
-	}
 	
 	public ColumnDef getColumnDef() {
 		return columnDef;
 	}
-	
-	
-	// public final String column;
-	// public final String table;
-	// public final ColumnDef columnDef;
-	// public final List<String> field;
-	// private final String type;
-	// private final String hash;
-	// private final String content;
 
-	// SCHEMA DEFINITION
-	public enum IndexType {
-		NOT_INDEXED, INDEXED, GIN, GIST
+	public boolean accept(OpObject opObject, SearchType searchType, Object[] argsToSearch) {
+		List<Object> array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), 
+				fieldsExpression, null);
+		if (array != null && argsToSearch.length > 0) {
+			for (Object s : array) {
+				if(searchType == SearchType.STRING_EQUALS) {
+					if(OUtils.equalsStringValue(s, argsToSearch[0])) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
-
-
-
+	
+	
 
 	
 }

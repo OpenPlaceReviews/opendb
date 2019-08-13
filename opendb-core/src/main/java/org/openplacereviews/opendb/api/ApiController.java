@@ -218,7 +218,8 @@ public class ApiController {
 	public String objectsByIndex(@RequestParam(required = true) String type,
 								 @RequestParam(required = true) String index,
 								 @RequestParam(required = true) String key) {
-		return formatter.fullObjectToJson(manager.getObjectsByIndex(type, index, key));
+		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
+		return formatter.fullObjectToJson(manager.getObjectsByIndex(type, index, req, key));
 	}
 
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")

@@ -404,22 +404,23 @@ public class DBConsensusManager {
 				readLock.unlock();
 			}
 		}
-
+		
 		@Override
-		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, String keyToSearch) {
-			Object objToSearch = keyToSearch;
-			return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(index), new ResultSetExtractor<List<OpObject>>() {
+		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request,
+				Object... args) {
+			Object objToSearch = args[0];
+			return jdbcTemplate.query(dbSchema.generateIndexQuery(index, request), new ResultSetExtractor<List<OpObject>>() {
 				@Override
 				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
 					List<OpObject> res = new LinkedList<>();
 					while (rs.next()) {
 						res.add(formatter.parseObject(rs.getString(1)));
 					}
-
 					return res;
 				}
 			}, new Object[] {sbhash, objToSearch});
 		}
+
 
 		@Override
 		public OpOperation getOperation(String rawHash) {

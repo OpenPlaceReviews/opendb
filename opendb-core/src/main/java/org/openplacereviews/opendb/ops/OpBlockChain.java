@@ -765,34 +765,27 @@ public class OpBlockChain {
 	}
 	
 
-	@SuppressWarnings("unchecked")
-	public void retrieveObjectsByIndex(String type, OpIndexColumn index, String keyToSearch, ObjectsSearchRequest request) {
+	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) {
 		if (isNullBlock()) {
 			return;
 		}
 		if (dbAccess != null) {
-			List<OpObject> res = dbAccess.getObjectsByIndex(type, index, keyToSearch);
+			List<OpObject> res = dbAccess.getObjectsByIndex(type, index, request, argsToSearch);
 			request.result.addAll(res);
 		} else {
 			OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 			if (oi != null) {
 				for (OpObject opObject : oi.getAllObjects().values()) {
 					if (opObject != OpObject.NULL && opObject != null) {
-						List<Object> array = opObject.getIndexObjectByField(index);
-						if (mapObject != null) {
-							for (Object s : mapObject.get(index)) {
-								// TODO ?
-								if (String.valueOf(s).equals(keyToSearch) && !request.result.contains(opObject)) {
-									request.result.add(opObject);
-								}
-							}
+						if(index.accept(opObject, request.searchType, argsToSearch)) {
+							request.result.add(opObject);
 						}
 					}
 				}
 			}
 		}
 		if(request.limit == -1 || request.result.size() < request.limit) {
-			parent.retrieveObjectsByIndex(type, index, keyToSearch, request);
+			parent.retrieveObjectsByIndex(type, index, request, argsToSearch);
 		}
 	}
 
@@ -1132,7 +1125,7 @@ public class OpBlockChain {
 
 		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
 
-		List<OpObject> getObjectsByIndex(String table, OpIndexColumn index, String key);
+		List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... args);
 
 		OpOperation getOperation(String rawHash);
 

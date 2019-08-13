@@ -86,6 +86,13 @@ public class OUtils {
 		}
 		return s1.equals(s2);
 	}
+	
+	public static boolean equalsStringValue(Object s1, Object s2) {
+		if(s1 == null) {
+			return s1 == s2;
+		}
+		return s1.toString().equals(s2.toString());
+	}
 
 	public static long parseLongSilently(String input, long def) {
 		if (input != null && input.length() > 0) {

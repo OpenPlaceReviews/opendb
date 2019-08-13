@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -454,13 +456,17 @@ public class DBSchemaManager {
 		return null;
 	}
 
-	public String generateQueryForExtractingDataByIndices(OpIndexColumn index) {
-		return "SELECT content FROM " + index.getTableName() + 
-				" WHERE " + getExpressionSignWithColumnName(index.getColumnDef()) 
+	public String generateIndexQuery(OpIndexColumn index, ObjectsSearchRequest req) {
+		ColumnDef cd = index.getColumnDef();
+		return "SELECT content FROM " + cd.tableName + 
+				" WHERE " + getExpressionSignWithColumnName(cd, req.searchType) 
 				+ " AND superblock = ?";
 	}
 
-	private String getExpressionSignWithColumnName(ColumnDef columnDef) {
+	private String getExpressionSignWithColumnName(ColumnDef columnDef, SearchType searchType) {
+		if(searchType != SearchType.STRING_EQUALS) {
+			throw new UnsupportedOperationException();
+		}
 		switch (columnDef.index) {
 			case INDEXED : {
 				return columnDef.colName + " = ?";
@@ -469,7 +475,7 @@ public class DBSchemaManager {
 				return columnDef.colName + " @> ?";
 			}
 			case GIST : {
-				throw new IllegalArgumentException("GIST index not implemented");
+				throw new UnsupportedOperationException("GIST index not implemented");
 			}
 			default: {
 				return columnDef.colName + " = ?";

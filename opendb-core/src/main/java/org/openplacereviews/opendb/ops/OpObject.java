@@ -1,18 +1,31 @@
 package org.openplacereviews.opendb.ops;
 
-import com.google.gson.*;
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.openplacereviews.opendb.service.DBSchemaManager.CustomIndexDto;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
 
-import java.lang.reflect.Type;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 public class OpObject {
 	
@@ -168,10 +181,6 @@ public class OpObject {
 		}
 	}
 
-	public List<Object> getIndexObjectByField(OpIndexColumn indexDto) {
-		List<Object> res = new ArrayList<Object>();
-		return JsonObjectUtils.getIndexObjectByField(this.fields, indexDto.field, res);
-	}
 	
 	public Object getCacheObject(String f) {
 		if(cacheFields == null) {

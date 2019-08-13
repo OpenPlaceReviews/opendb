@@ -521,13 +521,12 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getObjectsByIndex(String type, String columnId, String valueToSearch) {
-		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-		OpIndexColumn indexType = dataManager.getIndexType(type, columnId);
-		if (indexType != null) {
-			blockchain.retrieveObjectsByIndex(type, indexType, valueToSearch, objectsSearchRequest);
+	public List<OpObject> getObjectsByIndex(String type, String indexId, OpBlockChain.ObjectsSearchRequest req, Object... valueToSearch) {
+		OpIndexColumn indexCol = dataManager.getIndexType(type, indexId);
+		if (indexCol != null) {
+			blockchain.retrieveObjectsByIndex(type, indexCol, req, valueToSearch);
 		}
-		return objectsSearchRequest.result;
+		return req.result;
 	}
 
 	public void setBootstrapList(List<String> bootstrapList) {
