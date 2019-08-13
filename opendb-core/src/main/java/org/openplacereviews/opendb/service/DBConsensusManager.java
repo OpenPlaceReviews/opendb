@@ -701,40 +701,42 @@ public class DBConsensusManager {
 			Entry<CompoundKey, OpObject> e = it.next();
 			CompoundKey pkey = e.getKey();
 			OpObject obj = e.getValue();
-			long l = opsId.get(obj.getParentHash());
-			int sblockid = OUtils.first(l);
-			int sorder = OUtils.second(l);
+			if (obj != OpObject.NULL) {
+				long l = opsId.get(obj.getParentHash());
+				int sblockid = OUtils.first(l);
+				int sorder = OUtils.second(l);
 
-			if (pkey.size() > ksize) {
-				throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+				if (pkey.size() > ksize) {
+					throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+				}
+
+				Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
+				args[0] = type;
+				String ophash = obj.getParentHash();
+				args[1] = SecUtils.getHashBytes(ophash);
+				args[2] = superBlockHash;
+
+				args[3] = sblockid;
+				args[4] = sorder;
+				PGobject contentObj = new PGobject();
+				contentObj.setType("jsonb");
+				try {
+					contentObj.setValue(formatter.objToJson(obj));
+				} catch (SQLException es) {
+					throw new IllegalArgumentException(es);
+				}
+				args[5] = contentObj;
+
+				AtomicInteger i = new AtomicInteger(6);
+				customIndexDtoList.forEach(customIndexDto -> {
+					args[i.get()] = dbSchema.getColumnValue(customIndexDto, obj);
+					i.getAndIncrement();
+				});
+
+				pkey.toArray(args, i.get());
+
+				insertBatch.add(args);
 			}
-
-			Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
-			args[0] = type;
-			String ophash = obj.getParentHash();
-			args[1] = SecUtils.getHashBytes(ophash);
-			args[2] = superBlockHash;
-
-			args[3] = sblockid;
-			args[4] = sorder;
-			PGobject contentObj = new PGobject();
-			contentObj.setType("jsonb");
-			try {
-				contentObj.setValue(formatter.objToJson(obj));
-			} catch (SQLException es) {
-				throw new IllegalArgumentException(es);
-			}
-			args[5] = contentObj;
-
-			AtomicInteger i = new AtomicInteger(6);
-			customIndexDtoList.forEach(customIndexDto -> {
-				args[i.get()] = dbSchema.getColumnValue(customIndexDto, obj);
-				i.getAndIncrement();
-			});
-
-			pkey.toArray(args, i.get());
-
-			insertBatch.add(args);
 		}
 
 		return insertBatch;
