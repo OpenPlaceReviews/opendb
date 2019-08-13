@@ -509,8 +509,10 @@ public class BlocksManager {
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
 		String table = dataManager.getTableByType(type);
 		String column = dataManager.getColumnByTableAndIndex(table, index);
-		String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
-		blockchain.retrieveObjectsByIndex(searchByField, type, index, key, objectsSearchRequest);
+		if (table != null && column != null) {
+			String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
+			blockchain.retrieveObjectsByIndex(searchByField, type, index, key, objectsSearchRequest);
+		}
 
 		return objectsSearchRequest.result;
 	}

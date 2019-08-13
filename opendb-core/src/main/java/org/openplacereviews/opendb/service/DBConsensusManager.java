@@ -96,15 +96,18 @@ public class DBConsensusManager {
 	}
 
 	public String getColumnByTableAndIndex(String table, String index) {
-		TreeMap<String, Map<String, Object>> obtables = dbSchema.getObjtables();
-		LinkedHashMap<String, Object> cii = (LinkedHashMap<String, Object>) obtables.get(table).get("indices");
-		for (Entry<String, Object> entry : cii.entrySet()) {
-			LinkedHashMap<String, Object> arrayColumns = (LinkedHashMap<String, Object>) entry.getValue();
-			Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
-			if (fields != null) {
-				for (String field : fields.values()) {
-					if (index.equals(field)) {
-						return (String) arrayColumns.get("column");
+		if (table != null) {
+			TreeMap<String, Map<String, Object>> obtables = dbSchema.getObjtables();
+			Map<String, Object> tableObject = obtables.get(table);
+			LinkedHashMap<String, Object> cii = (LinkedHashMap<String, Object>) tableObject.get("indices");
+			for (Entry<String, Object> entry : cii.entrySet()) {
+				LinkedHashMap<String, Object> arrayColumns = (LinkedHashMap<String, Object>) entry.getValue();
+				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
+				if (fields != null) {
+					for (String field : fields.values()) {
+						if (index.equals(field)) {
+							return (String) arrayColumns.get("column");
+						}
 					}
 				}
 			}
