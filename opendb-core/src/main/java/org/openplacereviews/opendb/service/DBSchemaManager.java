@@ -592,7 +592,7 @@ public class DBSchemaManager {
 					Object[] res = new Object[customIndexDTO.field.size()];
 					int amountTags = 0, reInd = 0;;
 					for (int i = 0; i < customIndexDTO.field.size(); i++) {
-						Object o = getObjectByFieldName(obj, customIndexDTO.field.get(i), getLastFieldValue(customIndexDTO.field.get(i)));
+						Object o = obj.getIndexObjectByField(customIndexDTO.field.get(i), getLastFieldValue(customIndexDTO.field.get(i)));
 						if (o != null) {
 							res[i] = o;
 							amountTags++;
@@ -651,65 +651,6 @@ public class DBSchemaManager {
 			return finalNames[finalNames.length - 1];
 		}
 		return fied;
-	}
-
-	public static Object getObjectByFieldName(Object opObject, String field, String finalName) {
-		if (field.contains(".")) {
-			String[] fields = field.split("\\.", 2);
-			Object loadedObj = getObjectForField(opObject, fields[0]);
-			return getObjectByFieldName(loadedObj, fields[1], finalName);
-		} else {
-			Object loadedObj = getObjectForField(opObject, field);
-			if (loadedObj == null) {
-				return null;
-			}
-			if (loadedObj instanceof List) {
-				if (!((List<Object>) loadedObj).isEmpty()) {
-					Map<String, Object> res = new HashMap<>();
-					res.put(finalName, loadedObj);
-					return res;
-				}
-				return null;
-			} else if (loadedObj instanceof Map) {
-				return Collections.singletonList(loadedObj);
-			} else {
-				Map<String, Object> res = new HashMap<>();
-				if (loadedObj instanceof Number) {
-					loadedObj = ((Number) loadedObj).toString();
-				}
-				res.put(finalName, Collections.singletonList(loadedObj));
-				return res;
-			}
-		}
-	}
-
-	private static Object getObjectForField(Object obj, String field) {
-		if (obj instanceof  OpObject) {
-			return ((OpObject) obj).getObjectValue(field);
-		}
-		if (obj instanceof Map) {
-			Map<String, Object> res = (Map<String, Object>) obj;
-			return res.get(field);
-		} else if (obj instanceof List) {
-			List<Object> objectList = (List<Object>) obj;
-			List<Object> loadedObjs = new LinkedList<>();
-			for (Object o : objectList) {
-				Object lObject = getObjectForField(o, field);
-				if (lObject instanceof Number) {
-					lObject = ((Number)lObject).toString();
-				}
-				if (lObject != null && o != lObject) {
-					if (lObject instanceof List) {
-						loadedObjs.addAll((List) lObject);
-					} else {
-						loadedObjs.add(lObject);
-					}
-				}
-			}
-			return loadedObjs;
-		} else {
-			return obj;
-		}
 	}
 
 	public static class CustomIndexDto {

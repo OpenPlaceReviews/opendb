@@ -432,7 +432,7 @@ public class OpBlockchainTest {
 	@Test
 	public void testGettingObj() {
 		OpObject object = generateTestOpObject();
-		Object res = dbSchemaManager.getObjectByFieldName(object, "tags.k.t", "t");
+		Object res = object.getIndexObjectByField("tags.k.t", "t");
 		assertEquals("{t=[22222222]}", res.toString());
 	}
 

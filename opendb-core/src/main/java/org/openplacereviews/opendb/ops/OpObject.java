@@ -165,6 +165,10 @@ public class OpObject {
 			fields.put(field, object);
 		}
 	}
+
+	public Object getIndexObjectByField(String field, String finalName) {
+		return JsonObjectUtils.getIndexObjectByField(this.fields, field, finalName);
+	}
 	
 	public Object getCacheObject(String f) {
 		if(cacheFields == null) {

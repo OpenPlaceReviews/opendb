@@ -95,10 +95,11 @@ public class DBConsensusManager {
 		return dbSchema.getTableByType(type);
 	}
 
-	public String getColumnByTablaAndIndex(String table, String index) {
-		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) dbSchema.getObjtables().get(table).get("indices");
-		for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
-			LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+	public String getColumnByTableAndIndex(String table, String index) {
+		TreeMap<String, Map<String, Object>> obtables = dbSchema.getObjtables();
+		LinkedHashMap<String, Object> cii = (LinkedHashMap<String, Object>) obtables.get(table).get("indices");
+		for (Entry<String, Object> entry : cii.entrySet()) {
+			LinkedHashMap<String, Object> arrayColumns = (LinkedHashMap<String, Object>) entry.getValue();
 			Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
 			if (fields != null) {
 				for (String field : fields.values()) {
@@ -112,11 +113,11 @@ public class DBConsensusManager {
 		return null;
 	}
 
-
 	public String getFieldForSearchByIndex(String table, String column, String index) {
-		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) dbSchema.getObjtables().get(table).get("columns");
-		for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
-			LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+		TreeMap<String, Map<String, Object>> obtables = dbSchema.getObjtables();
+		LinkedHashMap<String, Object> cii = (LinkedHashMap<String, Object>) obtables.get(table).get("columns");
+		for (Entry<String, Object> entry : cii.entrySet()) {
+			LinkedHashMap<String, Object> arrayColumns = (LinkedHashMap<String, Object>) entry.getValue();
 			if (column.equals(arrayColumns.get("name"))) {
 				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
 				for (String field : fields.values()) {
@@ -375,7 +376,9 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public List<OpObject> getObjectsByIndex(String table, String column, String index, String key) {
+		public List<OpObject> getObjectsByIndex(String type, String index, String key) {
+			String table = getTableByType(type);
+			String column = getColumnByTableAndIndex(table, index);
 			return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
 				@Override
 				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -986,20 +989,5 @@ public class DBConsensusManager {
 		});
 		return res[0];
 	}
-
-	public List<String> getNotSuperblockOperations() {
-		List<String> opOperations = new ArrayList<>();
-		jdbcTemplate.query("SELECT hash from " + OPERATIONS_TABLE + " WHERE superblock IS NULL", new RowCallbackHandler() {
-			@Override
-			public void processRow(ResultSet rs) throws SQLException {
-				while (rs.next()) {
-					opOperations.add(SecUtils.hexify(rs.getBytes(1)));
-				}
-			}
-		});
-
-		return opOperations;
-	}
-
 
 }
