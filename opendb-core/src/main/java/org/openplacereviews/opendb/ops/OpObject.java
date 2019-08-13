@@ -1,6 +1,8 @@
 package org.openplacereviews.opendb.ops;
 
 import com.google.gson.*;
+
+import org.openplacereviews.opendb.service.DBSchemaManager.CustomIndexDto;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
@@ -166,8 +168,9 @@ public class OpObject {
 		}
 	}
 
-	public Object getIndexObjectByField(String field, String finalName) {
-		return JsonObjectUtils.getIndexObjectByField(this.fields, field, finalName);
+	public List<Object> getIndexObjectByField(OpIndexColumn indexDto) {
+		List<Object> res = new ArrayList<Object>();
+		return JsonObjectUtils.getIndexObjectByField(this.fields, indexDto.field, res);
 	}
 	
 	public Object getCacheObject(String f) {

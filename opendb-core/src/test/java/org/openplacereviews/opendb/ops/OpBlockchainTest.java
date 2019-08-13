@@ -429,13 +429,6 @@ public class OpBlockchainTest {
 		assertNotEquals(copy.getId(), old.getId());
 	}
 
-	@Test
-	public void testGettingObj() {
-		OpObject object = generateTestOpObject();
-		Object res = object.getIndexObjectByField("tags.k.t", "t");
-		assertEquals("{t=[22222222]}", res.toString());
-	}
-
 	private OpObject generateTestOpObject() {
 		OpObject opObject = new OpObject();
 		opObject.setId("some id");

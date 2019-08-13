@@ -1,26 +1,42 @@
 package org.openplacereviews.opendb.service;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
-import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.ops.*;
-import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
-import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyPair;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.api.MgmtController;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.ValidationTimer;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 @Service
 public class BlocksManager {
@@ -505,13 +521,11 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getObjectsByIndex(String type, String index, String key) {
+	public List<OpObject> getObjectsByIndex(String type, String columnId, String valueToSearch) {
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-		String table = dataManager.getTableByType(type);
-		String column = dataManager.getColumnByTableAndIndex(table, index);
-		if (table != null && column != null) {
-			String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
-			blockchain.retrieveObjectsByIndex(searchByField, type, index, key, objectsSearchRequest);
+		OpIndexColumn indexType = dataManager.getIndexType(type, columnId);
+		if (indexType != null) {
+			blockchain.retrieveObjectsByIndex(type, indexType, valueToSearch, objectsSearchRequest);
 		}
 		return objectsSearchRequest.result;
 	}

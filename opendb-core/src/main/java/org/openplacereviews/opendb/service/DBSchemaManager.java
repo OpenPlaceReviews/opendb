@@ -1,10 +1,30 @@
 package org.openplacereviews.opendb.service;
 
+import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.GIN;
+import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.GIST;
+import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.INDEXED;
+import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.NOT_INDEXED;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -15,14 +35,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.*;
 
 
 @Service
@@ -70,12 +82,13 @@ public class DBSchemaManager {
 	public enum IndexType {
 		NOT_INDEXED, INDEXED, GIN, GIST
 	}
-	private static class ColumnDef {
-		String tableName;
-		String colName;
-		String colType;
-		IndexType index;
-		List<String> indexedField;
+	
+	
+	public static class ColumnDef {
+		public String tableName;
+		public String colName;
+		public String colType;
+		public IndexType index;
 	}
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType indexType) {
@@ -92,7 +105,7 @@ public class DBSchemaManager {
 		lst.add(cd);
 	}
 
-	private static void registerColumn(String tableName, String colName, String colType, List<CustomIndexDto> customIndices, IndexType basicIndexType) {
+	private static void registerColumn(String tableName, String colName, String colType, List<OpIndexColumn> customIndices, IndexType basicIndexType) {
 		List<ColumnDef> lst = schema.get(tableName);
 		if (lst == null) {
 			lst = new ArrayList<ColumnDef>();
@@ -105,7 +118,7 @@ public class DBSchemaManager {
 		cd.index = basicIndexType;
 
 		if (customIndices != null) {
-			CustomIndexDto indexInfo = getIndexInfoByColumnName(colName, customIndices);
+			OpIndexColumn indexInfo = getIndexInfoByColumnName(colName, customIndices);
 			if (indexInfo != null) {
 				cd.index = getIndexTypeByNameColumn(indexInfo, basicIndexType);
 				cd.indexedField = indexInfo.field;
@@ -169,7 +182,7 @@ public class DBSchemaManager {
 
 	}
 
-	private static void registerObjTable(String tbName, int maxKeySize, List<CustomIndexDto> customIndexDtoList) {
+	private static void registerObjTable(String tbName, int maxKeySize, List<OpIndexColumn> customIndexDtoList) {
 		registerColumn(tbName, "type", "text", customIndexDtoList, INDEXED);
 		for (int i = 1; i <= maxKeySize; i++) {
 			registerColumn(tbName, "p" + i, "text", customIndexDtoList, INDEXED);
@@ -296,10 +309,10 @@ public class DBSchemaManager {
 				pks += ", p" +i; 
 			}
 
-			List<CustomIndexDto> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
-				List<CustomIndexDto> indexList = new ArrayList<>();
+			List<OpIndexColumn> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
+				List<OpIndexColumn> indexList = new ArrayList<>();
 				while (rs.next()) {
-					indexList.add(CustomIndexDto.of(rs.getString(1), rs.getString(2)));
+					indexList.add(OpIndexColumn.of(rs.getString(1), rs.getString(2)));
 				}
 				return indexList;
 			}, type);
@@ -309,10 +322,10 @@ public class DBSchemaManager {
 					"INSERT INTO " + tableName + "(type, ophash, superblock, sblockid, sorder, content " + pks + ") " +
 					"SELECT type, ophash, superblock, sblockid, sorder, content" + pks + " FROM moved_rows", type);
 
-			List<CustomIndexDto> customIndexDtoList = generateCustomColumnsForTable(tableName);
+			List<OpIndexColumn> customIndexDtoList = generateCustomColumnsForTable(tableName);
 
 			StringBuilder columnsForUpdating = new StringBuilder();
-			for (CustomIndexDto c : customIndexDtoList) {
+			for (OpIndexColumn c : customIndexDtoList) {
 				if (columnsForUpdating.length() == 0) {
 					columnsForUpdating.append(c.column).append(" = ?");
 				} else {
@@ -349,18 +362,27 @@ public class DBSchemaManager {
 				i = MAX_KEY_SIZE;
 			}
 
-			List<CustomIndexDto> indices = null;
-			LinkedHashMap<String, LinkedHashMap<String, Object>> indexMap = (LinkedHashMap<String, LinkedHashMap<String, Object>>) objtables.get(tableName).get("indices");
+			Map<String, Map<String, String>> cii = (Map<String, Map<String, String>>) objtables.get(tableName).get("columns");
+			if (cii != null) {
+				for (Map.Entry<String, Map<String, String>> entry : cii.entrySet()) {
+					Map<String, String> arrayColumns = entry.getValue();
+					
+					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), indices, NOT_INDEXED);
+				}
+			}
+			
+			List<OpIndexColumn> indices = null;
+			Map<String, Map<String, Object>> indexMap = (Map<String, Map<String, Object>>) objtables.get(tableName).get("indices");
 			if (indexMap != null) {
 				indices = new ArrayList<>();
-				for (Map.Entry<String, LinkedHashMap<String, Object>> entry : indexMap.entrySet()) {
-					LinkedHashMap<String, Object> index = entry.getValue();
+				for (Map.Entry<String, Map<String, Object>> entry : indexMap.entrySet()) {
+					Map<String, Object> index = entry.getValue();
 					List<String> indicesList = new ArrayList<>();
-					LinkedHashMap<String, String> fieldList = ((LinkedHashMap<String, String>) index.get("field"));
+					Map<String, String> fieldList = ((Map<String, String>) index.get("field"));
 					if (fieldList != null) {
 						indicesList.addAll(fieldList.values());
 					}
-					indices.add(CustomIndexDto.of(index.get("column").toString(), indicesList, index.get("type").toString()));
+					indices.add(OpIndexColumn.of(index.get("column").toString(), indicesList, index.get("type").toString()));
 				}
 			}
 
@@ -375,45 +397,11 @@ public class DBSchemaManager {
 				}
 			}
 
-			LinkedHashMap<String, LinkedHashMap<String, String>> cii = (LinkedHashMap<String, LinkedHashMap<String, String>>) objtables.get(tableName).get("columns");
-			if (cii != null) {
-				for (Map.Entry<String, LinkedHashMap<String, String>> entry : cii.entrySet()) {
-					LinkedHashMap<String, String> arrayColumns = entry.getValue();
-
-					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), indices, NOT_INDEXED);
-				}
-			}
+			
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
 	}
 
-	private static CustomIndexDto getIndexInfoByColumnName(String columnName, List<CustomIndexDto> customIndexDtoList) {
-		for (CustomIndexDto indexInfo : customIndexDtoList) {
-			if (indexInfo.column.equals(columnName)) {
-				return indexInfo;
-			}
-		}
-		return null;
-	}
-
-	private static IndexType getIndexTypeByNameColumn(CustomIndexDto customIndexDTO, IndexType basicIndexType) {
-		IndexType indexType = basicIndexType;
-		switch (customIndexDTO.type) {
-			case "GIN": {
-				indexType = GIN;
-				break;
-			}
-			case "GIST": {
-				indexType = GIST;
-				break;
-			}
-			case "": {
-				indexType = INDEXED;
-				break;
-			}
-		}
-		return indexType;
-	}
 
 	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
 		List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);
@@ -466,87 +454,25 @@ public class DBSchemaManager {
 		return null;
 	}
 
-	public String generateQueryForExtractingDataByIndices(String table, String column, String index, String key) {
-		ColumnDef columnDef = null;
-		List<ColumnDef> clfs = schema.get(table);
-		if (clfs == null) {
-			throw new IllegalArgumentException("Table definition wa not found");
-		}
-		for (ColumnDef cld : clfs) {
-			if (cld.colName.equals(column)) {
-				columnDef = cld;
-				break;
-			}
-		}
-
-		if (columnDef == null) {
-			throw new IllegalArgumentException("Index type is not specified");
-		}
-
-		return "SELECT content FROM " + table + " WHERE " + getExpressionSignWithColumnName(columnDef, index, generateArgs(table, column, key)) + " AND superblock = ?";
+	public String generateQueryForExtractingDataByIndices(OpIndexColumn index) {
+		return "SELECT content FROM " + index.getTableName() + 
+				" WHERE " + getExpressionSignWithColumnName(index.getColumnDef()) 
+				+ " AND superblock = ?";
 	}
 
-	private String getOnlyColumnType(String table, String column) {
-		String columnType = "";
-
-		for (ColumnDef cld : schema.get(table)) {
-			if (cld.colName.equals(column)) {
-				columnType = cld.colType.contains(" ") ? cld.colType.split(" ")[0] : cld.colType;
-				break;
-			}
-		}
-
-		return columnType;
-	}
-
-	public Object generateArgs(String table, String column, String key) {
-		Object args;
-		String columnType = getOnlyColumnType(table, column);
-
-		switch (columnType) {
-			case "bytea": {
-				String[] keySplit = null;
-				if (key.contains(":")) {
-					keySplit = key.split(":");
-				}
-				args = "\\x" + ((keySplit == null) ? key : keySplit[keySplit.length - 1]);
-				break;
-			}
-			case "jsonb": {
-				PGobject pGobject = new PGobject();
-				pGobject.setType("jsonb");
-				try {
-					if (!key.startsWith("\"")) {
-						key = "\"" + key + "\"";
-					}
-					pGobject.setValue(key);
-				} catch (SQLException e) {
-					throw new IllegalArgumentException(e);
-				}
-				args = pGobject;
-				break;
-			}
-			default: {
-				return key;
-			}
-		}
-
-		return args;
-	}
-
-	private String getExpressionSignWithColumnName(ColumnDef columnDef, String index, Object args) {
+	private String getExpressionSignWithColumnName(ColumnDef columnDef) {
 		switch (columnDef.index) {
 			case INDEXED : {
-				return columnDef.colName + " = '" + args + "'";
+				return columnDef.colName + " = ?";
 			}
 			case GIN : {
-				return columnDef.colName + " @> '[{\"" + index + "\": " + Arrays.toString(new Object[]{args}) + "}]'";
+				return columnDef.colName + " @> ?";
 			}
 			case GIST : {
 				throw new IllegalArgumentException("GIST index not implemented");
 			}
 			default: {
-				return columnDef.colName + " = '" + args + "'";
+				return columnDef.colName + " = ?";
 			}
 		}
 	}
@@ -583,7 +509,7 @@ public class DBSchemaManager {
 		return s;
 	}
 
-	public Object getColumnValue(CustomIndexDto customIndexDTO, OpObject obj) {
+	public Object getColumnValue(OpIndexColumn customIndexDTO, OpObject obj) {
 		switch (customIndexDTO.type) {
 			case "jsonb" : {
 				try {
@@ -653,40 +579,9 @@ public class DBSchemaManager {
 		return fied;
 	}
 
-	public static class CustomIndexDto {
-		public String column;
-		private List<String> field;
-		private String type;
-		private String hash;
-		private String content;
 
-		private CustomIndexDto() {
-
-		}
-
-		public static CustomIndexDto of(String column, List<String> field, String type) {
-			CustomIndexDto customIndexDTO = new CustomIndexDto();
-			customIndexDTO.column = column;
-			customIndexDTO.field = field;
-			customIndexDTO.type = type;
-
-			return customIndexDTO;
-		}
-
-		public static CustomIndexDto of(String ophash, String content) {
-			CustomIndexDto customIndexDTO = new CustomIndexDto();
-			customIndexDTO.hash = ophash;
-			customIndexDTO.content = content;
-
-			return customIndexDTO;
-		}
-	}
-
-	public HashMap<String, Object> getMapIndicesForTable(String table) {
-		HashMap<String, Object> tableColumnIndices = new HashMap();
-
-
-
+	public Map<String, Object> getMapIndicesForTable(String table) {
+		Map<String, Object> tableColumnIndices = new HashMap<>();
 		if (table == null) {
 			for (String key : objtables.keySet()) {
 				List<ColumnDef> cdfs = schema.get(key);
@@ -694,7 +589,7 @@ public class DBSchemaManager {
 				for (ColumnDef cdf : cdfs) {
 					if (cdf.index != NOT_INDEXED) {
 						if (cdf.indexedField == null) {
-							indices.put(cdf.colName, Collections.EMPTY_LIST);
+							indices.put(cdf.colName, Collections.emptyList());
 						} else {
 							indices.put(cdf.colName, cdf.indexedField);
 						}
@@ -709,7 +604,7 @@ public class DBSchemaManager {
 				for (ColumnDef cdf : cdfs) {
 					if (cdf.index != NOT_INDEXED) {
 						if (cdf.indexedField == null) {
-							indices.put(cdf.colName, Collections.EMPTY_LIST);
+							indices.put(cdf.colName, Collections.emptyList());
 						} else {
 							indices.put(cdf.colName, cdf.indexedField);
 						}
@@ -722,31 +617,37 @@ public class DBSchemaManager {
 		return tableColumnIndices;
 	}
 
-	public List<CustomIndexDto> generateCustomColumnsForTable(String table) {
-		List<CustomIndexDto> columns = new ArrayList<>();
+	@SuppressWarnings("unchecked")
+	public List<OpIndexColumn> generateCustomColumnsForTable(String table) {
+		List<OpIndexColumn> columns = new ArrayList<>();
 
 		if (table.equals(OBJS_TABLE)) {
 			return columns;
 		}
 
-		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) objtables.get(table).get("columns");
+		Map<String, Map<String, Object>> cii = (Map<String, Map<String, Object>>) objtables.get(table).get("columns");
 		if (cii != null) {
-			for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
-				LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+			for (Map.Entry<String, Map<String, Object>> entry : cii.entrySet()) {
+				Map<String, Object> arrayColumns = entry.getValue();
 				List<String> columnList = new ArrayList<>();
-				LinkedHashMap<String, String> fieldList = ((LinkedHashMap<String, String>) arrayColumns.get("field"));
+				Map<String, String> fieldList = ((Map<String, String>) arrayColumns.get("field"));
 				if (fieldList != null) {
 					columnList.addAll(fieldList.values());
 				}
 
-				columns.add(CustomIndexDto.of(arrayColumns.get("name").toString(), columnList, arrayColumns.get("type").toString()));
+				columns.add(OpIndexColumn.of(arrayColumns.get("name").toString(), columnList, arrayColumns.get("type").toString()));
 			}
 		}
 
 		return columns;
 	}
+	
+	public OpIndexColumn getIndexType(String type, String columnId) {
+		// TODO Auto-generated method stub
+		return new OpIndexColumn();
+	}
 
-	public String generateColumnNames(List<CustomIndexDto> columns) {
+	public String generateColumnNames(List<OpIndexColumn> columns) {
 		AtomicReference<String> customColumns = new AtomicReference<>("");
 		columns.forEach(column -> {
 			if (customColumns.get().isEmpty()) {
@@ -799,6 +700,8 @@ public class DBSchemaManager {
 		}
 
 	}
+
+	
 	
 
 

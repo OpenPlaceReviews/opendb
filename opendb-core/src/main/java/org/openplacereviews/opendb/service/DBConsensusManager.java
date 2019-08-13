@@ -1,14 +1,49 @@
 package org.openplacereviews.opendb.service;
 
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.EXT_RESOURCE_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
+
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -21,20 +56,6 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
-import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class DBConsensusManager {
@@ -178,6 +199,10 @@ public class DBConsensusManager {
 		LOGGER.info(String.format("... Loaded operation %d into queue  ...", ops[0]));
 		LOGGER.info(String.format("+++ Database blockchain initialized +++"));
 		return blcQueue;
+	}
+	
+	public OpIndexColumn getIndexType(String type, String columnId) {
+		return dbSchema.getIndexType(type, columnId);
 	}
 
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent,
@@ -381,10 +406,9 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public List<OpObject> getObjectsByIndex(String type, String index, String key) {
-			String table = getTableByType(type);
-			String column = getColumnByTableAndIndex(table, index);
-			return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(table, column, index, key), new ResultSetExtractor<List<OpObject>>() {
+		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, String keyToSearch) {
+			Object objToSearch = keyToSearch;
+			return jdbcTemplate.query(dbSchema.generateQueryForExtractingDataByIndices(index), new ResultSetExtractor<List<OpObject>>() {
 				@Override
 				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
 					List<OpObject> res = new LinkedList<>();
@@ -394,7 +418,7 @@ public class DBConsensusManager {
 
 					return res;
 				}
-			}, new Object[] {sbhash});
+			}, new Object[] {sbhash, objToSearch});
 		}
 
 		@Override
@@ -670,7 +694,7 @@ public class DBConsensusManager {
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
 				String table = dbSchema.getTableByType(type);
-				List<CustomIndexDto> customIndexDtoList = dbSchema.generateCustomColumnsForTable(table);
+				List<OpIndexColumn> customIndexDtoList = dbSchema.generateCustomColumnsForTable(table);
 				String columns = dbSchema.generateColumnNames(customIndexDtoList);
 				AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
 				customIndexDtoList.forEach(customIndexDto -> amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,"));
@@ -694,7 +718,7 @@ public class DBConsensusManager {
 	}
 
 	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
-												   byte[] superBlockHash, Map<String, Long> opsId, List<CustomIndexDto> customIndexDtoList) {
+												   byte[] superBlockHash, Map<String, Long> opsId, List<OpIndexColumn> customIndexDtoList) {
 
 		List<Object[]> insertBatch = new ArrayList<>(objects.size());
 		int ksize = dbSchema.getKeySizeByType(type);
@@ -996,5 +1020,7 @@ public class DBConsensusManager {
 		});
 		return res[0];
 	}
+
+	
 
 }
