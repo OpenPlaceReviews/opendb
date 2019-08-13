@@ -674,6 +674,9 @@ public class DBSchemaManager {
 				return Collections.singletonList(loadedObj);
 			} else {
 				Map<String, Object> res = new HashMap<>();
+				if (loadedObj instanceof Number) {
+					loadedObj = ((Number) loadedObj).toString();
+				}
 				res.put(finalName, Collections.singletonList(loadedObj));
 				return res;
 			}
@@ -740,6 +743,8 @@ public class DBSchemaManager {
 
 	public HashMap<String, Object> getMapIndicesForTable(String table) {
 		HashMap<String, Object> tableColumnIndices = new HashMap();
+
+
 
 		if (table == null) {
 			for (String key : objtables.keySet()) {

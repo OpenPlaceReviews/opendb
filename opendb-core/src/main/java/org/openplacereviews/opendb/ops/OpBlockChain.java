@@ -731,19 +731,6 @@ public class OpBlockChain {
 		}
 	}
 
-	private void fetchAllObjectsByOpHash(String type, List<String> listOpHash, ObjectsSearchRequest request) {
-		if(isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
-		if(o != null) {
-			o.fetchAllObjectsByOpHash(listOpHash, request);
-		}
-		if(request.limit == -1 || request.result.size() < request.limit) {
-			parent.fetchAllObjectsByOpHash(type, listOpHash, request);
-		}
-	}
-
 	public void getObjects(String type, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;

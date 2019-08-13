@@ -505,14 +505,12 @@ public class BlocksManager {
 		return dataManager.getMapIndicesForTable(table);
 	}
 
-	public List<OpObject> getObjectsByIndex(String table, String column, String index, String key) {
+	public List<OpObject> getObjectsByIndex(String type, String index, String key) {
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-
-		List<String> types = dataManager.getTypesByTable(table);
+		String table = dataManager.getTableByType(type);
+		String column = dataManager.getColumnByTablaAndIndex(table, index);
 		String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
-		for (String type : types) {
-			blockchain.retrieveObjectsByIndex(searchByField, table, type, column, index, key, objectsSearchRequest);
-		}
+		blockchain.retrieveObjectsByIndex(searchByField, table, type, column, index, key, objectsSearchRequest);
 
 		return objectsSearchRequest.result;
 	}

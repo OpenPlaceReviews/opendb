@@ -215,11 +215,10 @@ public class ApiController {
 
 	@GetMapping(path = "/indices", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String objectsByIndex(@RequestParam(required = true) String table,
-								 @RequestParam(required = true) String column,
-								 @RequestParam(required = false) String index,
+	public String objectsByIndex(@RequestParam(required = true) String type,
+								 @RequestParam(required = true) String index,
 								 @RequestParam(required = true) String key) {
-		return formatter.fullObjectToJson(manager.getObjectsByIndex(table, column, index, key));
+		return formatter.fullObjectToJson(manager.getObjectsByIndex(type, index, key));
 	}
 
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")

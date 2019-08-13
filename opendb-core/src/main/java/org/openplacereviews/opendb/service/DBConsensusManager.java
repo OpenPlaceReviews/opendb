@@ -91,9 +91,25 @@ public class DBConsensusManager {
 		return dbSchema.getMapIndicesForTable(table);
 	}
 
-	public List<String> getTypesByTable(String table) {
-		Map<String, String> mapObject = (Map<String, String>) dbSchema.getObjtables().get(table).get("types");
-		return new ArrayList<>(mapObject.values());
+	public String getTableByType(String type) {
+		return dbSchema.getTableByType(type);
+	}
+
+	public String getColumnByTablaAndIndex(String table, String index) {
+		LinkedHashMap<String, LinkedHashMap<String, Object>> cii = (LinkedHashMap<String, LinkedHashMap<String, Object>>) dbSchema.getObjtables().get(table).get("indices");
+		for (Map.Entry<String, LinkedHashMap<String, Object>> entry : cii.entrySet()) {
+			LinkedHashMap<String, Object> arrayColumns = entry.getValue();
+			Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
+			if (fields != null) {
+				for (String field : fields.values()) {
+					if (index.equals(field)) {
+						return (String) arrayColumns.get("column");
+					}
+				}
+			}
+		}
+
+		return null;
 	}
 
 
