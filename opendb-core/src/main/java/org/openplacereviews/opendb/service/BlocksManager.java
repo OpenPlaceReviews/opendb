@@ -513,7 +513,6 @@ public class BlocksManager {
 			String searchByField = dataManager.getFieldForSearchByIndex(table, column, index);
 			blockchain.retrieveObjectsByIndex(searchByField, type, index, key, objectsSearchRequest);
 		}
-
 		return objectsSearchRequest.result;
 	}
 

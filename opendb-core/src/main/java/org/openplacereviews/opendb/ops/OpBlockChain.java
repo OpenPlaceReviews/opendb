@@ -752,6 +752,7 @@ public class OpBlockChain {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public void retrieveObjectsByIndex(String searchByField, String type, String index, String key, ObjectsSearchRequest request) {
 		if (isNullBlock()) {
 			return;
@@ -764,7 +765,7 @@ public class OpBlockChain {
 			if (oi != null) {
 				for (OpObject opObject : oi.getAllObjects().values()) {
 					if (opObject != OpObject.NULL && opObject != null) {
-						Map<String, List> mapObject = (Map<String, List>) opObject.getIndexObjectByField(searchByField, index);
+						Map<String, List<?>> mapObject = (Map<String, List<?>>) opObject.getIndexObjectByField(searchByField, index);
 						if (mapObject != null) {
 							for (Object s : mapObject.get(index)) {
 								if (String.valueOf(s).equals(key) && !request.result.contains(opObject)) {

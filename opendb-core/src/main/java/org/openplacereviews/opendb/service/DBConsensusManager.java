@@ -95,13 +95,14 @@ public class DBConsensusManager {
 		return dbSchema.getTableByType(type);
 	}
 
+	@SuppressWarnings("unchecked")
 	public String getColumnByTableAndIndex(String table, String index) {
 		if (table != null) {
-			TreeMap<String, Map<String, Object>> obtables = dbSchema.getObjtables();
+			Map<String, Map<String, Object>> obtables = dbSchema.getObjtables();
 			Map<String, Object> tableObject = obtables.get(table);
-			LinkedHashMap<String, Object> cii = (LinkedHashMap<String, Object>) tableObject.get("indices");
+			Map<String, Object> cii = (Map<String, Object>) tableObject.get("indices");
 			for (Entry<String, Object> entry : cii.entrySet()) {
-				LinkedHashMap<String, Object> arrayColumns = (LinkedHashMap<String, Object>) entry.getValue();
+				Map<String, Object> arrayColumns = (Map<String, Object>) entry.getValue();
 				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
 				if (fields != null) {
 					for (String field : fields.values()) {
@@ -116,11 +117,12 @@ public class DBConsensusManager {
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
 	public String getFieldForSearchByIndex(String table, String column, String index) {
-		TreeMap<String, Map<String, Object>> obtables = dbSchema.getObjtables();
-		LinkedHashMap<String, Object> cii = (LinkedHashMap<String, Object>) obtables.get(table).get("columns");
+		Map<String, Map<String, Object>> obtables = dbSchema.getObjtables();
+		Map<String, Object> cii = (Map<String, Object>) obtables.get(table).get("columns");
 		for (Entry<String, Object> entry : cii.entrySet()) {
-			LinkedHashMap<String, Object> arrayColumns = (LinkedHashMap<String, Object>) entry.getValue();
+			Map<String, Object> arrayColumns = (Map<String, Object>) entry.getValue();
 			if (column.equals(arrayColumns.get("name"))) {
 				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
 				for (String field : fields.values()) {
