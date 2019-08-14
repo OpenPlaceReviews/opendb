@@ -1,9 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.GIN;
-import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.GIST;
-import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.INDEXED;
-import static org.openplacereviews.opendb.service.DBSchemaManager.IndexType.NOT_INDEXED;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,6 +21,10 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.de.ColumnDef;
+import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
+
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,29 +77,11 @@ public class DBSchemaManager {
 		Set<String> types = new TreeSet<>();
 	}
 	
-	// SCHEMA DEFINITION
-	public enum IndexType {
-		NOT_INDEXED, INDEXED, GIN, GIST
-	}
 	
 	
-	public static class ColumnDef {
-		public String tableName;
-		public String colName;
-		public String colType;
-		public IndexType index;
-		
-		public boolean isArray() {
-			return colType.endsWith("[]");
-		}
-	}
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType basicIndexType) {
-		ColumnDef cd = new ColumnDef();
-		cd.tableName = tableName;
-		cd.colName = colName;
-		cd.colType = colType;
-		cd.index = basicIndexType;
+		ColumnDef cd = new ColumnDef(tableName, colName, colType, basicIndexType);
 		registerColumn(tableName, cd);
 	}
 
@@ -328,21 +310,22 @@ public class DBSchemaManager {
 			List<Map<String, Object>> cii = (List<Map<String, Object>>) objtables.get(tableName).get("columns");
 			if (cii != null) {
 				for (Map<String, Object> entry : cii) {
-					ColumnDef cd = new ColumnDef();
-					cd.tableName = tableName;
 					String name = (String) entry.get("name");
-					cd.colName = name;
-					cd.colType = (String) entry.get("sqltype");
-					// to be used array
-					// String sqlmapping = (String) entry.get("sqlmapping");
+					String colType = (String) entry.get("sqltype");
 					String index = (String) entry.get("index");
+					IndexType di = null;
 					if(index != null) {
 						if(index.equalsIgnoreCase("true")) {
-							cd.index = INDEXED;	
+							di = INDEXED;	
 						} else {
-							cd.index = IndexType.valueOf(index);
+							di = IndexType.valueOf(index);
 						}
 					}
+					
+					ColumnDef cd = new ColumnDef(tableName, name, colType, di);
+					// to be used array
+					// String sqlmapping = (String) entry.get("sqlmapping");
+					
 					List<String> fld = (List<String>) entry.get("field");
 					if(fld != null) {
 					for(String type : ott.types) {
@@ -372,8 +355,8 @@ public class DBSchemaManager {
 				if (clb.length() > 0) {
 					clb.append(", ");
 				}
-				clb.append(c.colName).append(" ").append(c.colType);
-				if(c.index != NOT_INDEXED) {
+				clb.append(c.getColName()).append(" ").append(c.getColType());
+				if(c.getIndex() != NOT_INDEXED) {
 					indx.add(generateIndexQuery(c));
 				}
 			}
@@ -386,29 +369,29 @@ public class DBSchemaManager {
 			for (ColumnDef c : cls) {
 				boolean found = false;
 				for (MetadataColumnSpec m : list) {
-					if (c.colName.equals(m.columnName)) {
+					if (c.getColName().equals(m.columnName)) {
 						found = true;
 						break;
 					}
 				}
 				if (!found) {
 					throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ",
-							c.colName, tableName));
+							c.getColName(), tableName));
 				}
 			}
 		}
 	}
 
 	private String generateIndexQuery(ColumnDef c) {
-		if (c.index.equals(INDEXED)) {
-			return String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-					c.tableName, c.colName);
-		} else if (c.index.equals(GIN)) {
-				return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", c.tableName, c.colName,
-						c.tableName, c.colName);
-		} else if (c.index.equals(GIST)) {
-				return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.tableName, c.colName,
-						c.tableName, c.colName);
+		if (c.getIndex() == INDEXED) {
+			return String.format("create index %s_%s_ind on %s (%s);\n", c.getTableName(), c.getColName(),
+					c.getTableName(), c.getColName());
+		} else if (c.getIndex() == GIN) {
+			return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", c.getTableName(), c.getColName(),
+					c.getTableName(), c.getColName());
+		} else if (c.getIndex() == GIST) {
+			return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.getTableName(),
+					c.getColName(), c.getTableName(), c.getColName());
 		}
 
 		return null;
@@ -416,7 +399,7 @@ public class DBSchemaManager {
 
 	public String generateIndexQuery(OpIndexColumn index, ObjectsSearchRequest req) {
 		ColumnDef cd = index.getColumnDef();
-		return "SELECT content FROM " + cd.tableName + 
+		return "SELECT content FROM " + cd.getTableName() + 
 				" WHERE " + getExpressionSignWithColumnName(cd, req.searchType) 
 				+ " AND superblock = ?";
 	}
@@ -425,18 +408,18 @@ public class DBSchemaManager {
 		if(searchType != SearchType.STRING_EQUALS) {
 			throw new UnsupportedOperationException();
 		}
-		switch (columnDef.index) {
+		switch (columnDef.getIndex()) {
 			case INDEXED : {
-				return columnDef.colName + " = ?";
+				return columnDef.getColName() + " = ?";
 			}
 			case GIN : {
-				return columnDef.colName + " @> ?";
+				return columnDef.getColName() + " @> ?";
 			}
 			case GIST : {
 				throw new UnsupportedOperationException("GIST index not implemented");
 			}
 			default: {
-				return columnDef.colName + " = ?";
+				return columnDef.getColName() + " = ?";
 			}
 		}
 	}
@@ -499,7 +482,7 @@ public class DBSchemaManager {
 	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, Collection<OpIndexColumn> indexes) {
 		StringBuilder extraColumnNames = new StringBuilder();
 		for(OpIndexColumn index : indexes) {
-			extraColumnNames.append(index.getColumnDef().colName).append(",");
+			extraColumnNames.append(index.getColumnDef().getColName()).append(",");
 		}
 		jdbcTemplate.batchUpdate("INSERT INTO " + table
 				+ "(type,ophash,superblock,sblockid,sorder,content,"
@@ -531,10 +514,10 @@ public class DBSchemaManager {
 				if (clb.length() > 0) {
 					clb.append(", ");
 				}
-				clb.append(c.colName).append(" ").append(c.colType);
-				if (c.index.equals(INDEXED)) {
-					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.tableName, c.colName,
-							c.tableName, c.colName));
+				clb.append(c.getColName()).append(" ").append(c.getColType());
+				if (c.getIndex() == INDEXED) {
+					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.getTableName(), c.getColName(),
+							c.getTableName(), c.getColName()));
 				}
 			}
 			System.out.println(String.format("create table %s (%s);", tableName, clb.toString()));

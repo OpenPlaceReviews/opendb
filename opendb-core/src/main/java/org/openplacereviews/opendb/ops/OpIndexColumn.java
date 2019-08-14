@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
-import org.openplacereviews.opendb.service.DBSchemaManager.ColumnDef;
+import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 
