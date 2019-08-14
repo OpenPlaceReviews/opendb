@@ -517,12 +517,12 @@ public class BlocksManager {
 		return bootstrapList;
 	}
 
-	public Map<String, Object> getMapIndicesForTable(String table) {
-		return dataManager.getMapIndicesForTable(table);
+	public Collection<OpIndexColumn> getIndicesForType(String type) {
+		return dataManager.getIndicesForType(type);
 	}
 
 	public List<OpObject> getObjectsByIndex(String type, String indexId, OpBlockChain.ObjectsSearchRequest req, Object... valueToSearch) {
-		OpIndexColumn indexCol = dataManager.getIndexType(type, indexId);
+		OpIndexColumn indexCol = dataManager.getIndex(type, indexId);
 		if (indexCol != null) {
 			blockchain.retrieveObjectsByIndex(type, indexCol, req, valueToSearch);
 		}

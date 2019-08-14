@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,6 +66,7 @@ public class DBSchemaManager {
 	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
 	private TreeMap<String, ObjectTypeTable> objTableDefs = new TreeMap<String, ObjectTypeTable>();
 	private TreeMap<String, String> typeToTables = new TreeMap<String, String>();
+	private TreeMap<String, Map<String, OpIndexColumn>> indexes = new TreeMap<>();
 	
 
 	@Autowired
@@ -503,42 +505,6 @@ public class DBSchemaManager {
 	
 
 
-	public Map<String, Object> getMapIndicesForTable(String table) {
-		Map<String, Object> tableColumnIndices = new HashMap<>();
-		if (table == null) {
-			for (String key : objtables.keySet()) {
-				List<ColumnDef> cdfs = schema.get(key);
-				Map<String, List<String>> indices = new HashMap<>();
-				for (ColumnDef cdf : cdfs) {
-					if (cdf.index != NOT_INDEXED) {
-						if (cdf.indexedField == null) {
-							indices.put(cdf.colName, Collections.emptyList());
-						} else {
-							indices.put(cdf.colName, cdf.indexedField);
-						}
-					}
-				}
-				tableColumnIndices.put(key, indices);
-			}
-		} else {
-			List<ColumnDef> cdfs = schema.get(table);
-			if (cdfs != null) {
-				Map<String, List<String>> indices = new HashMap<>();
-				for (ColumnDef cdf : cdfs) {
-					if (cdf.index != NOT_INDEXED) {
-						if (cdf.indexedField == null) {
-							indices.put(cdf.colName, Collections.emptyList());
-						} else {
-							indices.put(cdf.colName, cdf.indexedField);
-						}
-					}
-				}
-				tableColumnIndices.put(table, indices);
-			}
-		}
-
-		return tableColumnIndices;
-	}
 
 	@SuppressWarnings("unchecked")
 	public List<OpIndexColumn> generateCustomColumnsForTable(String type) {
@@ -565,9 +531,28 @@ public class DBSchemaManager {
 		return columns;
 	}
 	
-	public OpIndexColumn getIndexType(String type, String columnId) {
-		// TODO Auto-generated method stub
-		return new OpIndexColumn();
+	public OpIndexColumn getIndex(String type, String columnId) {
+		Map<String, OpIndexColumn> tind = indexes.get(type);
+		if(tind != null) {
+			return tind.get(columnId);
+		}
+		return null;
+	}
+	
+	public Collection<OpIndexColumn> getIndicesForType(String type) {
+		if(type == null) {
+			List<OpIndexColumn> ind = new ArrayList<>();
+			Iterator<Map<String, OpIndexColumn>> it = indexes.values().iterator();
+			while(it.hasNext()) {
+				ind.addAll(it.next().values());
+			}
+			return ind;
+		}
+		Map<String, OpIndexColumn> tind = indexes.get(type);
+		if(tind != null) {
+			return tind.values();
+		}
+		return Collections.emptyList();
 	}
 
 	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, List<OpIndexColumn> indexes) {
@@ -616,6 +601,8 @@ public class DBSchemaManager {
 		}
 
 	}
+
+	
 
 	
 	

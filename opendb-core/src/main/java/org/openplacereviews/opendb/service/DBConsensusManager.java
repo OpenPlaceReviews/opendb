@@ -106,36 +106,6 @@ public class DBConsensusManager {
 		return dbManagedChain.getSuperBlockHash();
 	}
 
-	public Map<String, Object> getMapIndicesForTable(String table) {
-		return dbSchema.getMapIndicesForTable(table);
-	}
-
-	public String getTableByType(String type) {
-		return dbSchema.getTableByType(type);
-	}
-
-	@SuppressWarnings("unchecked")
-	public String getColumnByTableAndIndex(String table, String index) {
-		if (table != null) {
-			Map<String, Map<String, Object>> obtables = dbSchema.getObjtables();
-			Map<String, Object> tableObject = obtables.get(table);
-			Map<String, Object> cii = (Map<String, Object>) tableObject.get("indices");
-			for (Entry<String, Object> entry : cii.entrySet()) {
-				Map<String, Object> arrayColumns = (Map<String, Object>) entry.getValue();
-				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
-				if (fields != null) {
-					for (String field : fields.values()) {
-						if (index.equals(field)) {
-							return (String) arrayColumns.get("column");
-						}
-					}
-				}
-			}
-		}
-
-		return null;
-	}
-
 	// mainchain could change
 	public synchronized OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
@@ -180,8 +150,12 @@ public class DBConsensusManager {
 		return blcQueue;
 	}
 	
-	public OpIndexColumn getIndexType(String type, String columnId) {
-		return dbSchema.getIndexType(type, columnId);
+	public OpIndexColumn getIndex(String type, String columnId) {
+		return dbSchema.getIndex(type, columnId);
+	}
+	
+	public Collection<OpIndexColumn> getIndicesForType(String type) {
+		return dbSchema.getIndicesForType(type);
 	}
 
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent,

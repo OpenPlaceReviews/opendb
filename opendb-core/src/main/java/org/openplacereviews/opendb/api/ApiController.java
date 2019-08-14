@@ -205,11 +205,10 @@ public class ApiController {
 		return formatter.fullObjectToJson(obj);
 	}
 
-	@GetMapping(path = "/indices-by-table", produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/indices-by-type", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String getIndices(@RequestParam(required = false) String table) {
-		Map<String, Object> tableIndices = manager.getMapIndicesForTable(table);
-
+	public String getIndices(@RequestParam(required = false) String type) {
+		Collection<OpIndexColumn> tableIndices = manager.getIndicesForType(type);
 		return formatter.fullObjectToJson(tableIndices);
 	}
 
