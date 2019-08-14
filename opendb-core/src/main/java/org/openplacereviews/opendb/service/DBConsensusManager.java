@@ -647,7 +647,7 @@ public class DBConsensusManager {
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
-				List<OpIndexColumn> indexes = dbSchema.generateCustomColumnsForTable(type);
+				Collection<OpIndexColumn> indexes = dbSchema.getIndicesForType(type);
 				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, indexes);
 				String table = dbSchema.getTableByType(type);
 				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, indexes);
@@ -668,7 +668,7 @@ public class DBConsensusManager {
 	}
 
 	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
-												   byte[] superBlockHash, Map<String, Long> opsId, List<OpIndexColumn> indexes) {
+												   byte[] superBlockHash, Map<String, Long> opsId, Collection<OpIndexColumn> indexes) {
 
 		List<Object[]> insertBatch = new ArrayList<>(objects.size());
 		int ksize = dbSchema.getKeySizeByType(type);

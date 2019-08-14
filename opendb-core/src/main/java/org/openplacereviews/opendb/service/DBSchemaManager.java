@@ -17,21 +17,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
-import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
-import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
-import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.dao.DataAccessException;
@@ -100,16 +95,21 @@ public class DBSchemaManager {
 	}
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType basicIndexType) {
-		List<ColumnDef> lst = schema.get(tableName);
-		if (lst == null) {
-			lst = new ArrayList<ColumnDef>();
-			schema.put(tableName, lst);
-		}
 		ColumnDef cd = new ColumnDef();
 		cd.tableName = tableName;
 		cd.colName = colName;
 		cd.colType = colType;
 		cd.index = basicIndexType;
+		registerColumn(tableName, cd);
+	}
+
+	private static void registerColumn(String tableName, ColumnDef cd) {
+		List<ColumnDef> lst = schema.get(tableName);
+		if (lst == null) {
+			lst = new ArrayList<ColumnDef>();
+			schema.put(tableName, lst);
+		}
+		
 		lst.add(cd);
 	}
 
@@ -298,48 +298,12 @@ public class DBSchemaManager {
 			for(int i = 1; i <= keySize; i++) {
 				pks += ", p" +i; 
 			}
-
-			List<OpIndexColumn> valuesForUpdating = jdbcTemplate.query("SELECT ENCODE(ophash, 'hex') as ophash, content FROM " + prevTable + " WHERE type = ?", rs -> {
-				List<OpIndexColumn> indexList = new ArrayList<>();
-				while (rs.next()) {
-					indexList.add(OpIndexColumn.of(rs.getString(1), rs.getString(2)));
-				}
-				return indexList;
-			}, type);
-
 			int update = jdbcTemplate.update(
 					"WITH moved_rows AS ( DELETE FROM " + prevTable + " a WHERE type = ? RETURNING a.*) " +
 					"INSERT INTO " + tableName + "(type, ophash, superblock, sblockid, sorder, content " + pks + ") " +
 					"SELECT type, ophash, superblock, sblockid, sorder, content" + pks + " FROM moved_rows", type);
 
-			List<OpIndexColumn> customIndexDtoList = generateCustomColumnsForTable(tableName);
-
-			StringBuilder columnsForUpdating = new StringBuilder();
-			for (OpIndexColumn c : customIndexDtoList) {
-				if (columnsForUpdating.length() == 0) {
-					columnsForUpdating.append(c.column).append(" = ?");
-				} else {
-					columnsForUpdating.append(",").append(c.column).append(" = ?");
-				}
-			}
-
-			if (valuesForUpdating != null) {
-				valuesForUpdating.forEach(customIndexDto -> {
-					OpObject opObject = formatter.parseObject(customIndexDto.content);
-					Object[] args = new Object[customIndexDtoList.size() + 1];
-					AtomicInteger i = new AtomicInteger();
-
-					customIndexDtoList.forEach(indexField -> {
-						args[i.get()] = getColumnValue(indexField, opObject);
-						i.getAndIncrement();
-					});
-					args[i.get()] = SecUtils.getHashBytes(customIndexDto.hash);
-
-					jdbcTemplate.update(
-							"UPDATE " + tableName + " SET " + columnsForUpdating + " WHERE ophash = ? ", args);
-				});
-			}
-
+			
 			LOGGER.info(String.format("Migrate %d objects of type '%s'.", update, type));
 		}
 	}
@@ -351,34 +315,9 @@ public class DBSchemaManager {
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
-
-			Map<String, Map<String, String>> cii = (Map<String, Map<String, String>>) objtables.get(tableName).get("columns");
-			if (cii != null) {
-				for (Map.Entry<String, Map<String, String>> entry : cii.entrySet()) {
-					Map<String, String> arrayColumns = entry.getValue();
-					
-					registerColumn(tableName, arrayColumns.get("name"), arrayColumns.get("type"), indices, NOT_INDEXED);
-				}
-			}
-			
-			List<OpIndexColumn> indices = null;
-			Map<String, Map<String, Object>> indexMap = (Map<String, Map<String, Object>>) objtables.get(tableName).get("indices");
-			if (indexMap != null) {
-				indices = new ArrayList<>();
-				for (Map.Entry<String, Map<String, Object>> entry : indexMap.entrySet()) {
-					Map<String, Object> index = entry.getValue();
-					List<String> indicesList = new ArrayList<>();
-					Map<String, String> fieldList = ((Map<String, String>) index.get("field"));
-					if (fieldList != null) {
-						indicesList.addAll(fieldList.values());
-					}
-					indices.add(OpIndexColumn.of(index.get("column").toString(), indicesList, index.get("type").toString()));
-				}
-			}
-
 			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
 			objTableDefs.put(tableName, ott);
-			registerObjTable(tableName, i, indices);
+			
 			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
 			if(tps != null) {
 				for(String type : tps.values()) {
@@ -386,8 +325,39 @@ public class DBSchemaManager {
 					ott.types.add(type);
 				}
 			}
-
-			
+			List<Map<String, Object>> cii = (List<Map<String, Object>>) objtables.get(tableName).get("columns");
+			if (cii != null) {
+				for (Map<String, Object> entry : cii) {
+					ColumnDef cd = new ColumnDef();
+					cd.tableName = tableName;
+					String name = (String) entry.get("name");
+					cd.colName = name;
+					cd.colType = (String) entry.get("sqltype");
+					// to be used array
+					// String sqlmapping = (String) entry.get("sqlmapping");
+					String index = (String) entry.get("index");
+					if(index != null) {
+						if(index.equalsIgnoreCase("true")) {
+							cd.index = INDEXED;	
+						} else {
+							cd.index = IndexType.valueOf(index);
+						}
+					}
+					List<String> fld = (List<String>) entry.get("field");
+					if(fld != null) {
+					for(String type : ott.types) {
+						OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
+						indexColumn.setFieldsExpression(fld);
+						if(!indexes.containsKey(type)) {
+							indexes.put(type, new TreeMap<String, OpIndexColumn>());
+						}
+						indexes.get(type).put(name, indexColumn);
+					}
+					}
+					registerColumn(tableName, cd);
+				}
+			}
+			registerObjTable(tableName, i);
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
 	}
@@ -502,35 +472,6 @@ public class DBSchemaManager {
 		return s;
 	}
 
-	
-
-
-
-	@SuppressWarnings("unchecked")
-	public List<OpIndexColumn> generateCustomColumnsForTable(String type) {
-		List<OpIndexColumn> columns = new ArrayList<>();
-
-		if (table.equals(OBJS_TABLE)) {
-			return columns;
-		}
-
-		Map<String, Map<String, Object>> cii = (Map<String, Map<String, Object>>) objtables.get(table).get("columns");
-		if (cii != null) {
-			for (Map.Entry<String, Map<String, Object>> entry : cii.entrySet()) {
-				Map<String, Object> arrayColumns = entry.getValue();
-				List<String> columnList = new ArrayList<>();
-				Map<String, String> fieldList = ((Map<String, String>) arrayColumns.get("field"));
-				if (fieldList != null) {
-					columnList.addAll(fieldList.values());
-				}
-
-				columns.add(OpIndexColumn.of(arrayColumns.get("name").toString(), columnList, arrayColumns.get("type").toString()));
-			}
-		}
-
-		return columns;
-	}
-	
 	public OpIndexColumn getIndex(String type, String columnId) {
 		Map<String, OpIndexColumn> tind = indexes.get(type);
 		if(tind != null) {
@@ -555,7 +496,7 @@ public class DBSchemaManager {
 		return Collections.emptyList();
 	}
 
-	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, List<OpIndexColumn> indexes) {
+	public void insertObjIntoTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, Collection<OpIndexColumn> indexes) {
 		StringBuilder extraColumnNames = new StringBuilder();
 		for(OpIndexColumn index : indexes) {
 			extraColumnNames.append(index.getColumnDef().colName).append(",");
