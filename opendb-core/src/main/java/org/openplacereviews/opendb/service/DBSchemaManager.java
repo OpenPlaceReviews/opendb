@@ -326,16 +326,16 @@ public class DBSchemaManager {
 					// to be used array
 					// String sqlmapping = (String) entry.get("sqlmapping");
 					
-					List<String> fld = (List<String>) entry.get("field");
-					if(fld != null) {
-					for(String type : ott.types) {
-						OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
-						indexColumn.setFieldsExpression(fld);
-						if(!indexes.containsKey(type)) {
-							indexes.put(type, new TreeMap<String, OpIndexColumn>());
+					Map<String, String> fld = (Map<String, String>) entry.get("field");
+					if (fld != null) {
+						for (String type : ott.types) {
+							OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
+							indexColumn.setFieldsExpression(fld.values());
+							if (!indexes.containsKey(type)) {
+								indexes.put(type, new TreeMap<String, OpIndexColumn>());
+							}
+							indexes.get(type).put(name, indexColumn);
 						}
-						indexes.get(type).put(name, indexColumn);
-					}
 					}
 					registerColumn(tableName, cd);
 				}

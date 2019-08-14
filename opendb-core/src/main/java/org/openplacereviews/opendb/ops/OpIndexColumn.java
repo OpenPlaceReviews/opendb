@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -31,7 +32,7 @@ public class OpIndexColumn {
 		return indexId;
 	}
 	
-	public void setFieldsExpression(List<String> fieldsExpression) {
+	public void setFieldsExpression(Collection<String> fieldsExpression) {
 		List<List<String>> nf = new ArrayList<>();
 		if (fieldsExpression != null) {
 			for (String o : fieldsExpression) {
