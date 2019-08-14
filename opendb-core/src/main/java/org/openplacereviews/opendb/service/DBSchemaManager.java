@@ -1,19 +1,6 @@
 package org.openplacereviews.opendb.service;
 
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
@@ -23,8 +10,6 @@ import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
-
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +18,12 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 
 
 @Service
@@ -307,9 +298,9 @@ public class DBSchemaManager {
 					ott.types.add(type);
 				}
 			}
-			List<Map<String, Object>> cii = (List<Map<String, Object>>) objtables.get(tableName).get("columns");
+			Map<String, Map<String, Object>> cii = (Map<String, Map<String, Object>>) objtables.get(tableName).get("columns");
 			if (cii != null) {
-				for (Map<String, Object> entry : cii) {
+				for (Map<String, Object> entry : cii.values()) {
 					String name = (String) entry.get("name");
 					String colType = (String) entry.get("sqltype");
 					String index = (String) entry.get("index");
