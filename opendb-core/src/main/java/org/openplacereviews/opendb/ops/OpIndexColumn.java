@@ -1,5 +1,6 @@
 package org.openplacereviews.opendb.ops;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -13,7 +14,7 @@ public class OpIndexColumn {
 	private final String indexId;
 	private final String opType;
 	private final ColumnDef columnDef;
-	private List<String> fieldsExpression = Collections.emptyList();
+	private List<List<String>> fieldsExpression = Collections.emptyList();
 	
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
@@ -31,11 +32,18 @@ public class OpIndexColumn {
 	}
 	
 	public void setFieldsExpression(List<String> fieldsExpression) {
-		this.fieldsExpression = fieldsExpression;
-	}
-	
-	public List<String> getFieldsExpression() {
-		return fieldsExpression;
+		List<List<String>> nf = new ArrayList<>();
+		if (fieldsExpression != null) {
+			for (String o : fieldsExpression) {
+				String[] split = o.split("\\.");
+				List<String> fld = new ArrayList<String>();
+				for(String s : split) {
+					fld.add(s);
+				}
+				nf.add(fld);
+			}
+		}
+		this.fieldsExpression = nf;
 	}
 	
 	public ColumnDef getColumnDef() {
@@ -43,8 +51,10 @@ public class OpIndexColumn {
 	}
 	
 	public Object evalDBValue(OpObject opObject) {
-		List<Object> array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), 
-				fieldsExpression, null);
+		List<Object> array = null;
+		for (List<String> f : fieldsExpression) {
+			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
+		}
 		if(array != null) {
 			Iterator<Object> it = array.iterator();
 			while(it.hasNext()) {
@@ -65,8 +75,10 @@ public class OpIndexColumn {
 	}
 
 	public boolean accept(OpObject opObject, SearchType searchType, Object[] argsToSearch) {
-		List<Object> array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), 
-				fieldsExpression, null);
+		List<Object> array = null;
+		for (List<String> f : fieldsExpression) {
+			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
+		}
 		if (array != null && argsToSearch.length > 0) {
 			for (Object s : array) {
 				if(searchType == SearchType.STRING_EQUALS) {
