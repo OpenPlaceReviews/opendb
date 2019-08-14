@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -130,25 +128,6 @@ public class DBConsensusManager {
 						if (index.equals(field)) {
 							return (String) arrayColumns.get("column");
 						}
-					}
-				}
-			}
-		}
-
-		return null;
-	}
-
-	@SuppressWarnings("unchecked")
-	public String getFieldForSearchByIndex(String table, String column, String index) {
-		Map<String, Map<String, Object>> obtables = dbSchema.getObjtables();
-		Map<String, Object> cii = (Map<String, Object>) obtables.get(table).get("columns");
-		for (Entry<String, Object> entry : cii.entrySet()) {
-			Map<String, Object> arrayColumns = (Map<String, Object>) entry.getValue();
-			if (column.equals(arrayColumns.get("name"))) {
-				Map<String, String> fields = (Map<String, String>) arrayColumns.get("field");
-				for (String field : fields.values()) {
-					if (dbSchema.getLastFieldValue(field).equals(index)) {
-						return field;
 					}
 				}
 			}
@@ -694,14 +673,10 @@ public class DBConsensusManager {
 			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
+				List<OpIndexColumn> indexes = dbSchema.generateCustomColumnsForTable(type);
+				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, indexes);
 				String table = dbSchema.getTableByType(type);
-				List<OpIndexColumn> customIndexDtoList = dbSchema.generateCustomColumnsForTable(table);
-				String columns = dbSchema.generateColumnNames(customIndexDtoList);
-				AtomicReference<String> amountValuesForCustomColumns = new AtomicReference<>("");
-				customIndexDtoList.forEach(customIndexDto -> amountValuesForCustomColumns.set(amountValuesForCustomColumns.get() + "?,"));
-
-				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, customIndexDtoList);
-				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, columns, amountValuesForCustomColumns);
+				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, indexes);
 			}
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 					blc.getRules());
@@ -719,7 +694,7 @@ public class DBConsensusManager {
 	}
 
 	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
-												   byte[] superBlockHash, Map<String, Long> opsId, List<OpIndexColumn> customIndexDtoList) {
+												   byte[] superBlockHash, Map<String, Long> opsId, List<OpIndexColumn> indexes) {
 
 		List<Object[]> insertBatch = new ArrayList<>(objects.size());
 		int ksize = dbSchema.getKeySizeByType(type);
@@ -737,14 +712,15 @@ public class DBConsensusManager {
 					throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
 				}
 
-				Object[] args = new Object[6 + ksize + customIndexDtoList.size()];
-				args[0] = type;
+				Object[] args = new Object[6 + ksize + indexes.size()];
+				int ind = 0;
+				args[ind++] = type;
 				String ophash = obj.getParentHash();
-				args[1] = SecUtils.getHashBytes(ophash);
-				args[2] = superBlockHash;
+				args[ind++] = SecUtils.getHashBytes(ophash);
+				args[ind++] = superBlockHash;
 
-				args[3] = sblockid;
-				args[4] = sorder;
+				args[ind++] = sblockid;
+				args[ind++] = sorder;
 				PGobject contentObj = new PGobject();
 				contentObj.setType("jsonb");
 				try {
@@ -752,15 +728,12 @@ public class DBConsensusManager {
 				} catch (SQLException es) {
 					throw new IllegalArgumentException(es);
 				}
-				args[5] = contentObj;
+				args[ind++] = contentObj;
 
-				AtomicInteger i = new AtomicInteger(6);
-				customIndexDtoList.forEach(customIndexDto -> {
-					args[i.get()] = dbSchema.getColumnValue(customIndexDto, obj);
-					i.getAndIncrement();
-				});
-
-				pkey.toArray(args, i.get());
+				for(OpIndexColumn index : indexes) {
+					args[ind++] = index.evalDBValue(obj);
+				}
+				pkey.toArray(args, ind);
 
 				insertBatch.add(args);
 			}

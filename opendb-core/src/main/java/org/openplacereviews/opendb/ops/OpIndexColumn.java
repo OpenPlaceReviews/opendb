@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
@@ -37,9 +38,30 @@ public class OpIndexColumn {
 		return fieldsExpression;
 	}
 	
-	
 	public ColumnDef getColumnDef() {
 		return columnDef;
+	}
+	
+	public Object evalDBValue(OpObject opObject) {
+		List<Object> array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), 
+				fieldsExpression, null);
+		if(array != null) {
+			Iterator<Object> it = array.iterator();
+			while(it.hasNext()) {
+				Object o = it.next();
+				if(o == null) {
+					it.remove();
+				}
+			}
+		}
+		if(array == null || array.size() == 0) {
+			return null;
+		}
+		if(columnDef.isArray()) {
+			return array.toArray(new Object[array.size()]);
+		} else {
+			return array.get(0);
+		}
 	}
 
 	public boolean accept(OpObject opObject, SearchType searchType, Object[] argsToSearch) {
