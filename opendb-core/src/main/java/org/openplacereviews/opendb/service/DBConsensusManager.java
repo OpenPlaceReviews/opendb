@@ -382,8 +382,6 @@ public class DBConsensusManager {
 							op[0] = formatter.parseOperation(rs.getString(1));
 						}
 					}
-
-
 				});
 				return op[0];
 			} finally {
