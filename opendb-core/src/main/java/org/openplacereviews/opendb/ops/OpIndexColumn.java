@@ -8,6 +8,8 @@ import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.sql.Array;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -90,7 +92,10 @@ public class OpIndexColumn {
 
 	public Object generateArrayObject(JdbcTemplate jdbcTemplate, Object[] object) {
 		try {
-			return jdbcTemplate.getDataSource().getConnection().createArrayOf(getColumnType(), object);
+			Connection connection = jdbcTemplate.getDataSource().getConnection();
+			Array array = connection.createArrayOf(getColumnType(), object);
+			connection.close();
+			return array;
 		} catch (SQLException e) {
 			LOGGER.error("Error while creating sql array", e);
 			return null;
