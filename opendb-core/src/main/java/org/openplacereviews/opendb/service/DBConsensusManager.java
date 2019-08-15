@@ -342,6 +342,9 @@ public class DBConsensusManager {
 		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request,
 				Object... args) {
 			Object objToSearch = args[0];
+			if(index.getColumnDef().isInteger() && objToSearch instanceof String) {
+				objToSearch = Long.parseLong(objToSearch.toString());
+			}
 //			if (index.getColumnDef().isArray()) {
 //				objToSearch = index.generateArrayObject(jdbcTemplate, new Object[] {objToSearch});
 //			}

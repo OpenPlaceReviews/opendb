@@ -37,4 +37,8 @@ public class ColumnDef {
 	public enum IndexType {
 		NOT_INDEXED, INDEXED, GIN, GIST
 	}
+
+	public boolean isInteger() {
+		return colType.startsWith("int") || colType.startsWith("bigint");
+	}
 }
