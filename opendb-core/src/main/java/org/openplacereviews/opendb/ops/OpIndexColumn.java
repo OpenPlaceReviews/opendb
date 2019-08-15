@@ -6,7 +6,6 @@ import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.sql.Array;
 import java.sql.Connection;
@@ -56,7 +55,7 @@ public class OpIndexColumn {
 		return columnDef;
 	}
 	
-	public Object evalDBValue(OpObject opObject, JdbcTemplate jdbcTemplate) {
+	public Object evalDBValue(OpObject opObject, Connection conn) {
 		List<Object> array = null;
 		for (List<String> f : fieldsExpression) {
 			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
@@ -74,7 +73,7 @@ public class OpIndexColumn {
 			return null;
 		}
 		if(columnDef.isArray()) {
-			return generateArrayObject(jdbcTemplate, array.toArray(new Object[array.size()]));
+			return generateArrayObject(conn, array.toArray(new Object[array.size()]));
 		} else {
 			return array.get(0);
 		}
@@ -90,11 +89,9 @@ public class OpIndexColumn {
 		return columnType;
 	}
 
-	public Object generateArrayObject(JdbcTemplate jdbcTemplate, Object[] object) {
+	private Object generateArrayObject(Connection connection, Object[] object) {
 		try {
-			Connection connection = jdbcTemplate.getDataSource().getConnection();
 			Array array = connection.createArrayOf(getColumnType(), object);
-			connection.close();
 			return array;
 		} catch (SQLException e) {
 			LOGGER.error("Error while creating sql array", e);

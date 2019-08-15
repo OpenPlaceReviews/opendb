@@ -23,6 +23,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -341,9 +342,9 @@ public class DBConsensusManager {
 		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request,
 				Object... args) {
 			Object objToSearch = args[0];
-			if (index.getColumnDef().isArray()) {
-				objToSearch = index.generateArrayObject(jdbcTemplate, new Object[] {objToSearch});
-			}
+//			if (index.getColumnDef().isArray()) {
+//				objToSearch = index.generateArrayObject(jdbcTemplate, new Object[] {objToSearch});
+//			}
 			return jdbcTemplate.query(dbSchema.generateIndexQuery(index, request), new ResultSetExtractor<List<OpObject>>() {
 				@Override
 				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -655,44 +656,50 @@ public class DBConsensusManager {
 		List<Object[]> insertBatch = new ArrayList<>(objects.size());
 		int ksize = dbSchema.getKeySizeByType(type);
 		Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
-		while (it.hasNext()) {
-			Entry<CompoundKey, OpObject> e = it.next();
-			CompoundKey pkey = e.getKey();
-			OpObject obj = e.getValue();
-			if (obj != OpObject.NULL) {
-				long l = opsId.get(obj.getParentHash());
-				int sblockid = OUtils.first(l);
-				int sorder = OUtils.second(l);
+		try {
+			Connection conn = jdbcTemplate.getDataSource().getConnection();
+			while (it.hasNext()) {
+				Entry<CompoundKey, OpObject> e = it.next();
+				CompoundKey pkey = e.getKey();
+				OpObject obj = e.getValue();
+				if (obj != OpObject.NULL) {
+					long l = opsId.get(obj.getParentHash());
+					int sblockid = OUtils.first(l);
+					int sorder = OUtils.second(l);
 
-				if (pkey.size() > ksize) {
-					throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+					if (pkey.size() > ksize) {
+						throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+					}
+
+					Object[] args = new Object[6 + ksize + indexes.size()];
+					int ind = 0;
+					args[ind++] = type;
+					String ophash = obj.getParentHash();
+					args[ind++] = SecUtils.getHashBytes(ophash);
+					args[ind++] = superBlockHash;
+
+					args[ind++] = sblockid;
+					args[ind++] = sorder;
+					PGobject contentObj = new PGobject();
+					contentObj.setType("jsonb");
+					try {
+						contentObj.setValue(formatter.objToJson(obj));
+					} catch (SQLException es) {
+						throw new IllegalArgumentException(es);
+					}
+					args[ind++] = contentObj;
+
+					for (OpIndexColumn index : indexes) {
+						args[ind++] = index.evalDBValue(obj, conn);
+					}
+					pkey.toArray(args, ind);
+
+					insertBatch.add(args);
 				}
-
-				Object[] args = new Object[6 + ksize + indexes.size()];
-				int ind = 0;
-				args[ind++] = type;
-				String ophash = obj.getParentHash();
-				args[ind++] = SecUtils.getHashBytes(ophash);
-				args[ind++] = superBlockHash;
-
-				args[ind++] = sblockid;
-				args[ind++] = sorder;
-				PGobject contentObj = new PGobject();
-				contentObj.setType("jsonb");
-				try {
-					contentObj.setValue(formatter.objToJson(obj));
-				} catch (SQLException es) {
-					throw new IllegalArgumentException(es);
-				}
-				args[ind++] = contentObj;
-
-				for(OpIndexColumn index : indexes) {
-					args[ind++] = index.evalDBValue(obj, jdbcTemplate);
-				}
-				pkey.toArray(args, ind);
-
-				insertBatch.add(args);
 			}
+			conn.close();
+		} catch (SQLException e) {
+			throw new IllegalArgumentException();
 		}
 
 		return insertBatch;
