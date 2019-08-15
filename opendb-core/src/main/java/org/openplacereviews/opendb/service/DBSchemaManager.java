@@ -404,10 +404,10 @@ public class DBSchemaManager {
 				return columnDef.getColName() + " = ?";
 			}
 			case GIN : {
-				return columnDef.getColName() + " @> ?";
+				return columnDef.getColName() + " @> ARRAY[?]";
 			}
 			case GIST : {
-				throw new UnsupportedOperationException("GIST index not implemented");
+				return columnDef.getColName() + " @> ARRAY[?]";
 			}
 			default: {
 				return columnDef.getColName() + " = ?";
