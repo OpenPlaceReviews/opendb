@@ -1,17 +1,20 @@
 package org.openplacereviews.opendb.ops;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.*;
+
 public class OpIndexColumn {
+
+	protected static final Log LOGGER = LogFactory.getLog(OpIndexColumn.class);
+
 	private final String indexId;
 	private final String opType;
 	private final ColumnDef columnDef;
@@ -51,7 +54,7 @@ public class OpIndexColumn {
 		return columnDef;
 	}
 	
-	public Object evalDBValue(OpObject opObject) {
+	public Object evalDBValue(OpObject opObject, Connection connection) {
 		List<Object> array = null;
 		for (List<String> f : fieldsExpression) {
 			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
@@ -69,10 +72,26 @@ public class OpIndexColumn {
 			return null;
 		}
 		if(columnDef.isArray()) {
-			return array.toArray(new Object[array.size()]);
+			try {
+				return connection.createArrayOf(getColumnType(),
+						array.toArray(new Object[array.size()]));
+			} catch (SQLException e) {
+				LOGGER.error("Error while creating sql array", e);
+				return null;
+			}
 		} else {
 			return array.get(0);
 		}
+	}
+
+	public String getColumnType() {
+		int indexOf = columnDef.getColType().indexOf("[");
+		String columnType = columnDef.getColType();
+		if (indexOf != -1) {
+			columnType = columnDef.getColType().substring(0, indexOf);
+		}
+
+		return columnType;
 	}
 
 	public boolean accept(OpObject opObject, SearchType searchType, Object[] argsToSearch) {

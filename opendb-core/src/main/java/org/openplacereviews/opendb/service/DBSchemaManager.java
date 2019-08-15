@@ -391,7 +391,7 @@ public class DBSchemaManager {
 	public String generateIndexQuery(OpIndexColumn index, ObjectsSearchRequest req) {
 		ColumnDef cd = index.getColumnDef();
 		return "SELECT content FROM " + cd.getTableName() + 
-				" WHERE " + getExpressionSignWithColumnName(cd, req.searchType) 
+				" WHERE " + getExpressionSignWithColumnName(cd, req.searchType)
 				+ " AND superblock = ?";
 	}
 
@@ -479,7 +479,7 @@ public class DBSchemaManager {
 				+ "(type,ophash,superblock,sblockid,sorder,content,"
 				+ extraColumnNames.toString()
 				+ generatePKString(table, "p%1$d", ",") + ") "
-				+ " values(?,?,?,?,?,?," + repeatString("?", ",", indexes.size()) + generatePKString(table, "?", ",") + ")", args);
+				+ " values(?,?,?,?,?,?," + repeatString("?,", "", indexes.size()) + generatePKString(table, "?", ",") + ")", args);
 	}
 
 	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {

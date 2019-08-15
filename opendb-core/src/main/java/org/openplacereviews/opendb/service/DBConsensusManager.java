@@ -1,47 +1,14 @@
 package org.openplacereviews.opendb.service;
 
-import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.EXT_RESOURCE_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
-
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
-import org.openplacereviews.opendb.ops.OpIndexColumn;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -54,6 +21,18 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class DBConsensusManager {
@@ -362,6 +341,13 @@ public class DBConsensusManager {
 		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request,
 				Object... args) {
 			Object objToSearch = args[0];
+			if (index.getColumnDef().isArray()) {
+				try {
+					objToSearch =  jdbcTemplate.getDataSource().getConnection().createArrayOf(index.getColumnType(), new Object[] {objToSearch});
+				} catch (SQLException e) {
+					LOGGER.error("Error while creating array for search", e);
+				}
+			}
 			return jdbcTemplate.query(dbSchema.generateIndexQuery(index, request), new ResultSetExtractor<List<OpObject>>() {
 				@Override
 				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -371,7 +357,7 @@ public class DBConsensusManager {
 					}
 					return res;
 				}
-			}, new Object[] {sbhash, objToSearch});
+			}, new Object[] {objToSearch, sbhash});
 		}
 
 
@@ -705,7 +691,11 @@ public class DBConsensusManager {
 				args[ind++] = contentObj;
 
 				for(OpIndexColumn index : indexes) {
-					args[ind++] = index.evalDBValue(obj);
+					try {
+						args[ind++] = index.evalDBValue(obj, jdbcTemplate.getDataSource().getConnection());
+					} catch (SQLException e1) {
+						LOGGER.error("Error while getting connection", e1);
+					}
 				}
 				pkey.toArray(args, ind);
 

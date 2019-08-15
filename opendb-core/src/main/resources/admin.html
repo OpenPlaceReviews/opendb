@@ -90,9 +90,11 @@
 
     <div id="indices" class="tab-pane fade">
         <h3>Table</h3>
-        <label>Input object type:</label><input type="text" id="index-obj-type"/>
-        <br>
-        <label>Input index name:</label><input type="text" id="index-name"/>
+        <label>Select type:&nbsp;</label><select id="type-list">
+    </select>
+        <h3>Column</h3>
+        <label>Select id:&nbsp;</label><select id="index-list">
+    </select>
         <br>
         <label>Input search key:</label><input type="text" id="index-search-key"/>
         <input type="submit" value="Search by key" id="load-table-index-btn">
@@ -294,6 +296,7 @@
         loadBotData();
         loadQueueData();
         loadObjectsData();
+        loadIndexData();
         loadBlocksData();
         loadErrorsData();
         loadIpfsStatusData();
@@ -443,6 +446,21 @@
             $("#amount-all-ipfs-objects").html(data.amountIpfsResources);
             $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
         });
+    }
+    
+    function loadIndexData() {
+        var opType = "sys.operation";
+
+        $.getJSON( "/api/objects?type="+opType, function( data ) {
+            var items = "";
+            for(var i = 0; i < data.objects.length; i++) {
+                let obj = data.objects[i];
+                items += "<option value = '" + obj.id + "' "+ ">" + obj.id + "</option>";
+
+            }
+            $("#type-list").html(items);
+        });
+
     }
 
     function loadBlocksData() {
@@ -595,12 +613,16 @@
         $("#objects-type-list").change(function() {
             loadObjectsData();
         });
-        $("#table-indices-list").change(function() {
-            globalInit = false;
-            loadIndexData();
-        });
-        $("#index-table-list").change(function() {
-            loadIndexData();
+        $("#type-list").change(function() {
+            let selectType = $("#type-list").val();
+            $.getJSON( "/api/indices-by-type?type="+selectType, function( data ) {
+                var items = "";
+                for (var i = 0; i < data.length; i++) {
+                    var array = data[i];
+                    items += "<option value = '" + array["indexId"] + "' "+ ">" + array["indexId"] + "</option>";
+                }
+                $("#index-list").html(items);
+            });
         });
 
         $("#block-create-btn").click(function(){
@@ -670,8 +692,8 @@
 
         $("#load-table-index-btn").click(function () {
             var obj = {
-                "index":$("#index-name").val(),
-                "type":$("#index-obj-type").val(),
+                "index":$("#index-list").val(),
+                "type":$("#type-list").val(),
                 "key":$("#index-search-key").val()
             };
             $.get("/api/indices", obj)
