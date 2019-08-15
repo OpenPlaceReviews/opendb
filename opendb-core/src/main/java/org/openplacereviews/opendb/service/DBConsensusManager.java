@@ -342,11 +342,7 @@ public class DBConsensusManager {
 				Object... args) {
 			Object objToSearch = args[0];
 			if (index.getColumnDef().isArray()) {
-				try {
-					objToSearch =  jdbcTemplate.getDataSource().getConnection().createArrayOf(index.getColumnType(), new Object[] {objToSearch});
-				} catch (SQLException e) {
-					LOGGER.error("Error while creating array for search", e);
-				}
+				objToSearch = index.generateArrayObject(jdbcTemplate, new Object[] {objToSearch});
 			}
 			return jdbcTemplate.query(dbSchema.generateIndexQuery(index, request), new ResultSetExtractor<List<OpObject>>() {
 				@Override
@@ -691,11 +687,7 @@ public class DBConsensusManager {
 				args[ind++] = contentObj;
 
 				for(OpIndexColumn index : indexes) {
-					try {
-						args[ind++] = index.evalDBValue(obj, jdbcTemplate.getDataSource().getConnection());
-					} catch (SQLException e1) {
-						LOGGER.error("Error while getting connection", e1);
-					}
+					args[ind++] = index.evalDBValue(obj, jdbcTemplate);
 				}
 				pkey.toArray(args, ind);
 
