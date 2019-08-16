@@ -197,7 +197,7 @@ public class OpBlockchainGettersTest {
 		OpBlockChain.ObjectsSearchRequest r = new OpBlockChain.ObjectsSearchRequest();
 		r.limit = 100;
 
-		blc.getObjects(OpBlockchainRules.OP_SIGNUP, r);
+		blc.fetchAllObjects(OpBlockchainRules.OP_SIGNUP, r);
 
 		assertEquals(2, r.result.size());
 	}

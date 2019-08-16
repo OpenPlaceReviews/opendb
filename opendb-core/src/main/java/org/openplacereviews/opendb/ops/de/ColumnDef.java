@@ -41,4 +41,13 @@ public class ColumnDef {
 	public boolean isInteger() {
 		return colType.startsWith("int") || colType.startsWith("bigint");
 	}
+
+	public String getScalarType() {
+		String columnType = colType;
+		int indexOf = colType.indexOf("[");
+		if (indexOf != -1) {
+			columnType = colType.substring(0, indexOf);
+		}
+		return columnType;
+	}
 }

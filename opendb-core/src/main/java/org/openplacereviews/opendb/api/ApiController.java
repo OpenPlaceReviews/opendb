@@ -186,7 +186,7 @@ public class ApiController {
 		ObjectsResult res = new ObjectsResult();
 		ObjectsSearchRequest r = new ObjectsSearchRequest();
 		r.limit = limit;
-		blc.getObjects(type, r);
+		blc.fetchAllObjects(type, r);
 		res.objects = r.result;
 		return formatter.fullObjectToJson(res);
 	}

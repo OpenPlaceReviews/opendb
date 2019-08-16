@@ -2,8 +2,11 @@ package org.openplacereviews.opendb.ops;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
+import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
+import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 
@@ -20,7 +23,7 @@ public class OpIndexColumn {
 	private final String opType;
 	private final ColumnDef columnDef;
 	private List<List<String>> fieldsExpression = Collections.emptyList();
-	
+	private boolean cache = true;
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
 		this.opType = opType;
@@ -72,41 +75,62 @@ public class OpIndexColumn {
 		if(array == null || array.size() == 0) {
 			return null;
 		}
+		// here we can convert to native db type
 		if(columnDef.isArray()) {
-			return generateArrayObject(conn, array.toArray(new Object[array.size()]));
+			try {
+				Array ar = conn.createArrayOf(columnDef.getScalarType(), array.toArray(new Object[array.size()]));
+				return ar;
+			} catch (SQLException e) {
+				LOGGER.error("Error while creating sql array", e);
+				return null;
+			}
 		} else {
 			return array.get(0);
 		}
 	}
 
-	private String getColumnType() {
-		int indexOf = columnDef.getColType().indexOf("[");
-		String columnType = columnDef.getColType();
-		if (indexOf != -1) {
-			columnType = columnDef.getColType().substring(0, indexOf);
+	public Object toNativeType(Object o) {
+		if(columnDef.isInteger()) {
+			return Long.parseLong(o.toString());
 		}
-
-		return columnType;
+		return o.toString();
+	}
+	
+	Object[] getDbCondition(ObjectsSearchRequest request, Object... args) {
+		Object[] o = new Object[2];
+		if (request.searchType != SearchType.EQUALS) {
+			throw new UnsupportedOperationException();
+		}
+		o[0] = columnDef.getColName() + " = ?";
+		if(columnDef.getIndex() == IndexType.GIN || columnDef.getIndex() == IndexType.GIST) {
+			o[0] = columnDef.getColName() + " @> ARRAY[?]";
+		}
+		o[1] = toNativeType(args[0]);
+		return o;
 	}
 
-	private Object generateArrayObject(Connection connection, Object[] object) {
-		try {
-			Array array = connection.createArrayOf(getColumnType(), object);
-			return array;
-		} catch (SQLException e) {
-			LOGGER.error("Error while creating sql array", e);
-			return null;
-		}
-	}
 
-	public boolean accept(OpObject opObject, SearchType searchType, Object[] argsToSearch) {
+	@SuppressWarnings("rawtypes")
+	void retrieveObjects(OpPrivateObjectInstancesById oi, ObjectsSearchRequest request, Object[] argsToSearch) {
+		// only 1 arg is supported
+		Object nt = toNativeType(argsToSearch[0]);
+		CacheObject co = oi.getIndexCacheObject(this);
+		if(co != null && co.cacheObject instanceof Set) {
+			if(!((Set)co.cacheObject).contains(nt)) {
+				return;
+			}
+		}
+		
+	}
+	
+	boolean accept(OpObject opObject, ObjectsSearchRequest request, Object[] argsToSearch) {
 		List<Object> array = null;
 		for (List<String> f : fieldsExpression) {
 			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
 		}
 		if (array != null && argsToSearch.length > 0) {
 			for (Object s : array) {
-				if(searchType == SearchType.STRING_EQUALS) {
+				if(request.searchType == SearchType.EQUALS) {
 					if(OUtils.equalsStringValue(s, argsToSearch[0])) {
 						return true;
 					}
@@ -115,8 +139,7 @@ public class OpIndexColumn {
 		}
 		return false;
 	}
-	
-	
 
+	
 	
 }

@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 
 class OpPrivateObjectInstancesById {
@@ -16,6 +18,7 @@ class OpPrivateObjectInstancesById {
 	private final String type;
 	private Map<CompoundKey, OpObject> objects = new ConcurrentHashMap<>();
 	private volatile CacheObject cacheObject;
+	private Map<Object, CacheObject> cacheMap = null;
 	private AtomicInteger editVersion = new AtomicInteger(0);
 	private final BlockDbAccessInterface dbAccess;
 
@@ -38,6 +41,7 @@ class OpPrivateObjectInstancesById {
 		CompoundKey k = new CompoundKey(0, key);
 		return getByKey(k);
 	}
+	
 
 	public Map<CompoundKey, OpObject> getAllObjects() {
 		if (dbAccess != null) {
@@ -56,43 +60,59 @@ class OpPrivateObjectInstancesById {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void fetchAllObjects(ObjectsSearchRequest request) {
-
-		Map<CompoundKey, OpObject> allObjects = objects;
+	public Stream<Entry<CompoundKey, OpObject>> fetchObjects(ObjectsSearchRequest request, 
+			OpIndexColumn col, Object... args) {
+		// limit will be negative
+		int limit = request.limit - request.result.size();
+		Stream<Entry<CompoundKey, OpObject>> stream;
 		if (dbAccess != null) {
-			allObjects = dbAccess.getAllObjects(type, request);
-		}
-		if(request.internalMapToFilterDuplicates == null) {
-			request.internalMapToFilterDuplicates = new HashMap<CompoundKey, OpObject>();
-			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
-			for (OpObject o : objects.values()) {
-				if (o != OpObject.NULL) {
-					request.result.add(o);
-				}
-				mp.put(new CompoundKey(0, o.getId()), o);
+			if (col == null) {
+				stream = dbAccess.streamObjects(type, limit);
+			} else {
+				stream = dbAccess.streamObjects(type, limit, col.getDbCondition(request, args));
 			}
 		} else {
-			Map<CompoundKey, OpObject> mp = (Map<CompoundKey, OpObject>) request.internalMapToFilterDuplicates;
-			Iterator<Entry<CompoundKey, OpObject>> it = allObjects.entrySet().iterator();
-			while (it.hasNext()) {
-				Entry<CompoundKey, OpObject> k = it.next();
-				if (!mp.containsKey(k.getKey())) {
-					if (k.getValue() != OpObject.NULL) {
-						request.result.add(k.getValue());
+			stream = objects.entrySet().stream();
+			if(col != null){
+				stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
+					@Override
+					public boolean test(Entry<CompoundKey, OpObject> t) {
+						return col.accept(t.getValue(), request, args);
 					}
-					mp.put(k.getKey(), k.getValue());
-				}
+				});
 			}
 		}
+		if (request.internalMapToFilterDuplicates == null) {
+			request.internalMapToFilterDuplicates = new HashSet<CompoundKey>();
+		}
+		final Set<CompoundKey> mp = (Set<CompoundKey>) request.internalMapToFilterDuplicates;
+		stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
+
+			@Override
+			public boolean test(Entry<CompoundKey, OpObject> entr) {
+				if (!mp.contains(entr.getKey())) {
+					mp.add(entr.getKey());
+				}
+				return entr.getValue() != OpObject.NULL;
+			}
+		});
+		return stream;
 	}
 
-	private OpObject getByKey(CompoundKey k) {
-		if (dbAccess != null) {
-			return dbAccess.getObjectById(type, k);
-		}
-		OpObject obj = objects.get(k);
+	OpObject getByKey(CompoundKey k) {
+		OpObject obj = getRawObj(k);
 		if (obj == OpObject.NULL) {
 			return null;
+		}
+		return obj;
+	}
+
+	OpObject getRawObj(CompoundKey k) {
+		OpObject obj ;
+		if (dbAccess != null) {
+			obj = dbAccess.getObjectById(type, k);
+		} else {
+			obj = objects.get(k);
 		}
 		return obj;
 	}
@@ -126,6 +146,7 @@ class OpPrivateObjectInstancesById {
 	void resetAfterEdit() {
 		editVersion.incrementAndGet();
 		cacheObject = null;
+		cacheMap = null;
 	}
 
 	public void add(List<String> id, OpObject newObj) {
@@ -143,7 +164,19 @@ class OpPrivateObjectInstancesById {
 		}
 		return null;
 	}
-
+	
+	public CacheObject getIndexCacheObject(Object index) {
+		Map<Object, CacheObject> mp = cacheMap;
+		if (mp != null) {
+			CacheObject co = mp.get(index);
+			if (co != null && co.cacheVersion == editVersion.intValue()) {
+				return co;
+			}
+		}
+		return null;
+	}
+	
+	
 	public int getEditVersion() {
 		return editVersion.intValue();
 	}
@@ -151,6 +184,17 @@ class OpPrivateObjectInstancesById {
 	void setCacheObject(Object cacheObject, int cacheVersion) {
 		if (cacheVersion == editVersion.intValue()) {
 			this.cacheObject = new CacheObject(cacheObject, cacheVersion);
+		}
+	}
+	
+	void setCacheIndexObject(Object index, Object cacheObject, int cacheVersion) {
+		if (cacheVersion == editVersion.intValue()) {
+			Map<Object, CacheObject> mp = cacheMap;
+			if(mp == null) {
+				mp = new ConcurrentHashMap<>();
+				this.cacheMap = mp;
+			}
+			mp.put(index, new CacheObject(cacheObject, cacheVersion));
 		}
 	}
 

@@ -14,6 +14,7 @@ import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,6 +27,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.stream.Stream;
 
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
@@ -742,13 +744,13 @@ public class OpBlockChain {
 		}
 	}
 
-	public void getObjects(String type, ObjectsSearchRequest request) {
+	public void fetchAllObjects(String type, ObjectsSearchRequest request) {
 		if(isNullBlock()) {
 			return;
 		}
 		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 		if(oi == null) {
-			parent.getObjects(type, request);
+			parent.fetchAllObjects(type, request);
 		} else {
 			request.editVersion = oi.getEditVersion();
 			request.objToSetCache = oi;
@@ -760,46 +762,53 @@ public class OpBlockChain {
 					return;
 				}
 			}
-			fetchAllObjects(type, request);
+			fetchObjectsInternal(type, request, null);
 		}
 	}
 	
 
 	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) {
-		if (isNullBlock()) {
-			return;
+		fetchObjectsInternal(type, request, index, argsToSearch);
+	}
+
+	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) {
+		if(isNullBlock()) {
+			return Collections.emptyMap();
 		}
-		if (dbAccess != null) {
-			List<OpObject> res = dbAccess.getObjectsByIndex(type, index, request, argsToSearch);
-			request.result.addAll(res);
-		} else {
-			OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
-			if (oi != null) {
-				for (OpObject opObject : oi.getAllObjects().values()) {
-					if (opObject != OpObject.NULL && opObject != null) {
-						if(index.accept(opObject, request.searchType, argsToSearch)) {
-							request.result.add(opObject);
-						}
-					}
+		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
+		// don't check for all queries
+		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
+		if(o != null) {
+			Iterator<Entry<CompoundKey, OpObject>> it = o.fetchObjects(request, col, args).iterator();
+			while(it.hasNext()) {
+				Entry<CompoundKey, OpObject> e = it.next();
+				request.result.add(e.getValue());
+				if(fetchedToCheck != null) {
+					fetchedToCheck.put(e.getKey(), e.getValue());
+				}
+				if(request.limit >= 0 && request.result.size() >= request.limit) {
+					return fetchedToCheck;
 				}
 			}
 		}
-		if(request.limit == -1 || request.result.size() < request.limit) {
-			parent.retrieveObjectsByIndex(type, index, request, argsToSearch);
+		if(request.limit < 0 || request.result.size() < request.limit) {
+			Map<CompoundKey, OpObject> prKeys = parent.fetchObjectsInternal(type, request, col, args);
+			// HERE we need to check that newer version doesn't exist in current blockchain 
+			if(prKeys != null) {
+				for(CompoundKey c : prKeys.keySet()) {
+					OpObject i = o.getRawObj(c);
+					if(i != null) {
+						// object was overridden
+						OpObject oldObj = prKeys.get(c);
+						request.result.remove(oldObj);
+					}
+				}
+			}
+			if(fetchedToCheck != null) {
+				fetchedToCheck.putAll(prKeys);
+			}
 		}
-	}
-
-	private void fetchAllObjects(String type, ObjectsSearchRequest request) {
-		if(isNullBlock()) {
-			return;
-		}
-		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
-		if(o != null) {
-			o.fetchAllObjects(request);
-		}
-		if(request.limit == -1 || request.result.size() < request.limit) {
-			parent.fetchAllObjects(type, request);
-		}
+		return fetchedToCheck;
 	}
 
 	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMap(String type) {
@@ -1123,12 +1132,15 @@ public class OpBlockChain {
 
 		OpObject getObjectById(String type, CompoundKey k);
 
-		Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request);
-
-		List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... args);
+		/**
+		 * extraParamsWithCondition[0] - extra and "sql condition"
+		 * extraParamsWithCondition[1+...] - parameters to bind
+		 */
+		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition);
 
 		OpOperation getOperation(String rawHash);
 
+		// Very memory consuming operation
 		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
 
 		OpBlock getBlockByHash(String rawHash);
@@ -1139,7 +1151,7 @@ public class OpBlockChain {
 		public int editVersion;
 		public int limit = -1;
 		public boolean requestCache = false;
-		public SearchType searchType = SearchType.STRING_EQUALS;
+		public SearchType searchType = SearchType.EQUALS;
 
 		public List<OpObject> result = new ArrayList<OpObject>();
 		public int cacheVersion = -1;
@@ -1150,7 +1162,7 @@ public class OpBlockChain {
 	}
 	
 	public enum SearchType {
-		STRING_EQUALS
+		EQUALS
 	}
 
 

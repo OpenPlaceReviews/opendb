@@ -8,7 +8,6 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
-import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -20,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -29,9 +29,14 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
@@ -227,6 +232,98 @@ public class DBConsensusManager {
 		return res;
 	}
 
+
+	protected class SuperblockDbSpliterator implements Spliterator<Map.Entry<CompoundKey, OpObject>> {
+
+		private static final int BATCH_SIZE = 250;
+		private SqlRowSet rs;
+		private SuperblockDbAccess dbAccess;
+		private final int keySize; 
+		private LinkedList<Map.Entry<CompoundKey, OpObject>> results = new LinkedList<>();
+		private boolean end;
+		SuperblockDbSpliterator(SuperblockDbAccess dbAccess, int keySize,  SqlRowSet rowSet) {
+			this.dbAccess = dbAccess;
+			this.keySize = keySize;
+			this.rs = rowSet;
+			readEntries();
+		}
+		
+		private boolean readEntries() {
+			if (end) {
+				return true;
+			}
+			dbAccess.readLock.lock();
+			try {
+				dbAccess.checkNotStale();
+				final List<String> ls = new ArrayList<String>(5);
+				int cnt = 0;
+				while (cnt++ < BATCH_SIZE) {
+					if(!rs.next()) {
+						end = true;
+						return true;
+					}
+					ls.clear();
+					for (int i = 0; i < keySize; i++) {
+						ls.add(rs.getString(i + 4));
+					}
+					final CompoundKey k = new CompoundKey(0, ls);
+					final OpObject obj = formatter.parseObject(rs.getString(1));
+					obj.setParentOp(rs.getString(2), SecUtils.hexify((byte[]) rs.getObject(3)));
+					results.add(new Map.Entry<CompoundKey, OpObject>() {
+
+						@Override
+						public CompoundKey getKey() {
+							return k;
+						}
+
+						@Override
+						public OpObject getValue() {
+							return null;
+						}
+
+						@Override
+						public OpObject setValue(OpObject value) {
+							throw new UnsupportedOperationException();
+						}
+					});
+				}
+			} finally {
+				dbAccess.readLock.unlock();
+			}
+			return false;
+		}
+
+		@Override
+		public boolean tryAdvance(Consumer<? super Map.Entry<CompoundKey, OpObject>> action) {
+			boolean empty = results.isEmpty();
+			if(empty) {
+				readEntries();
+				empty = results.isEmpty();
+			}
+			if(!empty) {
+				action.accept(results.pop());
+				return true;
+			}
+			return false;
+		}
+
+		@Override
+		public Spliterator<Entry<CompoundKey, OpObject>> trySplit() {
+			return null;
+		}
+
+		@Override
+		public long estimateSize() {
+			return Long.MAX_VALUE;
+		}
+
+		@Override
+		public int characteristics() {
+			return 0;
+		}
+		
+	}
+	
 	protected class SuperblockDbAccess implements BlockDbAccessInterface {
 
 		protected final String superBlockHash;
@@ -234,7 +331,7 @@ public class DBConsensusManager {
 		private final ReentrantReadWriteLock readWriteLock;
 		private final ReadLock readLock;
 		private final byte[] sbhash;
-		private volatile boolean staleAccess;
+		private AtomicBoolean staleAccess = new AtomicBoolean(false);
 
 		public SuperblockDbAccess(String superBlockHash, Collection<OpBlock> blockHeaders) {
 			this.superBlockHash = superBlockHash;
@@ -249,7 +346,8 @@ public class DBConsensusManager {
 			WriteLock lock = readWriteLock.writeLock();
 			lock.lock();
 			try {
-				staleAccess = stale;
+				checkNotStale();
+				staleAccess.set(stale);
 				return true;
 			} finally {
 				lock.unlock();
@@ -260,9 +358,7 @@ public class DBConsensusManager {
 		public OpObject getObjectById(String type, CompoundKey k) {
 			readLock.lock();
 			try {
-				if (staleAccess) {
-					throw new UnsupportedOperationException();
-				}
+				checkNotStale();
 				int sz = k.size();
 				Object[] o = new Object[sz + 2];
 				o[0] = sbhash;
@@ -283,7 +379,11 @@ public class DBConsensusManager {
 						if (!rs.next()) {
 							return null;
 						}
-						OpObject obj = formatter.parseObject(rs.getString(1));
+						String cnt = rs.getString(1);
+						if(cnt == null) {
+							return OpObject.NULL;
+						}
+						OpObject obj = formatter.parseObject(cnt);
 						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
 						return obj;
 					}
@@ -293,81 +393,49 @@ public class DBConsensusManager {
 			}
 		}
 
-
-		@Override
-		public Map<CompoundKey, OpObject> getAllObjects(String type, ObjectsSearchRequest request) {
-			int limit = request.limit - request.result.size();
-			if (limit <= 0 && request.limit >= 0) {
-				return Collections.emptyMap();
+		private void checkNotStale() {
+			if (staleAccess.get()) {
+				throw new UnsupportedOperationException();
 			}
+		}
+
+		public Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type,  int limit,  Object... extraParams) {
 			readLock.lock();
 			try {
-				if (staleAccess) {
-					throw new UnsupportedOperationException();
-				}
-				Object[] o = new Object[2];
+				checkNotStale();
+				int l = (extraParams == null ? 0 : extraParams.length);
+				Object[] o = new Object[2 + Math.max(l - 1, 0)];
 				o[0] = sbhash;
 				o[1] = type;
-
+				String cond = null;
+				for(int i = 0; i < l; i++) {
+					if(i == 0) {
+						cond =  extraParams[i].toString();
+					} else {
+						o[1 + i] = extraParams[i];
+					}
+				}
 				String objTable = dbSchema.getTableByType(type);
 				final int keySize = dbSchema.getKeySizeByType(type);
 				String sql = "select content, type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
-						+ "  from " + objTable + " where superblock = ? and type = ? ";
+						+ "  from " + objTable + " where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond); 
 				if (limit > 0) {
 					sql = sql + " limit " + limit;
 				}
-				Map<CompoundKey, OpObject> res = new LinkedHashMap<CompoundKey, OpObject>();
-				jdbcTemplate.query(sql, o, new RowCallbackHandler() {
-					List<String> ls = new ArrayList<String>(5);
-
-					@Override
-					public void processRow(ResultSet rs) throws SQLException {
-						ls.clear();
-						for (int i = 0; i < keySize; i++) {
-							ls.add(rs.getString(i + 4));
-						}
-						CompoundKey k = new CompoundKey(0, ls);
-						OpObject obj = formatter.parseObject(rs.getString(1));
-						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
-						res.put(k, obj);
-					}
-				});
-				return res;
+				
+				final SqlRowSet rs = jdbcTemplate.queryForRowSet(sql, o);
+				return StreamSupport.stream(new SuperblockDbSpliterator(this, keySize, rs), false); 
 			} finally {
 				readLock.unlock();
 			}
+			
 		}
-		
-		@Override
-		public List<OpObject> getObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request,
-				Object... args) {
-			Object objToSearch = args[0];
-			if(index.getColumnDef().isInteger() && objToSearch instanceof String) {
-				objToSearch = Long.parseLong(objToSearch.toString());
-			}
-//			if (index.getColumnDef().isArray()) {
-//				objToSearch = index.generateArrayObject(jdbcTemplate, new Object[] {objToSearch});
-//			}
-			return jdbcTemplate.query(dbSchema.generateIndexQuery(index, request), new ResultSetExtractor<List<OpObject>>() {
-				@Override
-				public List<OpObject> extractData(ResultSet rs) throws SQLException, DataAccessException {
-					List<OpObject> res = new LinkedList<>();
-					while (rs.next()) {
-						res.add(formatter.parseObject(rs.getString(1)));
-					}
-					return res;
-				}
-			}, new Object[] {objToSearch, sbhash});
-		}
-
 
 		@Override
 		public OpOperation getOperation(String rawHash) {
 			readLock.lock();
 			try {
-				if (staleAccess) {
-					throw new UnsupportedOperationException();
-				}
+				checkNotStale();
 				Object[] o = new Object[2];
 				o[0] = sbhash;
 				o[1] = SecUtils.getHashBytes(rawHash);
@@ -394,7 +462,7 @@ public class DBConsensusManager {
 			boolean isSuperblockReferenceActive = false;
 			readLock.lock();
 			try {
-				isSuperblockReferenceActive = !staleAccess;
+				isSuperblockReferenceActive = !staleAccess.get();
 			} finally {
 				readLock.unlock();
 			}
@@ -842,9 +910,9 @@ public class DBConsensusManager {
 					} catch (DataAccessException e) {
 						LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
 					}
+					// revert
+					dba.markAsStale(false);
 				}
-				// revert
-				dba.markAsStale(false);
 			}
 		}
 		return blc;

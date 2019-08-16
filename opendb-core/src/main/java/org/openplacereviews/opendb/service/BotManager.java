@@ -47,7 +47,7 @@ public class BotManager {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
 		req.requestCache = true;
 		OpBlockChain blc = blocksManager.getBlockchain();
-		blc.getObjects(OpBlockchainRules.OP_BOT, req);
+		blc.fetchAllObjects(OpBlockchainRules.OP_BOT, req);
 		if (req.cacheObject != null) {
 			return (Map<String, BotInfo>) req.cacheObject;
 		}

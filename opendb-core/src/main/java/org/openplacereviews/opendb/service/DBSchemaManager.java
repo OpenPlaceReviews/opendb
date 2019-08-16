@@ -1,12 +1,28 @@
 package org.openplacereviews.opendb.service;
 
 
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.GIN;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.GIST;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
-import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
@@ -18,12 +34,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 
 
 @Service
@@ -388,32 +398,6 @@ public class DBSchemaManager {
 		return null;
 	}
 
-	public String generateIndexQuery(OpIndexColumn index, ObjectsSearchRequest req) {
-		ColumnDef cd = index.getColumnDef();
-		return "SELECT content FROM " + cd.getTableName() + 
-				" WHERE " + getExpressionSignWithColumnName(cd, req.searchType)
-				+ " AND superblock = ?";
-	}
-
-	private String getExpressionSignWithColumnName(ColumnDef columnDef, SearchType searchType) {
-		if(searchType != SearchType.STRING_EQUALS) {
-			throw new UnsupportedOperationException();
-		}
-		switch (columnDef.getIndex()) {
-			case INDEXED : {
-				return columnDef.getColName() + " = ?";
-			}
-			case GIN : {
-				return columnDef.getColName() + " @> ARRAY[?]";
-			}
-			case GIST : {
-				return columnDef.getColName() + " @> ARRAY[?]";
-			}
-			default: {
-				return columnDef.getColName() + " = ?";
-			}
-		}
-	}
 
 	private boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
 		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?) "
