@@ -4,9 +4,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
-import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
+import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 
@@ -14,6 +14,9 @@ import java.sql.Array;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class OpIndexColumn {
 
@@ -89,14 +92,54 @@ public class OpIndexColumn {
 		}
 	}
 
-	public Object toNativeType(Object o) {
+
+	public Stream<Entry<CompoundKey, OpObject>> streamObjects(OpPrivateObjectInstancesById oi, 
+			String type, int limit, ObjectsSearchRequest request, Object[] args) {
+//		request.editVersion = oi.getEditVersion();
+//		request.objToSetCache = oi;
+//		if (request.requestCache) {
+//			CacheObject co = oi.getCacheObject();
+//			if (co != null && co.cacheVersion == request.editVersion) {
+//				request.cacheObject = co.cacheObject;
+//				request.cacheVersion = co.cacheVersion;
+//				return;
+//			}
+//		}
+		// only 1 arg is supported
+//		Object nt = toNativeType(args[0]);
+//		boolean reevaluateCache = true;
+//		if(cache) {
+//			
+//		}
+//				CacheObject co = oi.getIndexCacheObject(this);
+//				if(co != null && co.cacheObject instanceof Set) {
+//					if(!((Set)co.cacheObject).contains(nt)) {
+//						return;
+//					}
+//				}
+		Stream<Entry<CompoundKey, OpObject>> stream;
+		if(oi.getDbAccess() != null){
+			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
+		} else {
+			stream = oi.getRawObjects().entrySet().stream();
+			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
+				@Override
+				public boolean test(Entry<CompoundKey, OpObject> t) {
+					return accept(t.getValue(), request, args);
+				}
+			});
+		}
+		return stream;
+	}
+	
+	private Object toNativeType(Object o) {
 		if(columnDef.isInteger()) {
 			return Long.parseLong(o.toString());
 		}
 		return o.toString();
 	}
-	
-	Object[] getDbCondition(ObjectsSearchRequest request, Object... args) {
+
+	private Object[] getDbCondition(ObjectsSearchRequest request, Object... args) {
 		Object[] o = new Object[2];
 		if (request.searchType != SearchType.EQUALS) {
 			throw new UnsupportedOperationException();
@@ -108,22 +151,9 @@ public class OpIndexColumn {
 		o[1] = toNativeType(args[0]);
 		return o;
 	}
-
-
-	@SuppressWarnings("rawtypes")
-	void retrieveObjects(OpPrivateObjectInstancesById oi, ObjectsSearchRequest request, Object[] argsToSearch) {
-		// only 1 arg is supported
-		Object nt = toNativeType(argsToSearch[0]);
-		CacheObject co = oi.getIndexCacheObject(this);
-		if(co != null && co.cacheObject instanceof Set) {
-			if(!((Set)co.cacheObject).contains(nt)) {
-				return;
-			}
-		}
-		
-	}
 	
-	boolean accept(OpObject opObject, ObjectsSearchRequest request, Object[] argsToSearch) {
+	
+	private boolean accept(OpObject opObject, ObjectsSearchRequest request, Object[] argsToSearch) {
 		List<Object> array = null;
 		for (List<String> f : fieldsExpression) {
 			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
@@ -139,6 +169,8 @@ public class OpIndexColumn {
 		}
 		return false;
 	}
+
+	
 
 	
 	

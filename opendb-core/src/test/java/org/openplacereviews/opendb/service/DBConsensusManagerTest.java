@@ -143,7 +143,6 @@ public class DBConsensusManagerTest {
 		assertEquals(1, getAmountFromDbByTable(BLOCKS_TRASH_TABLE));
 	}
 
-	@Ignore // TODO fix error with jdbc connection
 	@Test
 	public void testUnloadSuperblockFromDB() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
@@ -172,7 +171,6 @@ public class DBConsensusManagerTest {
 
 	}
 
-	@Ignore // TODO fix error with jdbc connection
 	@Test
 	public void testSaveMainBlockchain() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);

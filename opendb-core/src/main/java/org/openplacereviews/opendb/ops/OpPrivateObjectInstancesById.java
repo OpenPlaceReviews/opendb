@@ -53,6 +53,10 @@ class OpPrivateObjectInstancesById {
 		}
 		return objects;
 	}
+	
+	BlockDbAccessInterface getDbAccess() {
+		return dbAccess;
+	}
 
 	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> fetchObjects(ObjectsSearchRequest request, 
@@ -60,21 +64,13 @@ class OpPrivateObjectInstancesById {
 		// limit will be negative
 		int limit = request.limit - request.result.size();
 		Stream<Entry<CompoundKey, OpObject>> stream;
-		if (dbAccess != null) {
-			if (col == null) {
+		if(col != null) {
+			stream = col.streamObjects(this, type, limit, request, args);
+		} else {
+			if (dbAccess != null) {
 				stream = dbAccess.streamObjects(type, limit);
 			} else {
-				stream = dbAccess.streamObjects(type, limit, col.getDbCondition(request, args));
-			}
-		} else {
-			stream = objects.entrySet().stream();
-			if(col != null){
-				stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
-					@Override
-					public boolean test(Entry<CompoundKey, OpObject> t) {
-						return col.accept(t.getValue(), request, args);
-					}
-				});
+				stream = objects.entrySet().stream();
 			}
 		}
 		if (request.internalMapToFilterDuplicates == null) {

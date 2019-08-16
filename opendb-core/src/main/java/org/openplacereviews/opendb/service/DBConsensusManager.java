@@ -286,8 +286,11 @@ public class DBConsensusManager {
 						ls.add(rs.getString(i + 4));
 					}
 					final CompoundKey k = new CompoundKey(0, ls);
-					final OpObject obj = formatter.parseObject(rs.getString(1));
-					obj.setParentOp(rs.getString(2), SecUtils.hexify((byte[]) rs.getObject(3)));
+					String cont = rs.getString(1);
+					final OpObject obj = cont == null ? OpObject.NULL : formatter.parseObject(cont);
+					if(cont != null) {
+						obj.setParentOp(rs.getString(2), SecUtils.hexify((byte[]) rs.getObject(3)));
+					}
 					results.add(new Map.Entry<CompoundKey, OpObject>() {
 
 						@Override
