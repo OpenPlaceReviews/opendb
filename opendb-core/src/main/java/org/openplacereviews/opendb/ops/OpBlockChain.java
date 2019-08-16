@@ -31,6 +31,8 @@ import java.util.stream.Stream;
 
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
@@ -71,7 +73,7 @@ public class OpBlockChain {
 	public static final int LOCKED_STATE = 2; // FINAL STATE. locked successfully and could be used as parent superblock
 	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user
 	public static final OpBlockChain NULL = new OpBlockChain(true);
-
+	
 	// 0-0 represents locked or unlocked state for blockchain
 	private volatile int locked = UNLOCKED;
 	// 0-1 nullable object is always root (in order to perform operations in sync)
@@ -95,6 +97,9 @@ public class OpBlockChain {
 	private final Deque<OpOperation> queueOperations = new ConcurrentLinkedDeque<OpOperation>();
 
 	private final Map<String, OpOperation> blockOperations = new ConcurrentHashMap<>();
+	
+	// Metrics
+	
 
 	private OpBlockChain(boolean nullParent) {
 		this.nullObject = true;
@@ -863,7 +868,7 @@ public class OpBlockChain {
 	}
 
 	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
-		ValidationTimer vld = new ValidationTimer().start();
+		Metric pm = mPrepareTotal.start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
@@ -874,30 +879,36 @@ public class OpBlockChain {
 		u.updateObjectsRef();
 		boolean valid = true;
 		ctx.ids.clear();
+		Metric m = mPrepareDelete.start();
 		valid = prepareDeletedObjects(u, ctx, hctx);
+		m.capture();
 		if(!valid) {
 			return false;
 		}
 		// should be called after prepareDeletedObjects (so cache is prepared)
+		m = mPrepareCreate.start();
 		valid = prepareCreatedObjects(u, ctx);
+		m.capture();
 		if(!valid) {
 			return false;
 		}
+		m = mPrepareEdit.start();
 		valid = prepareEditedObjects(u, ctx);
+		m.capture();
 		if (!valid) {
 			return false;
 		}
+		m = mPrepareRef.start();
 		valid = prepareReferencedObjects(u, ctx);
 		if(!valid) {
 			return valid;
 		}
-		vld.measure(ValidationTimer.OP_PREPARATION);
-		valid = rules.validateOp(this, u, ctx, vld);
+		m.capture();
+		pm.capture();
+		valid = rules.validateOp(this, u, ctx);
 		if(!valid) {
 			return valid;
 		}
-		vld.measure(ValidationTimer.OP_VALIDATION);
-		u.putCacheObject(OpObject.F_VALIDATION, vld.getTimes());
 		if(u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {
 			u.putCacheObject(OpObject.F_TIMESTAMP_ADDED, System.currentTimeMillis());
 		}
@@ -1176,6 +1187,12 @@ public class OpBlockChain {
 	public enum SearchType {
 		EQUALS
 	}
+	
+	private static final PerformanceMetric mPrepareCreate = PerformanceMetrics.i().getMetric("blc.prepare.create");
+	private static final PerformanceMetric mPrepareEdit = PerformanceMetrics.i().getMetric("blc.prepare.edit");
+	private static final PerformanceMetric mPrepareDelete = PerformanceMetrics.i().getMetric("blc.prepare.edit");
+	private static final PerformanceMetric mPrepareRef = PerformanceMetrics.i().getMetric("blc.prepare.ref");
+	private static final PerformanceMetric mPrepareTotal = PerformanceMetrics.i().getMetric("blc.prepare.total");
 
 
 }

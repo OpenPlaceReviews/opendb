@@ -182,11 +182,8 @@ public class OpBlockchainRulesSysValidationTest {
 		generateHashAndSignForOperation(opOperation, blc, false, serverKeyPair);
 		opOperation.makeImmutable();
 
-		ValidationTimer vld = new ValidationTimer().start();
-		vld.measure(ValidationTimer.OP_PREPARATION);
-
 		exceptionRule.expect(IllegalArgumentException.class);
-		blc.getRules().validateRules(blc, opOperation, new OpBlockChain.LocalValidationCtx(null), vld);
+		blc.getRules().validateRules(blc, opOperation, new OpBlockChain.LocalValidationCtx(null));
 	}
 
 

@@ -28,9 +28,11 @@ import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.ops.ValidationTimer;
+import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -194,12 +196,10 @@ public class BlocksManager {
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
-		ValidationTimer timer = new ValidationTimer();
-		timer.start();
-		
+		Metric mt = mBlockCreate.start();		
 		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getQueueOperations());
 		
-		int tmAddOps = timer.startExtra();
+		Metric m = mBlockCreateAddOps.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
 		for (OpOperation o : candidates) {
@@ -207,55 +207,58 @@ public class BlocksManager {
 				return null;
 			}
 		}
-		timer.measure(tmAddOps, ValidationTimer.BLC_ADD_OPERATIONS);
-		
+		m.capture();
+		m = mBlockCreateExtResources.start();
 		extResourceService.processOperations(candidates);
-		timer.measure(tmAddOps, ValidationTimer.BLC_PROCESS_RESOURCES);
-
-		int tmNewBlock = timer.startExtra();
+		m.capture();
+		
+		m = mBlockCreateValidate.start();
 		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair);
+		m.capture();
 		if(opBlock == null) {
 			return null;
 		}
 
-		timer.measure(tmNewBlock, ValidationTimer.BLC_NEW_BLOCK);
-		
-		return replicateValidBlock(timer, blc, opBlock, hctx);
+		mt.capture();
+		return replicateValidBlock(blc, opBlock, hctx);
 	}
 
-	private OpBlock replicateValidBlock(ValidationTimer timer, OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
+	private OpBlock replicateValidBlock(OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
+		Metric pm = mBlockReplicate.start();
 		// insert block could fail if hash is duplicated but it won't hurt the system
-		int tmDbSave = timer.startExtra();
+		Metric m = mBlockSaveBlock.start();
 		dataManager.insertBlock(opBlock);
+		m.capture();
+		
 		if (historyManager.isRunning()) {
+			m = mBlockSaveHistory.start();
 			historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+			m.capture();
 		}
-		timer.measure(tmDbSave, ValidationTimer.BLC_BLOCK_SAVE);
 		
 		// change only after block is inserted into db
-		int tmRebase = timer.startExtra();
+		m = mBlockRebase.start();
 		boolean changeParent = blockchain.rebaseOperations(blockChain);
 		if(!changeParent) {
 			return null;
 		}
-		timer.measure(tmRebase, ValidationTimer.BLC_REBASE);
+		m.capture();
 		
-		int tmSDbSave = timer.startExtra();
+		m = mBlockSaveSuperBlock.start();
 		OpBlockChain savedParent = dataManager.saveMainBlockchain(blockchain.getParent());
 		if(blockchain.getParent() != savedParent) {
 			blockchain.changeToEqualParent(savedParent);
 		}
-		timer.measure(tmSDbSave, ValidationTimer.BLC_SAVE);
+		m.capture();
 		
-		int tmCompact = timer.startExtra();
+		m = mBlockCompact.start();
 		compact();
-		timer.measure(tmCompact, ValidationTimer.BLC_COMPACT);
+		m.capture();
 		
-		
-		opBlock.putCacheObject(OpObject.F_VALIDATION, timer.getTimes());
 		logSystem.logSuccessBlock(opBlock, 
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
+		pm.capture();
 		return opBlock;
 	}
 
@@ -336,16 +339,16 @@ public class BlocksManager {
 	}
 	
 	public synchronized boolean replicateOneBlock(OpBlock block) {
-		ValidationTimer timer = new ValidationTimer();
-		timer.start();
+		Metric m = mBlockSync.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		OpBlock res;
 		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
 		res = blc.replicateBlock(block, hctx);
+		m.capture();
 		if(res == null) {
 			return false;
 		}
-		res = replicateValidBlock(timer, blc, res, hctx);
+		res = replicateValidBlock(blc, res, hctx);
 		if(res == null) {
 			return false;
 		}
@@ -549,4 +552,15 @@ public class BlocksManager {
 		return candidates;
 	}
 
+	private static final PerformanceMetric mBlockCreate = PerformanceMetrics.i().getMetric("block.mgmt.create.total");
+	private static final PerformanceMetric mBlockCreateAddOps = PerformanceMetrics.i().getMetric("block.mgmt.create.addops");
+	private static final PerformanceMetric mBlockCreateValidate = PerformanceMetrics.i().getMetric("block.mgmt.create.validate");
+	private static final PerformanceMetric mBlockCreateExtResources = PerformanceMetrics.i().getMetric("block.mgmt.create.extresources");
+	private static final PerformanceMetric mBlockSync = PerformanceMetrics.i().getMetric("block.mgmt.sync");
+	private static final PerformanceMetric mBlockReplicate = PerformanceMetrics.i().getMetric("block.mgmt.replicate.total");
+	private static final PerformanceMetric mBlockSaveBlock = PerformanceMetrics.i().getMetric("block.mgmt.replicate.db.saveblock");
+	private static final PerformanceMetric mBlockSaveHistory = PerformanceMetrics.i().getMetric("block.mgmt.replicate.db.savesuperblock");
+	private static final PerformanceMetric mBlockSaveSuperBlock = PerformanceMetrics.i().getMetric("block.mgmt.replicate.db.savehistory");
+	private static final PerformanceMetric mBlockCompact = PerformanceMetrics.i().getMetric("block.mgmt.replicate.compact");
+	private static final PerformanceMetric mBlockRebase = PerformanceMetrics.i().getMetric("block.mgmt.replicate.rebase");
 }

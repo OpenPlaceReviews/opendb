@@ -6,6 +6,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain.LocalValidationCtx;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
@@ -231,7 +233,7 @@ public class OpBlockchainRules {
 	}
 
 	
-	public boolean validateRules(OpBlockChain blockchain, OpOperation o, LocalValidationCtx ctx, ValidationTimer timer) {
+	public boolean validateRules(OpBlockChain blockchain, OpOperation o, LocalValidationCtx ctx) {
 		if(OpBlockchainRules.OP_VALIDATE.equals(o.getType())) {
 			// validate expression
 			for(OpObject obj : o.getCreated()) {
@@ -282,7 +284,7 @@ public class OpBlockchainRules {
 		List<OpObject> toValidate = validationRules.get(o.getType());
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache)) {
 					return false;
 				}
 			}
@@ -290,7 +292,7 @@ public class OpBlockchainRules {
 		toValidate = validationRules.get(WILDCARD_RULE);
 		if(toValidate != null) {
 			for(OpObject rule : toValidate) {
-				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache, timer)) {
+				if(!validateRule(blockchain, rule, o, ctx.newObjsCache.keySet(), dls, ctx.refObjsCache)) {
 					return false;
 				}
 			}
@@ -299,7 +301,8 @@ public class OpBlockchainRules {
 	}
 
 	private boolean validateRule(OpBlockChain blockchain, OpObject rule, OpOperation o, Set<OpObject> newObjsArray, List<OpObject> deletedObjsCache,
-			Map<String, OpObject> refObjsCache, ValidationTimer timer) {
+			Map<String, OpObject> refObjsCache) {
+		Metric m = PerformanceMetrics.i().getMetric("blc.validop", rule.getId().get(0)).start();
 		JsonArray deletedArray = (JsonArray) formatter.toJsonElement(deletedObjsCache);
 		for(int i = 0; i < deletedArray.size(); i++) {
 			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getParentType());
@@ -312,15 +315,18 @@ public class OpBlockchainRules {
 		List<OpExprEvaluator> ifs = getValidateExpresions(F_IF, rule);
 		for(OpExprEvaluator s : ifs) {
 			if(!s.evaluateBoolean(ctx)) {
+				m.capture();
 				return true;
 			}
 		}
 		for (OpExprEvaluator s : vld) {
 			if (!s.evaluateBoolean(ctx)) {
+				m.capture();
 				return error(o, ErrorType.OP_VALIDATION_FAILED, o.getHash(), rule.getId(),
 						rule.getStringValue(F_ERROR_MESSAGE));
 			}
 		}
+		m.capture();
 		return true;
 	}
 
@@ -516,7 +522,8 @@ public class OpBlockchainRules {
 	}
 	
 	
-	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, LocalValidationCtx ctx, ValidationTimer vld) {
+	public boolean validateOp(OpBlockChain opBlockChain, OpOperation u, LocalValidationCtx ctx) {
+		Metric mt = mValidTotal.start();
 		if(!OUtils.equals(calculateOperationHash(u, false), u.getHash())) {
 			return error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, calculateOperationHash(u, false), u.getHash());
 		}
@@ -525,16 +532,14 @@ public class OpBlockchainRules {
 		if (sz > OpBlockchainRules.MAX_OP_SIZE_MB) {
 			return error(u, ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
 		}
-		int timerSigs = vld.startExtra();
+		Metric m = mValidSig.start();
 		boolean valid = validateSignatures(opBlockChain, u);
-		vld.measure(timerSigs, ValidationTimer.OP_SIG);
+		m.capture();
 		if(!valid) {
 			return valid;
 		}
-		int timerRoles = vld.startExtra();
-		valid = validateRules(opBlockChain, u, ctx, vld);
-		vld.measure(timerRoles, ValidationTimer.OP_SIG);
-		
+		valid = validateRules(opBlockChain, u, ctx);
+		mt.capture();
 		if(!valid) {
 			return valid;
 		}
@@ -712,6 +717,9 @@ public class OpBlockchainRules {
 		void logError(OpObject o, ErrorType e, String msg, Exception cause);
 		
 	}
+	
+	private static final PerformanceMetric mValidSig = PerformanceMetrics.i().getMetric("blc.validop.sig");
+	private static final PerformanceMetric mValidTotal = PerformanceMetrics.i().getMetric("blc.validop.total");
 
 	
 }
