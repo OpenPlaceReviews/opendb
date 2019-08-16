@@ -12,11 +12,12 @@ public class PerformanceMetrics {
 	}
 	private final Map<String, PerformanceMetric> metrics = new ConcurrentHashMap<String, PerformanceMetrics.PerformanceMetric>();
 	private final AtomicInteger ids = new AtomicInteger();
-	private final AtomicLong overhead = new AtomicLong();
 	private final PerformanceMetric DISABLED = new PerformanceMetric(-1, "<disabled>");
 	private boolean enabled = true;
+	private PerformanceMetric overhead;
 	
 	private PerformanceMetrics() {
+		overhead = getByKey("_overhead");
 	}
 	
 	public boolean isEnabled() {
@@ -26,6 +27,10 @@ public class PerformanceMetrics {
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 	}
+	
+	public Map<String, PerformanceMetric> getMetrics() {
+		return metrics;
+	}
 
 	public PerformanceMetric getMetric(String prefix, String key) {
 		if(!enabled) {
@@ -34,17 +39,23 @@ public class PerformanceMetrics {
 		return getMetric(prefix + "." + key);
 	}
 	
+	
 	public PerformanceMetric getMetric(String key) {
 		if(!enabled) {
 			return DISABLED;
 		}
 		long s = System.nanoTime();
+		PerformanceMetric pm = getByKey(key);
+		overhead.capture(System.nanoTime() - s);
+		return pm;
+	}
+
+	private PerformanceMetric getByKey(String key) {
 		PerformanceMetric pm = metrics.get(key);
 		if(pm == null) {
 			pm = new PerformanceMetric(ids.incrementAndGet(), key);
 			metrics.put(key, pm);
 		}
-		overhead.addAndGet(System.nanoTime() - s);
 		return pm;
 	}
 	

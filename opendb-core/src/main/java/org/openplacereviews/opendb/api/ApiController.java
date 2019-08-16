@@ -6,6 +6,7 @@ import org.openplacereviews.opendb.service.HistoryManager;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
@@ -119,6 +120,18 @@ public class ApiController {
 	protected static class ObjectsResult {
 		public Collection<OpObject> objects;
 	}
+	
+	protected static class MetricResult {
+		public String id;
+		public int count;
+		public int totalSec;
+		public int avgMs;
+		
+	}
+	
+	protected static class MetricsResult {
+		public List<MetricResult> metrics = new ArrayList<ApiController.MetricResult>();
+	}
 
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
 	@ResponseBody
@@ -178,6 +191,24 @@ public class ApiController {
 		return formatter.fullObjectToJson(op);
 	}
 
+	@GetMapping(path = "/metrics", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String metrics() throws FailedVerificationException {
+		MetricsResult ms = new MetricsResult();
+		PerformanceMetrics inst = PerformanceMetrics.i();
+		for(PerformanceMetric p : new TreeMap<>(inst.getMetrics()).values()) {
+			MetricResult r = new MetricResult();
+			r.count = p.getInvocations();
+			r.id = p.getName();
+			r.totalSec = (int) (p.getDuration() / 1e9);
+			if(r.count > 0) {
+				r.avgMs = (int) (p.getDuration() / 1e6 / r.count);
+			}
+			ms.metrics.add(r);
+		}
+		return formatter.fullObjectToJson(ms);
+	}
+	
 	@GetMapping(path = "/objects", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String objects(@RequestParam(required = true) String type,

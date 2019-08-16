@@ -98,8 +98,6 @@ public class OpBlockChain {
 
 	private final Map<String, OpOperation> blockOperations = new ConcurrentHashMap<>();
 	
-	// Metrics
-	
 
 	private OpBlockChain(boolean nullParent) {
 		this.nullObject = true;
@@ -721,7 +719,9 @@ public class OpBlockChain {
 		}
 		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
 		if (ot != null) {
+			Metric m = mFetchById.start();
 			OpObject obj = ot.getObjectById(key, secondary);
+			m.capture();
 			if (obj != null) {
 				if(obj == OpObject.NULL) {
 					return null;
@@ -738,7 +738,9 @@ public class OpBlockChain {
 		}
 		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
 		if (ot != null) {
+			Metric m = mFetchById.start();
 			OpObject obj = ot.getObjectById(o);
+			m.capture();
 			if (obj != null) {
 				if(obj == OpObject.NULL) {
 					return null;
@@ -783,6 +785,7 @@ public class OpBlockChain {
 	}
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
+		Metric m = mFetchTotal.start();
 		if(isNullBlock()) {
 			return Collections.emptyMap();
 		}
@@ -799,6 +802,7 @@ public class OpBlockChain {
 					fetchedToCheck.put(e.getKey(), e.getValue());
 				}
 				if(request.limit >= 0 && request.result.size() >= request.limit) {
+					m.capture();
 					return fetchedToCheck;
 				}
 			}
@@ -820,6 +824,7 @@ public class OpBlockChain {
 				fetchedToCheck.putAll(prKeys);
 			}
 		}
+		m.capture();
 		return fetchedToCheck;
 	}
 
@@ -1193,6 +1198,9 @@ public class OpBlockChain {
 	private static final PerformanceMetric mPrepareDelete = PerformanceMetrics.i().getMetric("blc.prepare.edit");
 	private static final PerformanceMetric mPrepareRef = PerformanceMetrics.i().getMetric("blc.prepare.ref");
 	private static final PerformanceMetric mPrepareTotal = PerformanceMetrics.i().getMetric("blc.prepare.total");
+	
+	private static final PerformanceMetric mFetchTotal = PerformanceMetrics.i().getMetric("blc.fetch.total");
+	private static final PerformanceMetric mFetchById = PerformanceMetrics.i().getMetric("blc.fetch.byid");
 
 
 }

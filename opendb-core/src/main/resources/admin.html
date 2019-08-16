@@ -21,6 +21,7 @@
     <li><a data-toggle="tab" href="#indices" id="indices-tab">Indices</a></li>
     <li><a data-toggle="tab" href="#history" id="history-tab">History</a></li>
     <li><a data-toggle="tab" href="#bot" id="bot-tab">Bots</a></li>
+    <li><a data-toggle="tab" href="#metrics" id="metrics-tab">Metrics</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
     <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
 </ul>
@@ -80,21 +81,25 @@
 
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
-        <label>Select object type:&nbsp;</label><select id="objects-type-list">
-    </select>
+        <label>Select object type:&nbsp;</label>
+        <select id="objects-type-list"></select>
         <p id="object-type-description"/>
         <ul id="objects-list">
         </ul>
-
+    </div>
+    
+    
+    <div id="metrics" class="tab-pane fade">
+        <h3>Metrics</h3>
+        <div id="metrics-list">
+        </div>
     </div>
 
     <div id="indices" class="tab-pane fade">
         <h3>Table</h3>
-        <label>Select type:&nbsp;</label><select id="type-list">
-    </select>
+        <label>Select type:&nbsp;</label><select id="type-list"></select>
         <h3>Column</h3>
-        <label>Select id:&nbsp;</label><select id="index-list">
-    </select>
+        <label>Select id:&nbsp;</label><select id="index-list"></select>
         <br>
         <label>Input search key:</label><input type="text" id="index-search-key"/>
         <input type="submit" value="Search by key" id="load-table-index-btn">
@@ -146,53 +151,53 @@
     <div id="ipfs" class="tab-pane fade">
         <h3>IPFS info</h3>
         <div>
-            <p><b>IPFS STATUS:</b> &nbsp;&nbsp;<span id="ipfs-status"></span></p>
-            <p><b>PEER ID:</b> &nbsp;&nbsp;<span id="ipfs-peer-id"></span></p>
-            <p><b>VERSION:</b> &nbsp;&nbsp;<span id="ipfs-version"></span></p>
-            <p><b>GATEWAY</b> &nbsp;&nbsp;<span id="ipfs-gateway"></span></p>
+            <p><b>IPFS status:</b> &nbsp;&nbsp;<span id="ipfs-status"></span></p>
+            <p><b>Peer id:</b> &nbsp;&nbsp;<span id="ipfs-peer-id"></span></p>
+            <p><b>Version:</b> &nbsp;&nbsp;<span id="ipfs-version"></span></p>
+            <p><b>Gateway</b> &nbsp;&nbsp;<span id="ipfs-gateway"></span></p>
             <p><b>API</b> &nbsp;&nbsp;<span id="ipfs-api"></span></p>
-            <p><b>ADDRESSES</b> &nbsp;&nbsp;<span id="ipfs-addresses"></span></p>
-            <p><b>PUBLIC KEY</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
+            <p><b>Addresses</b> &nbsp;&nbsp;<span id="ipfs-addresses"></span></p>
+            <p><b>Public key</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
         </div>
 
         <h3>IPFS storage info</h3>
         <div>
-            <p><b>REPO SIZE:</b> &nbsp;&nbsp;<span id="ipfs-repo-size"></span></p>
-            <p><b>STORAGE MAX:</b> &nbsp;&nbsp;<span id="ipfs-max-storage-size"></span></p>
-            <p><b>REPO PATH</b> &nbsp;&nbsp;<span id="ipfs-repo-path"></span></p>
+            <p><b>Repo size:</b> &nbsp;&nbsp;<span id="ipfs-repo-size"></span></p>
+            <p><b>Max storage:</b> &nbsp;&nbsp;<span id="ipfs-max-storage-size"></span></p>
+            <p><b>Repo path</b> &nbsp;&nbsp;<span id="ipfs-repo-path"></span></p>
         </div>
 
         <h3>IPFS system info</h3>
         <div>
-            <p><b>DISK INFO:</b> &nbsp;&nbsp;<span id="system-info"></span></p>
-            <p><b>MEMORY:</b> &nbsp;&nbsp;<span id="system-memory"></span></p>
-            <p><b>RUNTIME:</b> &nbsp;&nbsp;<span id="system-runtime"></span></p>
-            <p><b>NETWORK</b> &nbsp;&nbsp;<span id="system-network"></span></p>
+            <p><b>Disk info:</b> &nbsp;&nbsp;<span id="system-info"></span></p>
+            <p><b>Memory:</b> &nbsp;&nbsp;<span id="system-memory"></span></p>
+            <p><b>Runtime:</b> &nbsp;&nbsp;<span id="system-runtime"></span></p>
+            <p><b>Network:</b> &nbsp;&nbsp;<span id="system-network"></span></p>
         </div>
 
-        <h3>STATISTIC</h3>
+        <h3>Stats</h3>
         <div>
-            <p><b>AMOUNT ALL IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-all-ipfs-objects"></span></p>
-            <p><b>AMOUNT PINNED IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-pinned-ipfs-objects"></span></p>
-            <p><b>AMOUNT MISSING IPFS OBJECTS:</b> &nbsp;&nbsp;<span id="amount-missing-ipfs-objects"></span></p>
-            <p><b>AMOUNT DB OBJECTS:</b> &nbsp;&nbsp;<span id="amount-db-objects"></span></p>
-            <p><b>AMOUNT UNACTIVATED OBJECTS:</b> &nbsp;&nbsp;<span id="amount-unactivated-objects"></span></p>
+            <p><b>All ipfs objects:</b> &nbsp;&nbsp;<span id="amount-all-ipfs-objects"></span></p>
+            <p><b>Pinned ipfs objects:</b> &nbsp;&nbsp;<span id="amount-pinned-ipfs-objects"></span></p>
+            <p><b>Missing ipfs objects:</b> &nbsp;&nbsp;<span id="amount-missing-ipfs-objects"></span></p>
+            <p><b>DB objects:</b> &nbsp;&nbsp;<span id="amount-db-objects"></span></p>
+            <p><b>Inactive objects:</b> &nbsp;&nbsp;<span id="amount-unactivated-objects"></span></p>
             <input type="submit" value="Load full stats" id="laod-full-stats-btn">
         </div>
 
         <h3>IPFS missing resources</h3>
         <div>
             <p><b>List of missing resources</b> &nbsp;&nbsp;<span id="ipfs-missing-objects"></span></p>
-            <input type="submit" value="Upload missing images to IPFS" id="fix-ipfs-missing-images-btn">
+            <input type="submit" value="Upload missing resources to IPFS" id="fix-ipfs-missing-images-btn">
         </div>
 
-        <h3>Unactivated images</h3>
+        <h3>Inactive resources</h3>
         <div>
-            <p><b>List unactivated images: </b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
-            <input type="submit" value="Remove unactivated images" id="fix-blc-missing-images-btn">
+            <p><b>List of inactive resources: </b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
+            <input type="submit" value="Remove inactive resources" id="fix-blc-missing-images-btn">
         </div>
 
-        <h3>Add Image</h3>
+        <h3>Add Resource</h3>
         <div>
             1. File: <input type="file" id="image-file">
             <br>
@@ -203,7 +208,7 @@
 
         <h3>Get file</h3>
         <div>
-            1. Cid of image: <input type="text" id="get-image">
+            1. Cid of resource: <input type="text" id="get-image">
             <br>
             <a href="" id="image-link" download>
                 <input type="submit" value="Get image" id="get-image-btn">
@@ -293,13 +298,16 @@
 
     function loadAllData() {
         loadStatusData();
-        loadBotData();
         loadQueueData();
         loadObjectsData();
         loadIndexData();
         loadBlocksData();
-        loadErrorsData();
-        loadIpfsStatusData();
+        if(loginName != "") {
+        	loadMetricsData();
+        	loadBotData();	
+        	loadErrorsData();
+        	loadIpfsStatusData();
+        }
     }
 
     function refreshUser() {
@@ -308,18 +316,57 @@
             $("#admin-actions").show();
             $("#admin-login-div").hide();
             $("#reg").show();
+            $("#errors-tab").show();
+            $("#metrics-tab").show();
             $("#bot-tab").show();
             $("#reg-tab").show();
             $("#ipfs-tab").show();
         } else {
             $("#admin-actions").hide();
             $("#admin-login-div").show();
+            $("#errors-tab").hide();
             $("#reg-tab").hide();
             $("#bot-tab").hide();
+            $("#metrics-tab").hide();
             $("#reg").hide();
             $("#ipfs-tab").hide();
         }
 
+    }
+    
+    
+    function loadMetricsData() {
+        $.getJSON( "/api/metrics", function( data ) {
+            var items = "";
+            items += "<table border='1'>";
+            items += "<tr>";
+            items += "<th><b>Id</b><th>";
+            items += "<th><b>Count</b><th>";
+            items += "<th><b>Total (s)</b><th>";
+            items += "<th><b>Average (ms)</b><th>";
+            items += "<th><b>Throughput / sec</b><th>";
+            items += "</tr>";
+            for(var i = 0; i < data.metrics.length; i++)  {
+                let item = data.metrics[i];
+                items += "<tr>";
+                var lid = item.id;
+                if(lid.length > 50) {
+                    lid = lid.substring(0, 50);
+                }
+                items += "<td><b>"+lid+"</b><td>";
+                items += "<td>"+item.count+"<td>";
+                items += "<td>"+item.totalSec+"<td>";
+                items += "<td>"+item.avgMs+"<td>";
+                if(item.avgMs > 0) {
+                    items += "<td>"+Number(1000/item.avgMs).toFixed(2)+"<td>";
+                } else {
+                    items += "<td>-<td>";
+                } 
+                items += "</tr>";
+            }
+            items += "</table>";
+            $("#metrics-list").html(items);
+        });
     }
 
     function loadErrorsData() {
