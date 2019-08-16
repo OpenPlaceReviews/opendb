@@ -1,13 +1,51 @@
 package org.openplacereviews.opendb.service;
 
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.EXT_RESOURCE_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
+
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.Spliterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -21,24 +59,6 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
-import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
 public class DBConsensusManager {
@@ -187,18 +207,17 @@ public class DBConsensusManager {
 		SuperblockDbAccess dbSB = dbSuperBlocks.get(blc.getSuperBlockHash());
 		SuperblockDbAccess dbPSB = dbSuperBlocks.get(blc.getParent().getSuperBlockHash());
 		OpBlockChain res = blc;
+		List<OpBlock> blockHeaders = new ArrayList<OpBlock>();
+		blockHeaders.addAll(blc.getSuperblockHeaders());
+		blockHeaders.addAll(blc.getParent().getSuperblockHeaders());
+		String newSuperblockHash = OpBlockchainRules.calculateSuperblockHash(blockHeaders.size(), blc.getLastBlockRawHash());
+		byte[] sbHashCurrent = SecUtils.getHashBytes(blc.getSuperBlockHash());
+		byte[] sbHashParent = SecUtils.getHashBytes(blc.getParent().getSuperBlockHash());
+		byte[] sbHashNew = SecUtils.getHashBytes(newSuperblockHash);
 		boolean txRollback = false;
 		try {
 			dbSB.markAsStale(true);
 			dbPSB.markAsStale(true);
-			List<OpBlock> blockHeaders = new ArrayList<OpBlock>();
-			blockHeaders.addAll(blc.getSuperblockHeaders());
-			blockHeaders.addAll(blc.getParent().getSuperblockHeaders());
-			String newSuperblockHash = OpBlockchainRules.calculateSuperblockHash(blockHeaders.size(), blc.getLastBlockRawHash());
-			byte[] sbHashCurrent = SecUtils.getHashBytes(blc.getSuperBlockHash());
-			byte[] sbHashParent = SecUtils.getHashBytes(blc.getParent().getSuperBlockHash());
-			byte[] sbHashNew = SecUtils.getHashBytes(newSuperblockHash);
-
 			// Connection conn = dataSource.getConnection();
 			jdbcTemplate.execute("BEGIN");
 			txRollback = true;
@@ -241,14 +260,14 @@ public class DBConsensusManager {
 		private final int keySize; 
 		private LinkedList<Map.Entry<CompoundKey, OpObject>> results = new LinkedList<>();
 		private boolean end;
-		SuperblockDbSpliterator(SuperblockDbAccess dbAccess, int keySize,  SqlRowSet rowSet) {
+		SuperblockDbSpliterator(SuperblockDbAccess dbAccess, int keySize,  SqlRowSet rowSet) throws DBStaleException {
 			this.dbAccess = dbAccess;
 			this.keySize = keySize;
 			this.rs = rowSet;
 			readEntries();
 		}
 		
-		private boolean readEntries() {
+		private boolean readEntries() throws DBStaleException {
 			if (end) {
 				return true;
 			}
@@ -278,7 +297,7 @@ public class DBConsensusManager {
 
 						@Override
 						public OpObject getValue() {
-							return null;
+							return obj;
 						}
 
 						@Override
@@ -324,6 +343,16 @@ public class DBConsensusManager {
 		
 	}
 	
+	
+	public class DBStaleException extends RuntimeException {
+		public DBStaleException(String string) {
+			super(string);
+		}
+
+		private static final long serialVersionUID = 327630066462749799L;
+		
+	}
+	
 	protected class SuperblockDbAccess implements BlockDbAccessInterface {
 
 		protected final String superBlockHash;
@@ -342,7 +371,7 @@ public class DBConsensusManager {
 			dbSuperBlocks.put(superBlockHash, this);
 		}
 
-		public boolean markAsStale(boolean stale) {
+		public boolean markAsStale(boolean stale) throws DBStaleException {
 			WriteLock lock = readWriteLock.writeLock();
 			lock.lock();
 			try {
@@ -355,7 +384,7 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public OpObject getObjectById(String type, CompoundKey k) {
+		public OpObject getObjectById(String type, CompoundKey k) throws DBStaleException {
 			readLock.lock();
 			try {
 				checkNotStale();
@@ -393,13 +422,13 @@ public class DBConsensusManager {
 			}
 		}
 
-		private void checkNotStale() {
+		private void checkNotStale() throws DBStaleException {
 			if (staleAccess.get()) {
-				throw new UnsupportedOperationException();
+				throw new DBStaleException("Superblock is stale : " + SecUtils.hexify(sbhash));
 			}
 		}
 
-		public Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type,  int limit,  Object... extraParams) {
+		public Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type,  int limit,  Object... extraParams) throws DBStaleException {
 			readLock.lock();
 			try {
 				checkNotStale();
@@ -432,7 +461,7 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public OpOperation getOperation(String rawHash) {
+		public OpOperation getOperation(String rawHash) throws DBStaleException {
 			readLock.lock();
 			try {
 				checkNotStale();
@@ -696,7 +725,7 @@ public class DBConsensusManager {
 				}
 			}
 
-			Map<String, Map<CompoundKey, OpObject>> so = blc.getSuperblockObjects();
+			Map<String, Map<CompoundKey, OpObject>> so = blc.getRawSuperblockObjects();
 			for (String type : so.keySet()) {
 				Map<CompoundKey, OpObject> objects = so.get(type);
 				Collection<OpIndexColumn> indexes = dbSchema.getIndicesForType(type);
@@ -731,24 +760,25 @@ public class DBConsensusManager {
 				Entry<CompoundKey, OpObject> e = it.next();
 				CompoundKey pkey = e.getKey();
 				OpObject obj = e.getValue();
+				// OpObject.NULL doesn't have parent hash otherwise it should be a separate object
+				long l = obj == OpObject.NULL ? 0 : opsId.get(obj.getParentHash());
+				int sblockid = OUtils.first(l);
+				int sorder = OUtils.second(l);
+
+				if (pkey.size() > ksize) {
+					throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
+				}
+
+				Object[] args = new Object[6 + ksize + indexes.size()];
+				int ind = 0;
+				args[ind++] = type;
+				String ophash = obj.getParentHash();
+				args[ind++] = SecUtils.getHashBytes(ophash);
+				args[ind++] = superBlockHash;
+
+				args[ind++] = sblockid;
+				args[ind++] = sorder;
 				if (obj != OpObject.NULL) {
-					long l = opsId.get(obj.getParentHash());
-					int sblockid = OUtils.first(l);
-					int sorder = OUtils.second(l);
-
-					if (pkey.size() > ksize) {
-						throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
-					}
-
-					Object[] args = new Object[6 + ksize + indexes.size()];
-					int ind = 0;
-					args[ind++] = type;
-					String ophash = obj.getParentHash();
-					args[ind++] = SecUtils.getHashBytes(ophash);
-					args[ind++] = superBlockHash;
-
-					args[ind++] = sblockid;
-					args[ind++] = sorder;
 					PGobject contentObj = new PGobject();
 					contentObj.setType("jsonb");
 					try {
@@ -757,14 +787,20 @@ public class DBConsensusManager {
 						throw new IllegalArgumentException(es);
 					}
 					args[ind++] = contentObj;
-
-					for (OpIndexColumn index : indexes) {
-						args[ind++] = index.evalDBValue(obj, conn);
-					}
-					pkey.toArray(args, ind);
-
-					insertBatch.add(args);
+				} else {
+					args[ind++] = null;
 				}
+
+				for (OpIndexColumn index : indexes) {
+					if (obj != OpObject.NULL) {
+						args[ind++] = index.evalDBValue(obj, conn);
+					} else {
+						args[ind++] = null;
+					}
+				}
+				pkey.toArray(args, ind);
+
+				insertBatch.add(args);
 			}
 			conn.close();
 		} catch (SQLException e) {

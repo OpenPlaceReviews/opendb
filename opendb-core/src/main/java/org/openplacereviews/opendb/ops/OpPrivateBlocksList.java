@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.ops;
 
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 
 import java.util.Collection;
 import java.util.Deque;
@@ -58,7 +59,7 @@ public class OpPrivateBlocksList {
 		return blocksInfo.get(rawHash);
 	}
 	
-	public OpBlock getFullBlockByHash(String rawHash) {
+	public OpBlock getFullBlockByHash(String rawHash) throws DBStaleException {
 		OpBlock b = blocksInfo.get(rawHash);
 		if (b == null) {
 			return null;

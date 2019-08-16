@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -606,15 +607,14 @@ public class OpBlockChain {
 	}
 
 
-	public Map<String, Map<CompoundKey, OpObject>> getSuperblockObjects() {
+	public Map<String, Map<CompoundKey, OpObject>> getRawSuperblockObjects() {
 		if(dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
 		Map<String, Map<CompoundKey, OpObject>> mp = new TreeMap<String, Map<CompoundKey, OpObject>>();
 		for(String type : objByName.keySet()) {
 			OpPrivateObjectInstancesById bid = objByName.get(type);
-			Map<CompoundKey, OpObject> allObjects = bid.getAllObjects();
-			mp.put(type, allObjects);
+			mp.put(type, bid.getRawObjects());
 		}
 		return mp;
 	}
@@ -672,7 +672,7 @@ public class OpBlockChain {
 		return parent.getBlockHeaderByRawHash(hash);
 	}
 
-	public OpBlock getFullBlockByRawHash(String hash) {
+	public OpBlock getFullBlockByRawHash(String hash) throws DBStaleException {
 		if(nullObject) {
 			return null;
 		}
@@ -683,7 +683,7 @@ public class OpBlockChain {
 		return parent.getFullBlockByRawHash(hash);
 	}
 
-	public OpOperation getOperationByHash(String rawHash) {
+	public OpOperation getOperationByHash(String rawHash) throws DBStaleException {
 		if(nullObject) {
 			return null;
 		}
@@ -706,11 +706,11 @@ public class OpBlockChain {
 		return parent.getOperationByHash(rawHash);
 	}
 
-	public OpObject getObjectByName(String type, String key) {
+	public OpObject getObjectByName(String type, String key) throws DBStaleException {
 		return getObjectByName(type, key, null);
 	}
 
-	public OpObject getObjectByName(String type, String key, String secondary) {
+	public OpObject getObjectByName(String type, String key, String secondary) throws DBStaleException {
 		if (isNullBlock()) {
 			return null;
 		}
@@ -718,13 +718,16 @@ public class OpBlockChain {
 		if (ot != null) {
 			OpObject obj = ot.getObjectById(key, secondary);
 			if (obj != null) {
+				if(obj == OpObject.NULL) {
+					return null;
+				}
 				return obj;
 			}
 		}
 		return parent.getObjectByName(type, key, secondary);
 	}
 
-	public OpObject getObjectByName(String type, List<String> o) {
+	public OpObject getObjectByName(String type, List<String> o) throws DBStaleException {
 		if (isNullBlock()) {
 			return null;
 		}
@@ -732,6 +735,9 @@ public class OpBlockChain {
 		if (ot != null) {
 			OpObject obj = ot.getObjectById(o);
 			if (obj != null) {
+				if(obj == OpObject.NULL) {
+					return null;
+				}
 				return obj;
 			}
 		}
@@ -744,7 +750,7 @@ public class OpBlockChain {
 		}
 	}
 
-	public void fetchAllObjects(String type, ObjectsSearchRequest request) {
+	public void fetchAllObjects(String type, ObjectsSearchRequest request) throws DBStaleException {
 		if(isNullBlock()) {
 			return;
 		}
@@ -767,11 +773,11 @@ public class OpBlockChain {
 	}
 	
 
-	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) {
+	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
 		fetchObjectsInternal(type, request, index, argsToSearch);
 	}
 
-	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) {
+	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
 		if(isNullBlock()) {
 			return Collections.emptyMap();
 		}
@@ -779,7 +785,8 @@ public class OpBlockChain {
 		// don't check for all queries
 		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
 		if(o != null) {
-			Iterator<Entry<CompoundKey, OpObject>> it = o.fetchObjects(request, col, args).iterator();
+			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, col, args);
+			Iterator<Entry<CompoundKey, OpObject>> it = stream.iterator();
 			while(it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();
 				request.result.add(e.getValue());
@@ -796,7 +803,7 @@ public class OpBlockChain {
 			// HERE we need to check that newer version doesn't exist in current blockchain 
 			if(prKeys != null) {
 				for(CompoundKey c : prKeys.keySet()) {
-					OpObject i = o.getRawObj(c);
+					OpObject i = o.getByKey(c);
 					if(i != null) {
 						// object was overridden
 						OpObject oldObj = prKeys.get(c);
@@ -1114,6 +1121,11 @@ public class OpBlockChain {
 
 		return fieldExpr;
 	}
+	
+	@Override
+	public String toString() {
+		return getSuperBlockHash();
+	}
 
 	// no multi thread issue (used only in synchronized blocks)
 	public static class LocalValidationCtx {
@@ -1130,20 +1142,20 @@ public class OpBlockChain {
 
 	public interface BlockDbAccessInterface {
 
-		OpObject getObjectById(String type, CompoundKey k);
+		OpObject getObjectById(String type, CompoundKey k) throws DBStaleException ;
 
 		/**
 		 * extraParamsWithCondition[0] - extra and "sql condition"
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
-		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition);
+		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException ;
 
-		OpOperation getOperation(String rawHash);
+		OpOperation getOperation(String rawHash) throws DBStaleException ;
 
 		// Very memory consuming operation
-		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders);
+		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) throws DBStaleException ;
 
-		OpBlock getBlockByHash(String rawHash);
+		OpBlock getBlockByHash(String rawHash) throws DBStaleException ;
 
 	}
 

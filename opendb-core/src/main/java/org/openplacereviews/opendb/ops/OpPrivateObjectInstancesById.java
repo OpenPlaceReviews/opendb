@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.ops;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.util.OUtils;
 
 import java.util.*;
@@ -37,31 +38,25 @@ class OpPrivateObjectInstancesById {
 		this.dbAccess = dbAccess;
 	}
 
-	public OpObject getObjectById(List<String> key) {
+	/**
+	 * returns OpObject.NULL if deleted
+	 */
+	public OpObject getObjectById(List<String> key) throws DBStaleException {
 		CompoundKey k = new CompoundKey(0, key);
 		return getByKey(k);
 	}
 	
 
-	public Map<CompoundKey, OpObject> getAllObjects() {
+	Map<CompoundKey, OpObject> getRawObjects() {
 		if (dbAccess != null) {
 			throw new UnsupportedOperationException();
-		}
-		if (objects.containsValue(OpObject.NULL)) {
-			LinkedHashMap<CompoundKey, OpObject> res = new LinkedHashMap<>();
-			Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
-			while (it.hasNext()) {
-				Entry<CompoundKey, OpObject> e = it.next();
-				res.put(e.getKey(), e.getValue() == OpObject.NULL ? null : e.getValue());
-			}
-			return res;
 		}
 		return objects;
 	}
 
 	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> fetchObjects(ObjectsSearchRequest request, 
-			OpIndexColumn col, Object... args) {
+			OpIndexColumn col, Object... args) throws DBStaleException {
 		// limit will be negative
 		int limit = request.limit - request.result.size();
 		Stream<Entry<CompoundKey, OpObject>> stream;
@@ -86,28 +81,19 @@ class OpPrivateObjectInstancesById {
 			request.internalMapToFilterDuplicates = new HashSet<CompoundKey>();
 		}
 		final Set<CompoundKey> mp = (Set<CompoundKey>) request.internalMapToFilterDuplicates;
-		stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
+		return stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
 
 			@Override
 			public boolean test(Entry<CompoundKey, OpObject> entr) {
 				if (!mp.contains(entr.getKey())) {
 					mp.add(entr.getKey());
 				}
-				return entr.getValue() != OpObject.NULL;
+				return entr.getValue() != OpObject.NULL && entr.getValue() != null;
 			}
 		});
-		return stream;
 	}
 
-	OpObject getByKey(CompoundKey k) {
-		OpObject obj = getRawObj(k);
-		if (obj == OpObject.NULL) {
-			return null;
-		}
-		return obj;
-	}
-
-	OpObject getRawObj(CompoundKey k) {
+	OpObject getByKey(CompoundKey k) throws DBStaleException {
 		OpObject obj ;
 		if (dbAccess != null) {
 			obj = dbAccess.getObjectById(type, k);
@@ -117,7 +103,7 @@ class OpPrivateObjectInstancesById {
 		return obj;
 	}
 
-	public OpObject getObjectById(String primaryKey, String secondaryKey) {
+	public OpObject getObjectById(String primaryKey, String secondaryKey) throws DBStaleException {
 		return getByKey(new CompoundKey(primaryKey, secondaryKey));
 	}
 

@@ -110,7 +110,7 @@ public class OpBlockchainGettersTest {
 	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperblockObjects(OpBlockChain opBlockChain) {
 		final int amountLoadedObjects = 7;
-		Map<String, Map<CompoundKey, OpObject>> superBlockObject = opBlockChain.getSuperblockObjects();
+		Map<String, Map<CompoundKey, OpObject>> superBlockObject = opBlockChain.getRawSuperblockObjects();
 
 		assertEquals(amountLoadedObjects, superBlockObject.size());
 	}
