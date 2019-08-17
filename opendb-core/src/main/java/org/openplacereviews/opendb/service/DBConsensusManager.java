@@ -235,7 +235,7 @@ public class DBConsensusManager {
 			res = new OpBlockChain(blc.getParent().getParent(),
 					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
 			jdbcTemplate.execute("COMMIT");
-			txRollback = true;
+			txRollback = false;
 		} finally {
 			if (txRollback) {
 				try {
@@ -378,7 +378,6 @@ public class DBConsensusManager {
 			WriteLock lock = readWriteLock.writeLock();
 			lock.lock();
 			try {
-				checkNotStale();
 				staleAccess.set(stale);
 				return true;
 			} finally {
