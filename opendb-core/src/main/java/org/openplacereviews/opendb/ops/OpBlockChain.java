@@ -1087,15 +1087,15 @@ public class OpBlockChain {
 							List<Object> args = new ArrayList<>(1);
 							args.add(opValue);
 							newObject.setFieldByExpr(fieldExpr, args);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof List) {
 							((List<Object>) oldObject).add(opValue);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof Map) {
 							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
 							if (value != null) {
 								((Map<String, Object>) oldObject).putAll(value);
-								checkCurrentFieldSpecified = true;
+								checkCurrentFieldSpecified = false;
 							}
 						} else {
 							throw new UnsupportedOperationException("Operation Append supported only for list and map");
@@ -1104,10 +1104,10 @@ public class OpBlockChain {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
 							newObject.setFieldByExpr(fieldExpr, 1);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof Number) {
 							newObject.setFieldByExpr(fieldExpr, ((Number) oldObject).longValue() + 1);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else {
 							throw new UnsupportedOperationException("Operation Increment supported only for Numbers");
 						}
@@ -1116,9 +1116,9 @@ public class OpBlockChain {
 								String.format("Operation %s is not supported for change", opId));
 					}
 					boolean currentNotSpecified = currentExpectedFields == null || 
-							!currentExpectedFields.containsKey(getFieldWithoutValue(fieldExpr));
+							!currentExpectedFields.containsKey(fieldExpr);
 					if (checkCurrentFieldSpecified && currentNotSpecified &&
-							currentObject.getFieldByExpr(getFieldWithoutValue(fieldExpr)) != null) {
+							currentObject.getFieldByExpr(fieldExpr) != null) {
 						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
@@ -1132,14 +1132,6 @@ public class OpBlockChain {
 		return true;
 	}
 
-	private String getFieldWithoutValue(String fieldExpr) {
-		if (fieldExpr.contains(".")) {
-			return fieldExpr.split("\\.")[0];
-		}
-
-		return fieldExpr;
-	}
-	
 	@Override
 	public String toString() {
 		return getSuperBlockHash();

@@ -83,8 +83,10 @@ class OpPrivateObjectInstancesById {
 			public boolean test(Entry<CompoundKey, OpObject> entr) {
 				if (!mp.contains(entr.getKey())) {
 					mp.add(entr.getKey());
+					return entr.getValue() != OpObject.NULL && entr.getValue() != null;
+				} else {
+					return false;
 				}
-				return entr.getValue() != OpObject.NULL && entr.getValue() != null;
 			}
 		});
 	}
