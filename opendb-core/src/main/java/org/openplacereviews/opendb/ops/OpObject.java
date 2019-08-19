@@ -241,6 +241,22 @@ public class OpObject {
 	public Map<String, Object> getStringObjMap(String field) {
 		return (Map<String, Object>) fields.get(field);
 	}
+	
+	@SuppressWarnings("unchecked")
+	public <T> T getField(T def, String... fields) {
+		Map<String, Object> p = this.fields;
+		for(int i = 0; i < fields.length - 1 ; i++) {
+			p = (Map<String, Object>) p.get(fields[i]);
+			if(p == null) {
+				return def;
+			}
+		}
+		T res = (T) p.get(fields[fields.length - 1]);
+		if(res == null) {
+			return def;
+		}
+		return res;
+	}
 
 	@SuppressWarnings("unchecked")
 	public Map<List<String>, Object> getStringListObjMap(String field) {

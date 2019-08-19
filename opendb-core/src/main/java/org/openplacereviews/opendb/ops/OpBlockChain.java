@@ -1164,7 +1164,7 @@ public class OpBlockChain {
 		 * extraParamsWithCondition[0] - extra and "sql condition"
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
-		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException ;
+		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException;
 
 		OpOperation getOperation(String rawHash) throws DBStaleException ;
 
