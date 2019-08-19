@@ -192,7 +192,9 @@ public class BlocksManager {
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
-		
+		if(blockchain.getQueueOperations().isEmpty()) {
+			return null;
+		}
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
