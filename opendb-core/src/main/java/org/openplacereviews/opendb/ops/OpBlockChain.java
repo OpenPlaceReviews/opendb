@@ -1115,8 +1115,10 @@ public class OpBlockChain {
 						throw new UnsupportedOperationException(
 								String.format("Operation %s is not supported for change", opId));
 					}
-					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(getFieldWithoutValue(fieldExpr))
-							&& currentObject.getFieldByExpr(getFieldWithoutValue(fieldExpr)) == null) {
+					boolean currentNotSpecified = currentExpectedFields == null || 
+							!currentExpectedFields.containsKey(getFieldWithoutValue(fieldExpr));
+					if (checkCurrentFieldSpecified && currentNotSpecified &&
+							currentObject.getFieldByExpr(getFieldWithoutValue(fieldExpr)) != null) {
 						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
@@ -1199,7 +1201,6 @@ public class OpBlockChain {
 	private static final PerformanceMetric mPrepareRef = PerformanceMetrics.i().getMetric("blc.prepare.ref");
 	private static final PerformanceMetric mPrepareTotal = PerformanceMetrics.i().getMetric("blc.prepare.total");
 	
-	private static final PerformanceMetric mFetchTotal = PerformanceMetrics.i().getMetric("blc.fetch.total");
 	private static final PerformanceMetric mFetchById = PerformanceMetrics.i().getMetric("blc.fetch.byid");
 
 
