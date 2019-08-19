@@ -785,7 +785,7 @@ public class OpBlockChain {
 	}
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
-		Metric m = mFetchTotal.start();
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + (col == null ? "all" : col.getIndexId())).start(); 
 		if(isNullBlock()) {
 			return Collections.emptyMap();
 		}

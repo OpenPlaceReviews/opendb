@@ -489,6 +489,9 @@ public class BlocksManager {
 	}
 	
 	public String getCurrentState() {
+		if(blockchain == null) {
+			return "INITIALIZING";
+		}
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
 			return "READY";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_STATE) {
