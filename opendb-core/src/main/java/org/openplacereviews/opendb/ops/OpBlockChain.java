@@ -61,10 +61,10 @@ import org.openplacereviews.opendb.util.exception.FailedVerificationException;
  */
 public class OpBlockChain {
 
-	public static final Object OP_CHANGE_DELETE = "delete";
-	public static final Object OP_CHANGE_INCREMENT = "increment";
-	public static final Object OP_CHANGE_APPEND = "append";
-	public static final Object OP_CHANGE_SET = "set";
+	public static final String OP_CHANGE_DELETE = "delete";
+	public static final String OP_CHANGE_INCREMENT = "increment";
+	public static final String OP_CHANGE_APPEND = "append";
+	public static final String OP_CHANGE_SET = "set";
 	
 	
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
