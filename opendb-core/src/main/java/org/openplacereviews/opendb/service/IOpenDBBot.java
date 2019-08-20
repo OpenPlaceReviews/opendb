@@ -20,12 +20,12 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	public int taskCount();
 	
 	/**
-	 * @return total progress to be done, -1 if undefined
+	 * @return total progress to be done (any positive number), -1 if undefined
 	 */
 	public int total();
 	
 	/**
-	 * @return current progress, -1 if undefined
+	 * @return current progress - should be number between [0, total[, -1 if undefined
 	 */
 	public int progress();
 }

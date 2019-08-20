@@ -192,7 +192,9 @@ public class BlocksManager {
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
-		
+		if(blockchain.getQueueOperations().isEmpty()) {
+			return null;
+		}
 		if (OpBlockChain.UNLOCKED != blockchain.getStatus()) {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
@@ -244,17 +246,8 @@ public class BlocksManager {
 		}
 		m.capture();
 		
-		m = mBlockSaveSuperBlock.start();
-		OpBlockChain savedParent = dataManager.saveMainBlockchain(blockchain.getParent());
-		if(blockchain.getParent() != savedParent) {
-			blockchain.changeToEqualParent(savedParent);
-		}
-		m.capture();
-		
-		m = mBlockCompact.start();
+
 		compact();
-		m.capture();
-		
 		logSystem.logSuccessBlock(opBlock, 
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
@@ -263,10 +256,20 @@ public class BlocksManager {
 	}
 
 	public synchronized boolean compact() {
+		Metric m = mBlockSaveSuperBlock.start();
+		OpBlockChain savedParent = dataManager.saveMainBlockchain(blockchain.getParent());
+		if(blockchain.getParent() != savedParent) {
+			blockchain.changeToEqualParent(savedParent);
+		}
+		m.capture();
+		
+		m = mBlockCompact.start();
 		OpBlockChain newParent = dataManager.compact(0, blockchain.getParent(), true);
 		if(newParent != blockchain.getParent()) {
 			blockchain.changeToEqualParent(newParent);
 		}
+		m.capture();
+		
 		return true;
 	}
 	
@@ -486,6 +489,9 @@ public class BlocksManager {
 	}
 	
 	public String getCurrentState() {
+		if(blockchain == null) {
+			return "INITIALIZING";
+		}
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
 			return "READY";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_STATE) {

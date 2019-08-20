@@ -61,10 +61,10 @@ import org.openplacereviews.opendb.util.exception.FailedVerificationException;
  */
 public class OpBlockChain {
 
-	public static final Object OP_CHANGE_DELETE = "delete";
-	public static final Object OP_CHANGE_INCREMENT = "increment";
-	public static final Object OP_CHANGE_APPEND = "append";
-	public static final Object OP_CHANGE_SET = "set";
+	public static final String OP_CHANGE_DELETE = "delete";
+	public static final String OP_CHANGE_INCREMENT = "increment";
+	public static final String OP_CHANGE_APPEND = "append";
+	public static final String OP_CHANGE_SET = "set";
 	
 	
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
@@ -785,7 +785,7 @@ public class OpBlockChain {
 	}
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
-		Metric m = mFetchTotal.start();
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + (col == null ? "all" : col.getIndexId())).start(); 
 		if(isNullBlock()) {
 			return Collections.emptyMap();
 		}
@@ -1087,15 +1087,15 @@ public class OpBlockChain {
 							List<Object> args = new ArrayList<>(1);
 							args.add(opValue);
 							newObject.setFieldByExpr(fieldExpr, args);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof List) {
 							((List<Object>) oldObject).add(opValue);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof Map) {
 							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
 							if (value != null) {
 								((Map<String, Object>) oldObject).putAll(value);
-								checkCurrentFieldSpecified = true;
+								checkCurrentFieldSpecified = false;
 							}
 						} else {
 							throw new UnsupportedOperationException("Operation Append supported only for list and map");
@@ -1104,10 +1104,10 @@ public class OpBlockChain {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
 							newObject.setFieldByExpr(fieldExpr, 1);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof Number) {
 							newObject.setFieldByExpr(fieldExpr, ((Number) oldObject).longValue() + 1);
-							checkCurrentFieldSpecified = true;
+							checkCurrentFieldSpecified = false;
 						} else {
 							throw new UnsupportedOperationException("Operation Increment supported only for Numbers");
 						}
@@ -1115,8 +1115,10 @@ public class OpBlockChain {
 						throw new UnsupportedOperationException(
 								String.format("Operation %s is not supported for change", opId));
 					}
-					if (checkCurrentFieldSpecified && !currentExpectedFields.containsKey(getFieldWithoutValue(fieldExpr))
-							&& currentObject.getFieldByExpr(getFieldWithoutValue(fieldExpr)) == null) {
+					boolean currentNotSpecified = currentExpectedFields == null || 
+							!currentExpectedFields.containsKey(fieldExpr);
+					if (checkCurrentFieldSpecified && currentNotSpecified &&
+							currentObject.getFieldByExpr(fieldExpr) != null) {
 						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
@@ -1130,14 +1132,6 @@ public class OpBlockChain {
 		return true;
 	}
 
-	private String getFieldWithoutValue(String fieldExpr) {
-		if (fieldExpr.contains(".")) {
-			return fieldExpr.split("\\.")[0];
-		}
-
-		return fieldExpr;
-	}
-	
 	@Override
 	public String toString() {
 		return getSuperBlockHash();
@@ -1164,7 +1158,7 @@ public class OpBlockChain {
 		 * extraParamsWithCondition[0] - extra and "sql condition"
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
-		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException ;
+		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException;
 
 		OpOperation getOperation(String rawHash) throws DBStaleException ;
 
@@ -1199,7 +1193,6 @@ public class OpBlockChain {
 	private static final PerformanceMetric mPrepareRef = PerformanceMetrics.i().getMetric("blc.prepare.ref");
 	private static final PerformanceMetric mPrepareTotal = PerformanceMetrics.i().getMetric("blc.prepare.total");
 	
-	private static final PerformanceMetric mFetchTotal = PerformanceMetrics.i().getMetric("blc.fetch.total");
 	private static final PerformanceMetric mFetchById = PerformanceMetrics.i().getMetric("blc.fetch.byid");
 
 
