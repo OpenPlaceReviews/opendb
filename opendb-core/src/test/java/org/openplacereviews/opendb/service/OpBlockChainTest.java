@@ -152,7 +152,7 @@ public class OpBlockChainTest {
 				amountVersions++;
 			}
 		}
-		assertEquals(2, amountVersions);
+		assertEquals(1, amountVersions);
 	}
 
 	@Test
