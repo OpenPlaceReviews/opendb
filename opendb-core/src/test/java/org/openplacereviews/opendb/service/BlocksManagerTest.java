@@ -6,7 +6,6 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.openplacereviews.opendb.OpenDBServer;
-import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -27,9 +26,7 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.*;
 import static org.openplacereviews.opendb.ops.OpObject.*;
 import static org.openplacereviews.opendb.ops.OpOperation.F_EDIT;
 import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
@@ -226,29 +223,11 @@ public class BlocksManagerTest {
 		blocksManager.addOperation(generateRemoveOp(OBJ_ID + 1));
 	}
 
-	// TODO simulate more objs for test
-	@Test
-	public void testDBCompactAfterRemovingObj() throws FailedVerificationException {
-		for (OpOperation op : generateStartOperationAndObject()) {
-			assertTrue(blocksManager.addOperation(op));
-		}
-
-		OpBlock opBlock = blocksManager.createBlock();
-		assertNotNull(opBlock);
-
-		OpObject object = blockChain.getObjectByName(OP_ID, OBJ_ID);
-		assertNotNull(object);
-
-		assertTrue(blocksManager.addOperation(generateRemoveOp(OBJ_ID)));
-		opBlock = blocksManager.createBlock();
-		assertNotNull(opBlock);
-	}
-
 	private OpOperation generateRemoveOp(String id) throws FailedVerificationException {
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OP_ID);
 		opOperation.setSignedBy(serverName);
-		opOperation.putObjectValue("delete", Collections.singletonList(Collections.singletonList(id)));
+		opOperation.addDeleted(Collections.singletonList(id));
 		blockChain.getRules().generateHashAndSign(opOperation, serverKeyPair);
 
 		return opOperation;

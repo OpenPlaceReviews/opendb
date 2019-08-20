@@ -25,6 +25,7 @@ test {
     exclude '**/service/DBHistoryManagerTest.class'
     exclude '**/service/OpBlockchainDbAccessTest.class'
     exclude '**/service/OpBlockchainGettersDbAccessTest.class'
+    exclude '**/service/OpBlockchainCompactSearchTest.class'
 }
 
 task embeddedPostgresTest(type: Test) {

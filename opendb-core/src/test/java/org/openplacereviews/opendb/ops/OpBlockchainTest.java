@@ -3,13 +3,13 @@ package org.openplacereviews.opendb.ops;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.openplacereviews.opendb.service.DBSchemaManager;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
 import java.util.*;
 
@@ -18,6 +18,7 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
+@Ignore
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainTest {
 
@@ -25,7 +26,6 @@ public class OpBlockchainTest {
 	public ExpectedException exceptionRule = ExpectedException.none();
 
 	public OpBlockChain blc;
-	public DBSchemaManager dbSchemaManager = new DBSchemaManager();
 
 	private Object[] parametersWithBlockchainAndBlock() throws FailedVerificationException {
 		beforeEachTestMethod();
