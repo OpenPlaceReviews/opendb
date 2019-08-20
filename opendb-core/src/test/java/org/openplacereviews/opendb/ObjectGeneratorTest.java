@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb;
 
 import org.openplacereviews.opendb.api.MgmtController;
+import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.DBConstants;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
@@ -32,8 +33,7 @@ public class ObjectGeneratorTest {
 					"opr-0-test-grant", "std-validations"};
 
 	public static String[] BLOCKCHAIN_LIST =
-			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
-					"opr-0-test-grant", "std-validations", "voting-process"};
+			new String[]{"opr-0-test-user", "std-roles", "opr-0-test-grant", "std-ops-defintions", "opr-0-test-user-test","std-validations", "voting-process"};
 
 	public static String[] USER_LIST =
 			new String[]{"opr-0-test-user"};
@@ -80,7 +80,7 @@ public class ObjectGeneratorTest {
 		}
 	}
 
-	public static List<OpOperation> getOperations(JsonFormatter formatter, OpBlockChain blc, String[] name_list) throws FailedVerificationException {
+	public static List<OpOperation> getOperations(JsonFormatter formatter, BlocksManager blocksManager, String[] name_list) throws FailedVerificationException {
 		List<OpOperation> allOperation = new ArrayList<>();
 		for (String f : name_list) {
 			OpOperation[] lst = formatter.fromJson(
@@ -89,7 +89,7 @@ public class ObjectGeneratorTest {
 			for (OpOperation o : lst) {
 				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
 					o.setSignedBy(serverName);
-					o = blc.getRules().generateHashAndSign(o, serverKeyPair);
+					o = blocksManager.generateHashAndSign(o, serverKeyPair);
 				}
 				o.makeImmutable();
 				allOperation.add(o);

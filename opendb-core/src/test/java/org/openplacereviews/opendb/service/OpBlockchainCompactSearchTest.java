@@ -24,6 +24,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -37,7 +38,7 @@ import static org.openplacereviews.opendb.service.DBSchemaManager.OBJS_TABLE;
 @ActiveProfiles("test")
 @EnableWebSecurity
 @EnableConfigurationProperties
-public class OpBlockChainTest {
+public class OpBlockchainCompactSearchTest {
 
 	@ClassRule
 	public static final PostgreSQLServer databaseServer = new PostgreSQLServer();
@@ -97,13 +98,14 @@ public class OpBlockChainTest {
 		Mockito.doNothing().when(ipfsFileManager).processOperations(any());
 
 		Mockito.doCallRealMethod().when(dbSchemaManager).initializeDatabaseSchema(metadataDb, jdbcTemplate);
-		Mockito.doNothing().when(dbConsensusManager).insertBlock(any());
+		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
 		Mockito.doCallRealMethod().when(dbConsensusManager).insertOperation(any());
 
 		generateMetadataDB(metadataDb, jdbcTemplate);
 		blockChain = dbConsensusManager.init(metadataDb);
 		blocksManager.init(metadataDb, blockChain);
 		ReflectionTestUtils.setField(blocksManager, "serverKeyPair", serverKeyPair);
+		databaseServer.wipeDatabase();
 	}
 
 	@After
@@ -137,8 +139,8 @@ public class OpBlockChainTest {
 	}
 
 	@Test
-	public void testSearchOldObjectVersion() throws FailedVerificationException {
-		for (OpOperation op : getOperations(formatter, blockChain, BLOCKCHAIN_LIST)) {
+	public void testSearchOldObjectVersionInRuntimeBlock() throws FailedVerificationException {
+		for (OpOperation op : getOperations(formatter, blocksManager, BLOCKCHAIN_LIST)) {
 			assertTrue(blocksManager.addOperation(op));
 		}
 		blocksManager.createBlock();
@@ -156,15 +158,77 @@ public class OpBlockChainTest {
 	}
 
 	@Test
+	public void testSearchOldObjectVersionInSuperblock() throws FailedVerificationException {
+		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
+		for (int i = 0; i < opOperationList.size(); i++) {
+			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
+			if (i > 2) {
+				blocksManager.createBlock();
+			}
+		}
+
+		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
+		blockChain.fetchAllObjects("osm.place",  objectsSearchRequest);
+
+		int amountVersions = 0;
+		for (OpObject opObject : objectsSearchRequest.result) {
+			if (opObject.getId().equals(Collections.singletonList("12345662"))) {
+				amountVersions++;
+			}
+		}
+		assertEquals(1, amountVersions);
+	}
+
+	@Test
 	public void testIndexSearch() throws FailedVerificationException {
-		for (OpOperation op : getOperations(formatter, blockChain, BLOCKCHAIN_LIST)) {
+		for (OpOperation op : getOperations(formatter, blocksManager, BLOCKCHAIN_LIST)) {
 			assertTrue(blocksManager.addOperation(op));
 		}
 		blocksManager.createBlock();
 	}
 
 	@Test
-	public void testCompact() {
+	public void testCompactWithCompactCoefficientEq1RuntimeBlock() throws FailedVerificationException {
+		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
+		for (int i = 0; i < opOperationList.size(); i++) {
+			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
+			if (i > 2) {
+				assertNotNull(blocksManager.createBlock());
+			}
+		}
 
+		assertTrue(blocksManager.compact());
+	}
+
+	@Test
+	public void testCompactCompactCoefficientEq1AfterBlockCompact() throws FailedVerificationException {
+		testCompactWithCompactCoefficientEq1RuntimeBlock();
+		assertTrue(blocksManager.compact());
+	}
+
+	@Test
+	public void testCompactWithCompactCoefficientEq1WithDBBlocks() throws FailedVerificationException {
+		ReflectionTestUtils.setField(dbConsensusManager, "superblockSize", 6);
+		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
+		for (int i = 0; i < opOperationList.size(); i++) {
+			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
+			if (i > 2) {
+				blocksManager.createBlock();
+			}
+		}
+
+		assertTrue(blocksManager.compact());
+	}
+
+	@Test
+	public void testCompactWithCompactCoefficientEq2WithRuntimeBlocks() throws FailedVerificationException {
+		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
+		testCompactWithCompactCoefficientEq1RuntimeBlock();
+	}
+
+	@Test
+	public void testCompactWithCompactCoefficientEq2WithDBBlocks() throws FailedVerificationException {
+		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
+		testCompactWithCompactCoefficientEq1WithDBBlocks();
 	}
 }
