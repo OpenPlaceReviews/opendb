@@ -105,7 +105,6 @@ public class OpIndexColumn {
 			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
 		} else {
 			if (cacheRuntime && keys == null) {
-				oi.setCacheObjectByKey(this, cacheObject, ev);
 				keys = new HashSet<Object>();
 				List<Object> array = new ArrayList<Object>();
 				for (OpObject o : oi.getRawObjects().values()) {

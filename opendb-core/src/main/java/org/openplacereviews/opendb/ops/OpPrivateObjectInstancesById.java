@@ -133,12 +133,22 @@ class OpPrivateObjectInstancesById {
 		cacheMap = null;
 	}
 
-	public void add(List<String> id, OpObject newObj) {
+	public OpObject add(List<String> id, OpObject newObj) {
 		if (dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
-		objects.put(new CompoundKey(0, id), newObj == null ? OpObject.NULL : newObj);
+		OpObject r = objects.put(new CompoundKey(0, id), newObj == null ? OpObject.NULL : newObj);
 		resetAfterEdit();
+		return r;
+	}
+	
+	public OpObject remove(List<String> id) {
+		if (dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
+		OpObject r = objects.remove( new CompoundKey(0, id));
+		resetAfterEdit();
+		return r;
 	}
 
 	public CacheObject getCacheObject() {
