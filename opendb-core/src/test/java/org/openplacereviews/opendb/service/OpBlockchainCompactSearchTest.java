@@ -126,11 +126,10 @@ public class OpBlockchainCompactSearchTest {
 			opObject1.set(formatter.parseObject(rs.getString(1)));
 		});
 		assertNull(opObject1.get());
-
 	}
 
 	@Test
-	public void testSearchOldObjectVersionInRuntimeBlock() throws FailedVerificationException {
+	public void testSearchWithoutDuplicatesAfterEditInRuntimeBlocks() throws FailedVerificationException {
 		for (OpOperation op : getOperations(formatter, blocksManager, BLOCKCHAIN_LIST)) {
 			assertTrue(blocksManager.addOperation(op));
 		}
@@ -139,17 +138,21 @@ public class OpBlockchainCompactSearchTest {
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
 		blockChain.fetchAllObjects("osm.place",  objectsSearchRequest);
 
-		int amountVersions = 0;
+		int duplicates = 0;
+		boolean deletedExist = false;
 		for (OpObject opObject : objectsSearchRequest.result) {
 			if (opObject.getId().equals(Collections.singletonList("12345662"))) {
-				amountVersions++;
+				duplicates++;
+			} else if (opObject.getId().equals(Collections.singletonList("22222"))) {
+				deletedExist = true;
 			}
 		}
-		assertEquals(1, amountVersions);
+		assertEquals(1, duplicates);
+		assertFalse(deletedExist);
 	}
 
 	@Test
-	public void testSearchOldObjectVersionInSuperblock() throws FailedVerificationException {
+	public void testSearchWithoutDuplicatesAfterEditInSuperblock() throws FailedVerificationException {
 		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
 		for (int i = 0; i < opOperationList.size(); i++) {
 			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
@@ -161,15 +164,22 @@ public class OpBlockchainCompactSearchTest {
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
 		blockChain.fetchAllObjects("osm.place",  objectsSearchRequest);
 
-		int amountVersions = 0;
+		int duplicates = 0;
 		for (OpObject opObject : objectsSearchRequest.result) {
 			if (opObject.getId().equals(Collections.singletonList("12345662"))) {
-				amountVersions++;
+				duplicates++;
 			}
 		}
-		assertEquals(1, amountVersions);
+		assertEquals(1, duplicates);
 	}
 
+	@Test
+	public void testSearchWithoutDuplicatesAfterEditInCompactDB() throws FailedVerificationException {
+		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
+		testSearchWithoutDuplicatesAfterEditInSuperblock();
+	}
+
+	//TODO
 	@Test
 	public void testIndexSearch() throws FailedVerificationException {
 		for (OpOperation op : getOperations(formatter, blocksManager, BLOCKCHAIN_LIST)) {

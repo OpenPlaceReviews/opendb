@@ -1,18 +1,20 @@
 package org.openplacereviews.opendb.service;
 
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainGettersTest;
-import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -233,19 +235,6 @@ public class OpBlockchainGettersDbAccessTest {
 		OpBlockChain blockChain = generateBlockchainWithDBAccess();
 
 		opBlockchainGettersTest.testGetFullBlockByNotExistingRawHash(blockChain);
-	}
-
-	@Ignore
-	@Test
-	public void testGetOperationByHashWithDBAccess() throws FailedVerificationException {
-		OpOperation opOperation = opBlockchainGettersTest.blc.getQueueOperations().getLast();
-
-		OpBlock opBlock = opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
-		opBlock.getOperations().forEach(opOperation1 -> dbConsensusManager.insertOperation(opOperation1));
-
-		OpBlockChain blockChain = generateBlockchainWithDBAccess();
-
-		opBlockchainGettersTest.testGetOperationByHash(blockChain, opOperation.getRawHash());
 	}
 
 	@Test

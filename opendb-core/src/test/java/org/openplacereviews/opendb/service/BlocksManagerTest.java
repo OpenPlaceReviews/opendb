@@ -143,7 +143,6 @@ public class BlocksManagerTest {
 
 	}
 
-	// TODO
 	@Test
 	@Ignore
 	public void testFinishingVotingProcess() throws FailedVerificationException {
