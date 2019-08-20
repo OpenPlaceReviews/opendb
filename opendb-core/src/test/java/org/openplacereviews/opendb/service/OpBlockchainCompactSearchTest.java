@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.service;
 
 import org.junit.*;
-import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -13,12 +12,8 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Connection;
@@ -34,10 +29,6 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.service.DBSchemaManager.OBJS_TABLE;
 
-@RunWith(SpringRunner.class)
-@ActiveProfiles("test")
-@EnableWebSecurity
-@EnableConfigurationProperties
 public class OpBlockchainCompactSearchTest {
 
 	@ClassRule
