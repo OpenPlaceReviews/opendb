@@ -3,7 +3,6 @@ package org.openplacereviews.opendb.ops;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
@@ -19,10 +18,8 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-@Ignore
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainGettersTest {
-	// TODO refactor tests
 
 	public OpBlockChain blc;
 	

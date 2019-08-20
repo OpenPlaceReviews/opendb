@@ -3,7 +3,6 @@ package org.openplacereviews.opendb.ops;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -18,7 +17,6 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-@Ignore
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainTest {
 
