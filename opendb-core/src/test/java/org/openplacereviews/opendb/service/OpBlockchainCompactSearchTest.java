@@ -20,6 +20,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -27,7 +29,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-import static org.openplacereviews.opendb.service.DBSchemaManager.OBJS_TABLE;
 
 public class OpBlockchainCompactSearchTest {
 
@@ -65,6 +66,9 @@ public class OpBlockchainCompactSearchTest {
 	private OpenDBServer.MetadataDb metadataDb = new OpenDBServer.MetadataDb();
 	private JdbcTemplate jdbcTemplate;
 
+	private static final String opType = "osm.place";
+	private static final String table = "obj_osm";
+
 	@Before
 	public void beforeEachTestMethod() throws Exception {
 		MockitoAnnotations.initMocks(this);
@@ -85,6 +89,7 @@ public class OpBlockchainCompactSearchTest {
 		ReflectionTestUtils.setField(blocksManager, "historyManager", historyManager);
 		ReflectionTestUtils.setField(blocksManager, "extResourceService", ipfsFileManager);
 		ReflectionTestUtils.setField(blocksManager, "logSystem", logOperationService);
+		ReflectionTestUtils.setField(dbSchemaManager, "objtables", generateObjtables());
 		Mockito.doNothing().when(fileBackupManager).init();
 		Mockito.doNothing().when(ipfsFileManager).processOperations(any());
 
@@ -116,13 +121,13 @@ public class OpBlockchainCompactSearchTest {
 		dbConsensusManager.saveMainBlockchain(blockChain);
 
 		final long[] amount = new long[1];
-		jdbcTemplate.query("SELECT COUNT(*) FROM " + OBJS_TABLE + " WHERE p1 = '22222'", rs -> {
+		jdbcTemplate.query("SELECT COUNT(*) FROM " + table + " WHERE p1 = '22222'", rs -> {
 			amount[0] = rs.getLong(1);
 		});
 		assertEquals(1, amount[0]);
 
 		AtomicReference<OpObject> opObject1 = new AtomicReference<>();
-		jdbcTemplate.query("SELECT content FROM " + OBJS_TABLE + " WHERE p1 = '22222'", rs -> {
+		jdbcTemplate.query("SELECT content FROM " + table + " WHERE p1 = '22222'", rs -> {
 			opObject1.set(formatter.parseObject(rs.getString(1)));
 		});
 		assertNull(opObject1.get());
@@ -136,7 +141,7 @@ public class OpBlockchainCompactSearchTest {
 		blocksManager.createBlock();
 
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-		blockChain.fetchAllObjects("osm.place",  objectsSearchRequest);
+		blockChain.fetchAllObjects(opType,  objectsSearchRequest);
 
 		int duplicates = 0;
 		boolean deletedExist = false;
@@ -162,7 +167,7 @@ public class OpBlockchainCompactSearchTest {
 		}
 
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-		blockChain.fetchAllObjects("osm.place",  objectsSearchRequest);
+		blockChain.fetchAllObjects(opType,  objectsSearchRequest);
 
 		int duplicates = 0;
 		for (OpObject opObject : objectsSearchRequest.result) {
@@ -179,13 +184,34 @@ public class OpBlockchainCompactSearchTest {
 		testSearchWithoutDuplicatesAfterEditInSuperblock();
 	}
 
-	//TODO
 	@Test
-	public void testIndexSearch() throws FailedVerificationException {
+	public void testIndexSearchWithRuntimeBlocks() throws FailedVerificationException {
 		for (OpOperation op : getOperations(formatter, blocksManager, BLOCKCHAIN_LIST)) {
 			assertTrue(blocksManager.addOperation(op));
 		}
 		blocksManager.createBlock();
+
+		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
+		blocksManager.getObjectsByIndex(opType, "osmid", objectsSearchRequest, 232423451);
+
+		assertEquals(1, objectsSearchRequest.result.size());
+	}
+
+	@Test
+	public void testIndexSearchWithDBBlocks() throws FailedVerificationException {
+		ReflectionTestUtils.setField(dbConsensusManager, "superblockSize", 6);
+		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
+		for (int i = 0; i < opOperationList.size(); i++) {
+			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
+			if (i > 2) {
+				assertNotNull(blocksManager.createBlock());
+			}
+		}
+
+		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
+		blocksManager.getObjectsByIndex(opType, "osmid", objectsSearchRequest, 232423451);
+
+		assertEquals(1, objectsSearchRequest.result.size());
 	}
 
 	@Test
@@ -231,5 +257,30 @@ public class OpBlockchainCompactSearchTest {
 	public void testCompactWithCompactCoefficientEq2WithDBBlocks() throws FailedVerificationException {
 		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
 		testCompactWithCompactCoefficientEq1WithDBBlocks();
+	}
+
+	private TreeMap<String, Map<String, Object>> generateObjtables() {
+		TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
+		Map<String, Object> objectMap = new TreeMap<>();
+		TreeMap<String, Object> linkedTypesMap = new TreeMap<>();
+		linkedTypesMap.put("0", opType);
+		objectMap.put("types", linkedTypesMap);
+		objectMap.put("keysize", 2);
+
+		TreeMap<String, Object> columnObject = new TreeMap<>();
+		columnObject.put("name", "osmid");
+		TreeMap<String, Object> fieldLinkedMap = new TreeMap<>();
+		fieldLinkedMap.put("0", "osm.id");
+		columnObject.put("field", fieldLinkedMap);
+		columnObject.put("sqlmapping", "array");
+		columnObject.put("sqltype", "bigint[]");
+		columnObject.put("index", "GIN");
+		TreeMap<String, Object> linkedColumnMap = new TreeMap<>();
+		linkedColumnMap.put("0", columnObject);
+
+		objectMap.put("columns", linkedColumnMap);
+		objtables.put(table, objectMap);
+
+		return objtables;
 	}
 }
