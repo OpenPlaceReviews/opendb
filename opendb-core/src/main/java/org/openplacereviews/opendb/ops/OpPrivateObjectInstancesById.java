@@ -149,10 +149,10 @@ class OpPrivateObjectInstancesById {
 		return null;
 	}
 	
-	public CacheObject getIndexCacheObject(Object index) {
+	public CacheObject getCacheObjectByKey(Object key) {
 		Map<Object, CacheObject> mp = cacheMap;
 		if (mp != null) {
-			CacheObject co = mp.get(index);
+			CacheObject co = mp.get(key);
 			if (co != null && co.cacheVersion == editVersion.intValue()) {
 				return co;
 			}
@@ -171,14 +171,14 @@ class OpPrivateObjectInstancesById {
 		}
 	}
 	
-	void setCacheIndexObject(Object index, Object cacheObject, int cacheVersion) {
+	void setCacheObjectByKey(Object key, Object cacheObject, int cacheVersion) {
 		if (cacheVersion == editVersion.intValue()) {
 			Map<Object, CacheObject> mp = cacheMap;
 			if(mp == null) {
 				mp = new ConcurrentHashMap<>();
 				this.cacheMap = mp;
 			}
-			mp.put(index, new CacheObject(cacheObject, cacheVersion));
+			mp.put(key, new CacheObject(cacheObject, cacheVersion));
 		}
 	}
 

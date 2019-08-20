@@ -30,6 +30,7 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
+import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
@@ -530,7 +531,7 @@ public class BlocksManager {
 		return dataManager.getIndicesForType(type);
 	}
 
-	public List<OpObject> getObjectsByIndex(String type, String indexId, OpBlockChain.ObjectsSearchRequest req, Object... valueToSearch) {
+	public List<OpObject> getObjectsByIndex(String type, String indexId, OpBlockChain.ObjectsSearchRequest req, Object... valueToSearch) throws DBStaleException {
 		OpIndexColumn indexCol = dataManager.getIndex(type, indexId);
 		if (indexCol != null) {
 			blockchain.retrieveObjectsByIndex(type, indexCol, req, valueToSearch);
