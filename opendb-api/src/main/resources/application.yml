@@ -21,7 +21,7 @@ opendb:
   db:
     store-history: ${OPENDB_STORE_HISTORY:true}
     compactCoefficient: ${OPENDB_DB_CF:1.0}
-    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
+    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:3}
   storage:
     ipfs.node:
       host: ${IPFS_HOST:}

@@ -23,8 +23,7 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;

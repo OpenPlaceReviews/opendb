@@ -56,7 +56,7 @@ public class DBConsensusManagerTest {
 		MockitoAnnotations.initMocks(this);
 
 		Connection connection = databaseServer.getConnection();
-		this.jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(connection, false));
+		this.jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
 
 		ReflectionTestUtils.setField(dbConsensusManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
@@ -64,6 +64,7 @@ public class DBConsensusManagerTest {
 
 		Mockito.doCallRealMethod().when(dbSchemaManager).initializeDatabaseSchema(metadataDb, jdbcTemplate);
 		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
+		Mockito.doCallRealMethod().when(dbSchemaManager).insertObjIntoTableBatch(any(), any(), any(), any());
 
 		Mockito.doNothing().when(fileBackupManager).init();
 
@@ -147,7 +148,7 @@ public class DBConsensusManagerTest {
 	public void testUnloadSuperblockFromDB() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generate30Blocks(formatter, opBlockChain, dbConsensusManager);
+		generateMore30Blocks(formatter, opBlockChain, dbConsensusManager, BOOTSTRAP_LIST);
 		dbConsensusManager.saveMainBlockchain(opBlockChain);
 
 		final long[] amount = new long[1];
@@ -160,7 +161,7 @@ public class DBConsensusManagerTest {
 		jdbcTemplate.query("SELECT COUNT(*) FROM " + BLOCKS_TABLE + " WHERE superblock is NOT NULL", rs -> {
 			amount[0] = rs.getLong(1);
 		});
-		assertEquals(39, amount[0]);
+		assertEquals(40, amount[0]);
 
 		dbConsensusManager.unloadSuperblockFromDB(blockChain);
 
@@ -175,7 +176,7 @@ public class DBConsensusManagerTest {
 	public void testSaveMainBlockchain() throws FailedVerificationException {
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 
-		generate30Blocks(formatter, opBlockChain, dbConsensusManager);
+		generateMore30Blocks(formatter, opBlockChain, dbConsensusManager, BOOTSTRAP_LIST);
 
 		final long[] amount = new long[1];
 
@@ -191,7 +192,7 @@ public class DBConsensusManagerTest {
 			amount[0] = rs.getLong(1);
 		});
 
-		assertEquals(39, amount[0]);
+		assertEquals(40, amount[0]);
 	}
 
 	@Test
@@ -274,4 +275,6 @@ public class DBConsensusManagerTest {
 
 		return amount[0];
 	}
+
+
 }

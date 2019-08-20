@@ -27,14 +27,18 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 public class ObjectGeneratorTest {
 
-	private static String[] BOOTSTRAP_LIST =
+	public static String[] BOOTSTRAP_LIST =
 			new String[]{"opr-0-test-user", "history-test", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
 					"opr-0-test-grant", "std-validations"};
 
-	private static String[] USER_LIST =
+	public static String[] BLOCKCHAIN_LIST =
+			new String[]{"opr-0-test-user", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
+					"opr-0-test-grant", "std-validations", "voting-process"};
+
+	public static String[] USER_LIST =
 			new String[]{"opr-0-test-user"};
 
-	private static String[] VOTING_LIST =
+	public static String[] VOTING_LIST =
 			new String[]{"opr-0-test-user", "std-roles", "opr-0-test-grant", "voting-validation"};
 
 	public static void generateUserOperations(JsonFormatter formatter, OpBlockChain blc) throws
@@ -76,14 +80,35 @@ public class ObjectGeneratorTest {
 		}
 	}
 
+	public static List<OpOperation> getOperations(JsonFormatter formatter, OpBlockChain blc, String[] name_list) throws FailedVerificationException {
+		List<OpOperation> allOperation = new ArrayList<>();
+		for (String f : name_list) {
+			OpOperation[] lst = formatter.fromJson(
+					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
+					OpOperation[].class);
+			for (OpOperation o : lst) {
+				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
+					o.setSignedBy(serverName);
+					o = blc.getRules().generateHashAndSign(o, serverKeyPair);
+				}
+				o.makeImmutable();
+				allOperation.add(o);
+			}
+
+		}
+
+		return allOperation;
+
+	}
+
 	public static void generateOperations(JsonFormatter formatter, OpBlockChain blc) throws FailedVerificationException {
 		addOperationFromList(formatter, blc, BOOTSTRAP_LIST);
 	}
 
-	public static void generate30Blocks(JsonFormatter formatter, OpBlockChain blc,
-										DBConsensusManager dbConsensusManager) throws FailedVerificationException {
+	public static void generateMore30Blocks(JsonFormatter formatter, OpBlockChain blc,
+											DBConsensusManager dbConsensusManager, String[] name_list) throws FailedVerificationException {
 		int i = 0;
-		for (String f : BOOTSTRAP_LIST) {
+		for (String f : name_list) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
 					OpOperation[].class);
