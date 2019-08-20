@@ -515,7 +515,11 @@ public class OpBlockChain {
 					if (prevOperationsSameType != null) {
 						p = findLast(prevOperationsSameType, id);
 					}
-					oinf.remove(id, p);
+					if (p == null) {
+						oinf.remove(id);
+					} else {
+						oinf.add(id, p);
+					}
 				}
 			}
 		}

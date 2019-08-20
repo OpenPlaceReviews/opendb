@@ -133,12 +133,22 @@ class OpPrivateObjectInstancesById {
 		cacheMap = null;
 	}
 
-	public void add(List<String> id, OpObject newObj) {
+	public OpObject add(List<String> id, OpObject newObj) {
 		if (dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
-		objects.put(new CompoundKey(0, id), newObj == null ? OpObject.NULL : newObj);
+		OpObject r = objects.put(new CompoundKey(0, id), newObj == null ? OpObject.NULL : newObj);
 		resetAfterEdit();
+		return r;
+	}
+	
+	public OpObject remove(List<String> id) {
+		if (dbAccess != null) {
+			throw new UnsupportedOperationException();
+		}
+		OpObject r = objects.remove( new CompoundKey(0, id));
+		resetAfterEdit();
+		return r;
 	}
 
 	public void remove(List<String> id, OpObject newObj) {
@@ -159,10 +169,10 @@ class OpPrivateObjectInstancesById {
 		return null;
 	}
 	
-	public CacheObject getIndexCacheObject(Object index) {
+	public CacheObject getCacheObjectByKey(Object key) {
 		Map<Object, CacheObject> mp = cacheMap;
 		if (mp != null) {
-			CacheObject co = mp.get(index);
+			CacheObject co = mp.get(key);
 			if (co != null && co.cacheVersion == editVersion.intValue()) {
 				return co;
 			}
@@ -181,14 +191,14 @@ class OpPrivateObjectInstancesById {
 		}
 	}
 	
-	void setCacheIndexObject(Object index, Object cacheObject, int cacheVersion) {
+	void setCacheObjectByKey(Object key, Object cacheObject, int cacheVersion) {
 		if (cacheVersion == editVersion.intValue()) {
 			Map<Object, CacheObject> mp = cacheMap;
 			if(mp == null) {
 				mp = new ConcurrentHashMap<>();
 				this.cacheMap = mp;
 			}
-			mp.put(index, new CacheObject(cacheObject, cacheVersion));
+			mp.put(key, new CacheObject(cacheObject, cacheVersion));
 		}
 	}
 

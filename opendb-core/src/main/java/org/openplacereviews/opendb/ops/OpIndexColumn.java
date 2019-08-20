@@ -4,6 +4,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
 import org.openplacereviews.opendb.ops.OpBlockChain.SearchType;
+import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
@@ -26,7 +27,7 @@ public class OpIndexColumn {
 	private final String opType;
 	private final ColumnDef columnDef;
 	private List<List<String>> fieldsExpression = Collections.emptyList();
-	private boolean cache = true;
+	private boolean cacheRuntime = true;
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
 		this.opType = opType;
@@ -62,10 +63,7 @@ public class OpIndexColumn {
 	}
 	
 	public Object evalDBValue(OpObject opObject, Connection conn) {
-		List<Object> array = null;
-		for (List<String> f : fieldsExpression) {
-			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
-		}
+		List<Object> array = eval(opObject, null);
 		if(array != null) {
 			Iterator<Object> it = array.iterator();
 			while(it.hasNext()) {
@@ -93,34 +91,35 @@ public class OpIndexColumn {
 	}
 
 
+	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> streamObjects(OpPrivateObjectInstancesById oi, 
 			String type, int limit, ObjectsSearchRequest request, Object[] args) {
-//		request.editVersion = oi.getEditVersion();
-//		request.objToSetCache = oi;
-//		if (request.requestCache) {
-//			CacheObject co = oi.getCacheObject();
-//			if (co != null && co.cacheVersion == request.editVersion) {
-//				request.cacheObject = co.cacheObject;
-//				request.cacheVersion = co.cacheVersion;
-//				return;
-//			}
-//		}
-		// only 1 arg is supported
-//		Object nt = toNativeType(args[0]);
-//		boolean reevaluateCache = true;
-//		if(cache) {
-//			
-//		}
-//				CacheObject co = oi.getIndexCacheObject(this);
-//				if(co != null && co.cacheObject instanceof Set) {
-//					if(!((Set)co.cacheObject).contains(nt)) {
-//						return;
-//					}
-//				}
+		int ev = oi.getEditVersion();
+		CacheObject cacheObject = oi.getCacheObjectByKey(this);
+		Set<Object> keys = null;
+		if(cacheObject != null && cacheObject.cacheVersion == ev) {
+			keys = (Set<Object>) cacheObject.cacheObject;
+		}
 		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(oi.getDbAccess() != null){
 			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
 		} else {
+			if (cacheRuntime && keys == null) {
+				keys = new HashSet<Object>();
+				List<Object> array = new ArrayList<Object>();
+				for (OpObject o : oi.getRawObjects().values()) {
+					array.clear();
+					array = eval(o, array);
+					for (Object k : array) {
+						keys.add(k);
+					}
+				}
+				oi.setCacheObjectByKey(this, keys, ev);
+			}
+			if(keys != null && !keys.contains(toNativeType(args[0]))) {
+				return Stream.empty();
+			}
+			
 			stream = oi.getRawObjects().entrySet().stream();
 			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
 				@Override
@@ -128,6 +127,7 @@ public class OpIndexColumn {
 					return accept(t.getValue(), request, args);
 				}
 			});
+			
 		}
 		return stream;
 	}
@@ -154,10 +154,7 @@ public class OpIndexColumn {
 	
 	
 	private boolean accept(OpObject opObject, ObjectsSearchRequest request, Object[] argsToSearch) {
-		List<Object> array = null;
-		for (List<String> f : fieldsExpression) {
-			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, null);
-		}
+		List<Object> array = eval(opObject, null);
 		if (array != null && argsToSearch.length > 0) {
 			for (Object s : array) {
 				if(request.searchType == SearchType.EQUALS) {
@@ -168,6 +165,13 @@ public class OpIndexColumn {
 			}
 		}
 		return false;
+	}
+
+	private List<Object> eval(OpObject opObject, List<Object> array ) {
+		for (List<String> f : fieldsExpression) {
+			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, array);
+		}
+		return array;
 	}
 
 	
