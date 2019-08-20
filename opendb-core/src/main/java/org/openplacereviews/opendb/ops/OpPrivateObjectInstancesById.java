@@ -151,16 +151,6 @@ class OpPrivateObjectInstancesById {
 		return r;
 	}
 
-	public void remove(List<String> id, OpObject newObj) {
-		if (dbAccess != null) {
-			throw new UnsupportedOperationException();
-		}
-		if (newObj != null) {
-			objects.remove(new CompoundKey(0, id));
-			resetAfterEdit();
-		}
-	}
-
 	public CacheObject getCacheObject() {
 		CacheObject c = cacheObject;
 		if (c != null && c.cacheVersion == editVersion.intValue()) {
