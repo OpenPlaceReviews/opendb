@@ -69,7 +69,7 @@
 			"comment" : "Validate that for all standard operation arity is always 0 and nobody could change it",
 			"role" : "none",
 			"if" : [
-				"set:in(.id.0, set:all('sys.operation','sys.validate','sys.role','sys.grant', 'sys.login', 'sys.signup'))",
+				"set:in(.id.0, set:all('sys.operation','sys.validate','sys.role','sys.bot','sys.grant', 'sys.login', 'sys.signup'))",
 				"std:eq(std:size(.new),1)"
 			],
 			"validate" : [
