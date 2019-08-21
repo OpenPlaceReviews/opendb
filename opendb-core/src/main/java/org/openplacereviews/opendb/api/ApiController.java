@@ -224,14 +224,14 @@ public class ApiController {
 
 	@GetMapping(path = "/object-by-id", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String objects(@RequestParam(required = true) String type, @RequestParam(required = false) String key,
-			@RequestParam(required = false) String key2) throws FailedVerificationException {
+	public String objects(@RequestParam(required = true) String type, @RequestParam(required = true) String key) throws FailedVerificationException {
 		OpBlockChain blc = manager.getBlockchain();
 		OpObject obj;
-		if (OUtils.isEmpty(key2)) {
+		if (!key.contains(",")) {
 			obj = blc.getObjectByName(type, key);
 		} else {
-			obj = blc.getObjectByName(type, key, key2);
+			String[] keys = key.split(",");
+			obj = blc.getObjectByName(type, keys[0].trim(), keys[1].trim());
 		}
 		return formatter.fullObjectToJson(obj);
 	}
