@@ -94,5 +94,16 @@ public class BotManager {
 
 		return false;
 	}
+	
+	public boolean stopBot(String botId) {
+		BotInfo botObj = getBots().get(botId);
+		if (botObj == null) {
+			return false;
+		}
+		if (botObj.instance != null) {
+			return botObj.instance.interrupt();
+		}
+		return false;
+	}
 
 }
