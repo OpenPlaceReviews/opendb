@@ -683,6 +683,9 @@ public class OpBlockchainRules {
 		EDIT_OBJ_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
 		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock)"),
+		EDIT_OP_NOT_SUPPORTED("Edit obj operation '%s' is not supported yet"),
+		EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS("Operation increment only supported for numbers: field '%s', value '%s'"),
+		EDIT_OP_APPEND_ONLY_FOR_LIST_MAP("Operation append only supported for list and map: field '%s', value '%s'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 
 		VOTE_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),

@@ -1089,7 +1089,7 @@ public class OpBlockChain {
 								checkCurrentFieldSpecified = false;
 							}
 						} else {
-							throw new UnsupportedOperationException("Operation Append supported only for list and map");
+							return rules.error(u, ErrorType.EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS, fieldExpr, oldObject);
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
@@ -1100,11 +1100,10 @@ public class OpBlockChain {
 							newObject.setFieldByExpr(fieldExpr, ((Number) oldObject).longValue() + 1);
 							checkCurrentFieldSpecified = false;
 						} else {
-							throw new UnsupportedOperationException("Operation Increment supported only for Numbers");
+							return rules.error(u, ErrorType.EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS, fieldExpr, oldObject);
 						}
 					} else {
-						throw new UnsupportedOperationException(
-								String.format("Operation %s is not supported for change", opId));
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, opId);
 					}
 					boolean currentNotSpecified = currentExpectedFields == null || 
 							!currentExpectedFields.containsKey(fieldExpr);
