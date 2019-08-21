@@ -897,7 +897,7 @@ public class OpBlockchainRulesSysValidationTest {
 		OpObject opObject = new OpObject();
 		opObject.setId(newOperation);
 		opObject.putStringValue(F_COMMENT, comment);
-		opObject.putObjectValue("arity", 1);
+		opObject.putObjectValue("arity", 0);
 
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OpBlockchainRules.OP_OPERATION);
