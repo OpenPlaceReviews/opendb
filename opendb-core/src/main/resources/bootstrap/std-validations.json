@@ -53,7 +53,7 @@
 			"comment" : "Validate operation with arity=1 on amount old, edit and new objects",
 			"role" : "none",
 			"if" : [
-				"std:eq(.ref.op.arity, 1)"
+				"std:eq(.ref.op.arity, 0)"
 			],
 			"validate" : [
 				"std:leq(std:size(.new),1)",
@@ -69,7 +69,7 @@
 			"comment" : "Validate that for all standard operation arity is always 0 and nobody could change it",
 			"role" : "none",
 			"if" : [
-				"set:in(.type, set:all('sys.operation','sys.validate','sys.role','sys.grant', 'sys.login', 'sys.signup'))",
+				"set:in(.id.0, set:all('sys.operation','sys.validate','sys.role','sys.grant', 'sys.login', 'sys.signup'))",
 				"std:eq(std:size(.new),1)"
 			],
 			"validate" : [
