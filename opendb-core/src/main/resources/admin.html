@@ -644,6 +644,17 @@
             var selectedSearchType = $("#search-type-list").val();
             if (selectedSearchType === "index") {
                 $("#index-id").show();
+                var selectedType = $("#type-list").val();
+                if (selectedType != null) {
+                    $.getJSON( "/api/indices-by-type?type="+selectedType, function( data ) {
+                        var items = "";
+                        for (var i = 0; i < data.length; i++) {
+                            var array = data[i];
+                            items += "<option value = '" + array["indexId"] + "' "+ ">" + array["indexId"] + "</option>";
+                        }
+                        $("#index-list").html(items);
+                    });
+                }
             } else {
                 $("#index-id").hide();
             }
