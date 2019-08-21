@@ -19,6 +19,7 @@ public class LogOperationService implements ValidationListener {
 	protected static final Log LOGGER = LogFactory.getLog(LogOperationService.class);
 
 	private static final int LIMIT = 1000;
+	
 	@Autowired
 	private JsonFormatter formatter;
 	
@@ -49,7 +50,7 @@ public class LogOperationService implements ValidationListener {
 			LOGGER.info("SUCCESS: " + getMessage(le));
 		} else {
 			LOGGER.warn("FAILURE: " + getMessage(le), le.cause);
-			if(le.obj != null) {
+			if(le.obj != null && formatter != null) {
 				LOGGER.info("FAILURE OBJECT: " + formatter.objToJson(le.obj));
 			}
 		}
