@@ -436,6 +436,9 @@ public class OpExprEvaluator {
 						}
 					}
 				}
+				if (objEquals(obj1, obj2) != 0) {
+					return 1;
+				}
 				return 0;
 			} else {
 				if (obj2 instanceof JsonArray) {
@@ -619,7 +622,7 @@ public class OpExprEvaluator {
 			String functionName = mcc.getChild(0).getText();
 			List<Object> args = new ArrayList<Object>();
 			StringBuilder traceExpr = null;
-			if (TRACE_EXPRESSIONS) {
+			if (isTraceExpressions()) {
 				traceExpr = new StringBuilder();
 				traceExpr.append(space(ctx.exprNested)).append(functionName);
 			}
@@ -627,7 +630,7 @@ public class OpExprEvaluator {
 				ParseTree pt = mcc.getChild(i);
 				if (pt instanceof ExpressionContext) {
 					Object obj = eval((ExpressionContext) pt, ctx);
-					if (TRACE_EXPRESSIONS) {
+					if (isTraceExpressions()) {
 						traceExpr.append("[ '").append(pt.getText()).append("'");
 						traceExpr.append(" -> '").append(obj).append("']");
 					}
@@ -637,13 +640,17 @@ public class OpExprEvaluator {
 			ctx.exprNested++;
 			Object funcRes = callFunction(functionName, args, ctx);
 
-			if (TRACE_EXPRESSIONS) {
+			if (isTraceExpressions()) {
 				System.out.println("EXPR:  " + traceExpr.toString() + " = " + funcRes);
 			}
 			ctx.exprNested--;
 			return funcRes;
 		}
 		throw new UnsupportedOperationException("Unsupported parser operation: %s" + child.getText());
+	}
+
+	protected boolean isTraceExpressions() {
+		return TRACE_EXPRESSIONS;
 	}
 
 	private Object getField(Object obj, String field) {

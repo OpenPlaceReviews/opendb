@@ -5,7 +5,12 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.crypto.prng.FixedSecureRandom;
+import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.JSON_MSG_TYPE;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,13 +37,14 @@ public class SecUtils {
 
 	public static void main(String[] args) throws FailedVerificationException {
 		
-		KeyPair kps = SecUtils.getKeyPair(ALGO_EC,
+		KeyPair kp = SecUtils.getKeyPair(ALGO_EC,
 				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
 				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
-		System.out.println(SecUtils.validateKeyPair(ALGO_EC, kps.getPrivate(), kps.getPublic()));
-		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
+//		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
+//		KeyPair kp = generateRandomEC256K1KeyPair();
 		System.out.println(kp.getPrivate().getFormat());
 		System.out.println(kp.getPrivate().getAlgorithm());
+		System.out.println(SecUtils.validateKeyPair(ALGO_EC, kp.getPrivate(), kp.getPublic()));
 		String pr = encodeKey(KEY_BASE64, kp.getPrivate());
 		String pk = encodeKey(KEY_BASE64, kp.getPublic());
 		String algo = kp.getPrivate().getAlgorithm();
@@ -56,6 +62,31 @@ public class SecUtils {
 		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", nk.getPrivate().getFormat(), pr, nk
 				.getPublic().getFormat(), pk));
 		System.out.println(validateSignature(nk, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, signature));
+		
+		JsonFormatter formatter = new JsonFormatter();
+		String msg = "{\n" + 
+				"		\"type\" : \"sys.signup\",\n" + 
+				"		\"signed_by\": \"openplacereviews\",\n" + 
+				"		\"create\": [{\n" + 
+				"			\"id\": [\"openplacereviews\"],\n" + 
+				"			\"name\" : \"openplacereviews\",\n" + 
+				"			\"algo\": \"EC\",\n" + 
+				"			\"auth_method\": \"provided\",\n" + 
+				"			\"pubkey\": \"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEn6GkOTN3SYc+OyCYCpqPzKPALvUgfUVNDJ+6eyBlCHI1/gKcVqzHLwaO90ksb29RYBiF4fW/PqHcECNzwJB+QA==\"\n" + 
+				"		}]\n" + 
+				"	}";
+
+		OpOperation opOperation = formatter.parseOperation(msg);
+		String hash = JSON_MSG_TYPE + ":"
+				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null,
+				formatter.opToJsonNoHash(opOperation));
+
+		byte[] hashBytes = SecUtils.getHashBytes(hash);
+		String signatureTxt = SecUtils.signMessageWithKeyBase64(kp, hashBytes, SecUtils.SIG_ALGO_ECDSA, null);
+		System.out.println(formatter.opToJsonNoHash(opOperation));
+		System.out.println(hash);
+		System.out.println(signatureTxt);
+
 
 	}
 

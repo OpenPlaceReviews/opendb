@@ -5,7 +5,9 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ValidationListener;
+import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.ops.OpObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -17,6 +19,8 @@ public class LogOperationService implements ValidationListener {
 	protected static final Log LOGGER = LogFactory.getLog(LogOperationService.class);
 
 	private static final int LIMIT = 1000;
+	@Autowired
+	private JsonFormatter formatter;
 	
 	ConcurrentLinkedDeque<LogEntry> log  = new ConcurrentLinkedDeque<LogOperationService.LogEntry>();
 	
@@ -45,6 +49,9 @@ public class LogOperationService implements ValidationListener {
 			LOGGER.info("SUCCESS: " + getMessage(le));
 		} else {
 			LOGGER.warn("FAILURE: " + getMessage(le), le.cause);
+			if(le.obj != null) {
+				LOGGER.info("FAILURE OBJECT: " + formatter.objToJson(le.obj));
+			}
 		}
 	}
 

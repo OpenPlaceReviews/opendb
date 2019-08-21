@@ -7,27 +7,26 @@
 			"comment" : "Validate that operation is registered",
 			"role" : "owner",
 			"validate" : [
-				"std:eq(.ref.op.id,.type)"
+				"std:eq(.ref.op.id.0,.type)"
 			]
 		}]
 	},
-	// TODO change validation rule, doesn't work!!
-//	{
-//		"type" : "sys.validate",
-//		"create" : [{
-//			"id" : ["all_op_arity_new_del"],
-//			"type" : ["*"],
-//			"comment" : "Validate operation arity",
-//			"role" : "none",
-//			"if" : [
-//				"std:eq(.ref.op.arity, 0)"
-//			],
-//			"validate" : [
-//				"std:leq(std:size(.new),1)",
-//				"std:leq(std:size(.old),1)"
-//			]
-//		}]
-//	},
+	{
+		"type" : "sys.validate",
+		"create" : [{
+			"id" : ["all_op_arity_new_del"],
+			"type" : ["*"],
+			"comment" : "Validate operation arity",
+			"role" : "none",
+			"if" : [
+				"std:eq(.ref.op.arity, 0)"
+			],
+			"validate" : [
+				"std:leq(std:size(.new),1)",
+				"std:leq(std:size(.old),1)"
+			]
+		}]
+	},
 	{
 		"type" : "sys.validate",
 		"create" : [{
@@ -101,7 +100,7 @@
 			"comment" : "Check that role none could not be created. Couldn't be changed!",
 			"role" : "none",
 			"validate" : [
-				"std:neq(.new.id, 'none')"
+				"std:neq(.new.id.0, 'none')"
 			]
 		}]
 	},
@@ -188,7 +187,7 @@
 				"std:eq(std:size(.old),0)"
 			],
 			"validate" : [
-				"set:in(.ref.s.id, .signed_by)"
+				"set:in(.ref.s.id.0, .signed_by)"
 			]
 		}]
 	},
@@ -204,7 +203,7 @@
 				"std:eq(std:size(.old),1)"
 			],
 			"validate" : [
-				"std:or(set:in(.ref.s.id, .signed_by), set:in(str:combine(.old.id,':'), .signed_by))"
+				"std:or(set:in(.ref.s.id.0, .signed_by), set:in(str:combine(.old.id.0,':'), .signed_by))"
 			]
 		}]
 	},
@@ -219,7 +218,7 @@
 				"std:or(std:eq(.new.auth_method,'provided'), std:eq(.old.auth_method,'provided'))"
 			],
 			"validate" : [
-				"set:in(.new.id, .signed_by)"
+				"set:in(.new.id.0, .signed_by)"
 			]
 		}]
 	},
@@ -251,7 +250,7 @@
 				"std:eq(std:size(.old),1)"
 			],
 			"validate" : [
-				"std:or(set:in(.ref.s.id, .signed_by), set:in(str:combine(.old.id,':'), .signed_by))"
+				"std:or(set:in(.ref.s.id.0, .signed_by), set:in(str:combine(.old.id.0,':'), .signed_by))"
 			]
 		}]
 	},
@@ -266,7 +265,7 @@
 				"std:or(std:eq(.new.auth_method,'pwd'),std:eq(.old.auth_method,'pwd'))"
 			],
 			"validate" : [
-				"set:in(.new.id, .signed_by)"
+				"set:in(.new.id.0, .signed_by)"
 			]
 		}]
 	}

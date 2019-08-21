@@ -308,6 +308,10 @@ public class OpBlockchainRules {
 			((JsonObject)deletedArray.get(i)).addProperty(OpOperation.F_TYPE, deletedObjsCache.get(i).getParentType());
 		}
 		JsonObject refsMap = formatter.toJsonElement(refObjsCache).getAsJsonObject();
+		for(String key : refsMap.keySet()) {
+			((JsonObject)refsMap.get(key)).addProperty(OpOperation.F_TYPE, refObjsCache.get(key).getParentType());
+		}
+		
 		JsonArray newArray = (JsonArray) formatter.toJsonElement(newObjsArray);
 		JsonObject opJsonObj = formatter.toJsonElement(o).getAsJsonObject();
 		EvaluationContext ctx = new EvaluationContext(blockchain, opJsonObj, newArray, deletedArray, refsMap);

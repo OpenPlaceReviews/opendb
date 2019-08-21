@@ -318,7 +318,7 @@ public class OpApiController {
 			}
 			op.setSignedBy(signedBy);
 			// sign with server is it necessary or make it optional? 
-			if(!OUtils.isEmpty(serverName)) {
+			if(!OUtils.isEmpty(serverName) && OUtils.isEmpty(signupPrivateKey)) {
     			op.addOtherSignedBy(serverName);
     			otherKeyPair = getServerLoginKeyPair(session);
     			if(otherKeyPair == null) {
