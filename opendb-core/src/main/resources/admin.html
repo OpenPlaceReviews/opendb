@@ -80,7 +80,7 @@
 
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
-        <label>Select search type</label><select id="search-type-list">
+        <label>Search by</label><select id="search-type-list">
         <option value="id">Id</option>
         <option value="index">Index</option>
         <option value="type">Type</option>
@@ -88,12 +88,15 @@
         <br>
         <label>Select type:&nbsp;</label><select id="type-list"></select>
         <br>
-        <div id="index-id">
+        <div id="index-list-id">
         <label>Select id:&nbsp;</label><select id="index-list"></select>
         </div>
         <br>
+        <div id="search-key-input">
         <label>Input search key:</label><input type="text" id="search-key"/>
+        </div>
         <input type="submit" value="Search" id="load-objects-btn">
+        <p id="amount-objects"></p>
         <p id="object-type-description"/>
         <ul id="objects-list">
         </ul>
@@ -410,7 +413,8 @@
 
     var globalObjectTypes = {};
     function loadObjectsData() {
-        $("#index-id").hide();
+        $("#index-list-id").hide();
+
         let selectType = $("#type-list").val();
         $.getJSON( "/api/objects?type=sys.operation", function( data ) {
             var types = "<option value = 'none'>none</option>";
@@ -425,23 +429,6 @@
             }
             $("#type-list").html(types);
         });
-
-        // if(selectType != "none" && globalObjectTypes[selectType]) {
-        //     $.getJSON( "/api/objects?type="+selectType, function( data ) {
-        //         var items = "";
-        //         $("#object-type-description").html(globalObjectTypes[selectType].comment);
-        //         $("#objects-tab").html("Objects (" + data.objects.length + ")");
-        //         for(var i = 0; i < data.objects.length; i++)  {
-        //             let obj = data.objects[i];
-        //             items += "<br><li><b>Object id</b>: " + obj.id;
-        //             items += "<br><b>Comment</b>: " + obj.comment;
-        //             items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-        //                 JSON.stringify(obj, null, 4) + "</pre></details>";
-        //             items += "</li>";
-        //         }
-        //         $("#objects-list").html(items);
-        //     });
-        // }
     }
 
     function loadStatusData() {
@@ -643,7 +630,8 @@
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
             if (selectedSearchType === "index") {
-                $("#index-id").show();
+                $("#index-list-id").show();
+                $("#search-key-input").show();
                 var selectedType = $("#type-list").val();
                 if (selectedType != null) {
                     $.getJSON( "/api/indices-by-type?type="+selectedType, function( data ) {
@@ -655,8 +643,12 @@
                         $("#index-list").html(items);
                     });
                 }
+            } else if (selectedSearchType === "type"){
+                $("#search-key-input").hide();
+                $("#index-list-id").hide();
             } else {
-                $("#index-id").hide();
+                $("#search-key-input").show();
+                $("#index-list-id").hide();
             }
         });
 
