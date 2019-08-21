@@ -28,4 +28,9 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	 * @return current progress - should be number between [0, total[, -1 if undefined
 	 */
 	public int progress();
+	
+	/**
+	 * interrupt execution
+	 */
+	public boolean interrupt();
 }
