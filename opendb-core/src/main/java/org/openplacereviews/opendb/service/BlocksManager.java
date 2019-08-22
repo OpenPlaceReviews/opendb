@@ -165,12 +165,18 @@ public class BlocksManager {
 		}
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
-		boolean added = blockchain.addOperation(op);
 		if (!existing) {
 			dataManager.insertOperation(op);
 		}
-		// all 3 methods in synchronized block, so it is almost guaranteed insertOperation won't fail
-		// or that operation will be lost in queue and system needs to be restarted
+		boolean added = false;
+		try {
+			added = blockchain.addOperation(op);
+		} finally {
+			if (!added && !existing) {
+				// don't remove relations because we can rely that operation hash / content will be the same 
+//				dataManager.removeOperations(Collections.singleton(op.getHash()));
+			}
+		}
 		return added;
 	}
 

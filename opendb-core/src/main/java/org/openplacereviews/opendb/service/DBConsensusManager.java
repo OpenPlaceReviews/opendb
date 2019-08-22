@@ -857,15 +857,26 @@ public class DBConsensusManager {
 
 	public int removeOperations(Set<String> ops) {
 		int deleted = 0;
-		// simple approach without using transaction isolations
-		for (String op : ops) {
-			deleted += jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
-							+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) " + " INSERT INTO "
-							+ OPERATIONS_TRASH_TABLE
-							+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
-					SecUtils.getHashBytes(op));
+		boolean txRollback = false;
+		try {
+			txStart();
+			txRollback = true;
+			// simple approach without using transaction isolations
+			for (String op : ops) {
+				deleted += jdbcTemplate.update(
+						"WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
+								+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
+								+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
+								+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
+						SecUtils.getHashBytes(op));
+			}
+			txCommit();
+			return deleted;
+		} finally {
+			if (txRollback) {
+				txRollback();
+			}
 		}
-		return deleted;
 	}
 
 	public boolean removeFullBlock(OpBlock block) {
@@ -982,11 +993,11 @@ public class DBConsensusManager {
 		}, status, DateUtils.addSeconds(new Date(), -addedMoreThanSecondsAgo));
 	}
 
-	public void removeResObjectFromDB(ResourceDTO resDTO) {
+	public void removeResource(ResourceDTO resDTO) {
 		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new Object[]{SecUtils.getHashBytes(resDTO.getHash())});
 	}
 
-	public void updateImageActiveStatus(ResourceDTO imageDTO, boolean status) {
+	public void updateResourceActiveStatus(ResourceDTO imageDTO, boolean status) {
 		jdbcTemplate.update("UPDATE " + EXT_RESOURCE_TABLE + " SET active = ? WHERE hash = ?", status, SecUtils.getHashBytes(imageDTO.getHash()));
 	}
 
@@ -1015,19 +1026,29 @@ public class DBConsensusManager {
 	}
 
 	public void insertOperation(OpOperation op) {
-		PGobject pGobject = new PGobject();
-		pGobject.setType("jsonb");
-
-		String js = formatter.opToJson(op);
+		boolean txRollback = false;
 		try {
-			pGobject.setValue(js);
-		} catch (SQLException e) {
-			throw new IllegalArgumentException(e);
-		}
-		byte[] bhash = SecUtils.getHashBytes(op.getHash());
+			txStart();
+			txRollback = true;
+			PGobject pGobject = new PGobject();
+			pGobject.setType("jsonb");
 
-		jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)",
-				bhash, pGobject);
+			String js = formatter.opToJson(op);
+			try {
+				pGobject.setValue(js);
+			} catch (SQLException e) {
+				throw new IllegalArgumentException(e);
+			}
+			byte[] bhash = SecUtils.getHashBytes(op.getHash());
+
+			jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", bhash, pGobject);
+			txCommit();
+			txRollback = false;
+		} finally {
+			if (txRollback) {
+				txRollback();
+			}
+		}
 	}
 
 	public OpOperation getOperationByHash(String hash) {

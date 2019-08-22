@@ -146,7 +146,7 @@ public class IPFSFileManager {
 
 	private void removeImageObject(ResourceDTO resourceDTO) throws FileNotFoundException {
 		ipfsService.unpin(resourceDTO.getCid());
-		dbManager.removeResObjectFromDB(resourceDTO);
+		dbManager.removeResource(resourceDTO);
 		File file = getFileByHash(resourceDTO.getHash(), resourceDTO.getExtension());
 		if (file.delete()) {
 			LOGGER.info(String.format("File %s is deleted", file.getName()));
@@ -163,7 +163,7 @@ public class IPFSFileManager {
 				array.clear();
 				getImageObject(o.getRawOtherFields(), array);
 				array.forEach(resDTO -> {
-					dbManager.updateImageActiveStatus(resDTO, true);
+					dbManager.updateResourceActiveStatus(resDTO, true);
 					ipfsService.pin(resDTO.getCid());
 				});
 			}
