@@ -52,23 +52,28 @@ public class OpApiController {
     @ResponseBody
     public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name, 
     		@RequestParam(required = true) String pwd, HttpSession session, HttpServletResponse response) {
-    	OpObject user = manager.getBlockchain().getObjectByName(OP_GRANT, name);
-    	boolean isAdministrator = false;
-    	if (user != null) {
-    		if (user.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
-    			isAdministrator = true;
+    	if(OUtils.equals(manager.getServerUser(), name) && 
+    			OUtils.equals(manager.getServerPrivateKey(), pwd)) {
+    		updateSessionObject(session, name, pwd);
+    	    return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+    	} else {
+			OpObject userGrantObject = manager.getBlockchain().getObjectByName(OP_GRANT, name);
+			if (userGrantObject != null) {
+				if (userGrantObject.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
+					updateSessionObject(session, name, pwd);
+					return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+				}
 			}
 		}
-    	if(OUtils.equals(manager.getServerUser(), name) && 
-    			OUtils.equals(manager.getServerPrivateKey(), pwd) || isAdministrator) {
-    		session.setAttribute(ADMIN_LOGIN_NAME, name);
-    		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
-    		session.setMaxInactiveInterval(-1);
-    		keyPairs.put(name, manager.getServerLoginKeyPair());
-    	    return ResponseEntity.ok().body("{\"status\":\"OK\"}");
-    	}
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("{\"status\":\"ERROR\"}");
     }
+
+    private void updateSessionObject(HttpSession session, String name, String pwd) {
+		session.setAttribute(ADMIN_LOGIN_NAME, name);
+		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
+		session.setMaxInactiveInterval(-1);
+		keyPairs.put(name, manager.getServerLoginKeyPair());
+	}
     
     public boolean validateServerLogin(HttpSession session) {
     	Object loginName = session.getAttribute(ADMIN_LOGIN_NAME);

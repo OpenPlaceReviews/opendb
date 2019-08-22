@@ -96,54 +96,14 @@
         <input type="submit" value="Search" id="load-objects-btn">
         <br><br>
         <h5 id="amount-objects"></h5>
+
+        <pre id="json-display" hidden="true"></pre>
+        <pre id="json-result" hidden="true"></pre>
+        <input type="button" value="Finish edit" hidden="true" id="finish-edit-btn">
+
         <p id="object-type-description"/>
         <ul id="objects-list">
         </ul>
-
-
-        <!--<textarea id="json-input" autocomplete="off">-->
-          <!--{-->
-            <!--"id": 1001,-->
-            <!--"type": "donut",-->
-            <!--"name": "Cake",-->
-            <!--"description": "http://en.wikipedia.org/wiki/Doughnut",-->
-            <!--"price": 2.55,-->
-            <!--"available": {-->
-              <!--"store": 42,-->
-              <!--"warehouse": 600-->
-            <!--},-->
-            <!--"topping": [-->
-              <!--{ "id": 5001, "type": "None" },-->
-              <!--{ "id": 5002, "type": "Glazed" },-->
-              <!--{ "id": 5005, "type": "Sugar" },-->
-              <!--{ "id": 5003, "type": "Chocolate" },-->
-              <!--{ "id": 5004, "type": "Maple" }-->
-            <!--]-->
-          <!--}-->
-        <!--</textarea>-->
-
-        <!--<button id="translate">Translate</button>-->
-
-        <!--<pre id="json-display"></pre>-->
-
-        <!--<script type="text/javascript">-->
-            <!--// get JSON-->
-            <!--function getJson() {-->
-                <!--try {-->
-                    <!--return JSON.parse($('#json-input').val());-->
-                <!--} catch (ex) {-->
-                    <!--alert('Wrong JSON Format: ' + ex);-->
-                <!--}-->
-            <!--}-->
-
-            <!--// initialize-->
-            <!--var editor = new JsonEditor('#json-display', getJson());-->
-
-            <!--// enable translate button-->
-            <!--$('#translate').on('click', function () {-->
-                <!--editor.load(getJson());-->
-            <!--});-->
-        <!--</script>-->
     </div>
     
     <div id="metrics" class="tab-pane fade">
@@ -646,6 +606,15 @@
         });
     }
 
+    var editor = {};
+    function generateJsonFromObject(obj) {
+        $("#json-display").show();
+        $("#json-result").hide();
+        $("#finish-edit-btn").show();
+        editor = new JsonEditor('#json-display', obj);
+        editor.load(obj);
+    }
+
     $( document ).ready(function() {
         loadData();
         $("#clear-list-btn").click(function(){
@@ -758,6 +727,8 @@
             var searchType = $("#search-type-list").val();
             var type = $("#type-list").val();
             var key = $("#search-key").val();
+            $("#json-display").hide();
+            $("#finish-edit-btn").hide();
 
             if (searchType === "id") {
                 let obj = {
@@ -768,28 +739,29 @@
                     var items = "";
                     if (data != null) {
                         items += "<br><li><b>Object id</b>: " + data.id;
+                        items += "<input type=\"button\" value=\"Edit\" onclick='generateJsonFromObject(" + JSON.stringify(data) +")'>";
                         items += "<br><b>Comment</b>: " + data.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(data, null, 4) + "</pre></details>";
                         items += "</li>";
                     }
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count result: " + (data === null ? 0 : 1));
+                    $("#amount-objects").html("Count results: " + (data === null ? 0 : 1));
                 });
             } else if (searchType === "all") {
                 $.getJSON( "/api/objects?type="+type, function( data ) {
                     var items = "";
                     for(var i = 0; i < data.objects.length; i++)  {
                         var obj = data.objects[i];
-                        items += "<form onsubmit=\"alert('submit!');return false\"><br><li><b>Object id</b>:" + obj.id;
-                        //items += "<input type=\"submit\" value=\"Edit\" id=\"edit-object-" + obj.id[0] + "\">";
+                        items += "<br><li><b>Object id</b>:" + obj.id;
+                        items += "<input type=\"button\" value=\"Edit\" onclick='generateJsonFromObject(" + JSON.stringify(obj) +")'>";
                         items += "<br><b>Comment</b>: " + obj.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre id=\"" + obj.id[0]+"\">" +
+                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
-                        items += "</li></form>";
+                        items += "</li>";
                     }
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count result: " +data.objects.length);
+                    $("#amount-objects").html("Count results: " +data.objects.length);
                 });
             } else { //index
                 let obj = {
@@ -802,15 +774,25 @@
                     for(var i = 0; i < data.length; i++)  {
                         let obj = data[i];
                         items += "<br><li><b>Object id</b>: " + obj.id;
+                        items += "<input type=\"button\" value=\"Edit\" onclick='generateJsonFromObject(" + JSON.stringify(obj) +")'>";
                         items += "<br><b>Comment</b>: " + obj.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
                         items += "</li>";
                     }
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count result: " + data.length);
+                    $("#amount-objects").html("Count results: " + data.length);
                 });
             }
+        });
+
+        // TODO run delta search!!!
+        $("#finish-edit-btn").click(function () {
+            $("#json-result").show();
+            $("#json-result").html(JSON.stringify(editor.get(), null, 4));
+            editor = null;
+            $("#finish-edit-btn").hide();
+            $("#json-display").hide();
         });
 
         $("#start-bot-btn").click(function () {
