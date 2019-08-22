@@ -41,6 +41,7 @@ opendb:
     minSecondsInterval: 120
     minQueueSize: 10
     maxSecondsInterval: 3600
+    minCapacity: 0.7
 
 management:
   endpoints:

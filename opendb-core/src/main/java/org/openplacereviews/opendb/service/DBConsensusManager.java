@@ -89,9 +89,27 @@ public class DBConsensusManager {
 	public String getSuperblockHash() {
 		return dbManagedChain.getSuperBlockHash();
 	}
+	
+	private void txStart() {
+		// commit before start to be sure consistent
+		jdbcTemplate.execute("COMMIT");
+		jdbcTemplate.execute("BEGIN");
+	}
+	
+	private void txRollback() {
+		try {
+			jdbcTemplate.execute("ROLLBACK");
+		} catch (DataAccessException e) {
+			LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
+		}
+	}
+
+	private void txCommit() {
+		jdbcTemplate.execute("COMMIT");
+	}
 
 	// mainchain could change
-	public synchronized OpBlockChain init(MetadataDb metadataDB) {
+	public OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
 		backupManager.init();
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
@@ -197,8 +215,7 @@ public class DBConsensusManager {
 		try {
 			dbSB.markAsStale(true);
 			dbPSB.markAsStale(true);
-			// Connection conn = dataSource.getConnection();
-			jdbcTemplate.execute("BEGIN");
+			txStart();
 			txRollback = true;
 			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
 			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
@@ -213,15 +230,11 @@ public class DBConsensusManager {
 
 			res = new OpBlockChain(blc.getParent().getParent(),
 					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
-			jdbcTemplate.execute("COMMIT");
+			txCommit();
 			txRollback = false;
 		} finally {
 			if (txRollback) {
-				try {
-					jdbcTemplate.execute("ROLLBACK");
-				} catch (DataAccessException e) {
-					LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
-				}
+				txRollback();
 				// revert
 				dbSB.markAsStale(false);
 				dbPSB.markAsStale(false);
@@ -229,6 +242,7 @@ public class DBConsensusManager {
 		}
 		return res;
 	}
+
 
 
 	protected class SuperblockDbSpliterator implements Spliterator<Map.Entry<CompoundKey, OpObject>> {
@@ -615,7 +629,7 @@ public class DBConsensusManager {
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
 //		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
-		jdbcTemplate.execute("BEGIN");
+		txStart();
 		boolean succeed = false;
 		try {
 			jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
@@ -629,15 +643,11 @@ public class DBConsensusManager {
 							String.format("Can't create block '%s' cause op '%s' doesn't exist", opBlock.getRawHash(), o.getHash()));
 				}
 			}
-			jdbcTemplate.execute("COMMIT");
+			txCommit();
 			succeed = true;
 		} finally {
 			if (!succeed) {
-				try {
-					jdbcTemplate.execute("ROLLBACK");
-				} catch (DataAccessException e) {
-					LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
-				}
+				txRollback();
 			}
 		}
 		backupManager.insertBlock(opBlock);
@@ -645,7 +655,8 @@ public class DBConsensusManager {
 		orphanedBlocks.put(rawHash, blockheader);
 	}
 
-	public synchronized OpBlockChain saveMainBlockchain(OpBlockChain blc) {
+
+	public OpBlockChain saveMainBlockchain(OpBlockChain blc) {
 		// find and saved last not saved part of the chain
 		OpBlockChain lastNotSaved = null;
 		OpBlockChain beforeLast = null;
@@ -686,7 +697,7 @@ public class DBConsensusManager {
 		Collection<OpBlock> blockHeaders = blc.getSuperblockHeaders();
 		OpBlockChain dbchain = null;
 
-		jdbcTemplate.execute("BEGIN");
+		txStart();
 		try {
 			Map<String, Long> opsId = new HashMap<String, Long>();
 			for (OpBlock block : blc.getSuperblockFullBlocks()) {
@@ -716,14 +727,10 @@ public class DBConsensusManager {
 			}
 			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 					blc.getRules());
-			jdbcTemplate.execute("COMMIT");
+			txCommit();
 		} finally {
 			if (dbchain == null) {
-				try {
-					jdbcTemplate.execute("ROLLBACK");
-				} catch (DataAccessException e) {
-					LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
-				}
+				txRollback();
 			}
 		}
 		return dbchain;
@@ -791,7 +798,7 @@ public class DBConsensusManager {
 		return insertBatch;
 	}
 
-	public synchronized OpBlockChain compact(int prevSize, OpBlockChain blc, boolean db) {
+	public OpBlockChain compact(int prevSize, OpBlockChain blc, boolean db) {
 		if (blc == null || blc.isNullBlock() || blc.getParent().isNullBlock()) {
 			return blc;
 		}
@@ -864,7 +871,7 @@ public class DBConsensusManager {
 	public boolean removeFullBlock(OpBlock block) {
 		boolean txRollback = false;
 		try {
-			jdbcTemplate.execute("BEGIN");
+			txStart();
 			txRollback = true;
 			byte[] blockHash = SecUtils.getHashBytes(block.getRawHash());
 			int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + BLOCKS_TABLE + " a WHERE hash = ? and superblock is null RETURNING a.*) "
@@ -882,16 +889,12 @@ public class DBConsensusManager {
 				orphanedBlocks.remove(block.getRawHash());
 				blocks.remove(block.getRawHash());
 			}
-			jdbcTemplate.execute("COMMIT");
+			txCommit();
 			txRollback = false;
 			return upd != 0;
 		} finally {
 			if (txRollback) {
-				try {
-					jdbcTemplate.execute("ROLLBACK");
-				} catch (DataAccessException e) {
-					LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
-				}
+				txRollback();
 			}
 		}
 	}
@@ -909,7 +912,7 @@ public class DBConsensusManager {
 			boolean txRollback = false;
 			try {
 				dba.markAsStale(true);
-				jdbcTemplate.execute("BEGIN");
+				txStart();
 				txRollback = true;
 				jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = NULL where superblock = ?", blockHash);
 				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = NULL where superblock = ? ", blockHash);
@@ -917,16 +920,12 @@ public class DBConsensusManager {
 					jdbcTemplate.update("DELETE FROM " + objTable + " where superblock = ?", blockHash);
 				}
 
-				jdbcTemplate.execute("COMMIT");
+				txCommit();
 				txRollback = false;
 				return res;
 			} finally {
 				if (txRollback) {
-					try {
-						jdbcTemplate.execute("ROLLBACK");
-					} catch (DataAccessException e) {
-						LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
-					}
+					txRollback();
 					// revert
 					dba.markAsStale(false);
 				}

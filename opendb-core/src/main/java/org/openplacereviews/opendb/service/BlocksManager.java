@@ -175,6 +175,10 @@ public class BlocksManager {
 	}
 
 	public synchronized OpBlock createBlock() throws FailedVerificationException {
+		return createBlock(0);
+	}
+	
+	public synchronized OpBlock createBlock(double minCapacity) throws FailedVerificationException {
 		// should be changed synchronized in future:
 		// This method doesn't need to be full synchronized cause it could block during compacting or any other operation adding ops
 		if(blockchain.getQueueOperations().isEmpty()) {
@@ -184,7 +188,11 @@ public class BlocksManager {
 			throw new IllegalStateException("Blockchain is not ready to create block");
 		}
 		Metric mt = mBlockCreate.start();		
-		List<OpOperation> candidates = pickupOpsFromQueue(blockchain.getQueueOperations());
+		List<OpOperation> candidates = pickupOpsFromQueue(minCapacity, blockchain.getQueueOperations());
+		if(candidates == null) {
+			mt.capture();
+			return null;
+		}
 		
 		Metric m = mBlockCreateAddOps.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
@@ -526,9 +534,27 @@ public class BlocksManager {
 	public void setBootstrapList(List<String> bootstrapList) {
 		this.bootstrapList = bootstrapList;
 	}
+	
+	public double getQueueCapacity() {
+		int opsSize = 0;
+		int opsCnt = 0;
+		Deque<OpOperation> ops = blockchain.getQueueOperations();
+		for (OpOperation o : ops) {
+			opsCnt++;
+			opsSize += formatter.opToJson(o).length();
+		}
+		return capacity(opsSize, opsCnt);
+	}
 
-	private List<OpOperation> pickupOpsFromQueue(Collection<OpOperation> q) {
+	private double capacity(int size, int opsCnt) {
+		double c1 = size / ((double) OpBlockchainRules.MAX_BLOCK_SIZE_MB);
+		double c2 = opsCnt / ((double) OpBlockchainRules.MAX_BLOCK_SIZE_OPS);
+		return Math.max(c1, c2);
+	}
+
+	private List<OpOperation> pickupOpsFromQueue(double minCapacity, Collection<OpOperation> q) {
 		int size = 0;
+		int opsCnt = 0;
 		List<OpOperation> candidates = new ArrayList<OpOperation>();
 		for (OpOperation o : q) {
 			int l = formatter.opToJson(o).length();
@@ -540,7 +566,10 @@ public class BlocksManager {
 			}
 			candidates.add(o);
 		}
-		return candidates;
+		if(capacity(size, opsCnt) >= minCapacity) {
+			return candidates;
+		}
+		return null;
 	}
 
 	private static final PerformanceMetric mBlockCreate = PerformanceMetrics.i().getMetric("block.mgmt.create.total");
