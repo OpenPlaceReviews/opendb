@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="../js/jquery.json-editor.min.js"></script>
 <style>
     body {padding: 40px;}
 </style>
@@ -80,26 +81,69 @@
 
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
-        <label>Search by</label><select id="search-type-list">
-        <option value="id">Id</option>
-        <option value="index">Index</option>
-        <option value="type">Type</option>
-    </select>
-        <br>
+
         <label>Select type:&nbsp;</label><select id="type-list"></select>
         <br>
-        <div id="index-list-id">
-        <label>Select id:&nbsp;</label><select id="index-list"></select>
-        </div>
+        <label>Search</label><select id="search-type-list">
+            <option selected value="all">All</option>
+            <option value="id">by Id</option>
+            <option value="osmid">by OsmId</option>
+        </select>
         <br>
-        <div id="search-key-input">
+        <div id="search-key-input" hidden="true">
         <label>Input search key:</label><input type="text" id="search-key"/>
         </div>
         <input type="submit" value="Search" id="load-objects-btn">
-        <p id="amount-objects"></p>
+        <br><br>
+        <h5 id="amount-objects"></h5>
         <p id="object-type-description"/>
         <ul id="objects-list">
         </ul>
+
+
+        <!--<textarea id="json-input" autocomplete="off">-->
+          <!--{-->
+            <!--"id": 1001,-->
+            <!--"type": "donut",-->
+            <!--"name": "Cake",-->
+            <!--"description": "http://en.wikipedia.org/wiki/Doughnut",-->
+            <!--"price": 2.55,-->
+            <!--"available": {-->
+              <!--"store": 42,-->
+              <!--"warehouse": 600-->
+            <!--},-->
+            <!--"topping": [-->
+              <!--{ "id": 5001, "type": "None" },-->
+              <!--{ "id": 5002, "type": "Glazed" },-->
+              <!--{ "id": 5005, "type": "Sugar" },-->
+              <!--{ "id": 5003, "type": "Chocolate" },-->
+              <!--{ "id": 5004, "type": "Maple" }-->
+            <!--]-->
+          <!--}-->
+        <!--</textarea>-->
+
+        <!--<button id="translate">Translate</button>-->
+
+        <!--<pre id="json-display"></pre>-->
+
+        <!--<script type="text/javascript">-->
+            <!--// get JSON-->
+            <!--function getJson() {-->
+                <!--try {-->
+                    <!--return JSON.parse($('#json-input').val());-->
+                <!--} catch (ex) {-->
+                    <!--alert('Wrong JSON Format: ' + ex);-->
+                <!--}-->
+            <!--}-->
+
+            <!--// initialize-->
+            <!--var editor = new JsonEditor('#json-display', getJson());-->
+
+            <!--// enable translate button-->
+            <!--$('#translate').on('click', function () {-->
+                <!--editor.load(getJson());-->
+            <!--});-->
+        <!--</script>-->
     </div>
     
     <div id="metrics" class="tab-pane fade">
@@ -629,41 +673,19 @@
 
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "index") {
-                $("#index-list-id").show();
-                $("#search-key-input").show();
-                var selectedType = $("#type-list").val();
-                if (selectedType != null) {
-                    $.getJSON( "/api/indices-by-type?type="+selectedType, function( data ) {
-                        var items = "";
-                        for (var i = 0; i < data.length; i++) {
-                            var array = data[i];
-                            items += "<option value = '" + array["indexId"] + "' "+ ">" + array["indexId"] + "</option>";
-                        }
-                        $("#index-list").html(items);
-                    });
-                }
-            } else if (selectedSearchType === "type"){
+            if (selectedSearchType === "all") {
                 $("#search-key-input").hide();
-                $("#index-list-id").hide();
             } else {
                 $("#search-key-input").show();
-                $("#index-list-id").hide();
             }
         });
 
         $("#type-list").change(function () {
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "index") {
-                let selectType = $("#type-list").val();
-                $.getJSON( "/api/indices-by-type?type="+selectType, function( data ) {
-                    var items = "";
-                    for (var i = 0; i < data.length; i++) {
-                        var array = data[i];
-                        items += "<option value = '" + array["indexId"] + "' "+ ">" + array["indexId"] + "</option>";
-                    }
-                    $("#index-list").html(items);
-                });
+            if (selectedSearchType === "all") {
+                $("#search-key-input").hide();
+            } else {
+                $("#search-key-input").show();
             }
         });
 
@@ -752,24 +774,27 @@
                         items += "</li>";
                     }
                     $("#objects-list").html(items);
+                    $("#amount-objects").html("Count result: " + (data === null ? 0 : 1));
                 });
-            } else if (searchType === "type") {
+            } else if (searchType === "all") {
                 $.getJSON( "/api/objects?type="+type, function( data ) {
                     var items = "";
                     for(var i = 0; i < data.objects.length; i++)  {
-                        let obj = data.objects[i];
-                        items += "<br><li><b>Object id</b>: " + obj.id;
+                        var obj = data.objects[i];
+                        items += "<form onsubmit=\"alert('submit!');return false\"><br><li><b>Object id</b>:" + obj.id;
+                        //items += "<input type=\"submit\" value=\"Edit\" id=\"edit-object-" + obj.id[0] + "\">";
                         items += "<br><b>Comment</b>: " + obj.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
+                        items += "<br><details><summary><b>Simple json</b></summary><pre id=\"" + obj.id[0]+"\">" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
-                        items += "</li>";
+                        items += "</li></form>";
                     }
                     $("#objects-list").html(items);
+                    $("#amount-objects").html("Count result: " +data.objects.length);
                 });
             } else { //index
                 let obj = {
                     "type" : type,
-                    "index": $("#index-list").val(),
+                    "index": "osmid",
                     "key" : key
                 };
                 $.getJSON( "/api/indices", obj, function( data ) {
@@ -783,6 +808,7 @@
                         items += "</li>";
                     }
                     $("#objects-list").html(items);
+                    $("#amount-objects").html("Count result: " + data.length);
                 });
             }
         });

@@ -18,9 +18,11 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.security.KeyPair;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
+
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_ROLES;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_GRANT;
 
 
 @Controller
@@ -29,7 +31,8 @@ public class OpApiController {
     
 	public static final String ADMIN_LOGIN_NAME = "admin_name";
 	public static final String ADMIN_LOGIN_PWD = "admin_pwd";
-	
+	public static final String ROLE_ADMINISTRATOR = "administrator";
+
 	Map<String, KeyPair> keyPairs = new TreeMap<>(); 
 	
     @Autowired
@@ -49,8 +52,15 @@ public class OpApiController {
     @ResponseBody
     public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name, 
     		@RequestParam(required = true) String pwd, HttpSession session, HttpServletResponse response) {
+    	OpObject user = manager.getBlockchain().getObjectByName(OP_GRANT, name);
+    	boolean isAdministrator = false;
+    	if (user != null) {
+    		if (user.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
+    			isAdministrator = true;
+			}
+		}
     	if(OUtils.equals(manager.getServerUser(), name) && 
-    			OUtils.equals(manager.getServerPrivateKey(), pwd)) {
+    			OUtils.equals(manager.getServerPrivateKey(), pwd) || isAdministrator) {
     		session.setAttribute(ADMIN_LOGIN_NAME, name);
     		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
     		session.setMaxInactiveInterval(-1);
