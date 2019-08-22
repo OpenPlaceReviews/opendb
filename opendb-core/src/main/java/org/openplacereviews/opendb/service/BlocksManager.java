@@ -564,6 +564,8 @@ public class BlocksManager {
 			if (candidates.size() + 1 >= OpBlockchainRules.MAX_BLOCK_SIZE_OPS) {
 				break;
 			}
+			size += l;
+			opsCnt++;
 			candidates.add(o);
 		}
 		if(capacity(size, opsCnt) >= minCapacity) {
