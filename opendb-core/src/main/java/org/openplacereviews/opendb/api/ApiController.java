@@ -115,7 +115,8 @@ public class ApiController {
 	}
 
 	protected static class BlocksResult {
-		public Collection<OpBlock> blocks;
+		public List<OpBlock> blocks;
+		public int blockDepth;
 	}
 
 	protected static class ObjectsResult {
@@ -136,30 +137,33 @@ public class ApiController {
 
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String blocksList(@RequestParam(required = false, defaultValue = "50") int depth,
+	public String blocksList(@RequestParam(required = false, defaultValue = "100") int depth,
 			@RequestParam(required = false) String from) throws FailedVerificationException {
-		List<OpBlock> blocks;
+		BlocksResult br = new BlocksResult();
+		OpBlockChain blc = manager.getBlockchain();
+		br.blockDepth = blc.getDepth();
 		if (from != null) {
 			if (OUtils.isEmpty(from)) {
-				blocks = new ArrayList<OpBlock>(manager.getBlockchain().getBlockHeaders(-1));
-				Collections.reverse(blocks);
+				br.blocks = new ArrayList<OpBlock>(blc.getBlockHeaders(-1));
+				Collections.reverse(br.blocks);
 			} else {
-				OpBlock found = manager.getBlockchain().getBlockHeaderByRawHash(from);
+				OpBlock found = blc.getBlockHeaderByRawHash(from);
 				if (found != null) {
-					depth = manager.getBlockchain().getLastBlockId() - found.getBlockId() + 2; // +1 extra
-					blocks = new LinkedList<OpBlock>(manager.getBlockchain().getBlockHeaders(depth));
-					Collections.reverse(blocks);
-					while (!blocks.isEmpty() && !OUtils.equals(blocks.get(0).getRawHash(), from)) {
-						blocks.remove(0);
+					depth = blc.getLastBlockId() - found.getBlockId() + 2; // +1 extra
+					br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(depth));
+					Collections.reverse(br.blocks);
+					while (!br.blocks.isEmpty() && !OUtils.equals(br.blocks.get(0).getRawHash(), from)) {
+						br.blocks.remove(0);
 					}
 				} else {
-					blocks = new ArrayList<OpBlock>(manager.getBlockchain().getBlockHeaders(3));
+					br.blocks = new ArrayList<OpBlock>(blc.getBlockHeaders(3));
 				}
 			}
 		} else {
-			blocks = manager.getBlockchain().getBlockHeaders(depth);
+			br.blocks = blc.getBlockHeaders(depth);
 		}
-		return formatter.fullObjectToJson(blocks.toArray(new OpBlock[blocks.size()]));
+		
+		return formatter.fullObjectToJson(br);
 	}
 
 	@GetMapping(path = "/block-by-hash", produces = "text/json;charset=UTF-8")
