@@ -41,10 +41,6 @@ public class BotManager {
 			return instance;
 		}
 
-		public void updateObject(OpObject vld) {
-			// TODO Auto-generated method stub
-			
-		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -70,7 +66,7 @@ public class BotManager {
 			bi.api = cfg.getStringValue("api");
 			inits.remove(bi.id);
 			BotInfo exBot = this.bots.get(bi.id);
-			if (exBot == null) {
+			if (exBot == null || !exBot.api.equals(bi.api)) {
 				try {
 
 					Class<?> bot = Class.forName(bi.api);
@@ -82,9 +78,6 @@ public class BotManager {
 							bi.version, bi.api), e);
 				}
 			} else {
-				if(exBot.version != bi.version) {
-					exBot.instance.updateConfig(cfg);
-				}
 				bi = exBot;
 			}
 			nbots.put(bi.id, bi);
