@@ -85,12 +85,6 @@ public class ApiController {
 		return new InputStreamResource(ApiController.class.getResourceAsStream("/admin.html"));
 	}
 
-	@GetMapping(path = "/landing", produces = "text/html;charset=UTF-8")
-	@ResponseBody
-	public InputStreamResource testLanding() {
-		return new InputStreamResource(ApiController.class.getResourceAsStream("/public/templates/landing.html"));
-	}
-
 	@GetMapping(path = "/queue", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String queueList() throws FailedVerificationException {
@@ -127,6 +121,7 @@ public class ApiController {
 
 	protected static class ObjectsResult {
 		public Collection<OpObject> objects;
+		public int count;
 	}
 	
 	protected static class MetricResult {
@@ -232,8 +227,17 @@ public class ApiController {
 		res.objects = r.result;
 		return formatter.fullObjectToJson(res);
 	}
+	
+	@GetMapping(path = "/objects-count", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String objects(@RequestParam(required = true) String type) throws FailedVerificationException {
+		OpBlockChain blc = manager.getBlockchain();
+		ObjectsResult o = new ObjectsResult();
+		o.count = blc.countAllObjects(type);
+		return formatter.fullObjectToJson(o);
+	}
 
-	@GetMapping(path = "/object-by-id", produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/objects-by-id", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String objects(@RequestParam(required = true) String type, @RequestParam(required = true) String key) throws FailedVerificationException {
 		OpBlockChain blc = manager.getBlockchain();
@@ -244,7 +248,9 @@ public class ApiController {
 			String[] keys = key.split(",");
 			obj = blc.getObjectByName(type, keys[0].trim(), keys[1].trim());
 		}
-		return formatter.fullObjectToJson(obj);
+		ObjectsResult res = new ObjectsResult();
+		res.objects = obj == null ? Collections.emptyList() : Collections.singletonList(obj);
+		return formatter.fullObjectToJson(res);
 	}
 
 	@GetMapping(path = "/indices-by-type", produces = "text/json;charset=UTF-8")
@@ -254,13 +260,15 @@ public class ApiController {
 		return formatter.fullObjectToJson(tableIndices);
 	}
 
-	@GetMapping(path = "/indices", produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/objects-by-index", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String objectsByIndex(@RequestParam(required = true) String type,
 								 @RequestParam(required = true) String index,
 								 @RequestParam(required = true) String key) {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
-		return formatter.fullObjectToJson(manager.getObjectsByIndex(type, index, req, key));
+		ObjectsResult r = new ObjectsResult();
+		r.objects = manager.getObjectsByIndex(type, index, req, key);
+		return formatter.fullObjectToJson(r);
 	}
 
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")

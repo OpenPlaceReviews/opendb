@@ -458,6 +458,32 @@ public class DBConsensusManager {
 			}
 			
 		}
+		
+		public int countObjects(String type, Object... extraParams) throws DBStaleException {
+			readLock.lock();
+			try {
+				checkNotStale();
+				int l = (extraParams == null ? 0 : extraParams.length);
+				Object[] o = new Object[2 + Math.max(l - 1, 0)];
+				o[0] = sbhash;
+				o[1] = type;
+				String cond = null;
+				for(int i = 0; i < l; i++) {
+					if(i == 0) {
+						cond =  extraParams[i].toString();
+					} else {
+						o[1 + i] = extraParams[i];
+					}
+				}
+				String objTable = dbSchema.getTableByType(type);
+				String sql = "select count(*) from " + objTable + 
+						" where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond); 
+				return jdbcTemplate.queryForObject(sql, o, Number.class).intValue();
+			} finally {
+				readLock.unlock();
+			}
+			
+		}
 
 		@Override
 		public OpOperation getOperation(String rawHash) throws DBStaleException {

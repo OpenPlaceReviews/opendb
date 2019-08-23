@@ -83,14 +83,13 @@
         <h3>Objects</h3>
 
         <label>Select type:&nbsp;</label><select id="type-list"></select>
-        <br>
-        <label>Search</label><select id="search-type-list">
-            <option selected value="all">All</option>
-            <option value="id">by Id</option>
+        <br><br>
+        <label>Search:&nbsp;</label><select id="search-type-list">
+            <option selected value="all">all</option>
         </select>
-        <br>
+        <br><br>
         <div id="search-key-input" hidden="true">
-        <label>Input search key:</label><input type="text" id="search-key"/>
+        <label>Input search key:&nbsp;</label><input type="text" id="search-key"/>
         </div>
         <input type="submit" value="Search" id="load-objects-btn">
         <br><br>
@@ -653,7 +652,7 @@
 
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all") {
+            if (selectedSearchType === "all" || selectedSearchType === "count") {
                 $("#search-key-input").hide();
             } else {
                 $("#search-key-input").show();
@@ -664,8 +663,9 @@
             var type = $("#type-list").val();
             $.getJSON( "/api/indices-by-type?type=" + type, function( data ) {
                 var searchTypes = "";
-                searchTypes += "<option value = 'all' selected>All</option>";
-                searchTypes += "<option value = 'id' >by ID</option>";
+                searchTypes += "<option value = 'all' selected>all</option>";
+                searchTypes += "<option value = 'id' >by id</option>";
+                searchTypes += "<option value = 'count' >count</option>";
                 for (var i = 0; i < data.length; i++) {
                     var obj = data[i]
                     searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
@@ -676,7 +676,7 @@
             });
 
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all") {
+            if (selectedSearchType === "all" || selectedSearchType === "count") {
                 $("#search-key-input").hide();
             } else {
                 $("#search-key-input").show();
@@ -754,63 +754,47 @@
             var key = $("#search-key").val();
             $("#json-display").hide();
             $("#finish-edit-btn").hide();
-
-            if (searchType === "id") {
-                let obj = {
-                    "type" : type,
-                    "key" : key
-                };
-                $.getJSON( "/api/object-by-id", obj, function( data ) {
+            
+			if (searchType === "count") {
+            	$.getJSON( "/api/objects-count?type=" + type, function( data ) {
                     var items = "";
-                    globalObjects = data;
-                    if (data != null) {
-                        items += "<br><li><b>Object id</b>: " + data.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects) \">";
-                        items += "<br><b>Comment</b>: " + data.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                            JSON.stringify(data, null, 4) + "</pre></details>";
-                        items += "</li>";
-                    }
+                    globalObjects = [];
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " + (data === null ? 0 : 1));
+                    $("#amount-objects").html("Count results: " + data.count);
                 });
-            } else if (searchType === "all") {
-                $.getJSON( "/api/objects?type="+type, function( data ) {
+            } else {
+            	let funcProcResults = function( data ) {
                     var items = "";
                     globalObjects = data.objects;
                     for(var i = 0; i < data.objects.length; i++)  {
-                        var obj = data.objects[i];
-                        items += "<br><li><b>Object id</b>:" + obj.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
-                        items += "<br><b>Comment</b>: " + obj.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                            JSON.stringify(obj, null, 4) + "</pre></details>";
-                        items += "</li>";
-                    }
-                    $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " +data.objects.length);
-                });
-            } else { //index
-                let obj = {
-                    "type" : type,
-                    "index": $("#search-type-list").val(),
-                    "key" : key
-                };
-                $.getJSON( "/api/indices", obj, function( data ) {
-                    var items = "";
-                    globalObjects = data;
-                    for(var i = 0; i < data.length; i++)  {
-                        let obj = data[i];
+                        let obj = data.objects[i];
                         items += "<br><li><b>Object id</b>: " + obj.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
+                        items += "&nbsp;&nbsp;<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
                         items += "<br><b>Comment</b>: " + obj.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
                         items += "</li>";
                     }
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " + data.length);
-                });
+                    $("#amount-objects").html("Count results: " + data.objects.length);
+                };
+            	//index
+            	if(searchType === "all") {
+            		$.getJSON( "/api/objects?type=" + type, funcProcResults);
+            	} else if (searchType === "id") {
+                    let obj = {
+                        "type" : type,
+                        "key" : key
+                    };
+                    $.getJSON("/api/objects-by-id", obj, funcProcResults);
+            	} else {
+                	let obj = {
+                    	"type" : type,
+                    	"index": $("#search-type-list").val(),
+                    	"key" : key
+                	};
+                	$.getJSON( "/api/objects-by-index", obj, funcProcResults);
+            	}
             }
         });
 
