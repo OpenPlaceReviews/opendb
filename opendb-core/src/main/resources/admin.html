@@ -485,12 +485,13 @@
     function loadBlocksData() {
         $.getJSON( "/api/blocks", function( data ) {
             var items = "";
+            var blocks = data.blocks;
             // SHOW currentBlock, currentTx - as in progress or failed
-            $("#blocks-tab").html("Blocks (" + data.length + ")");
+            $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
             var superblockId = 0;
             var superblockHash = "";
-            for(var i = 0; i < data.length; i++)  {
-                let op = data[i];
+            for(var i = 0; i < blocks.length; i++)  {
+                let op = blocks[i];
                 items += "<br><li><b>Block id</b>: " + op.block_id;
                 items += "<br><b>Hash</b>: " + op.hash;
                 if(op.eval) {
