@@ -13,8 +13,10 @@ import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -78,9 +80,14 @@ public class BlocksManagerTest {
 		Connection connection = databaseServer.getConnection();
 		this.jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(connection, false));
 
+		DataSourceTransactionManager txManager = new DataSourceTransactionManager();
+		txManager.setDataSource(jdbcTemplate.getDataSource());
+		TransactionTemplate txTemplate = new TransactionTemplate();
+		txTemplate.setTransactionManager(txManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
+		ReflectionTestUtils.setField(dbConsensusManager, "txTemplate", txTemplate);
 		ReflectionTestUtils.setField(historyManager, "dbSchema", dbSchemaManager);
 		ReflectionTestUtils.setField(historyManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(historyManager, "blocksManager", blocksManager);
