@@ -163,6 +163,7 @@ public class BlocksManager {
 		if (blockchain == null) {
 			return false;
 		}
+		Metric m = mBlockAddOpp.start();
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
 		if (!existing) {
@@ -176,6 +177,7 @@ public class BlocksManager {
 				// don't remove relations because we can rely that operation hash / content will be the same 
 //				dataManager.removeOperations(Collections.singleton(op.getHash()));
 			}
+			m.capture();
 		}
 		return added;
 	}
@@ -580,6 +582,7 @@ public class BlocksManager {
 		return null;
 	}
 
+	private static final PerformanceMetric mBlockAddOpp = PerformanceMetrics.i().getMetric("block.mgmt.addop");
 	private static final PerformanceMetric mBlockCreate = PerformanceMetrics.i().getMetric("block.mgmt.create.total");
 	private static final PerformanceMetric mBlockCreateAddOps = PerformanceMetrics.i().getMetric("block.mgmt.create.addops");
 	private static final PerformanceMetric mBlockCreateValidate = PerformanceMetrics.i().getMetric("block.mgmt.create.validate");

@@ -1,13 +1,52 @@
 package org.openplacereviews.opendb.service;
 
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.BLOCKS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.EXT_RESOURCE_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OPERATIONS_TRASH_TABLE;
+import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
+
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.Spliterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.ResourceDTO;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -21,23 +60,9 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
-import static org.openplacereviews.opendb.service.DBSchemaManager.*;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class DBConsensusManager {
@@ -53,7 +78,10 @@ public class DBConsensusManager {
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
-
+	
+	@Autowired
+	private TransactionTemplate txTemplate;
+	
 	@Autowired
 	private DBSchemaManager dbSchema;
 
@@ -90,24 +118,6 @@ public class DBConsensusManager {
 		return dbManagedChain.getSuperBlockHash();
 	}
 	
-	private void txStart() {
-		// commit before start to be sure consistent
-		jdbcTemplate.execute("COMMIT");
-		jdbcTemplate.execute("BEGIN");
-	}
-	
-	private void txRollback() {
-		try {
-			jdbcTemplate.execute("ROLLBACK");
-		} catch (DataAccessException e) {
-			LOGGER.error(String.format("Error while rollback %s ", e.getMessage()), e);
-		}
-	}
-
-	private void txCommit() {
-		jdbcTemplate.execute("COMMIT");
-	}
-
 	// mainchain could change
 	public OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
@@ -203,7 +213,6 @@ public class DBConsensusManager {
 				blc.getParent().getSuperBlockHash(), blc.getSuperBlockHash()));
 		SuperblockDbAccess dbSB = dbSuperBlocks.get(blc.getSuperBlockHash());
 		SuperblockDbAccess dbPSB = dbSuperBlocks.get(blc.getParent().getSuperBlockHash());
-		OpBlockChain res = blc;
 		List<OpBlock> blockHeaders = new ArrayList<OpBlock>();
 		blockHeaders.addAll(blc.getSuperblockHeaders());
 		blockHeaders.addAll(blc.getParent().getSuperblockHeaders());
@@ -211,36 +220,31 @@ public class DBConsensusManager {
 		byte[] sbHashCurrent = SecUtils.getHashBytes(blc.getSuperBlockHash());
 		byte[] sbHashParent = SecUtils.getHashBytes(blc.getParent().getSuperBlockHash());
 		byte[] sbHashNew = SecUtils.getHashBytes(newSuperblockHash);
-		boolean txRollback = false;
-		try {
-			dbSB.markAsStale(true);
-			dbPSB.markAsStale(true);
-			txStart();
-			txRollback = true;
-			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
-			jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
+		return txTemplate.execute(new TransactionCallback<OpBlockChain>() {
 
-			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
-			jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
+			@Override
+			public OpBlockChain doInTransaction(TransactionStatus status) {
+				dbSB.markAsStale(true);
+				dbPSB.markAsStale(true);
+				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
 
-			for (String objTable : dbSchema.getObjectTables()) {
-				jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashCurrent);
-				jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashParent);
+				jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+				jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ? WHERE superblock = ? ", sbHashNew, sbHashParent);
+
+				for (String objTable : dbSchema.getObjectTables()) {
+					jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashCurrent);
+					jdbcTemplate.update("UPDATE " + objTable + " set superblock = ?  WHERE superblock = ? ", sbHashNew, sbHashParent);
+				}
+
+				OpBlockChain res = new OpBlockChain(blc.getParent().getParent(),
+						blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
+				// on catch 
+//				dbSB.markAsStale(false);
+//				dbPSB.markAsStale(false);
+				return res;
 			}
-
-			res = new OpBlockChain(blc.getParent().getParent(),
-					blockHeaders, createDbAccess(newSuperblockHash, blockHeaders), blc.getRules());
-			txCommit();
-			txRollback = false;
-		} finally {
-			if (txRollback) {
-				txRollback();
-				// revert
-				dbSB.markAsStale(false);
-				dbPSB.markAsStale(false);
-			}
-		}
-		return res;
+		});
 	}
 
 
@@ -629,27 +633,26 @@ public class DBConsensusManager {
 		String rawHash = SecUtils.hexify(blockHash);
 		byte[] prevBlockHash = SecUtils.getHashBytes(opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH));
 //		String rawPrevBlockHash = SecUtils.hexify(prevBlockHash);
-		txStart();
-		boolean succeed = false;
-		try {
-			jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
-							+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", blockHash, prevBlockHash,
-					opBlock.getBlockId(), blockHeaderObj, blockObj);
-			for (OpOperation o : opBlock.getOperations()) {
-				int upd = jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set blocks = blocks || ? where hash = ?", blockHash,
-						SecUtils.getHashBytes(o.getHash()));
-				if (upd == 0) {
-					throw new IllegalArgumentException(
-							String.format("Can't create block '%s' cause op '%s' doesn't exist", opBlock.getRawHash(), o.getHash()));
+		txTemplate.execute(new TransactionCallback<Void>() {
+
+			@Override
+			public Void doInTransaction(TransactionStatus status) {
+				jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
+						+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", blockHash, prevBlockHash,
+				opBlock.getBlockId(), blockHeaderObj, blockObj);
+				for (OpOperation o : opBlock.getOperations()) {
+					int upd = jdbcTemplate.update(
+							"UPDATE " + OPERATIONS_TABLE + " set blocks = blocks || ? where hash = ?", 
+							blockHash, SecUtils.getHashBytes(o.getHash()));
+					if (upd == 0) {
+						throw new IllegalArgumentException(
+								String.format("Can't create block '%s' cause op '%s' doesn't exist",
+										opBlock.getRawHash(), o.getHash()));
+					}
 				}
+				return null;
 			}
-			txCommit();
-			succeed = true;
-		} finally {
-			if (!succeed) {
-				txRollback();
-			}
-		}
+		});
 		backupManager.insertBlock(opBlock);
 		blocks.put(rawHash, blockheader);
 		orphanedBlocks.put(rawHash, blockheader);
@@ -695,45 +698,44 @@ public class DBConsensusManager {
 		LOGGER.info(String.format("Save superblock %s ", superBlockHashStr));
 		byte[] superBlockHash = SecUtils.getHashBytes(blc.getSuperBlockHash());
 		Collection<OpBlock> blockHeaders = blc.getSuperblockHeaders();
-		OpBlockChain dbchain = null;
+		
+		
+		return txTemplate.execute(new TransactionCallback<OpBlockChain>() {
 
-		txStart();
-		try {
-			Map<String, Long> opsId = new HashMap<String, Long>();
-			for (OpBlock block : blc.getSuperblockFullBlocks()) {
-				byte[] blHash = SecUtils.getHashBytes(block.getFullHash());
-				// assign parent hash only for last block
-				// String blockRawHash = SecUtils.hexify(blHash);
-				// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
-				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? where hash = ?", superBlockHash, blHash);
-				int order = 0;
-				int bid = block.getBlockId();
-				for (OpOperation op : block.getOperations()) {
-					long l = OUtils.combine(bid, order);
-					opsId.put(op.getRawHash(), l);
-					jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ?, sblockid = ?, sorder = ? where hash = ?",
-							superBlockHash, bid, order, SecUtils.getHashBytes(op.getRawHash()));
-					order++;
+			@Override
+			public OpBlockChain doInTransaction(TransactionStatus status) {
+				Map<String, Long> opsId = new HashMap<String, Long>();
+				for (OpBlock block : blc.getSuperblockFullBlocks()) {
+					byte[] blHash = SecUtils.getHashBytes(block.getFullHash());
+					// assign parent hash only for last block
+					// String blockRawHash = SecUtils.hexify(blHash);
+					// LOGGER.info(String.format("Update block %s to superblock %s ", o.getHash(), superBlockHash));
+					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = ? where hash = ?", superBlockHash, blHash);
+					int order = 0;
+					int bid = block.getBlockId();
+					for (OpOperation op : block.getOperations()) {
+						long l = OUtils.combine(bid, order);
+						opsId.put(op.getRawHash(), l);
+						jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = ?, sblockid = ?, sorder = ? where hash = ?",
+								superBlockHash, bid, order, SecUtils.getHashBytes(op.getRawHash()));
+						order++;
+					}
 				}
-			}
 
-			Map<String, Map<CompoundKey, OpObject>> so = blc.getRawSuperblockObjects();
-			for (String type : so.keySet()) {
-				Map<CompoundKey, OpObject> objects = so.get(type);
-				Collection<OpIndexColumn> indexes = dbSchema.getIndicesForType(type);
-				List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, indexes);
-				String table = dbSchema.getTableByType(type);
-				dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, indexes);
+				Map<String, Map<CompoundKey, OpObject>> so = blc.getRawSuperblockObjects();
+				for (String type : so.keySet()) {
+					Map<CompoundKey, OpObject> objects = so.get(type);
+					Collection<OpIndexColumn> indexes = dbSchema.getIndicesForType(type);
+					List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, indexes);
+					String table = dbSchema.getTableByType(type);
+					dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, indexes);
+				}
+				OpBlockChain dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
+						blc.getRules());
+
+				return dbchain;
 			}
-			dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
-					blc.getRules());
-			txCommit();
-		} finally {
-			if (dbchain == null) {
-				txRollback();
-			}
-		}
-		return dbchain;
+		});
 	}
 
 	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
@@ -856,91 +858,75 @@ public class DBConsensusManager {
 	}
 
 	public int removeOperations(Set<String> ops) {
-		int deleted = 0;
-		boolean txRollback = false;
-		try {
-			txStart();
-			txRollback = true;
-			// simple approach without using transaction isolations
-			for (String op : ops) {
-				deleted += jdbcTemplate.update(
-						"WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
-								+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
-								+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
-								+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
-						SecUtils.getHashBytes(op));
+		return txTemplate.execute(new TransactionCallback<Integer>() {
+
+			@Override
+			public Integer doInTransaction(TransactionStatus status) {
+				int deleted = 0;
+				// simple approach without using transaction isolations
+				for (String op : ops) {
+					deleted += jdbcTemplate.update(
+							"WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
+									+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
+									+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
+									+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
+							SecUtils.getHashBytes(op));
+				}
+				return deleted;
 			}
-			txCommit();
-			return deleted;
-		} finally {
-			if (txRollback) {
-				txRollback();
-			}
-		}
+		});
 	}
 
 	public boolean removeFullBlock(OpBlock block) {
-		boolean txRollback = false;
-		try {
-			txStart();
-			txRollback = true;
-			byte[] blockHash = SecUtils.getHashBytes(block.getRawHash());
-			int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + BLOCKS_TABLE + " a WHERE hash = ? and superblock is null RETURNING a.*) "
-					+ " INSERT INTO " + BLOCKS_TRASH_TABLE
-					+ " (hash, phash, blockid, time, content) SELECT hash, phash, blockid, now(), content FROM moved_rows", blockHash);
-			if (upd != 0) {
-				// to do:
-				// here we need to decide what to do with operations with empty blocks[] (they will be added to the queue after restart otherwise)
-				for (OpOperation o : block.getOperations()) {
-					jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE
-									+ " set blocks = array_remove(blocks, ?) where hash = ?",
-							blockHash, SecUtils.getHashBytes(o.getRawHash()));
+		return txTemplate.execute(new TransactionCallback<Boolean>() {
+
+			@Override
+			public Boolean doInTransaction(TransactionStatus status) {
+				byte[] blockHash = SecUtils.getHashBytes(block.getRawHash());
+				int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + BLOCKS_TABLE + " a WHERE hash = ? and superblock is null RETURNING a.*) "
+						+ " INSERT INTO " + BLOCKS_TRASH_TABLE
+						+ " (hash, phash, blockid, time, content) SELECT hash, phash, blockid, now(), content FROM moved_rows", blockHash);
+				if (upd != 0) {
+					// to do:
+					// here we need to decide what to do with operations with empty blocks[] (they will be added to the queue after restart otherwise)
+					for (OpOperation o : block.getOperations()) {
+						jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE
+										+ " set blocks = array_remove(blocks, ?) where hash = ?",
+								blockHash, SecUtils.getHashBytes(o.getRawHash()));
+					}
+					jdbcTemplate.update("DELETE FROM " + OP_OBJ_HISTORY_TABLE + " WHERE blockhash = ?", SecUtils.getHashBytes(block.getFullHash()));
+					orphanedBlocks.remove(block.getRawHash());
+					blocks.remove(block.getRawHash());
 				}
-				jdbcTemplate.update("DELETE FROM " + OP_OBJ_HISTORY_TABLE + " WHERE blockhash = ?", SecUtils.getHashBytes(block.getFullHash()));
-				orphanedBlocks.remove(block.getRawHash());
-				blocks.remove(block.getRawHash());
+				return upd != 0;
 			}
-			txCommit();
-			txRollback = false;
-			return upd != 0;
-		} finally {
-			if (txRollback) {
-				txRollback();
-			}
-		}
+			
+		});
 	}
 
 	public OpBlockChain unloadSuperblockFromDB(OpBlockChain blc) {
 		if (blc.isDbAccessed()) {
 			SuperblockDbAccess dba = dbSuperBlocks.get(blc.getSuperBlockHash());
-			OpBlockChain res = new OpBlockChain(blc.getParent(), blc.getRules());
+			final OpBlockChain res = new OpBlockChain(blc.getParent(), blc.getRules());
 			List<OpBlock> lst = new ArrayList<OpBlock>(blc.getSuperblockFullBlocks());
 			byte[] blockHash = SecUtils.getHashBytes(blc.getSuperBlockHash());
 			Collections.reverse(lst);
 			for (OpBlock block : lst) {
 				res.replicateBlock(block);
 			}
-			boolean txRollback = false;
-			try {
-				dba.markAsStale(true);
-				txStart();
-				txRollback = true;
-				jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = NULL where superblock = ?", blockHash);
-				jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = NULL where superblock = ? ", blockHash);
-				for (String objTable : dbSchema.getObjectTables()) {
-					jdbcTemplate.update("DELETE FROM " + objTable + " where superblock = ?", blockHash);
-				}
+			return txTemplate.execute(new TransactionCallback<OpBlockChain>() {
 
-				txCommit();
-				txRollback = false;
-				return res;
-			} finally {
-				if (txRollback) {
-					txRollback();
-					// revert
-					dba.markAsStale(false);
+				@Override
+				public OpBlockChain doInTransaction(TransactionStatus status) {
+					dba.markAsStale(true);
+					jdbcTemplate.update("UPDATE " + OPERATIONS_TABLE + " set superblock = NULL where superblock = ?", blockHash);
+					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set superblock = NULL where superblock = ? ", blockHash);
+					for (String objTable : dbSchema.getObjectTables()) {
+						jdbcTemplate.update("DELETE FROM " + objTable + " where superblock = ?", blockHash);
+					}
+					return res;
 				}
-			}
+			}) ;
 		}
 		return blc;
 	}
@@ -1026,29 +1012,26 @@ public class DBConsensusManager {
 	}
 
 	public void insertOperation(OpOperation op) {
-		boolean txRollback = false;
-		try {
-			txStart();
-			txRollback = true;
-			PGobject pGobject = new PGobject();
-			pGobject.setType("jsonb");
+		txTemplate.execute(new TransactionCallback<OpOperation>() {
 
-			String js = formatter.opToJson(op);
-			try {
-				pGobject.setValue(js);
-			} catch (SQLException e) {
-				throw new IllegalArgumentException(e);
-			}
-			byte[] bhash = SecUtils.getHashBytes(op.getHash());
+			@Override
+			public OpOperation doInTransaction(TransactionStatus status) {
+				PGobject pGobject = new PGobject();
+				pGobject.setType("jsonb");
 
-			jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", bhash, pGobject);
-			txCommit();
-			txRollback = false;
-		} finally {
-			if (txRollback) {
-				txRollback();
+				String js = formatter.opToJson(op);
+				try {
+					pGobject.setValue(js);
+				} catch (SQLException e) {
+					throw new IllegalArgumentException(e);
+				}
+				byte[] bhash = SecUtils.getHashBytes(op.getHash());
+
+				jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", bhash, pGobject);
+				return op;
 			}
-		}
+			
+		});
 	}
 
 	public OpOperation getOperationByHash(String hash) {

@@ -54,15 +54,16 @@ public class ApiController {
 			if (o.getSuperBlockHash().equals("")) {
 				res.sblocks.add("Q-" + o.getQueueOperations().size());
 			} else {
-				String shorten = o.getSuperBlockHash();
-				while (shorten.indexOf("00") == 0) {
-					shorten = shorten.substring(2);
+				String hash = o.getSuperBlockHash();
+				String sz = hash.substring(0, 8);
+				hash = hash.substring(8, 16);
+				while (sz.indexOf("00") == 0) {
+					sz = sz.substring(2);
 				}
-				shorten = shorten.substring(0, 2) + "-" + shorten.substring(2, 10);
 				if (o.isDbAccessed()) {
-					shorten = "DB-" + shorten;
+					sz = "DB-" + sz;
 				}
-				res.sblocks.add(shorten);
+				res.sblocks.add(sz + "-"+hash);
 			}
 			o = o.getParent();
 		}
