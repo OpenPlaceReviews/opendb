@@ -619,6 +619,7 @@
             }, 1000);
         }
         $("#finish-edit-btn").show();
+        delete obj.eval;
         originObject = obj;
         editor = new JsonEditor('#json-display', obj);
         editor.load(obj);
@@ -919,6 +920,9 @@
                         }
                     } else {
                         for (var key in obj) {
+                            if (key === "version") {
+                                changeEdit[key] = "increment";
+                            }
                             var mapObj = obj[key];
                             var path1;
                             var value = Number(key);
@@ -940,7 +944,7 @@
                         }
                     ];
                     var op = {
-                        type: obj["eval"]["parentType"],
+                        type: $("#type-list").val(),
                         edit: listEdit
                     };
                     editor.load(op);
