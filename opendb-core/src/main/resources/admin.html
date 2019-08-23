@@ -98,8 +98,8 @@
         <h5 id="amount-objects"></h5>
 
         <pre id="json-display" hidden="true"></pre>
-        <pre id="json-result" hidden="true"></pre>
         <input type="button" value="Finish edit" hidden="true" id="finish-edit-btn">
+        <input type="button" value="Add edit op" hidden="true" id="add-edit-op-btn">
 
         <p id="object-type-description"/>
         <ul id="objects-list">
@@ -607,10 +607,20 @@
     }
 
     var editor = {};
+    var originObject;
+    var globalObjects = {};
     function generateJsonFromObject(obj) {
         $("#json-display").show();
-        $("#json-result").hide();
+
+        var target = $("#json-display");
+        if( target.length ) {
+            event.preventDefault();
+            $('html, body').stop().animate({
+                scrollTop: target.offset().top
+            }, 1000);
+        }
         $("#finish-edit-btn").show();
+        originObject = obj;
         editor = new JsonEditor('#json-display', obj);
         editor.load(obj);
     }
@@ -737,9 +747,10 @@
                 };
                 $.getJSON( "/api/object-by-id", obj, function( data ) {
                     var items = "";
+                    globalObjects = data;
                     if (data != null) {
                         items += "<br><li><b>Object id</b>: " + data.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick='generateJsonFromObject(" + JSON.stringify(data) +")'>";
+                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects) \">";
                         items += "<br><b>Comment</b>: " + data.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(data, null, 4) + "</pre></details>";
@@ -751,10 +762,11 @@
             } else if (searchType === "all") {
                 $.getJSON( "/api/objects?type="+type, function( data ) {
                     var items = "";
+                    globalObjects = data.objects;
                     for(var i = 0; i < data.objects.length; i++)  {
                         var obj = data.objects[i];
                         items += "<br><li><b>Object id</b>:" + obj.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick='generateJsonFromObject(" + JSON.stringify(obj) +")'>";
+                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
                         items += "<br><b>Comment</b>: " + obj.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
@@ -771,10 +783,11 @@
                 };
                 $.getJSON( "/api/indices", obj, function( data ) {
                     var items = "";
+                    globalObjects = data;
                     for(var i = 0; i < data.length; i++)  {
                         let obj = data[i];
                         items += "<br><li><b>Object id</b>: " + obj.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick='generateJsonFromObject(" + JSON.stringify(obj) +")'>";
+                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
                         items += "<br><b>Comment</b>: " + obj.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
@@ -786,14 +799,156 @@
             }
         });
 
-        // TODO run delta search!!!
         $("#finish-edit-btn").click(function () {
-            $("#json-result").show();
-            $("#json-result").html(JSON.stringify(editor.get(), null, 4));
-            editor = null;
+            var newObject = editor.get();
+            var res = deepDiffMapper.map(originObject, newObject);
+            var path = "";
+            var changeEdit = {};
+            var currentEdit = {};
+            deepDiffMapper.generateChangeCurrentObject(path, res, changeEdit, currentEdit);
+            deepDiffMapper.generateEditOp(originObject, changeEdit, currentEdit);
+            originObject = null;
             $("#finish-edit-btn").hide();
-            $("#json-display").hide();
+            $("#add-edit-op-btn").show();
         });
+
+        var deepDiffMapper = function() {
+            return {
+                VALUE_CREATED: 'created',
+                VALUE_UPDATED: 'updated',
+                VALUE_DELETED: 'deleted',
+                VALUE_UNCHANGED: 'unchanged',
+                map: function(obj1, obj2) {
+                    if (this.isFunction(obj1) || this.isFunction(obj2)) {
+                        throw 'Invalid argument. Function given, object expected.';
+                    }
+                    if (this.isValue(obj1) || this.isValue(obj2)) {
+                        var opType = this.compareValues(obj1, obj2);
+                        if (opType === this.VALUE_UPDATED) {
+                            return {
+                                op: opType,
+                                old: (obj1 === undefined) ? obj2 : obj1,
+                                new: (obj2 === undefined) ? obj1 : obj2
+                            }
+                        } else if (opType === this.VALUE_CREATED) {
+                            return {
+                                op: opType,
+                                new: (obj1 === undefined) ? obj2 : obj1
+                            };
+                        } else if (opType === this.VALUE_DELETED) {
+                            return {
+                                op: opType,
+                                old: (obj1 === undefined) ? obj2 : obj1
+                            }
+                        } else {
+                            return {
+                                op :opType
+                            }
+                        }
+                    }
+
+                    var diff = {};
+                    for (var key in obj1) {
+                        if (this.isFunction(obj1[key])) {
+                            continue;
+                        }
+
+                        var value2 = undefined;
+                        if ('undefined' != typeof(obj2[key])) {
+                            value2 = obj2[key];
+                        }
+
+                        diff[key] = this.map(obj1[key], value2);
+                    }
+                    for (var key in obj2) {
+                        if (this.isFunction(obj2[key]) || ('undefined' != typeof(diff[key]))) {
+                            continue;
+                        }
+
+                        diff[key] = this.map(undefined, obj2[key]);
+                    }
+
+                    return diff;
+
+                },
+                compareValues: function(value1, value2) {
+                    if (value1 === value2) {
+                        return this.VALUE_UNCHANGED;
+                    }
+                    if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
+                        return this.VALUE_UNCHANGED;
+                    }
+                    if ('undefined' == typeof(value1)) {
+                        return this.VALUE_CREATED;
+                    }
+                    if ('undefined' == typeof(value2)) {
+                        return this.VALUE_DELETED;
+                    }
+
+                    return this.VALUE_UPDATED;
+                },
+                generateChangeCurrentObject: function(path, obj, changeEdit, currentEdit) {
+                    if (obj.hasOwnProperty("op")) {
+                        if (obj["op"] === this.VALUE_CREATED) {
+                            var setObj = {
+                                set: obj["new"]
+                            };
+                            changeEdit[path] = setObj;
+                        } else if (obj["op"] === this.VALUE_DELETED) {
+                            changeEdit[path] = "delete";
+                            currentEdit[path] = obj["old"];
+                        } else if (obj["op"] === this.VALUE_UPDATED) {
+                            var setObj = {
+                                set: obj["new"]
+                            };
+                            changeEdit[path] = setObj;
+                            currentEdit[path] = obj["old"];
+                        }
+                    } else {
+                        for (var key in obj) {
+                            var mapObj = obj[key];
+                            var path1;
+                            var value = Number(key);
+                            if (!isNaN(value)) {
+                                path1 = path === "" ? key : (path + "[" + key + "]");
+                            } else {
+                                path1 = path === "" ? key : (path + "." + key);
+                            }
+                            this.generateChangeCurrentObject(path1, mapObj, changeEdit, currentEdit);
+                        }
+                    }
+                },
+                generateEditOp: function(obj, changeEdit, currentEdit) {
+                    var listEdit = [
+                        {
+                            id: obj["id"],
+                            change: changeEdit,
+                            current: currentEdit
+                        }
+                    ];
+                    var op = {
+                        type: obj["eval"]["parentType"],
+                        edit: listEdit
+                    };
+                    editor.load(op);
+                },
+                isFunction: function(obj) {
+                    return {}.toString.apply(obj) === '[object Function]';
+                },
+                isArray: function(obj) {
+                    return {}.toString.apply(obj) === '[object Array]';
+                },
+                isObject: function(obj) {
+                    return {}.toString.apply(obj) === '[object Object]';
+                },
+                isDate: function(obj) {
+                    return {}.toString.apply(obj) === '[object Date]';
+                },
+                isValue: function(obj) {
+                    return !this.isObject(obj) && !this.isArray(obj);
+                }
+            }
+        }();
 
         $("#start-bot-btn").click(function () {
             var obj = {
@@ -863,7 +1018,6 @@
                                         JSON.stringify(arrays[i].objEdit, null, 4) + "</pre></details>";
                                 }
                                 items += "</li></div>";
-                                console.log(items);
                             }
                         }
                     }
@@ -972,6 +1126,24 @@
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
 
             // $.post("/api/auth/process-operation", obj)
+        });
+        $("#add-edit-op-btn").click(function () {
+            var obj = {
+                "addToQueue" : "true",
+                "dontSignByServer": false
+            };
+            var params = $.param(obj);
+            var json = JSON.stringify(editor.get());
+            editor = null;
+            $("#json-display").hide();
+            $("#add-edit-op-btn").hide();
+            $.ajax({
+                url: '/api/auth/process-operation?' + params,
+                type: 'POST',
+                data: json,
+                contentType: 'application/json; charset=utf-8'
+            }).done(function(data){  $("#result").html(data); loadData();})
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
         $("#login-btn").click(function() {
             var obj = {
