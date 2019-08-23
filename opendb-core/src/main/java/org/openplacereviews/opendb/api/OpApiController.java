@@ -21,6 +21,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_ROLES;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_GRANT;
+
 
 @Controller
 @RequestMapping("/api/auth")
@@ -28,6 +31,7 @@ public class OpApiController {
     
 	public static final String ADMIN_LOGIN_NAME = "admin_name";
 	public static final String ADMIN_LOGIN_PWD = "admin_pwd";
+	public static final String ROLE_ADMINISTRATOR = "administrator";
 
 	Map<String, KeyPair> keyPairs = new TreeMap<>(); 
 	
@@ -37,27 +41,40 @@ public class OpApiController {
     @Autowired
     private JsonFormatter formatter;
 
-    @GetMapping(path = "/admin-status")
+	@GetMapping(path = "/admin-status")
 	public ResponseEntity<String> serverLogin(HttpSession session) {
 		String serverUser = getServerUser(session);
 		return ResponseEntity.status(HttpStatus.OK).body(
 				"{\"admin\":\"" + (serverUser == null ? "" : serverUser) + "\"}");
 	}
-    
-    @PostMapping(path = "/admin-login")
-    @ResponseBody
-    public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name, 
-    		@RequestParam(required = true) String pwd, HttpSession session, HttpServletResponse response) {
+
+	@PostMapping(path = "/admin-login")
+	@ResponseBody
+	public ResponseEntity<String> serverLogin(@RequestParam(required = true) String name,
+											  @RequestParam(required = true) String pwd, HttpSession session, HttpServletResponse response) {
 		if(OUtils.equals(manager.getServerUser(), name) &&
 				OUtils.equals(manager.getServerPrivateKey(), pwd)) {
-			session.setAttribute(ADMIN_LOGIN_NAME, name);
-			session.setAttribute(ADMIN_LOGIN_PWD, pwd);
-			session.setMaxInactiveInterval(-1);
-			keyPairs.put(name, manager.getServerLoginKeyPair());
+			updateSessionObject(session, name, pwd);
 			return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+		} else {
+			OpObject userGrantObject = manager.getBlockchain().getObjectByName(OP_GRANT, name);
+			if (userGrantObject != null) {
+				if (userGrantObject.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
+					updateSessionObject(session, name, pwd);
+					return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+				}
+			}
 		}
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("{\"status\":\"ERROR\"}");
-    }
+	}
+
+	private void updateSessionObject(HttpSession session, String name, String pwd) {
+		session.setAttribute(ADMIN_LOGIN_NAME, name);
+		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
+		session.setMaxInactiveInterval(-1);
+		// TODO get admin key pair, not server!
+		keyPairs.put(name, manager.getServerLoginKeyPair());
+	}
     
     public boolean validateServerLogin(HttpSession session) {
     	Object loginName = session.getAttribute(ADMIN_LOGIN_NAME);
