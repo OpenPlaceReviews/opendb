@@ -826,23 +826,23 @@
                         var opType = this.compareValues(obj1, obj2);
                         if (opType === this.VALUE_UPDATED) {
                             return {
-                                op: opType,
+                                editType: opType,
                                 old: (obj1 === undefined) ? obj2 : obj1,
                                 new: (obj2 === undefined) ? obj1 : obj2
                             }
                         } else if (opType === this.VALUE_CREATED) {
                             return {
-                                op: opType,
+                                editType: opType,
                                 new: (obj1 === undefined) ? obj2 : obj1
                             };
                         } else if (opType === this.VALUE_DELETED) {
                             return {
-                                op: opType,
+                                editType: opType,
                                 old: (obj1 === undefined) ? obj2 : obj1
                             }
                         } else {
                             return {
-                                op :opType
+                                editType :opType
                             }
                         }
                     }
@@ -888,16 +888,16 @@
                     return this.VALUE_UPDATED;
                 },
                 generateChangeCurrentObject: function(path, obj, changeEdit, currentEdit) {
-                    if (obj.hasOwnProperty("op")) {
-                        if (obj["op"] === this.VALUE_CREATED) {
+                    if (obj.hasOwnProperty("editType")) {
+                        if (obj["editType"] === this.VALUE_CREATED) {
                             var setObj = {
                                 set: obj["new"]
                             };
                             changeEdit[path] = setObj;
-                        } else if (obj["op"] === this.VALUE_DELETED) {
+                        } else if (obj["editType"] === this.VALUE_DELETED) {
                             changeEdit[path] = "delete";
                             currentEdit[path] = obj["old"];
-                        } else if (obj["op"] === this.VALUE_UPDATED) {
+                        } else if (obj["editType"] === this.VALUE_UPDATED) {
                             var setObj = {
                                 set: obj["new"]
                             };
