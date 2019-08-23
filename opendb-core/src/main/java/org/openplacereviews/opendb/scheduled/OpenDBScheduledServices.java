@@ -22,11 +22,11 @@ public class OpenDBScheduledServices {
 	@Value("${opendb.block-create.minSecondsInterval}")
 	public int minSecondsInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS;
 	
-	@Value("${opendb.block-create.minQueueSize}")
-	public int minQueueSize = 10;
+	@Value("${opendb.block-create.minCapacity}")
+	public double minCapacity = 0.7;
 	
 	@Value("${opendb.block-create.maxSecondsInterval}")
-	public int maxSecondsInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 20;
+	public int maxSecondsInterval = 60 * 15;
 	
 	@Value("${opendb.replicate.interval}")
 	public int replicateInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 10;
@@ -56,14 +56,11 @@ public class OpenDBScheduledServices {
 				blocksManager.isBlockCreationOn()) {
 			OpBlock hd = blocksManager.getBlockchain().getLastBlockHeader();
 			long timePast = (System.currentTimeMillis() - (hd == null ?  0 : hd.getDate(OpBlock.F_DATE))) / 1000; 
-			boolean createBlock = false; 
+			double cp = blocksManager.getQueueCapacity();
 			if(timePast > maxSecondsInterval) {
-				createBlock = true;
-			} else if(timePast > minSecondsInterval && sz >= minQueueSize ) {
-				createBlock = true;
-			}
-			if(createBlock) {
-				blocksManager.createBlock();
+				blocksManager.createBlock(0);
+			} else if(timePast > minSecondsInterval && cp >= minCapacity) {
+				blocksManager.createBlock(minCapacity);
 			}
 		}
 	}

@@ -40,6 +40,11 @@ public class BotManager {
 		public IOpenDBBot<?> getInstance() {
 			return instance;
 		}
+
+		public void updateObject(OpObject vld) {
+			// TODO Auto-generated method stub
+			
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -51,34 +56,42 @@ public class BotManager {
 		if (req.cacheObject != null) {
 			return (Map<String, BotInfo>) req.cacheObject;
 		}
+		return recreateBots(req, blc);
+	}
+
+
+	private synchronized Map<String, BotManager.BotInfo> recreateBots(OpBlockChain.ObjectsSearchRequest req, OpBlockChain blc) {
 		TreeSet<String> inits = new TreeSet<>(this.bots.keySet());
-		Map<String, BotManager.BotInfo> bots = new TreeMap<String, BotManager.BotInfo>();
-		for (OpObject vld : req.result) {
+		Map<String, BotManager.BotInfo> nbots = new TreeMap<String, BotManager.BotInfo>();
+		for (OpObject cfg : req.result) {
 			BotInfo bi = new BotInfo();
-			bi.id = vld.getId().get(0);
-			bi.version = vld.getIntValue("version", 0);
-			bi.api = vld.getStringValue("api");
+			bi.id = cfg.getId().get(0);
+			bi.version = cfg.getIntValue("version", 0);
+			bi.api = cfg.getStringValue("api");
 			inits.remove(bi.id);
-			BotInfo exBot = bots.get(bi.id);
-			if (exBot == null || exBot.version != bi.version) {
+			BotInfo exBot = this.bots.get(bi.id);
+			if (exBot == null) {
 				try {
 
 					Class<?> bot = Class.forName(bi.api);
 					Constructor<?> constructor = bot.getConstructor(OpObject.class);
-					bi.instance = (IOpenDBBot<?>) constructor.newInstance(vld);
+					bi.instance = (IOpenDBBot<?>) constructor.newInstance(cfg);
 					beanFactory.autowireBean(bi.getInstance());
 				} catch (Exception e) {
 					LOGGER.error(String.format("Error while creating bot %s instance version %d, api %s", bi.id,
 							bi.version, bi.api), e);
 				}
 			} else {
+				if(exBot.version != bi.version) {
+					exBot.instance.updateConfig(cfg);
+				}
 				bi = exBot;
 			}
-			bots.put(bi.id, bi);
+			nbots.put(bi.id, bi);
 		}
-		this.bots = bots;
-		blc.setCacheAfterSearch(req, bots);
-		return bots;
+		this.bots = nbots;
+		blc.setCacheAfterSearch(req, nbots);
+		return nbots;
 	}
 	
 	

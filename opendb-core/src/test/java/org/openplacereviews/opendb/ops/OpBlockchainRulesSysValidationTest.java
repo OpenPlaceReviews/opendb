@@ -888,30 +888,6 @@ public class OpBlockchainRulesSysValidationTest {
 		blc.addOperation(opOperation);
 	}
 
-	/**
-	 * Expected validation error: operation_std_arity_always_0
-	 *
-	 * @throws FailedVerificationException
-	 */
-	@Test
-	public void testChangeOperationArity() throws FailedVerificationException {
-		String newOperation = "sys.operation1", comment = "some comment";
-
-		OpObject opObject = new OpObject();
-		opObject.setId(newOperation);
-		opObject.putStringValue(F_COMMENT, comment);
-		opObject.putObjectValue("arity", 1);
-
-		OpOperation opOperation = new OpOperation();
-		opOperation.setType(OpBlockchainRules.OP_OPERATION);
-		opOperation.addCreated(opObject);
-
-		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
-		opOperation.makeImmutable();
-
-		exceptionRule.expect(IllegalArgumentException.class);
-		blc.addOperation(opOperation);
-	}
 
 	//////////////////////////////////////////////////////// SYS.* ///////////////////////////////////////////////////////
 
