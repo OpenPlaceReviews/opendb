@@ -87,7 +87,6 @@
         <label>Search</label><select id="search-type-list">
             <option selected value="all">All</option>
             <option value="id">by Id</option>
-            <option value="osmid">by OsmId</option>
         </select>
         <br>
         <div id="search-key-input" hidden="true">
@@ -660,6 +659,20 @@
         });
 
         $("#type-list").change(function () {
+            var type = $("#type-list").val();
+            $.getJSON( "/api/indices-by-type?type=" + type, function( data ) {
+                var searchTypes = "";
+                searchTypes += "<option value = 'all' selected>All</option>";
+                searchTypes += "<option value = 'id' >by ID</option>";
+                for (var i = 0; i < data.length; i++) {
+                    var obj = data[i]
+                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
+                }
+
+                $("#search-type-list").html(searchTypes);
+                $("#search-key-input").hide();
+            });
+
             var selectedSearchType = $("#search-type-list").val();
             if (selectedSearchType === "all") {
                 $("#search-key-input").hide();
@@ -778,7 +791,7 @@
             } else { //index
                 let obj = {
                     "type" : type,
-                    "index": "osmid",
+                    "index": $("#search-type-list").val(),
                     "key" : key
                 };
                 $.getJSON( "/api/indices", obj, function( data ) {
