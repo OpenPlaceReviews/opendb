@@ -58,6 +58,15 @@ class OpPrivateObjectInstancesById {
 		return dbAccess;
 	}
 
+	
+	public int countObjects() {
+		if(dbAccess != null) {
+			return dbAccess.countObjects(type);
+		} else {
+			// we should filter nulls to get precise number 
+			return objects.size();
+		}
+	}
 	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> fetchObjects(ObjectsSearchRequest request, 
 			OpIndexColumn col, Object... args) throws DBStaleException {

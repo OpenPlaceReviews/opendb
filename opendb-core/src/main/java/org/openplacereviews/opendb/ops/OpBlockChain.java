@@ -747,6 +747,18 @@ public class OpBlockChain {
 			request.objToSetCache.setCacheObject(cacheObject, request.editVersion);
 		}
 	}
+	
+	public int countAllObjects(String type) {
+		if(isNullBlock()) {
+			return 0;
+		}
+		int sz = 0;
+		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
+		if(oi != null) {
+			sz = oi.countObjects();
+		}
+		return sz + parent.countAllObjects(type);
+	}
 
 	public void fetchAllObjects(String type, ObjectsSearchRequest request) throws DBStaleException {
 		if(isNullBlock()) {
@@ -770,7 +782,6 @@ public class OpBlockChain {
 		}
 	}
 	
-
 	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
 		fetchObjectsInternal(type, request, index, argsToSearch);
 	}
@@ -1149,6 +1160,8 @@ public class OpBlockChain {
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
 		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException;
+		
+		int countObjects(String type, Object... extraParamsWithCondition) throws DBStaleException;
 
 		OpOperation getOperation(String rawHash) throws DBStaleException ;
 
