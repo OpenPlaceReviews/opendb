@@ -218,18 +218,15 @@ public class MgmtController {
 			return unauthorizedByServer();
 		}
 		String trimmedList = opsListOrSingleValue.trim();
-		String[] ops;
 		if (trimmedList.startsWith("[")) {
-			ops = formatter.fromJson(new StringReader(opsListOrSingleValue), String[].class);
-		} else {
-			ops = new String[] { trimmedList };
+			trimmedList = trimmedList.substring(1, trimmedList.length() - 1);
 		}
-		Set<String> deleted = new TreeSet<>();
-		for (String op : ops) {
-			deleted.add(op);
+		Set<String> toDelete = new TreeSet<String>();
+		for(String s : trimmedList.split(",")) {
+			toDelete.add(s);
 		}
-		manager.removeQueueOperations(deleted);
-		return ResponseEntity.ok(formatter.fullObjectToJson(ops));
+		Set<String> removeQueueOperations = manager.removeQueueOperations(toDelete);
+		return ResponseEntity.ok(formatter.fullObjectToJson(removeQueueOperations));
 	}
     
     
