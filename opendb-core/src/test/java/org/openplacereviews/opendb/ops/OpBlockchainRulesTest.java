@@ -86,16 +86,6 @@ public class OpBlockchainRulesTest {
 		blc.addOperation(opOperation);
 	}
 
-	/**
-	 * Expected ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS
-	 */
-	@Test
-	public void testAddOperationExpectError_MgmtCantDeleteNonLastOperations() {
-		OpOperation opOperation = blc.getQueueOperations().getFirst();
-
-		exceptionRule.expect(IllegalArgumentException.class);
-		blc.removeQueueOperations(new HashSet<>(Collections.singletonList(opOperation.getRawHash())));
-	}
 
 	/**
 	 * Expected ErrorType.REF_OBJ_NOT_FOUND
@@ -253,7 +243,9 @@ public class OpBlockchainRulesTest {
 		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
 		selectOperations(opOperations, operationsToDelete, iterator);
 
-		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		// FIXME COPY/PASTE
+//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		Set<String> removedOperations = Collections.emptySet();
 		assertEquals(5, removedOperations.size());
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
@@ -296,7 +288,8 @@ public class OpBlockchainRulesTest {
 		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
 		selectOperations(opOperations, operationsToDelete, iterator);
 
-		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		Set<String> removedOperations = Collections.emptySet();
 		assertEquals(5, removedOperations.size());
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
@@ -353,7 +346,9 @@ public class OpBlockchainRulesTest {
 		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
 		selectOperations(opOperations, operationsToDelete, iterator);
 
-		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		// FIXME
+//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		Set<String> removedOperations = Collections.emptySet();
 		assertEquals(5, removedOperations.size());
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
@@ -396,7 +391,9 @@ public class OpBlockchainRulesTest {
 		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
 		selectOperations(opOperations, operationsToDelete, iterator);
 
-		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		// FIXME COPY/PASTE!
+//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		Set<String> removedOperations = Collections.emptySet();
 		assertEquals(5, removedOperations.size());
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
@@ -450,7 +447,9 @@ public class OpBlockchainRulesTest {
 		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
 		selectOperations(opOperations, operationsToDelete, iterator);
 
-		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		// FIXME COPY/PASTE
+//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
+		Set<String> removedOperations = Collections.emptySet();
 		assertEquals(5, removedOperations.size());
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);

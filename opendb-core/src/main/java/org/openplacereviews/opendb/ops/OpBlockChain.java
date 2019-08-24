@@ -231,38 +231,6 @@ public class OpBlockChain {
 	}
 
 
-	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
-		validateIsUnlocked();
-		Iterator<OpOperation> descendingIterator = getQueueOperations().descendingIterator();
-		OpOperation nonDeletedLast = null;
-		while(descendingIterator.hasNext()) {
-			OpOperation no = descendingIterator.next();
-			if(nonDeletedLast == null){
-				if(!operationsToDelete.contains(no.getRawHash())) {
-					nonDeletedLast = no;
-				}
-			} else {
-				if(operationsToDelete.contains(no.getRawHash())) {
-					rules.error(nonDeletedLast, ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS, nonDeletedLast.getRawHash(), no.getRawHash());
-				}
-			}
-		}
-		Set<String> result;
-		locked = LOCKED_OP_IN_PROGRESS;
-		try {
-			result = atomicDeleteOperations(operationsToDelete);
-			for(OpPrivateObjectInstancesById o : objByName.values()) {
-				o.resetAfterEdit();
-			}
-			locked = UNLOCKED;
-		} finally {
-			if (locked == LOCKED_OP_IN_PROGRESS) {
-				locked = LOCKED_ERROR;
-			}
-		}
-		return result;
-	}
-
 	public synchronized OpBlock replicateBlock(OpBlock block) {
 		return replicateBlock(block, null);
 	}
@@ -441,15 +409,23 @@ public class OpBlockChain {
 				atomicRemoveOperationObj(o, null);
 			}
 		}
+		List<OpOperation> ops = new ArrayList<>(queueOperations);
 		blocks.clear();
-		Set<String> operationsToDelete = new TreeSet<String>();
-		for (OpOperation o : getQueueOperations()) {
-			operationsToDelete.add(o.getRawHash());
+		blockOperations.clear();
+		queueOperations.clear();
+		objByName.clear();
+		Iterator<OpOperation> it = ops.iterator();
+		while(it.hasNext()) {
+			OpOperation o = it.next();
+			if(newParent.getOperationByHash(o.getRawHash()) != null) {
+				it.remove();
+			}
 		}
-		atomicDeleteOperations(operationsToDelete);
-
-		for (OpPrivateObjectInstancesById o : objByName.values()) {
-			o.resetAfterEdit();
+		//  TODO check history object context
+		for (OpOperation o : ops) {
+			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>");
+			validateAndPrepareOperation(o, validationCtx, null);
+			atomicAddOperationAfterPrepare(o, validationCtx);
 		}
 		atomicSetParent(newParent);
 	}
@@ -461,7 +437,7 @@ public class OpBlockChain {
 			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
 			if (operationsToDelete.contains(o.getRawHash())) {
 				deletedOps.add(o.getRawHash());
-				atomicRemoveOperationObj(o, nonDeletedOpsByTypes.get(o.getType()));
+				atomicRemoveOperationObj(o, prevByType);
 			} else {
 				if(prevByType == null) {
 					prevByType = new ArrayList<OpOperation>();
@@ -504,24 +480,38 @@ public class OpBlockChain {
 
 	private void atomicRemoveOperationObj(OpOperation op, List<OpOperation> prevOperationsSameType) {
 		// delete new objects by name
+		// FIXME BUGS  ! 
+		String objType = op.getType();
+		OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 		for (OpObject ok : op.getCreated()) {
-			List<String> id = ok.getId();
-			if (id != null && id.size() > 0) {
-				String objType = op.getType();
-				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-				OpObject currentObj = oinf.getObjectById(id);
-				if (ok.equals(currentObj)) {
-					OpObject p = null;
-					if (prevOperationsSameType != null) {
-						p = findLast(prevOperationsSameType, id);
-					}
-					if (p == null) {
-						oinf.remove(id);
-					} else {
-						oinf.add(id, p);
-					}
-				}
+			OpObject currentObj = oinf.getObjectById(ok.getId());
+			if (ok.equals(currentObj)) {
+				replaceObjId(oinf, prevOperationsSameType, ok.getId());
 			}
+		}
+		for (OpObject ok : op.getEdited()) {
+			OpObject currentObj = oinf.getObjectById(ok.getId());
+			if (ok.equals(currentObj)) {
+				replaceObjId(oinf, prevOperationsSameType, ok.getId());
+			}
+		}
+		for (List<String> id : op.getDeleted()) {
+			OpObject currentObj = oinf.getObjectById(id);
+			if (currentObj == null) {
+				replaceObjId(oinf, prevOperationsSameType, id);
+			}
+		}
+	}
+
+	private void replaceObjId(OpPrivateObjectInstancesById oinf, List<OpOperation> prevOperationsSameType, List<String> id) {
+		OpObject p = null;
+		if (prevOperationsSameType != null) {
+			p = findLast(prevOperationsSameType, id);
+		}
+		if (p == null) {
+			oinf.remove(id);
+		} else {
+			oinf.add(id, p);
 		}
 	}
 

@@ -241,7 +241,7 @@ public class BlocksManager {
 		
 		// change only after block is inserted into db
 		m = mBlockRebase.start();
-		boolean changeParent = blockchain.rebaseOperations(blockChain);
+		boolean changeParent = this.blockchain.rebaseOperations(blockChain);
 		if(!changeParent) {
 			return null;
 		}
@@ -360,25 +360,20 @@ public class BlocksManager {
 	}
 	
 	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
-		Set<String> deleted;
-		try {
-			deleted = blockchain.removeQueueOperations(operationsToDelete);
-		} catch (RuntimeException e) {
-			// handle non last operations - slow method
-			deleted = new TreeSet<String>();
-			OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-			for (OpOperation o : blockchain.getQueueOperations()) {
-				if (!operationsToDelete.contains(o.getRawHash())) {
-					if (!blc.addOperation(o)) {
-						return null;
-					}
-				} else {
-					deleted.add(o.getRawHash());
+		Set<String> deleted = new TreeSet<String>();
+		// handle non last operations - slow method
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		for (OpOperation o : blockchain.getQueueOperations()) {
+			if (!operationsToDelete.contains(o.getRawHash())) {
+				if (!blc.addOperation(o)) {
+					return null;
 				}
+			} else {
+				deleted.add(o.getRawHash());
 			}
-			blockchain = blc; 
 		}
 		dataManager.removeOperations(deleted);
+		blockchain = blc;
 		return deleted;
 	}
 	

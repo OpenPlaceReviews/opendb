@@ -223,7 +223,8 @@ public class DBConsensusManagerTest {
 			i++;
 		}
 
-		opBlockChain.removeQueueOperations(operationsToDelete);
+		// FIXME
+//		opBlockChain.removeQueueOperations(operationsToDelete);
 
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
