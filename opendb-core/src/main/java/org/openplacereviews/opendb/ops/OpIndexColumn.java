@@ -28,12 +28,20 @@ public class OpIndexColumn {
 	private final ColumnDef columnDef;
 	private List<List<String>> fieldsExpression = Collections.emptyList();
 	private boolean cacheRuntime = true;
-	private boolean cacheDB = true;
+	private boolean cacheDB = false;
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
 		this.opType = opType;
 		this.indexId = indexId;
 		this.columnDef = columnDef;
+	}
+	
+	public void setCacheDB(boolean cacheDB) {
+		this.cacheDB = cacheDB;
+	}
+	
+	public void setCacheRuntime(boolean cacheRuntime) {
+		this.cacheRuntime = cacheRuntime;
 	}
 	
 	public String getOpType() {

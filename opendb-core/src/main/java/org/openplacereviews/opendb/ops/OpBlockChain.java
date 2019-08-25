@@ -6,7 +6,6 @@ import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
-import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
@@ -235,7 +234,7 @@ public class OpBlockChain {
 		return replicateBlock(block, null);
 	}
 
-	public synchronized OpBlock replicateBlock(OpBlock block, HistoryObjectCtx hctx) {
+	public synchronized OpBlock replicateBlock(OpBlock block, DeletedObjectCtx hctx) {
 		block.checkImmutable();
 		validateIsUnlocked();
 		if (!isQueueEmpty()) {
@@ -322,7 +321,7 @@ public class OpBlockChain {
 
 	}
 
-	public boolean addOperation(OpOperation op, HistoryObjectCtx historyObjectCtx) {
+	public boolean addOperation(OpOperation op, DeletedObjectCtx historyObjectCtx) {
 		return addOperation(op, false, historyObjectCtx);
 	}
 
@@ -336,7 +335,7 @@ public class OpBlockChain {
 	/**
 	 * Adds operation and validates it to block chain
 	 */
-	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, HistoryObjectCtx historyObjectCtx) {
+	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, DeletedObjectCtx historyObjectCtx) {
 		op.checkImmutable();
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx("");
@@ -784,7 +783,7 @@ public class OpBlockChain {
 		parent.fetchBlockHeaders(lst, depth);
 	}
 
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
+	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
 		Metric pm = mPrepareTotal.start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
@@ -901,7 +900,7 @@ public class OpBlockChain {
 		return op;
 	}
 
-	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
+	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
 		List<List<String>> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 
@@ -1080,6 +1079,19 @@ public class OpBlockChain {
 
 		OpBlock getBlockByHash(String rawHash) throws DBStaleException ;
 
+	}
+	
+	public static class DeletedObjectCtx {
+		public Map<String, List<OpObject>> deletedObjsCache = new LinkedHashMap<>();
+
+		public void putObjectToDeleteCache(String key, OpObject opObject) {
+			List<OpObject> list = deletedObjsCache.get(key);
+			if (list == null) {
+				list = new ArrayList<>();
+			}
+			list.add(opObject);
+			deletedObjsCache.put(key, list);
+		}
 	}
 
 	public static class ObjectsSearchRequest {

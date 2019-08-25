@@ -6,6 +6,7 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
@@ -204,7 +205,7 @@ public class BlocksManager {
 		
 		Metric m = mBlockCreateAddOps.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		DeletedObjectCtx hctx = new DeletedObjectCtx();
 		for (OpOperation o : candidates) {
 			if(!blc.addOperation(o, hctx)) {
 				return null;
@@ -226,18 +227,17 @@ public class BlocksManager {
 		return replicateValidBlock(blc, opBlock, hctx);
 	}
 
-	private OpBlock replicateValidBlock(OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
+	private OpBlock replicateValidBlock(OpBlockChain blockChain, OpBlock opBlock, DeletedObjectCtx hctx) {
 		Metric pm = mBlockReplicate.start();
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		Metric m = mBlockSaveBlock.start();
 		dataManager.insertBlock(opBlock);
 		m.capture();
 		
-		if (historyManager.isRunning()) {
-			m = mBlockSaveHistory.start();
-			historyManager.saveHistoryForBlockOperations(opBlock, hctx);
-			m.capture();
-		}
+		
+		m = mBlockSaveHistory.start();
+		historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+		m.capture();
 		
 		// change only after block is inserted into db
 		m = mBlockRebase.start();
@@ -346,7 +346,7 @@ public class BlocksManager {
 		Metric m = mBlockSync.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		OpBlock res;
-		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		DeletedObjectCtx hctx = new DeletedObjectCtx();
 		res = blc.replicateBlock(block, hctx);
 		m.capture();
 		if(res == null) {
