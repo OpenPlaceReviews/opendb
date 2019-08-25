@@ -363,8 +363,7 @@ public class HistoryManager {
 			}
 		} else {
 			if (signedBy.get(0).contains(":")) {
-				signedBy = Arrays.asList(signedBy.get(0).split(":"));
-				for (String user : signedBy) {
+				for (String user : signedBy.get(0).split(":")) {
 					args[k] = user;
 					k++;
 				}
