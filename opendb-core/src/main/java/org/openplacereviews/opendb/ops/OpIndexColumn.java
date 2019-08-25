@@ -28,6 +28,7 @@ public class OpIndexColumn {
 	private final ColumnDef columnDef;
 	private List<List<String>> fieldsExpression = Collections.emptyList();
 	private boolean cacheRuntime = true;
+	private boolean cacheDB = true;
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
 		this.opType = opType;
@@ -102,24 +103,23 @@ public class OpIndexColumn {
 		}
 		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(oi.getDbAccess() != null){
-			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
-		} else {
-			if (cacheRuntime && keys == null) {
-				keys = new HashSet<Object>();
-				List<Object> array = new ArrayList<Object>();
-				for (OpObject o : oi.getRawObjects().values()) {
-					array.clear();
-					array = eval(o, array);
-					for (Object k : array) {
-						keys.add(k);
-					}
-				}
+			if (cacheDB && keys == null) {
+				Iterator<Entry<CompoundKey, OpObject>> it = oi.getDbAccess().streamObjects(type, -1).iterator();
+				keys = buildCacheKeys(it);
 				oi.setCacheObjectByKey(this, keys, ev);
 			}
-			if(keys != null && !keys.contains(toNativeType(args[0]))) {
-				return Stream.empty();
+		} else {
+			if (cacheRuntime && keys == null) {
+				keys = buildCacheKeys(oi.getRawObjects().entrySet().iterator());
+				oi.setCacheObjectByKey(this, keys, ev);
 			}
-			
+		}
+		if(keys != null && !keys.contains(toNativeType(args[0]))) {
+			return Stream.empty();
+		}
+		if(oi.getDbAccess() != null){
+			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
+		} else {
 			stream = oi.getRawObjects().entrySet().stream();
 			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
 				@Override
@@ -130,6 +130,22 @@ public class OpIndexColumn {
 			
 		}
 		return stream;
+	}
+
+	private Set<Object> buildCacheKeys(Iterator<Entry<CompoundKey, OpObject>> it) {
+		Set<Object> keys;
+		List<Object> array = new ArrayList<Object>();
+		keys = new HashSet<Object>();
+		while(it.hasNext()) {
+			Entry<CompoundKey, OpObject> e = it.next();
+			OpObject o = e.getValue();
+			array.clear();
+			array = eval(o, array);
+			for (Object k : array) {
+				keys.add(k);
+			}
+		}
+		return keys;
 	}
 	
 	private Object toNativeType(Object o) {
