@@ -151,19 +151,13 @@ public class HistoryManager {
 			HistoryEdit previousHistoryEdit = null;
 			if (sort.equals(ASC_SORT)) {
 				Collections.reverse(loadedList);
-				for (HistoryEdit historyEdit : loadedList) {
-					originObject = getPreviousOpObject(originObject, previousHistoryEdit, historyEdit);
-					previousHistoryEdit = historyEdit;
-					newHistoryList.add(historyEdit);
-				}
-				Collections.reverse(newHistoryList);
-			} else if (sort.equals(DESC_SORT)){
-				for (HistoryEdit historyEdit : loadedList) {
-					originObject = getPreviousOpObject(originObject, previousHistoryEdit, historyEdit);
-					previousHistoryEdit = historyEdit;
-					newHistoryList.add(historyEdit);
-				}
 			}
+			for (HistoryEdit historyEdit : loadedList) {
+				originObject = getPreviousOpObject(originObject, previousHistoryEdit, historyEdit);
+				previousHistoryEdit = historyEdit;
+				newHistoryList.add(historyEdit);
+			}
+
 			newHistoryMap.put(keys, newHistoryList);
 		}
 
@@ -363,9 +357,20 @@ public class HistoryManager {
 
 	private void generateSignedByArguments(Object[] args, List<String> signedBy, int k) {
 		if (signedBy.size() > 1) {
-			args[k] = signedBy.toArray();
+			for (String user : signedBy) {
+				args[k] = user;
+				k++;
+			}
 		} else {
-			args[k] = signedBy.get(0);
+			if (signedBy.get(0).contains(":")) {
+				signedBy = Arrays.asList(signedBy.get(0).split(":"));
+				for (String user : signedBy) {
+					args[k] = user;
+					k++;
+				}
+			} else {
+				args[k] = signedBy.get(0);
+			}
 		}
 	}
 
