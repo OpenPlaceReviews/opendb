@@ -92,31 +92,19 @@ public class OpIndexColumn {
 	}
 
 
-	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> streamObjects(OpPrivateObjectInstancesById oi, 
 			String type, int limit, ObjectsSearchRequest request, Object[] args) {
-		int ev = oi.getEditVersion();
-		CacheObject cacheObject = oi.getCacheObjectByKey(this);
-		Set<Object> keys = null;
-		if(cacheObject != null && cacheObject.cacheVersion == ev) {
-			keys = (Set<Object>) cacheObject.cacheObject;
-		}
-		Stream<Entry<CompoundKey, OpObject>> stream;
-		if(oi.getDbAccess() != null){
-			if (cacheDB && keys == null) {
-				Iterator<Entry<CompoundKey, OpObject>> it = oi.getDbAccess().streamObjects(type, -1).iterator();
-				keys = buildCacheKeys(it);
-				oi.setCacheObjectByKey(this, keys, ev);
-			}
-		} else {
-			if (cacheRuntime && keys == null) {
-				keys = buildCacheKeys(oi.getRawObjects().entrySet().iterator());
-				oi.setCacheObjectByKey(this, keys, ev);
+		Set<Object> keys = getKeysFromCache(oi);
+		if (keys == null) {
+			if((oi.getDbAccess() != null && cacheDB) || 
+					 (oi.getDbAccess() == null && cacheRuntime)) {
+				keys = buildCacheKeys(oi, type);
 			}
 		}
 		if(keys != null && !keys.contains(toNativeType(args[0]))) {
 			return Stream.empty();
 		}
+		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(oi.getDbAccess() != null){
 			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
 		} else {
@@ -130,6 +118,34 @@ public class OpIndexColumn {
 			
 		}
 		return stream;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Set<Object> getKeysFromCache(OpPrivateObjectInstancesById oi) {
+		int ev = oi.getEditVersion();
+		CacheObject cacheObject = oi.getCacheObjectByKey(this);
+		Set<Object> keys = null;
+		if(cacheObject != null && cacheObject.cacheVersion == ev) {
+			keys = (Set<Object>) cacheObject.cacheObject;
+		}
+		return keys;
+	}
+
+	private synchronized Set<Object> buildCacheKeys(OpPrivateObjectInstancesById oi, String type) {
+		Set<Object> keys = getKeysFromCache(oi);
+		if (keys != null) {
+			return keys;
+		}
+		int ev = oi.getEditVersion();
+		if (oi.getDbAccess() != null) {
+			Iterator<Entry<CompoundKey, OpObject>> it = oi.getDbAccess().streamObjects(type, -1).iterator();
+			keys = buildCacheKeys(it);
+			oi.setCacheObjectByKey(this, keys, ev);
+		} else if (oi.getDbAccess() == null) {
+			keys = buildCacheKeys(oi.getRawObjects().entrySet().iterator());
+			oi.setCacheObjectByKey(this, keys, ev);
+		}
+		return keys;
 	}
 
 	private Set<Object> buildCacheKeys(Iterator<Entry<CompoundKey, OpObject>> it) {
