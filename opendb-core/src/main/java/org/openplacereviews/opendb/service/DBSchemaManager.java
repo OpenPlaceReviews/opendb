@@ -126,8 +126,8 @@ public class DBSchemaManager {
 		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", INDEXED);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", INDEXED);
 		for (int i = 1; i <= HISTORY_USERS_SIZE; i++) {
-			registerColumn(OP_OBJ_HISTORY_TABLE, "usr" + i, "text", INDEXED);
-			registerColumn(OP_OBJ_HISTORY_TABLE, "login" + i, "text", INDEXED);
+			registerColumn(OP_OBJ_HISTORY_TABLE, "usr_" + i, "text", INDEXED);
+			registerColumn(OP_OBJ_HISTORY_TABLE, "login_" + i, "text", INDEXED);
 		}
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
 			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", INDEXED);
@@ -476,9 +476,9 @@ public class DBSchemaManager {
 
 	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {
 		jdbcTemplate.batchUpdate("INSERT INTO " + table + "(blockhash, ophash, type, time, obj, status," +
-				generatePKString(table, "u1", ",", HISTORY_USERS_SIZE) + "," +
+				generatePKString(table, "usr_%1$d, login_%1$d", ",", HISTORY_USERS_SIZE) + "," +
 				generatePKString(table, "p%1$d", ",", MAX_KEY_SIZE) + ") VALUES ("+
-				generatePKString(table, "?", ",", HISTORY_USERS_SIZE + 4+ 6 ) + ")", args);
+				generatePKString(table, "?", ",", HISTORY_USERS_SIZE * 2 + MAX_KEY_SIZE + 6 ) + ")", args);
 	}
 
 	// Query / insert values

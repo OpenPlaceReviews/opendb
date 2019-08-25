@@ -376,7 +376,7 @@ public class HistoryManager {
 		if(ls.size() > userInd) {
 			String[] un = ls.get(userInd).split(":");
 			args[arrInd + userInd * 2] = un[0];
-			if(un.length > 0) {
+			if(un.length > 1) {
 				args[arrInd + userInd * 2 + 1] = un[1];
 			}
 		}
