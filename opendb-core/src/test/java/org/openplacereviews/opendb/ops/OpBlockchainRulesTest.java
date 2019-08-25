@@ -234,19 +234,7 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockPrevId() throws FailedVerificationException {
-		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
-		assertFalse(dequeOperations.isEmpty());
-
-		List<OpOperation> opOperations = new ArrayList<>();
-		Set<String> operationsToDelete = new HashSet<>();
-
-		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
-		selectOperations(opOperations, operationsToDelete, iterator);
-
-		// FIXME COPY/PASTE
-//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
-		Set<String> removedOperations = Collections.emptySet();
-		assertEquals(5, removedOperations.size());
+		List<OpOperation> opOperations = generateStartBlcState();
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
@@ -279,18 +267,7 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockHashIsDuplicated() throws FailedVerificationException {
-		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
-		assertFalse(dequeOperations.isEmpty());
-
-		List<OpOperation> opOperations = new ArrayList<>();
-		Set<String> operationsToDelete = new HashSet<>();
-
-		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
-		selectOperations(opOperations, operationsToDelete, iterator);
-
-//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
-		Set<String> removedOperations = Collections.emptySet();
-		assertEquals(5, removedOperations.size());
+		List<OpOperation> opOperations = generateStartBlcState();
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
@@ -337,19 +314,7 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockMerkleTreeFailed() throws FailedVerificationException {
-		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
-		assertFalse(dequeOperations.isEmpty());
-
-		List<OpOperation> opOperations = new ArrayList<>();
-		Set<String> operationsToDelete = new HashSet<>();
-
-		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
-		selectOperations(opOperations, operationsToDelete, iterator);
-
-		// FIXME
-//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
-		Set<String> removedOperations = Collections.emptySet();
-		assertEquals(5, removedOperations.size());
+		List<OpOperation> opOperations = generateStartBlcState();
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
@@ -382,19 +347,7 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockSigMerkleTreeFailed() throws FailedVerificationException {
-		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
-		assertFalse(dequeOperations.isEmpty());
-
-		List<OpOperation> opOperations = new ArrayList<>();
-		Set<String> operationsToDelete = new HashSet<>();
-
-		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
-		selectOperations(opOperations, operationsToDelete, iterator);
-
-		// FIXME COPY/PASTE!
-//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
-		Set<String> removedOperations = Collections.emptySet();
-		assertEquals(5, removedOperations.size());
+		List<OpOperation> opOperations = generateStartBlcState();
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
@@ -438,19 +391,7 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockHashFailed() throws FailedVerificationException {
-		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
-		assertFalse(dequeOperations.isEmpty());
-
-		List<OpOperation> opOperations = new ArrayList<>();
-		Set<String> operationsToDelete = new HashSet<>();
-
-		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
-		selectOperations(opOperations, operationsToDelete, iterator);
-
-		// FIXME COPY/PASTE
-//		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
-		Set<String> removedOperations = Collections.emptySet();
-		assertEquals(5, removedOperations.size());
+		List<OpOperation> opOperations = generateStartBlcState();
 
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
@@ -469,6 +410,29 @@ public class OpBlockchainRulesTest {
 
 		exceptionRule.expect(IllegalArgumentException.class);
 		blc.replicateBlock(block);
+	}
+
+	private List<OpOperation> generateStartBlcState() {
+		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
+		assertFalse(dequeOperations.isEmpty());
+
+		List<OpOperation> opOperations = new ArrayList<>();
+		Set<String> operationsToDelete = new HashSet<>();
+
+		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
+		selectOperations(opOperations, operationsToDelete, iterator);
+
+		int amountLoadedOperations = blc.getQueueOperations().size();
+
+		OpBlockChain blockchain = new OpBlockChain(blc.getParent(), blc.getRules());
+		for (OpOperation o : blc.getQueueOperations()) {
+			if (!operationsToDelete.contains(o.getRawHash())) {
+				blockchain.addOperation(o);
+			}
+		}
+		blc = blockchain;
+		assertEquals(5, amountLoadedOperations - blc.getQueueOperations().size());
+		return opOperations;
 	}
 
 	/**

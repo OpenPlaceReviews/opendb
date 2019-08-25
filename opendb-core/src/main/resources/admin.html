@@ -799,16 +799,21 @@
         });
 
         $("#finish-edit-btn").click(function () {
-            var newObject = editor.get();
-            var res = deepDiffMapper.map(originObject, newObject);
-            var path = "";
-            var changeEdit = {};
-            var currentEdit = {};
-            deepDiffMapper.generateChangeCurrentObject(path, res, changeEdit, currentEdit);
-            deepDiffMapper.generateEditOp(originObject, changeEdit, currentEdit);
-            originObject = null;
-            $("#finish-edit-btn").hide();
-            $("#add-edit-op-btn").show();
+            try {
+                var newObject = editor.get();
+                var res = deepDiffMapper.map(originObject, newObject);
+                var path = "";
+                var changeEdit = {};
+                var currentEdit = {};
+                deepDiffMapper.generateChangeCurrentObject(path, res, changeEdit, currentEdit);
+                deepDiffMapper.generateEditOp(originObject, changeEdit, currentEdit);
+
+                originObject = null;
+                $("#finish-edit-btn").hide();
+                $("#add-edit-op-btn").show();
+            } catch (e) {
+                alert(e);
+            }
         });
 
         var deepDiffMapper = function() {
@@ -1136,15 +1141,13 @@
             };
             var params = $.param(obj);
             var json = JSON.stringify(editor.get());
-            editor = null;
-            $("#json-display").hide();
-            $("#add-edit-op-btn").hide();
             $.ajax({
                 url: '/api/auth/process-operation?' + params,
                 type: 'POST',
                 data: json,
                 contentType: 'application/json; charset=utf-8'
-            }).done(function(data){  $("#result").html(data); loadData();})
+            }).done(function(data){
+                $("#result").html(data); loadData();  editor = null; $("#json-display").hide();$("#add-edit-op-btn").hide(); })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
         $("#login-btn").click(function() {

@@ -116,7 +116,7 @@ public class HistoryManager {
 							HistoryManager.Status.getStatus(rs.getInt(11))
 					);
 					if (historyObject.getStatus().equals(HistoryManager.Status.EDITED)) {
-						historyObject.setObjEdit(formatter.fromJsonToTreeMap(rs.getString(9)));
+						historyObject.setDeltaChanges(formatter.fromJsonToTreeMap(rs.getString(9)));
 					}
 					historyObject.setId(ids);
 
@@ -195,15 +195,15 @@ public class HistoryManager {
 
 	protected OpObject getPreviousOpObject(OpObject originObject, HistoryEdit previousHistoryEdit, HistoryEdit historyEdit) {
 		if (historyEdit.getStatus().equals(Status.DELETED)) {
-			originObject = historyEdit.deltaChanges;
+			originObject = historyEdit.objEdit;
 		} else if (historyEdit.getStatus().equals(Status.EDITED) && originObject == null ||
 				historyEdit.getStatus().equals(Status.CREATED) && previousHistoryEdit == null) {
 			originObject = blocksManager.getBlockchain().getObjectByName(historyEdit.objType, historyEdit.id.subList(1, historyEdit.id.size()));
-			historyEdit.deltaChanges = originObject;
+			historyEdit.objEdit = originObject;
 		} else {
-			Map<String, Object> changes = previousHistoryEdit.objEdit;
+			Map<String, Object> changes = previousHistoryEdit.deltaChanges;
 			if (changes == null) {
-				historyEdit.deltaChanges = originObject;
+				historyEdit.objEdit = originObject;
 			} else {
 				originObject = generateReverseEditObject(originObject, changes);
 				if (originObject.getFieldByExpr(OpObject.F_STATE) != null &&
@@ -211,7 +211,7 @@ public class HistoryManager {
 					originObject.setFieldByExpr(OpObject.F_STATE, OpObject.F_OPEN);
 					originObject.remove(F_SUBMITTED_OP_HASH);
 				}
-				historyEdit.deltaChanges = originObject;
+				historyEdit.objEdit = originObject;
 			}
 		}
 
@@ -406,15 +406,15 @@ public class HistoryManager {
 		private List<String> id;
 		private List<String> userId;
 		private String objType;
-		private TreeMap<String, Object> objEdit;
-		private OpObject deltaChanges;
+		private OpObject objEdit;
+		private TreeMap<String, Object> deltaChanges;
 		private String date;
 		private Status status;
 
-		public HistoryEdit(List<String> userId, String objType, OpObject deltaChanges, String date, Status status) {
+		public HistoryEdit(List<String> userId, String objType, OpObject objEdit, String date, Status status) {
 			this.userId = userId;
 			this.objType = objType;
-			this.deltaChanges = deltaChanges;
+			this.objEdit = objEdit;
 			this.date = date;
 			this.status = status;
 		}
@@ -443,19 +443,19 @@ public class HistoryManager {
 			this.objType = objType;
 		}
 
-		public TreeMap<String, Object> getObjEdit() {
+		public OpObject getObjEdit() {
 			return objEdit;
 		}
 
-		public void setObjEdit(TreeMap<String, Object> objEdit) {
+		public void setObjEdit(OpObject objEdit) {
 			this.objEdit = objEdit;
 		}
 
-		public OpObject getDeltaChanges() {
+		public TreeMap<String, Object> getDeltaChanges() {
 			return deltaChanges;
 		}
 
-		public void setDeltaChanges(OpObject deltaChanges) {
+		public void setDeltaChanges(TreeMap<String, Object> deltaChanges) {
 			this.deltaChanges = deltaChanges;
 		}
 

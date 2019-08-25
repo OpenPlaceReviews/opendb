@@ -281,8 +281,14 @@ public class OpBlockchainTest {
 		opOperation.makeImmutable();
 
 		int amountLoadedOperations = blc.getQueueOperations().size();
-		 // FXIME
-//		blc.removeQueueOperations(Collections.singleton(loadedOperation.getRawHash()));
+
+		OpBlockChain blockchain = new OpBlockChain(blc.getParent(), blc.getRules());
+		for (OpOperation o : blc.getQueueOperations()) {
+			if (!o.getRawHash().equals(loadedOperation.getRawHash())) {
+				blockchain.addOperation(o);
+			}
+		}
+		blc = blockchain;
 
 		assertEquals(amountLoadedOperations - 1, blc.getQueueOperations().size());
 		assertTrue(blc.addOperation(opOperation));
@@ -324,9 +330,14 @@ public class OpBlockchainTest {
 		opOperation.makeImmutable();
 
 		int amountLoadedOperations = blc.getQueueOperations().size();
-		
-		// FIXME
-//		blc.removeQueueOperations(Collections.singleton(loadedOperation.getRawHash()));
+
+		OpBlockChain blockchain = new OpBlockChain(blc.getParent(), blc.getRules());
+		for (OpOperation o : blc.getQueueOperations()) {
+			if (!o.getRawHash().equals(loadedOperation.getRawHash())) {
+				blockchain.addOperation(o);
+			}
+		}
+		blc = blockchain;
 		assertEquals(amountLoadedOperations - 1, blc.getQueueOperations().size());
 
 		assertTrue(blc.validateOperation(opOperation));

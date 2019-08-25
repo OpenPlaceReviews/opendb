@@ -223,8 +223,16 @@ public class DBConsensusManagerTest {
 			i++;
 		}
 
-		// FIXME
-//		opBlockChain.removeQueueOperations(operationsToDelete);
+		int amountLoadedOperations = opBlockChain.getQueueOperations().size();
+
+		OpBlockChain blockchain = new OpBlockChain(opBlockChain.getParent(), opBlockChain.getRules());
+		for (OpOperation o : opBlockChain.getQueueOperations()) {
+			if (!operationsToDelete.contains(o.getRawHash())) {
+				blockchain.addOperation(o);
+			}
+		}
+		opBlockChain = blockchain;
+		assertEquals(operationsToDelete.size(), amountLoadedOperations - opBlockChain.getQueueOperations().size());
 
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));

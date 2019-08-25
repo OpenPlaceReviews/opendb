@@ -38,7 +38,7 @@ public class HistoryManagerTest {
 				null
 		);
 
-		firstHistoryEdit.setObjEdit(generateObjEdit());
+		firstHistoryEdit.setDeltaChanges(generateObjEdit());
 		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, firstHistoryEdit);
 		previousHistoryEdit = firstHistoryEdit;
 
@@ -52,7 +52,7 @@ public class HistoryManagerTest {
 				HistoryManager.Status.EDITED,
 				generateSecondObjEdit()
 		);
-		secondHistoryEdit.setObjEdit(generateSecondObjEdit());
+		secondHistoryEdit.setDeltaChanges(generateSecondObjEdit());
 		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, secondHistoryEdit);
 		previousHistoryEdit = secondHistoryEdit;
 
@@ -82,7 +82,7 @@ public class HistoryManagerTest {
 				new Date().toString(),
 				status
 		);
-		historyEdit.setObjEdit(objEdit);
+		historyEdit.setDeltaChanges(objEdit);
 
 		return historyEdit;
 	}
