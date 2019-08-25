@@ -404,11 +404,6 @@ public class OpBlockChain {
 
 	private void atomicRebaseOperations(OpBlockChain newParent) {
 		// all blocks must be present in new parent
-		for (OpBlock b : blocks.getAllBlocks()) {
-			for (OpOperation o : b.getOperations()) {
-				atomicRemoveOperationObj(o, null);
-			}
-		}
 		List<OpOperation> ops = new ArrayList<>(queueOperations);
 		blocks.clear();
 		blockOperations.clear();
@@ -430,33 +425,6 @@ public class OpBlockChain {
 		atomicSetParent(newParent);
 	}
 
-	private Set<String> atomicDeleteOperations(Set<String> operationsToDelete) {
-		Set<String> deletedOps = new TreeSet<>();
-		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
-		for (OpOperation o : getQueueOperations()) {
-			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
-			if (operationsToDelete.contains(o.getRawHash())) {
-				deletedOps.add(o.getRawHash());
-				atomicRemoveOperationObj(o, prevByType);
-			} else {
-				if(prevByType == null) {
-					prevByType = new ArrayList<OpOperation>();
-					nonDeletedOpsByTypes.put(o.getType(), prevByType);
-				}
-				prevByType.add(o);
-			}
-		}
-
-		Iterator<OpOperation> it = queueOperations.iterator();
-		while (it.hasNext()) {
-			OpOperation o = it.next();
-			if(operationsToDelete.contains(o.getRawHash())) {
-				it.remove();
-			}
-		}
-		return deletedOps;
-	}
-
 
 	private void copyAndMergeWithParent(OpBlockChain copy, OpBlockChain parent ) {
 		if (copy.isDbAccessed() || parent.isDbAccessed()) {
@@ -476,55 +444,6 @@ public class OpBlockChain {
 			nid.putObjects(cid, true);
 
 		}
-	}
-
-	private void atomicRemoveOperationObj(OpOperation op, List<OpOperation> prevOperationsSameType) {
-		// delete new objects by name
-		// FIXME BUGS  ! 
-		String objType = op.getType();
-		OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-		for (OpObject ok : op.getCreated()) {
-			OpObject currentObj = oinf.getObjectById(ok.getId());
-			if (ok.equals(currentObj)) {
-				replaceObjId(oinf, prevOperationsSameType, ok.getId());
-			}
-		}
-		for (OpObject ok : op.getEdited()) {
-			OpObject currentObj = oinf.getObjectById(ok.getId());
-			if (ok.equals(currentObj)) {
-				replaceObjId(oinf, prevOperationsSameType, ok.getId());
-			}
-		}
-		for (List<String> id : op.getDeleted()) {
-			OpObject currentObj = oinf.getObjectById(id);
-			if (currentObj == null) {
-				replaceObjId(oinf, prevOperationsSameType, id);
-			}
-		}
-	}
-
-	private void replaceObjId(OpPrivateObjectInstancesById oinf, List<OpOperation> prevOperationsSameType, List<String> id) {
-		OpObject p = null;
-		if (prevOperationsSameType != null) {
-			p = findLast(prevOperationsSameType, id);
-		}
-		if (p == null) {
-			oinf.remove(id);
-		} else {
-			oinf.add(id, p);
-		}
-	}
-
-	private OpObject findLast(List<OpOperation> list, List<String> id) {
-		OpObject last = null;
-		for (OpOperation o : list) {
-			for (OpObject obj : o.getCreated()) {
-				if (OUtils.equals(obj.getId(), id)) {
-					last = obj;
-				}
-			}
-		}
-		return last;
 	}
 
 	public Deque<OpOperation> getQueueOperations() {
@@ -742,11 +661,8 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return 0;
 		}
-		int sz = 0;
 		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
-		if(oi != null) {
-			sz = oi.countObjects();
-		}
+		int sz = oi.countObjects();
 		return sz + parent.countAllObjects(type);
 	}
 
@@ -773,14 +689,18 @@ public class OpBlockChain {
 	}
 	
 	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + index.getIndexId() + ".total").start();
 		fetchObjectsInternal(type, request, index, argsToSearch);
+		m.capture();
 	}
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
-		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + (col == null ? "all" : col.getIndexId())).start(); 
 		if(isNullBlock()) {
 			return Collections.emptyMap();
 		}
+		String mid = "blc.fetch." + (col == null ? "all" : col.getIndexId());
+		mid += isDbAccessed()?  ".db" : ".ram";
+		Metric m = PerformanceMetrics.i().getMetric(mid).start();
 		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
 		// don't check for all queries
 		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
@@ -799,6 +719,7 @@ public class OpBlockChain {
 				}
 			}
 		}
+		m.capture();
 		if(request.limit < 0 || request.result.size() < request.limit) {
 			Map<CompoundKey, OpObject> prKeys = parent.fetchObjectsInternal(type, request, col, args);
 			// HERE we need to check that newer version doesn't exist in current blockchain 
@@ -816,7 +737,6 @@ public class OpBlockChain {
 				fetchedToCheck.putAll(prKeys);
 			}
 		}
-		m.capture();
 		return fetchedToCheck;
 	}
 
