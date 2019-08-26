@@ -69,12 +69,12 @@ class OpPrivateObjectInstancesById {
 	}
 	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> fetchObjects(ObjectsSearchRequest request, 
-			OpIndexColumn col, Object... args) throws DBStaleException {
+			int superBlockSize, OpIndexColumn col, Object... args) throws DBStaleException {
 		// limit will be negative
 		int limit = request.limit - request.result.size();
 		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(col != null) {
-			stream = col.streamObjects(this, type, limit, request, args);
+			stream = col.streamObjects(this, superBlockSize, type, limit, request, args);
 		} else {
 			if (dbAccess != null) {
 				stream = dbAccess.streamObjects(type, limit);

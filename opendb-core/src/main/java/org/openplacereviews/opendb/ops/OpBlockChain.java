@@ -704,7 +704,7 @@ public class OpBlockChain {
 		// don't check for all queries
 		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
 		if(o != null) {
-			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, col, args);
+			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, getSuperblockSize(), col, args);
 			Iterator<Entry<CompoundKey, OpObject>> it = stream.iterator();
 			while(it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();

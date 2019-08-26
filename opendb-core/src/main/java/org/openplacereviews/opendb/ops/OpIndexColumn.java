@@ -27,8 +27,8 @@ public class OpIndexColumn {
 	private final String opType;
 	private final ColumnDef columnDef;
 	private List<List<String>> fieldsExpression = Collections.emptyList();
-	private boolean cacheRuntime = true;
-	private boolean cacheDB = false;
+	private int cacheRuntimeBlocks = 64;
+	private int cacheDBBlocks = 64;
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
 		this.opType = opType;
@@ -36,12 +36,12 @@ public class OpIndexColumn {
 		this.columnDef = columnDef;
 	}
 	
-	public void setCacheDB(boolean cacheDB) {
-		this.cacheDB = cacheDB;
+	public void setCacheDBBlocks(int cacheDB) {
+		this.cacheDBBlocks = cacheDB;
 	}
 	
-	public void setCacheRuntime(boolean cacheRuntime) {
-		this.cacheRuntime = cacheRuntime;
+	public void setCacheRuntimeBlocks(int cacheRuntimeBlocks) {
+		this.cacheRuntimeBlocks = cacheRuntimeBlocks;
 	}
 	
 	public String getOpType() {
@@ -101,11 +101,11 @@ public class OpIndexColumn {
 
 
 	public Stream<Entry<CompoundKey, OpObject>> streamObjects(OpPrivateObjectInstancesById oi, 
-			String type, int limit, ObjectsSearchRequest request, Object[] args) {
+			int superBlockSize, String type, int limit, ObjectsSearchRequest request, Object[] args) {
 		Set<Object> keys = getKeysFromCache(oi);
 		if (keys == null) {
-			if((oi.getDbAccess() != null && cacheDB) || 
-					 (oi.getDbAccess() == null && cacheRuntime)) {
+			if((oi.getDbAccess() != null && cacheDBBlocks >= superBlockSize) || 
+					 (oi.getDbAccess() == null && cacheRuntimeBlocks >= superBlockSize)) {
 				keys = buildCacheKeys(oi, type);
 			}
 		}

@@ -314,8 +314,8 @@ public class DBSchemaManager {
 					String name = (String) entry.get("name");
 					String colType = (String) entry.get("sqltype");
 					String index = (String) entry.get("index");
-					Boolean cacheRuntime = (Boolean) entry.get("cache-runtime");
-					Boolean cacheDB = (Boolean) entry.get("cache-db");
+					Integer cacheRuntime = (Integer) entry.get("cache-runtime-max");
+					Integer cacheDB = (Integer) entry.get("cache-db-max");
 					IndexType di = null;
 					if(index != null) {
 						if(index.equalsIgnoreCase("true")) {
@@ -334,10 +334,10 @@ public class DBSchemaManager {
 						for (String type : ott.types) {
 							OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
 							if(cacheRuntime != null) {
-								indexColumn.setCacheRuntime(cacheRuntime);
+								indexColumn.setCacheRuntimeBlocks(cacheRuntime);
 							}
 							if(cacheDB != null) {
-								indexColumn.setCacheDB(cacheDB);
+								indexColumn.setCacheDBBlocks(cacheDB);
 							}
 							indexColumn.setFieldsExpression(fld.values());
 							if (!indexes.containsKey(type)) {
