@@ -1,12 +1,15 @@
 package org.openplacereviews.opendb.scheduled;
 
 import java.util.Date;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.BotManager;
+import org.openplacereviews.opendb.service.BotManager.BotInfo;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,22 +26,41 @@ public class OpenDBScheduledServices {
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBScheduledServices.class);
 	private static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
 	
-	@Value("${opendb.block-create.minSecondsInterval}")
+	@Value("${opendb.block-create.minSecondsInterval:15}")
 	public int minSecondsInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS;
 	
-	@Value("${opendb.block-create.minCapacity}")
+	@Value("${opendb.block-create.minCapacity:0.8}")
 	public double minCapacity = 0.7;
 	
-	@Value("${opendb.block-create.maxSecondsInterval}")
+	@Value("${opendb.block-create.maxSecondsInterval:900}")
 	public int maxSecondsInterval = 60 * 15;
 	
-	@Value("${opendb.replicate.interval}")
-	public int replicateInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 10;
+	@Value("${opendb.replicate.interval:30}")
+	public int replicateInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 2;
+	
+	@Value("${opendb.bots.minInterval:1800}")
+	public int botsMinInterval = 1800;
 
 	private long previousReplicateCheck = 0;
 	
+	private long previousBotsCheck = 0;
+	
 	@Autowired
 	private BlocksManager blocksManager;
+	
+	@Autowired
+	private BotManager botManager;
+	
+	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
+	public void runBots() throws FailedVerificationException {
+		if (blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && blocksManager.isBlockCreationOn()
+				&& (System.currentTimeMillis() - previousBotsCheck) >= botsMinInterval * 1000l) {
+			previousBotsCheck = System.currentTimeMillis();
+			for(BotInfo bi :botManager.getBots().values()) {
+				botManager.startBot(bi.getId());
+			}
+		}
+	}
 	
 	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
 	public void replicateBlock() {

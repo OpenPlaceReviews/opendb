@@ -36,6 +36,11 @@ public class BotManager {
 		String id;
 		int version;
 		IOpenDBBot<?> instance;
+
+		
+		public String getId() {
+			return id;
+		}
 		
 		public IOpenDBBot<?> getInstance() {
 			return instance;
