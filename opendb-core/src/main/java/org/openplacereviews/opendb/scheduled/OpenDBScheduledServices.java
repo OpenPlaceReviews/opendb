@@ -45,14 +45,14 @@ public class OpenDBScheduledServices {
 		if(blocksManager.isReplicateOn()) {
 			try {
 				long now = System.currentTimeMillis() / 1000;
-				if (previousReplicateCheck - now > replicateInterval) {
+				if (now - previousReplicateCheck > replicateInterval) {
 					blocksManager.replicate();
 					// ignore if replication was successful or not
 					// exception would mean network failure and conflicts will need to be resolved manually
 					previousReplicateCheck = now;
+					LOGGER.info(String.format("Replication successful %s", new Date())); 
+							//now, previousReplicateCheck, replicateInterval));
 				}
-				LOGGER.info(String.format("Replication successful %s: %d < %d + %d", 
-						new Date(), now, previousReplicateCheck, replicateInterval));
 			} catch (Exception e) {
 				LOGGER.error("Error replication: " + e.getMessage(), e);
 			}
