@@ -117,6 +117,7 @@
 			</div>
 		<p></p>
 			<div class="btn-group">
+				<input type="button" value="Refresh" id="refresh-metrics" />
 				<input type="button" value="Reset Group A" id="reset-metrics-a" />
         		<input type="button" value="Reset Group B" id="reset-metrics-b" />
 			</div>
@@ -726,6 +727,13 @@
             .done(function(data){  metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
             .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
         });
+        
+        $("#refresh-metrics").click(function(){
+        	$.get("/api/metrics", {})
+            .done(function(data){  metricsData = data.metrics; setMetricsDataToTable(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
         $("#reset-metrics-a").click(function(){
         	$.post("/api/metrics-reset?cnt=1", {})
             .done(function(data){  metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
