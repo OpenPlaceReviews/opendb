@@ -295,10 +295,10 @@ public class BlocksManager {
 		if(isReplicateOn()) {
 			try {
 				String from = blockchain.getLastBlockRawHash();
-				OpBlock[] replicateBlockHeaders = formatter.fromJson(
+				BlocksListResult replicateBlockHeaders = formatter.fromJson(
 						readerFromUrl(replicateUrl + "blocks?from=" + from), 
-								OpBlock[].class);
-				LinkedList<OpBlock> headersToReplicate = new LinkedList<OpBlock>(Arrays.asList(replicateBlockHeaders));
+								BlocksListResult.class);
+				LinkedList<OpBlock> headersToReplicate = replicateBlockHeaders.blocks;
 				if(!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
 					if(!OUtils.equals(headersToReplicate.peekFirst().getRawHash(), from)) {
 						logSystem.logError(headersToReplicate.peekFirst(), ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS, 
@@ -575,6 +575,11 @@ public class BlocksManager {
 			return candidates;
 		}
 		return null;
+	}
+	
+	public static class BlocksListResult {
+		public LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
+		public int blockDepth;
 	}
 
 	private static final PerformanceMetric mBlockAddOpp = PerformanceMetrics.i().getMetric("block.mgmt.addop");

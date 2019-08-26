@@ -1,14 +1,29 @@
 package org.openplacereviews.opendb.api;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.service.HistoryManager;
-import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
 import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.BlocksManager.BlocksListResult;
+import org.openplacereviews.opendb.service.HistoryManager;
+import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.LogOperationService.LogEntry;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -21,8 +36,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import java.util.*;
 
 @Controller
 @RequestMapping("/api")
@@ -114,10 +127,7 @@ public class ApiController {
 		public List<String> sblocks = new ArrayList<String>();
 	}
 
-	protected static class BlocksResult {
-		public List<OpBlock> blocks;
-		public int blockDepth;
-	}
+	
 
 	protected static class ObjectsResult {
 		public Collection<OpObject> objects;
@@ -140,12 +150,12 @@ public class ApiController {
 	@ResponseBody
 	public String blocksList(@RequestParam(required = false, defaultValue = "100") int depth,
 			@RequestParam(required = false) String from) throws FailedVerificationException {
-		BlocksResult br = new BlocksResult();
+		BlocksListResult br = new BlocksListResult();
 		OpBlockChain blc = manager.getBlockchain();
 		br.blockDepth = blc.getDepth();
 		if (from != null) {
 			if (OUtils.isEmpty(from)) {
-				br.blocks = new ArrayList<OpBlock>(blc.getBlockHeaders(-1));
+				br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(-1));
 				Collections.reverse(br.blocks);
 			} else {
 				OpBlock found = blc.getBlockHeaderByRawHash(from);
@@ -157,11 +167,11 @@ public class ApiController {
 						br.blocks.remove(0);
 					}
 				} else {
-					br.blocks = new ArrayList<OpBlock>(blc.getBlockHeaders(3));
+					br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(3));
 				}
 			}
 		} else {
-			br.blocks = blc.getBlockHeaders(depth);
+			br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(depth));
 		}
 		
 		return formatter.fullObjectToJson(br);
