@@ -51,7 +51,8 @@ public class OpenDBScheduledServices {
 					// exception would mean network failure and conflicts will need to be resolved manually
 					previousReplicateCheck = now;
 				}
-				LOGGER.error(String.format("Replication successful %s", new Date()));
+				LOGGER.info(String.format("Replication successful %s: %d < %d + %d", 
+						new Date(), now, previousReplicateCheck, replicateInterval));
 			} catch (Exception e) {
 				LOGGER.error("Error replication: " + e.getMessage(), e);
 			}
