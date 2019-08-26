@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -136,14 +137,14 @@ public class ApiController {
 	
 	protected static class MetricResult {
 		public String id;
-		public int count;
-		public int totalSec;
-		public int avgMs;
+		public int[] count;
+		public int[] totalSec;
+		public int[] avgMs;
 		
 	}
 	
 	protected static class MetricsResult {
-		public List<MetricResult> metrics = new ArrayList<ApiController.MetricResult>();
+		public List<MetricResult> metrics = new ArrayList<>();
 	}
 
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
@@ -206,19 +207,34 @@ public class ApiController {
 		}
 		return formatter.fullObjectToJson(op);
 	}
+	
+	
+	@PostMapping(path = "/metrics-reset", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String metricsReset(@RequestParam(required = true) int cnt) throws FailedVerificationException {
+		PerformanceMetrics.i().reset(cnt);
+		return metrics();
+	}
 
 	@GetMapping(path = "/metrics", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String metrics() throws FailedVerificationException {
 		MetricsResult ms = new MetricsResult();
 		PerformanceMetrics inst = PerformanceMetrics.i();
-		for(PerformanceMetric p : new TreeMap<>(inst.getMetrics()).values()) {
+		TreeMap<String, PerformanceMetric> mp = new TreeMap<>(inst.getMetrics());
+		int l = PerformanceMetrics.METRICS_COUNT + 1;
+		for (PerformanceMetric p : mp.values()) {
 			MetricResult r = new MetricResult();
-			r.count = p.getInvocations();
 			r.id = p.getName();
-			r.totalSec = (int) (p.getDuration() / 1e9);
-			if(r.count > 0) {
-				r.avgMs = (int) (p.getDuration() / 1e6 / r.count);
+			r.count = new int[l];
+			r.totalSec = new int[l];
+			r.avgMs = new int[l];
+			for (int i = 0; i < l; i++) {
+				r.count[i] = p.getInvocations(i);
+				r.totalSec[i] = (int) (p.getDuration(i) / 1e9);
+				if (r.count[i] > 0) {
+					r.avgMs[i] = (int) (p.getDuration(i) / 1e6 / r.count[i]);
+				}
 			}
 			ms.metrics.add(r);
 		}

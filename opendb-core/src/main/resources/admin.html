@@ -106,6 +106,21 @@
     
     <div id="metrics" class="tab-pane fade">
         <h3>Metrics</h3>
+        <p></p>
+        	<div class="btn-group btn-group-toggle" >
+    			<input type="radio" name="metrics-group" id="metrics-all" autocomplete="off" checked/>
+    			<label for="metrics-all">All</label>
+    			<input type="radio" name="metrics-group" id="metrics-a" autocomplete="off"/>
+    			<label for="metrics-a">Group A</label>
+    			<input type="radio" name="metrics-group" id="metrics-b" autocomplete="off"/>
+    			<label for="metrics-b">Group B</label>
+			</div>
+		<p></p>
+			<div class="btn-group">
+				<input type="button" value="Reset Group A" id="reset-metrics-a" />
+        		<input type="button" value="Reset Group B" id="reset-metrics-b" />
+			</div>
+		<p></p>
         <div id="metrics-list">
         </div>
     </div>
@@ -284,6 +299,7 @@
 </body>
 <script>
     var loginName = "";
+    var metricsData = [];
 
     function loadDataDelay(d=1500) {
         setTimeout(function() { loadData(); }, d);
@@ -337,37 +353,50 @@
     }
     
     
+    function setMetricsDataToTable() {
+    	var gid = 0;
+    	if($("#metrics-a").prop("checked")) {
+    		gid = 1;
+    	}
+    	if($("#metrics-b").prop("checked")) {
+    		gid = 2;
+    	}
+    	var items = "";
+        items += "<table border='1'>";
+        items += "<tr>";
+        items += "<th><b>Id</b><th>";
+        items += "<th><b>Count</b><th>";
+        items += "<th><b>Total (s)</b><th>";
+        items += "<th><b>Average (ms)</b><th>";
+        items += "<th><b>Throughput / sec</b><th>";
+        items += "</tr>";
+        
+        for(var i = 0; i < metricsData.length; i++)  {
+            let item = metricsData[i];
+            items += "<tr>";
+            var lid = item.id;
+            if(lid.length > 50) {
+                lid = lid.substring(0, 50);
+            }
+            items += "<td><b>"+lid+"</b><td>";
+            items += "<td>"+item.count[gid]+"<td>";
+            items += "<td>"+item.totalSec[gid]+"<td>";
+            items += "<td>"+item.avgMs[gid]+"<td>";
+            if(item.avgMs > 0) {
+                items += "<td>"+Number(1000/item.avgMs[gid]).toFixed(2)+"<td>";
+            } else {
+                items += "<td>-<td>";
+            } 
+            items += "</tr>";
+        }
+        items += "</table>";
+        $("#metrics-list").html(items);
+    }
+    
     function loadMetricsData() {
         $.getJSON( "/api/metrics", function( data ) {
-            var items = "";
-            items += "<table border='1'>";
-            items += "<tr>";
-            items += "<th><b>Id</b><th>";
-            items += "<th><b>Count</b><th>";
-            items += "<th><b>Total (s)</b><th>";
-            items += "<th><b>Average (ms)</b><th>";
-            items += "<th><b>Throughput / sec</b><th>";
-            items += "</tr>";
-            for(var i = 0; i < data.metrics.length; i++)  {
-                let item = data.metrics[i];
-                items += "<tr>";
-                var lid = item.id;
-                if(lid.length > 50) {
-                    lid = lid.substring(0, 50);
-                }
-                items += "<td><b>"+lid+"</b><td>";
-                items += "<td>"+item.count+"<td>";
-                items += "<td>"+item.totalSec+"<td>";
-                items += "<td>"+item.avgMs+"<td>";
-                if(item.avgMs > 0) {
-                    items += "<td>"+Number(1000/item.avgMs).toFixed(2)+"<td>";
-                } else {
-                    items += "<td>-<td>";
-                } 
-                items += "</tr>";
-            }
-            items += "</table>";
-            $("#metrics-list").html(items);
+        	metricsData = data.metrics;
+        	setMetricsDataToTable();
         });
     }
 
@@ -682,6 +711,27 @@
                 $("#search-key-input").show();
             }
         });
+        
+        $("#metrics-all").click(function() {
+        	setMetricsDataToTable();
+        });
+        $("#metrics-a").click(function() {
+        	setMetricsDataToTable();
+        });
+        $("#metrics-b").click(function() {
+        	setMetricsDataToTable();
+        });
+        $("#reset-metrics-b").click(function(){
+        	$.post("/api/metrics-reset?cnt=2", {})
+            .done(function(data){  metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        $("#reset-metrics-a").click(function(){
+        	$.post("/api/metrics-reset?cnt=1", {})
+            .done(function(data){  metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        
 
         $("#block-create-btn").click(function(){
             $.post("/api/mgmt/create", {})
