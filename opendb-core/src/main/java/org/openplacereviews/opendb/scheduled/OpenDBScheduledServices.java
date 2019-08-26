@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb.scheduled;
 
+import java.util.Date;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
@@ -42,13 +44,14 @@ public class OpenDBScheduledServices {
 	public void replicateBlock() {
 		if(blocksManager.isReplicateOn()) {
 			try {
-			long now = System.currentTimeMillis() / 1000;
-			if(previousReplicateCheck - now > replicateInterval) {
-				blocksManager.replicate();
-				// ignore if replication was successful or not
-				// exception would mean network failure and conflicts will need to be resolved manually
-				previousReplicateCheck = now;
-			}
+				long now = System.currentTimeMillis() / 1000;
+				if (previousReplicateCheck - now > replicateInterval) {
+					blocksManager.replicate();
+					// ignore if replication was successful or not
+					// exception would mean network failure and conflicts will need to be resolved manually
+					previousReplicateCheck = now;
+				}
+				LOGGER.error(String.format("Replication successful %s", new Date()));
 			} catch (Exception e) {
 				LOGGER.error("Error replication: " + e.getMessage(), e);
 			}
