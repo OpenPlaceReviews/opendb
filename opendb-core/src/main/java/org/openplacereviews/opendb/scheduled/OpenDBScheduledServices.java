@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb.scheduled;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
@@ -16,7 +18,7 @@ public class OpenDBScheduledServices {
 	protected static final int HOUR = 60 * MINUTE;
 	protected static final long DAY = 24l * HOUR;
 	
-	
+	protected static final Log LOGGER = LogFactory.getLog(OpenDBScheduledServices.class);
 	private static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
 	
 	@Value("${opendb.block-create.minSecondsInterval}")
@@ -37,14 +39,18 @@ public class OpenDBScheduledServices {
 	private BlocksManager blocksManager;
 	
 	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
-	public void replicateBlock() throws FailedVerificationException {
+	public void replicateBlock() {
 		if(blocksManager.isReplicateOn()) {
+			try {
 			long now = System.currentTimeMillis() / 1000;
 			if(previousReplicateCheck - now > replicateInterval) {
 				blocksManager.replicate();
 				// ignore if replication was successful or not
 				// exception would mean network failure and conflicts will need to be resolved manually
 				previousReplicateCheck = now;
+			}
+			} catch (Exception e) {
+				LOGGER.error("Error replication: " + e.getMessage(), e);
 			}
 		}
 	}
