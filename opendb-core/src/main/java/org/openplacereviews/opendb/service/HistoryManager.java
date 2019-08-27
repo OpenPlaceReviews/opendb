@@ -82,9 +82,9 @@ public class HistoryManager {
 		String sql;
 		switch (historyObjectRequest.historyType) {
 			case HISTORY_BY_USER: {
-				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
-						dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "u%1$d = ?", " AND ", historyObjectRequest.key.size()) +
-						" ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+				StringBuilder userString = getUserSqlRequestString(historyObjectRequest);
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+						userString + " ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
 			}
@@ -93,7 +93,7 @@ public class HistoryManager {
 				if (historyObjectRequest.key.size() > 1) {
 					objType = historyObjectRequest.key.get(0);
 				}
-				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						(objType == null ? "" : " type = ? AND ") + dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ",
 						(objType == null ? historyObjectRequest.key.size() : historyObjectRequest.key.size() - 1)) +
 						" ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
@@ -102,7 +102,7 @@ public class HistoryManager {
 			}
 			case HISTORY_BY_TYPE: {
 				historyObjectRequest.key = Collections.singletonList(historyObjectRequest.key.get(0));
-				sql = "SELECT u1, u2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
 						" WHERE type = ?" + " ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
@@ -110,8 +110,32 @@ public class HistoryManager {
 		}
 	}
 
+	private StringBuilder getUserSqlRequestString(HistoryObjectRequest historyObjectRequest) {
+		StringBuilder userString = new StringBuilder();
+		int k = 1;
+		for (String key : historyObjectRequest.key) {
+			if (key.contains(":")) {
+				if (userString.length() == 0) {
+					userString.append(" usr_").append(k).append(" = ? AND login_").append(k).append(" = ? ");
+				} else {
+					userString.append(" AND usr_").append(k).append(" = ? AND login_").append(k).append(" = ? ");
+				}
+			} else {
+				if (userString.length() == 0) {
+					userString.append(" usr_").append(k).append(" = ? ");
+				} else {
+					userString.append(" AND usr_").append(k).append(" = ? ");
+				}
+			}
+			k++;
+		}
+		return userString;
+	}
+
 	protected void loadHistory(String sql, HistoryObjectRequest historyObjectRequest) {
-		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, historyObjectRequest.key.toArray(), new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
+		Object[] keyObject = historyObjectRequest.key.toArray();
+		keyObject = generateUserSearchObject(historyObjectRequest, keyObject);
+		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, keyObject, new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
 			@Override
 			public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
@@ -120,27 +144,36 @@ public class HistoryManager {
 				List<HistoryEdit> allObjects = new LinkedList<>();
 				while (rs.next()) {
 					List<String> users = new ArrayList<>();
-					for (int i = 1; i <= 2; i++) {
+					String user = "";
+					for (int i = 1; i <= 4; i++) {
 						if (rs.getString(i) != null) {
-							users.add(rs.getString(i));
+							if (user.length() == 0) {
+								user = rs.getString(i);
+							} else {
+								user += ":" + rs.getString(i);
+							}
+							if (i % 2 == 0) {
+								users.add(user);
+								user = "";
+							}
 						}
 					}
 					List<String> ids = new ArrayList<>();
-					ids.add(rs.getString(10));
-					for (int i = 3; i <= 2 + MAX_KEY_SIZE; i++) {
+					ids.add(rs.getString(12));
+					for (int i = 5; i <= 4 + MAX_KEY_SIZE; i++) {
 						if (rs.getString(i) != null) {
 							ids.add(rs.getString(i));
 						}
 					}
 					HistoryEdit historyObject = new HistoryEdit(
 							users,
-							rs.getString(10),
-							formatter.parseObject(rs.getString(9)),
-							formatFullDate(rs.getTimestamp(8)),
-							HistoryManager.Status.getStatus(rs.getInt(11))
+							rs.getString(12),
+							formatter.parseObject(rs.getString(11)),
+							formatFullDate(rs.getTimestamp(10)),
+							HistoryManager.Status.getStatus(rs.getInt(13))
 					);
 					if (historyObject.getStatus().equals(HistoryManager.Status.EDITED)) {
-						historyObject.setDeltaChanges(formatter.fromJsonToTreeMap(rs.getString(9)));
+						historyObject.setDeltaChanges(formatter.fromJsonToTreeMap(rs.getString(11)));
 					}
 					historyObject.setId(ids);
 
@@ -157,7 +190,39 @@ public class HistoryManager {
 		});
 	}
 
-	
+	private Object[] generateUserSearchObject(HistoryObjectRequest historyObjectRequest, Object[] keyObject) {
+		if (HISTORY_BY_USER.equals(historyObjectRequest.historyType)) {
+			int loginSize = 0;
+			for (String key : historyObjectRequest.key) {
+				if (key.contains(":")) {
+					loginSize++;
+				}
+			}
+			keyObject = new Object[historyObjectRequest.key.size() + loginSize];
+
+			int i = -1;
+			for (String user : historyObjectRequest.key) {
+				if (user.contains(":")) {
+					String[] args = user.split(":");
+					keyObject[++i] = args[0];
+					keyObject[++i] = args[1];
+				} else {
+					if (i == -1) {
+						keyObject[0] = user;
+						i++;
+					} else {
+						if (loginSize == 0) {
+							keyObject[1] = user;
+						} else {
+							keyObject[2] = user;
+						}
+					}
+				}
+			}
+		}
+		return keyObject;
+	}
+
 
 	public Map<List<String>, List<HistoryEdit>> generateHistoryObj(Map<List<String>, List<HistoryEdit>> historyMap, String sort) {
 		Map<List<String>, List<HistoryEdit>> newHistoryMap = new LinkedHashMap<>();
