@@ -1,11 +1,9 @@
 package org.openplacereviews.opendb.scheduled;
 
 import java.util.Date;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.BotManager;
@@ -44,6 +42,8 @@ public class OpenDBScheduledServices {
 	private long previousReplicateCheck = 0;
 	
 	private long previousBotsCheck = 0;
+	
+	private long opsAppeared = 0;
 	
 	@Autowired
 	private BlocksManager blocksManager;
@@ -89,14 +89,21 @@ public class OpenDBScheduledServices {
 		int sz = blocksManager.getBlockchain().getQueueOperations().size();
 		if(blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && sz > 0 && 
 				blocksManager.isBlockCreationOn()) {
-			OpBlock hd = blocksManager.getBlockchain().getLastBlockHeader();
-			long timePast = (System.currentTimeMillis() - (hd == null ?  0 : hd.getDate(OpBlock.F_DATE))) / 1000; 
+//			OpBlock hd = blocksManager.getBlockchain().getLastBlockHeader();
+//			long timePast = (System.currentTimeMillis() - (hd == null ?  0 : hd.getDate(OpBlock.F_DATE))) / 1000;
+			if (opsAppeared == 0) {
+				opsAppeared = System.currentTimeMillis();
+			}
+			long timePast = (System.currentTimeMillis() - opsAppeared) / 1000;
 			double cp = blocksManager.getQueueCapacity();
 			if(timePast > maxSecondsInterval) {
 				blocksManager.createBlock(0);
+				opsAppeared = 0;
 			} else if(timePast > minSecondsInterval && cp >= minCapacity) {
 				blocksManager.createBlock(minCapacity);
 			}
+		} else if(sz == 0) {
+			opsAppeared = 0;
 		}
 	}
 }
