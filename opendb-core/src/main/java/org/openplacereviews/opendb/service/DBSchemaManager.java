@@ -44,19 +44,18 @@ public class DBSchemaManager {
 	private static final int OPENDB_SCHEMA_VERSION = 1;
 	
 	// //////////SYSTEM TABLES DDL ////////////
-	protected static String SETTINGS_TABLE = "opendb_settings";
-	protected static String BLOCKS_TABLE = "blocks";
-	protected static String OPERATIONS_TABLE = "operations";
-	protected static String OBJS_TABLE = "objs";
-	protected static String OPERATIONS_TRASH_TABLE = "operations_trash";
-	protected static String BLOCKS_TRASH_TABLE = "blocks_trash";
-	protected static String EXT_RESOURCE_TABLE = "resources";
-	protected static String OP_OBJ_HISTORY_TABLE = "op_obj_history";
+	protected static final String SETTINGS_TABLE = "opendb_settings";
+	protected static final String BLOCKS_TABLE = "blocks";
+	protected static final String OPERATIONS_TABLE = "operations";
+	protected static final String OBJS_TABLE = "objs";
+	protected static final String OPERATIONS_TRASH_TABLE = "operations_trash";
+	protected static final String BLOCKS_TRASH_TABLE = "blocks_trash";
+	protected static final String EXT_RESOURCE_TABLE = "resources";
+	protected static final String OP_OBJ_HISTORY_TABLE = "op_obj_history";
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	protected static final int MAX_KEY_SIZE = 5;
-	protected static final int USER_KEY_SIZE = 2;
-	protected static final int HISTORY_TABLE_SIZE = MAX_KEY_SIZE + USER_KEY_SIZE + 6;
+	protected static final int HISTORY_USERS_SIZE = 2;
 
 	// loaded from config
 	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
@@ -126,8 +125,9 @@ public class DBSchemaManager {
 		registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", INDEXED);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", INDEXED);
 		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", INDEXED);
-		for (int i = 1; i <= USER_KEY_SIZE; i++) {
-			registerColumn(OP_OBJ_HISTORY_TABLE, "u" + i, "text", INDEXED);
+		for (int i = 1; i <= HISTORY_USERS_SIZE; i++) {
+			registerColumn(OP_OBJ_HISTORY_TABLE, "usr_" + i, "text", INDEXED);
+			registerColumn(OP_OBJ_HISTORY_TABLE, "login_" + i, "text", INDEXED);
 		}
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
 			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", INDEXED);
@@ -314,6 +314,8 @@ public class DBSchemaManager {
 					String name = (String) entry.get("name");
 					String colType = (String) entry.get("sqltype");
 					String index = (String) entry.get("index");
+					Integer cacheRuntime = (Integer) entry.get("cache-runtime-max");
+					Integer cacheDB = (Integer) entry.get("cache-db-max");
 					IndexType di = null;
 					if(index != null) {
 						if(index.equalsIgnoreCase("true")) {
@@ -331,6 +333,12 @@ public class DBSchemaManager {
 					if (fld != null) {
 						for (String type : ott.types) {
 							OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
+							if(cacheRuntime != null) {
+								indexColumn.setCacheRuntimeBlocks(cacheRuntime);
+							}
+							if(cacheDB != null) {
+								indexColumn.setCacheDBBlocks(cacheDB);
+							}
 							indexColumn.setFieldsExpression(fld.values());
 							if (!indexes.containsKey(type)) {
 								indexes.put(type, new TreeMap<String, OpIndexColumn>());
@@ -468,9 +476,9 @@ public class DBSchemaManager {
 
 	public void insertObjIntoHistoryTableBatch(List<Object[]> args, String table, JdbcTemplate jdbcTemplate) {
 		jdbcTemplate.batchUpdate("INSERT INTO " + table + "(blockhash, ophash, type, time, obj, status," +
-				generatePKString(table, "u%1$d", ",", USER_KEY_SIZE) + "," +
+				generatePKString(table, "usr_%1$d, login_%1$d", ",", HISTORY_USERS_SIZE) + "," +
 				generatePKString(table, "p%1$d", ",", MAX_KEY_SIZE) + ") VALUES ("+
-				generatePKString(table, "?", ",", HISTORY_TABLE_SIZE) + ")", args);
+				generatePKString(table, "?", ",", HISTORY_USERS_SIZE * 2 + MAX_KEY_SIZE + 6 ) + ")", args);
 	}
 
 	// Query / insert values

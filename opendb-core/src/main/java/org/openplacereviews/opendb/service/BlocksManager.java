@@ -6,6 +6,7 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
@@ -163,6 +164,7 @@ public class BlocksManager {
 		if (blockchain == null) {
 			return false;
 		}
+		Metric m = mBlockAddOpp.start();
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
 		if (!existing) {
@@ -176,6 +178,7 @@ public class BlocksManager {
 				// don't remove relations because we can rely that operation hash / content will be the same 
 //				dataManager.removeOperations(Collections.singleton(op.getHash()));
 			}
+			m.capture();
 		}
 		return added;
 	}
@@ -202,7 +205,7 @@ public class BlocksManager {
 		
 		Metric m = mBlockCreateAddOps.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		DeletedObjectCtx hctx = new DeletedObjectCtx();
 		for (OpOperation o : candidates) {
 			if(!blc.addOperation(o, hctx)) {
 				return null;
@@ -224,22 +227,21 @@ public class BlocksManager {
 		return replicateValidBlock(blc, opBlock, hctx);
 	}
 
-	private OpBlock replicateValidBlock(OpBlockChain blockChain, OpBlock opBlock, HistoryManager.HistoryObjectCtx hctx) {
+	private OpBlock replicateValidBlock(OpBlockChain blockChain, OpBlock opBlock, DeletedObjectCtx hctx) {
 		Metric pm = mBlockReplicate.start();
 		// insert block could fail if hash is duplicated but it won't hurt the system
 		Metric m = mBlockSaveBlock.start();
 		dataManager.insertBlock(opBlock);
 		m.capture();
 		
-		if (historyManager.isRunning()) {
-			m = mBlockSaveHistory.start();
-			historyManager.saveHistoryForBlockOperations(opBlock, hctx);
-			m.capture();
-		}
+		
+		m = mBlockSaveHistory.start();
+		historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+		m.capture();
 		
 		// change only after block is inserted into db
 		m = mBlockRebase.start();
-		boolean changeParent = blockchain.rebaseOperations(blockChain);
+		boolean changeParent = this.blockchain.rebaseOperations(blockChain);
 		if(!changeParent) {
 			return null;
 		}
@@ -293,10 +295,10 @@ public class BlocksManager {
 		if(isReplicateOn()) {
 			try {
 				String from = blockchain.getLastBlockRawHash();
-				OpBlock[] replicateBlockHeaders = formatter.fromJson(
+				BlocksListResult replicateBlockHeaders = formatter.fromJson(
 						readerFromUrl(replicateUrl + "blocks?from=" + from), 
-								OpBlock[].class);
-				LinkedList<OpBlock> headersToReplicate = new LinkedList<OpBlock>(Arrays.asList(replicateBlockHeaders));
+								BlocksListResult.class);
+				LinkedList<OpBlock> headersToReplicate = replicateBlockHeaders.blocks;
 				if(!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
 					if(!OUtils.equals(headersToReplicate.peekFirst().getRawHash(), from)) {
 						logSystem.logError(headersToReplicate.peekFirst(), ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS, 
@@ -344,7 +346,7 @@ public class BlocksManager {
 		Metric m = mBlockSync.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		OpBlock res;
-		HistoryManager.HistoryObjectCtx hctx = historyManager.isRunning() ? new HistoryManager.HistoryObjectCtx("") : null;
+		DeletedObjectCtx hctx = new DeletedObjectCtx();
 		res = blc.replicateBlock(block, hctx);
 		m.capture();
 		if(res == null) {
@@ -358,25 +360,20 @@ public class BlocksManager {
 	}
 	
 	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
-		Set<String> deleted;
-		try {
-			deleted = blockchain.removeQueueOperations(operationsToDelete);
-		} catch (RuntimeException e) {
-			// handle non last operations - slow method
-			deleted = new TreeSet<String>();
-			OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-			for (OpOperation o : blockchain.getQueueOperations()) {
-				if (!operationsToDelete.contains(o.getRawHash())) {
-					if (!blc.addOperation(o)) {
-						return null;
-					}
-				} else {
-					deleted.add(o.getRawHash());
+		Set<String> deleted = new TreeSet<String>();
+		// handle non last operations - slow method
+		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
+		for (OpOperation o : blockchain.getQueueOperations()) {
+			if (!operationsToDelete.contains(o.getRawHash())) {
+				if (!blc.addOperation(o)) {
+					return null;
 				}
+			} else {
+				deleted.add(o.getRawHash());
 			}
-			blockchain = blc; 
 		}
 		dataManager.removeOperations(deleted);
+		blockchain = blc;
 		return deleted;
 	}
 	
@@ -579,7 +576,13 @@ public class BlocksManager {
 		}
 		return null;
 	}
+	
+	public static class BlocksListResult {
+		public LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
+		public int blockDepth;
+	}
 
+	private static final PerformanceMetric mBlockAddOpp = PerformanceMetrics.i().getMetric("block.mgmt.addop");
 	private static final PerformanceMetric mBlockCreate = PerformanceMetrics.i().getMetric("block.mgmt.create.total");
 	private static final PerformanceMetric mBlockCreateAddOps = PerformanceMetrics.i().getMetric("block.mgmt.create.addops");
 	private static final PerformanceMetric mBlockCreateValidate = PerformanceMetrics.i().getMetric("block.mgmt.create.validate");

@@ -15,8 +15,10 @@ import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -25,8 +27,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.service.DBSchemaManager.OP_OBJ_HISTORY_TABLE;
@@ -69,12 +70,20 @@ public class DBHistoryManagerTest {
 		generateDBConnection();
 		OpBlockChain opBlockChain = dbConsensusManager.init(metadataDb);
 		blocksManager.init(metadataDb, opBlockChain);
-		generateOperations(formatter, opBlockChain);
+		generateOperationsByList(formatter, opBlockChain, BLOCKCHAIN_LIST);
 
 		OpBlock opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
+
+		DataSourceTransactionManager txManager = new DataSourceTransactionManager();
+		txManager.setDataSource(jdbcTemplate.getDataSource());
+		TransactionTemplate txTemplate = new TransactionTemplate();
+		txTemplate.setTransactionManager(txManager);
+		ReflectionTestUtils.setField(historyManager, "isRunning", true);
+		ReflectionTestUtils.setField(historyManager, "txTemplate", txTemplate);
+
 		historyManager.saveHistoryForBlockOperations(opBlock, null);
 
-		assertEquals(3, getAmountFromHistoryTableByObj("osm.place", Arrays.asList("12345662")));
+		assertEquals(2, getAmountFromHistoryTableByObj("osm.place", Arrays.asList("12345662")));
 
 		HistoryManager.HistoryObjectRequest historyObjectRequest = new HistoryManager.HistoryObjectRequest(
 				HistoryManager.HISTORY_BY_OBJECT,
@@ -85,7 +94,7 @@ public class DBHistoryManagerTest {
 		historyManager.retrieveHistory(historyObjectRequest);
 
 		List<HistoryManager.HistoryEdit> historyObject = historyObjectRequest.historySearchResult.get(Arrays.asList("osm.place","12345662"));
-		assertEquals(3, historyObject.size());
+		assertEquals(2, historyObject.size());
 
 	}
 

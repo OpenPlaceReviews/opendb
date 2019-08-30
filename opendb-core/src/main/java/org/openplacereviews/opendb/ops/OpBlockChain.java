@@ -6,7 +6,6 @@ import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
-import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectCtx;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
@@ -231,43 +230,11 @@ public class OpBlockChain {
 	}
 
 
-	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
-		validateIsUnlocked();
-		Iterator<OpOperation> descendingIterator = getQueueOperations().descendingIterator();
-		OpOperation nonDeletedLast = null;
-		while(descendingIterator.hasNext()) {
-			OpOperation no = descendingIterator.next();
-			if(nonDeletedLast == null){
-				if(!operationsToDelete.contains(no.getRawHash())) {
-					nonDeletedLast = no;
-				}
-			} else {
-				if(operationsToDelete.contains(no.getRawHash())) {
-					rules.error(nonDeletedLast, ErrorType.MGMT_CANT_DELETE_NON_LAST_OPERATIONS, nonDeletedLast.getRawHash(), no.getRawHash());
-				}
-			}
-		}
-		Set<String> result;
-		locked = LOCKED_OP_IN_PROGRESS;
-		try {
-			result = atomicDeleteOperations(operationsToDelete);
-			for(OpPrivateObjectInstancesById o : objByName.values()) {
-				o.resetAfterEdit();
-			}
-			locked = UNLOCKED;
-		} finally {
-			if (locked == LOCKED_OP_IN_PROGRESS) {
-				locked = LOCKED_ERROR;
-			}
-		}
-		return result;
-	}
-
 	public synchronized OpBlock replicateBlock(OpBlock block) {
 		return replicateBlock(block, null);
 	}
 
-	public synchronized OpBlock replicateBlock(OpBlock block, HistoryObjectCtx hctx) {
+	public synchronized OpBlock replicateBlock(OpBlock block, DeletedObjectCtx hctx) {
 		block.checkImmutable();
 		validateIsUnlocked();
 		if (!isQueueEmpty()) {
@@ -354,7 +321,7 @@ public class OpBlockChain {
 
 	}
 
-	public boolean addOperation(OpOperation op, HistoryObjectCtx historyObjectCtx) {
+	public boolean addOperation(OpOperation op, DeletedObjectCtx historyObjectCtx) {
 		return addOperation(op, false, historyObjectCtx);
 	}
 
@@ -368,7 +335,7 @@ public class OpBlockChain {
 	/**
 	 * Adds operation and validates it to block chain
 	 */
-	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, HistoryObjectCtx historyObjectCtx) {
+	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, DeletedObjectCtx historyObjectCtx) {
 		op.checkImmutable();
 		validateIsUnlocked();
 		LocalValidationCtx validationCtx = new LocalValidationCtx("");
@@ -436,49 +403,25 @@ public class OpBlockChain {
 
 	private void atomicRebaseOperations(OpBlockChain newParent) {
 		// all blocks must be present in new parent
-		for (OpBlock b : blocks.getAllBlocks()) {
-			for (OpOperation o : b.getOperations()) {
-				atomicRemoveOperationObj(o, null);
-			}
-		}
+		List<OpOperation> ops = new ArrayList<>(queueOperations);
 		blocks.clear();
-		Set<String> operationsToDelete = new TreeSet<String>();
-		for (OpOperation o : getQueueOperations()) {
-			operationsToDelete.add(o.getRawHash());
-		}
-		atomicDeleteOperations(operationsToDelete);
-
-		for (OpPrivateObjectInstancesById o : objByName.values()) {
-			o.resetAfterEdit();
-		}
-		atomicSetParent(newParent);
-	}
-
-	private Set<String> atomicDeleteOperations(Set<String> operationsToDelete) {
-		Set<String> deletedOps = new TreeSet<>();
-		Map<String, List<OpOperation>> nonDeletedOpsByTypes = new HashMap<String, List<OpOperation>>();
-		for (OpOperation o : getQueueOperations()) {
-			List<OpOperation> prevByType = nonDeletedOpsByTypes.get(o.getType());
-			if (operationsToDelete.contains(o.getRawHash())) {
-				deletedOps.add(o.getRawHash());
-				atomicRemoveOperationObj(o, nonDeletedOpsByTypes.get(o.getType()));
-			} else {
-				if(prevByType == null) {
-					prevByType = new ArrayList<OpOperation>();
-					nonDeletedOpsByTypes.put(o.getType(), prevByType);
-				}
-				prevByType.add(o);
-			}
-		}
-
-		Iterator<OpOperation> it = queueOperations.iterator();
-		while (it.hasNext()) {
+		blockOperations.clear();
+		queueOperations.clear();
+		objByName.clear();
+		Iterator<OpOperation> it = ops.iterator();
+		while(it.hasNext()) {
 			OpOperation o = it.next();
-			if(operationsToDelete.contains(o.getRawHash())) {
+			if(newParent.getOperationByHash(o.getRawHash()) != null) {
 				it.remove();
 			}
 		}
-		return deletedOps;
+		//  TODO check history object context
+		for (OpOperation o : ops) {
+			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>");
+			validateAndPrepareOperation(o, validationCtx, null);
+			atomicAddOperationAfterPrepare(o, validationCtx);
+		}
+		atomicSetParent(newParent);
 	}
 
 
@@ -500,41 +443,6 @@ public class OpBlockChain {
 			nid.putObjects(cid, true);
 
 		}
-	}
-
-	private void atomicRemoveOperationObj(OpOperation op, List<OpOperation> prevOperationsSameType) {
-		// delete new objects by name
-		for (OpObject ok : op.getCreated()) {
-			List<String> id = ok.getId();
-			if (id != null && id.size() > 0) {
-				String objType = op.getType();
-				OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-				OpObject currentObj = oinf.getObjectById(id);
-				if (ok.equals(currentObj)) {
-					OpObject p = null;
-					if (prevOperationsSameType != null) {
-						p = findLast(prevOperationsSameType, id);
-					}
-					if (p == null) {
-						oinf.remove(id);
-					} else {
-						oinf.add(id, p);
-					}
-				}
-			}
-		}
-	}
-
-	private OpObject findLast(List<OpOperation> list, List<String> id) {
-		OpObject last = null;
-		for (OpOperation o : list) {
-			for (OpObject obj : o.getCreated()) {
-				if (OUtils.equals(obj.getId(), id)) {
-					last = obj;
-				}
-			}
-		}
-		return last;
 	}
 
 	public Deque<OpOperation> getQueueOperations() {
@@ -747,6 +655,15 @@ public class OpBlockChain {
 			request.objToSetCache.setCacheObject(cacheObject, request.editVersion);
 		}
 	}
+	
+	public int countAllObjects(String type) {
+		if(isNullBlock()) {
+			return 0;
+		}
+		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
+		int sz = oi.countObjects();
+		return sz + parent.countAllObjects(type);
+	}
 
 	public void fetchAllObjects(String type, ObjectsSearchRequest request) throws DBStaleException {
 		if(isNullBlock()) {
@@ -770,21 +687,24 @@ public class OpBlockChain {
 		}
 	}
 	
-
 	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + index.getIndexId() + ".total").start();
 		fetchObjectsInternal(type, request, index, argsToSearch);
+		m.capture();
 	}
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
-		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + (col == null ? "all" : col.getIndexId())).start(); 
 		if(isNullBlock()) {
 			return Collections.emptyMap();
 		}
+		String mid = "blc.fetch." + (col == null ? "all" : col.getIndexId());
+		mid += isDbAccessed()?  ".db" : ".ram";
+		Metric m = PerformanceMetrics.i().getMetric(mid).start();
 		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
 		// don't check for all queries
 		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
 		if(o != null) {
-			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, col, args);
+			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, getSuperblockSize(), col, args);
 			Iterator<Entry<CompoundKey, OpObject>> it = stream.iterator();
 			while(it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();
@@ -798,6 +718,7 @@ public class OpBlockChain {
 				}
 			}
 		}
+		m.capture();
 		if(request.limit < 0 || request.result.size() < request.limit) {
 			Map<CompoundKey, OpObject> prKeys = parent.fetchObjectsInternal(type, request, col, args);
 			// HERE we need to check that newer version doesn't exist in current blockchain 
@@ -815,7 +736,6 @@ public class OpBlockChain {
 				fetchedToCheck.putAll(prKeys);
 			}
 		}
-		m.capture();
 		return fetchedToCheck;
 	}
 
@@ -863,7 +783,7 @@ public class OpBlockChain {
 		parent.fetchBlockHeaders(lst, depth);
 	}
 
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
+	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
 		Metric pm = mPrepareTotal.start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
@@ -980,7 +900,7 @@ public class OpBlockChain {
 		return op;
 	}
 
-	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, HistoryObjectCtx hctx) {
+	private boolean prepareDeletedObjects(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
 		List<List<String>> deletedRefs = u.getDeleted();
 		ctx.deletedObjsCache.clear();
 
@@ -1149,6 +1069,8 @@ public class OpBlockChain {
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
 		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException;
+		
+		int countObjects(String type, Object... extraParamsWithCondition) throws DBStaleException;
 
 		OpOperation getOperation(String rawHash) throws DBStaleException ;
 
@@ -1157,6 +1079,19 @@ public class OpBlockChain {
 
 		OpBlock getBlockByHash(String rawHash) throws DBStaleException ;
 
+	}
+	
+	public static class DeletedObjectCtx {
+		public Map<String, List<OpObject>> deletedObjsCache = new LinkedHashMap<>();
+
+		public void putObjectToDeleteCache(String key, OpObject opObject) {
+			List<OpObject> list = deletedObjsCache.get(key);
+			if (list == null) {
+				list = new ArrayList<>();
+			}
+			list.add(opObject);
+			deletedObjsCache.put(key, list);
+		}
 	}
 
 	public static class ObjectsSearchRequest {

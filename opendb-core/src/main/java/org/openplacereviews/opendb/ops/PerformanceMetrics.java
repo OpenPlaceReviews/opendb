@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class PerformanceMetrics {
 	private static final PerformanceMetrics inst = new PerformanceMetrics();
+	public static final int METRICS_COUNT = 2;
 	public static PerformanceMetrics i() {
 		return inst;
 	}
@@ -39,6 +40,12 @@ public class PerformanceMetrics {
 		return getMetric(prefix + "." + key);
 	}
 	
+	public void reset(int c) {
+		for(PerformanceMetric p : metrics.values()) {
+			p.reset(c);
+		}
+	}
+	
 	
 	public PerformanceMetric getMetric(String key) {
 		if(!enabled) {
@@ -66,6 +73,11 @@ public class PerformanceMetrics {
 		String description;
 		AtomicInteger invocations = new AtomicInteger();
 		AtomicLong totalDuration = new AtomicLong();
+		AtomicInteger invocationsA = new AtomicInteger();
+		AtomicLong totalDurationA = new AtomicLong();
+		AtomicInteger invocationsB = new AtomicInteger();
+		AtomicLong totalDurationB = new AtomicLong();
+
 		
 		
 		private PerformanceMetric(int id, String name) {
@@ -92,11 +104,31 @@ public class PerformanceMetrics {
 			return description;
 		}
 		
-		public int getInvocations() {
+		public void reset(int c) {
+			if(c == 1) {
+				invocationsA.set(0);
+				totalDurationA.set(0);
+			} else if(c == 2) {
+				totalDurationB.set(0);
+				invocationsB.set(0);
+			}
+		}
+		
+		public int getInvocations(int c) {
+			if(c == 1) {
+				return invocationsA.get();
+			} else if(c == 2) {
+				return invocationsB.get();
+			}
 			return invocations.get();
 		}
 		
-		public long getDuration() {
+		public long getDuration(int c) {
+			if(c == 1) {
+				return totalDurationA.get();
+			} else if(c == 2) {
+				return totalDurationB.get();
+			}
 			return totalDuration.get();
 		}
 		
@@ -107,6 +139,10 @@ public class PerformanceMetrics {
 		long capture(long d) {
 			invocations.incrementAndGet();
 			totalDuration.addAndGet(d);
+			invocationsA.incrementAndGet();
+			totalDurationA.addAndGet(d);
+			invocationsB.incrementAndGet();
+			totalDurationB.addAndGet(d);
 			return d;
 		}
 	}

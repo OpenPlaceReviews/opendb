@@ -81,8 +81,12 @@ public class OUtils {
 		return true;
 	}
 	public static boolean equals(Object s1, Object s2) {
-		if(s1 == null) {
+		if(s1 == null || s2 == null) {
 			return s1 == s2;
+		}
+		if(s1 instanceof Number && s2 instanceof Number) {
+			return ((Number) s1).longValue() == ((Number) s2).longValue() && 
+					((Number) s1).doubleValue() == ((Number) s2).doubleValue();
 		}
 		return s1.equals(s2);
 	}

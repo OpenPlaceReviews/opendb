@@ -83,15 +83,13 @@
         <h3>Objects</h3>
 
         <label>Select type:&nbsp;</label><select id="type-list"></select>
-        <br>
-        <label>Search</label><select id="search-type-list">
-            <option selected value="all">All</option>
-            <option value="id">by Id</option>
-            <option value="osmid">by OsmId</option>
+        <br><br>
+        <label>Search:&nbsp;</label><select id="search-type-list">
+            <option selected value="all">all</option>
         </select>
-        <br>
+        <br><br>
         <div id="search-key-input" hidden="true">
-        <label>Input search key:</label><input type="text" id="search-key"/>
+        <label>Input search key:&nbsp;</label><input type="text" id="search-key"/>
         </div>
         <input type="submit" value="Search" id="load-objects-btn">
         <br><br>
@@ -108,6 +106,22 @@
     
     <div id="metrics" class="tab-pane fade">
         <h3>Metrics</h3>
+        <p></p>
+        	<div class="btn-group btn-group-toggle" >
+    			<input type="radio" name="metrics-group" id="metrics-all" autocomplete="off" checked/>
+    			<label for="metrics-all">All</label>
+    			<input type="radio" name="metrics-group" id="metrics-a" autocomplete="off"/>
+    			<label for="metrics-a">Group A</label>
+    			<input type="radio" name="metrics-group" id="metrics-b" autocomplete="off"/>
+    			<label for="metrics-b">Group B</label>
+			</div>
+		<p></p>
+			<div class="btn-group">
+				<input type="button" value="Refresh" id="refresh-metrics" />
+				<input type="button" value="Reset Group A" id="reset-metrics-a" />
+        		<input type="button" value="Reset Group B" id="reset-metrics-b" />
+			</div>
+		<p></p>
         <div id="metrics-list">
         </div>
     </div>
@@ -286,6 +300,7 @@
 </body>
 <script>
     var loginName = "";
+    var metricsData = [];
 
     function loadDataDelay(d=1500) {
         setTimeout(function() { loadData(); }, d);
@@ -339,37 +354,50 @@
     }
     
     
+    function setMetricsDataToTable() {
+    	var gid = 0;
+    	if($("#metrics-a").prop("checked")) {
+    		gid = 1;
+    	}
+    	if($("#metrics-b").prop("checked")) {
+    		gid = 2;
+    	}
+    	var items = "";
+        items += "<table border='1'>";
+        items += "<tr>";
+        items += "<th><b>Id</b><th>";
+        items += "<th><b>Count</b><th>";
+        items += "<th><b>Total (s)</b><th>";
+        items += "<th><b>Average (ms)</b><th>";
+        items += "<th><b>Throughput / sec</b><th>";
+        items += "</tr>";
+        
+        for(var i = 0; i < metricsData.length; i++)  {
+            let item = metricsData[i];
+            items += "<tr>";
+            var lid = item.id;
+            if(lid.length > 50) {
+                lid = lid.substring(0, 50);
+            }
+            items += "<td><b>"+lid+"</b><td>";
+            items += "<td>"+item.count[gid]+"<td>";
+            items += "<td>"+item.totalSec[gid]+"<td>";
+            items += "<td>"+item.avgMs[gid]+"<td>";
+            if(item.avgMs > 0) {
+                items += "<td>"+Number(1000/item.avgMs[gid]).toFixed(2)+"<td>";
+            } else {
+                items += "<td>-<td>";
+            } 
+            items += "</tr>";
+        }
+        items += "</table>";
+        $("#metrics-list").html(items);
+    }
+    
     function loadMetricsData() {
         $.getJSON( "/api/metrics", function( data ) {
-            var items = "";
-            items += "<table border='1'>";
-            items += "<tr>";
-            items += "<th><b>Id</b><th>";
-            items += "<th><b>Count</b><th>";
-            items += "<th><b>Total (s)</b><th>";
-            items += "<th><b>Average (ms)</b><th>";
-            items += "<th><b>Throughput / sec</b><th>";
-            items += "</tr>";
-            for(var i = 0; i < data.metrics.length; i++)  {
-                let item = data.metrics[i];
-                items += "<tr>";
-                var lid = item.id;
-                if(lid.length > 50) {
-                    lid = lid.substring(0, 50);
-                }
-                items += "<td><b>"+lid+"</b><td>";
-                items += "<td>"+item.count+"<td>";
-                items += "<td>"+item.totalSec+"<td>";
-                items += "<td>"+item.avgMs+"<td>";
-                if(item.avgMs > 0) {
-                    items += "<td>"+Number(1000/item.avgMs).toFixed(2)+"<td>";
-                } else {
-                    items += "<td>-<td>";
-                } 
-                items += "</tr>";
-            }
-            items += "</table>";
-            $("#metrics-list").html(items);
+        	metricsData = data.metrics;
+        	setMetricsDataToTable();
         });
     }
 
@@ -486,12 +514,13 @@
     function loadBlocksData() {
         $.getJSON( "/api/blocks", function( data ) {
             var items = "";
+            var blocks = data.blocks;
             // SHOW currentBlock, currentTx - as in progress or failed
-            $("#blocks-tab").html("Blocks (" + data.length + ")");
+            $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
             var superblockId = 0;
             var superblockHash = "";
-            for(var i = 0; i < data.length; i++)  {
-                let op = data[i];
+            for(var i = 0; i < blocks.length; i++)  {
+                let op = blocks[i];
                 items += "<br><li><b>Block id</b>: " + op.block_id;
                 items += "<br><b>Hash</b>: " + op.hash;
                 if(op.eval) {
@@ -620,6 +649,7 @@
             }, 1000);
         }
         $("#finish-edit-btn").show();
+        delete obj.eval;
         originObject = obj;
         editor = new JsonEditor('#json-display', obj);
         editor.load(obj);
@@ -652,7 +682,7 @@
 
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all") {
+            if (selectedSearchType === "all" || selectedSearchType === "count") {
                 $("#search-key-input").hide();
             } else {
                 $("#search-key-input").show();
@@ -660,13 +690,56 @@
         });
 
         $("#type-list").change(function () {
+            var type = $("#type-list").val();
+            $.getJSON( "/api/indices-by-type?type=" + type, function( data ) {
+                var searchTypes = "";
+                searchTypes += "<option value = 'all' selected>all</option>";
+                searchTypes += "<option value = 'id' >by id</option>";
+                searchTypes += "<option value = 'count' >count</option>";
+                for (var i = 0; i < data.length; i++) {
+                    var obj = data[i]
+                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
+                }
+
+                $("#search-type-list").html(searchTypes);
+                $("#search-key-input").hide();
+            });
+
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all") {
+            if (selectedSearchType === "all" || selectedSearchType === "count") {
                 $("#search-key-input").hide();
             } else {
                 $("#search-key-input").show();
             }
         });
+        
+        $("#metrics-all").click(function() {
+        	setMetricsDataToTable();
+        });
+        $("#metrics-a").click(function() {
+        	setMetricsDataToTable();
+        });
+        $("#metrics-b").click(function() {
+        	setMetricsDataToTable();
+        });
+        $("#reset-metrics-b").click(function(){
+        	$.post("/api/metrics-reset?cnt=2", {})
+            .done(function(data){  metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        
+        $("#refresh-metrics").click(function(){
+        	$.get("/api/metrics", {})
+            .done(function(data){  metricsData = data.metrics; setMetricsDataToTable(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#reset-metrics-a").click(function(){
+        	$.post("/api/metrics-reset?cnt=1", {})
+            .done(function(data){  metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+        
 
         $("#block-create-btn").click(function(){
             $.post("/api/mgmt/create", {})
@@ -739,77 +812,66 @@
             var key = $("#search-key").val();
             $("#json-display").hide();
             $("#finish-edit-btn").hide();
-
-            if (searchType === "id") {
-                let obj = {
-                    "type" : type,
-                    "key" : key
-                };
-                $.getJSON( "/api/object-by-id", obj, function( data ) {
+            
+			if (searchType === "count") {
+            	$.getJSON( "/api/objects-count?type=" + type, function( data ) {
                     var items = "";
-                    globalObjects = data;
-                    if (data != null) {
-                        items += "<br><li><b>Object id</b>: " + data.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects) \">";
-                        items += "<br><b>Comment</b>: " + data.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                            JSON.stringify(data, null, 4) + "</pre></details>";
-                        items += "</li>";
-                    }
+                    globalObjects = [];
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " + (data === null ? 0 : 1));
+                    $("#amount-objects").html("Count results: " + data.count);
                 });
-            } else if (searchType === "all") {
-                $.getJSON( "/api/objects?type="+type, function( data ) {
+            } else {
+            	let funcProcResults = function( data ) {
                     var items = "";
                     globalObjects = data.objects;
                     for(var i = 0; i < data.objects.length; i++)  {
-                        var obj = data.objects[i];
-                        items += "<br><li><b>Object id</b>:" + obj.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
-                        items += "<br><b>Comment</b>: " + obj.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                            JSON.stringify(obj, null, 4) + "</pre></details>";
-                        items += "</li>";
-                    }
-                    $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " +data.objects.length);
-                });
-            } else { //index
-                let obj = {
-                    "type" : type,
-                    "index": "osmid",
-                    "key" : key
-                };
-                $.getJSON( "/api/indices", obj, function( data ) {
-                    var items = "";
-                    globalObjects = data;
-                    for(var i = 0; i < data.length; i++)  {
-                        let obj = data[i];
+                        let obj = data.objects[i];
                         items += "<br><li><b>Object id</b>: " + obj.id;
-                        items += "<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
+                        items += "&nbsp;&nbsp;<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
                         items += "<br><b>Comment</b>: " + obj.comment;
                         items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                             JSON.stringify(obj, null, 4) + "</pre></details>";
                         items += "</li>";
                     }
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " + data.length);
-                });
+                    $("#amount-objects").html("Count results: " + data.objects.length);
+                };
+            	//index
+            	if(searchType === "all") {
+            		$.getJSON( "/api/objects?type=" + type, funcProcResults);
+            	} else if (searchType === "id") {
+                    let obj = {
+                        "type" : type,
+                        "key" : key
+                    };
+                    $.getJSON("/api/objects-by-id", obj, funcProcResults);
+            	} else {
+                	let obj = {
+                    	"type" : type,
+                    	"index": $("#search-type-list").val(),
+                    	"key" : key
+                	};
+                	$.getJSON( "/api/objects-by-index", obj, funcProcResults);
+            	}
             }
         });
 
         $("#finish-edit-btn").click(function () {
-            var newObject = editor.get();
-            var res = deepDiffMapper.map(originObject, newObject);
-            var path = "";
-            var changeEdit = {};
-            var currentEdit = {};
-            deepDiffMapper.generateChangeCurrentObject(path, res, changeEdit, currentEdit);
-            deepDiffMapper.generateEditOp(originObject, changeEdit, currentEdit);
-            originObject = null;
-            $("#finish-edit-btn").hide();
-            $("#add-edit-op-btn").show();
+            try {
+                var newObject = editor.get();
+                var res = deepDiffMapper.map(originObject, newObject);
+                var path = "";
+                var changeEdit = {};
+                var currentEdit = {};
+                deepDiffMapper.generateChangeCurrentObject(path, res, changeEdit, currentEdit);
+                deepDiffMapper.generateEditOp(originObject, changeEdit, currentEdit);
+
+                originObject = null;
+                $("#finish-edit-btn").hide();
+                $("#add-edit-op-btn").show();
+            } catch (e) {
+                alert(e);
+            }
         });
 
         var deepDiffMapper = function() {
@@ -826,23 +888,23 @@
                         var opType = this.compareValues(obj1, obj2);
                         if (opType === this.VALUE_UPDATED) {
                             return {
-                                op: opType,
+                                editType: opType,
                                 old: (obj1 === undefined) ? obj2 : obj1,
                                 new: (obj2 === undefined) ? obj1 : obj2
                             }
                         } else if (opType === this.VALUE_CREATED) {
                             return {
-                                op: opType,
+                                editType: opType,
                                 new: (obj1 === undefined) ? obj2 : obj1
                             };
                         } else if (opType === this.VALUE_DELETED) {
                             return {
-                                op: opType,
+                                editType: opType,
                                 old: (obj1 === undefined) ? obj2 : obj1
                             }
                         } else {
                             return {
-                                op :opType
+                                editType :opType
                             }
                         }
                     }
@@ -888,16 +950,16 @@
                     return this.VALUE_UPDATED;
                 },
                 generateChangeCurrentObject: function(path, obj, changeEdit, currentEdit) {
-                    if (obj.hasOwnProperty("op")) {
-                        if (obj["op"] === this.VALUE_CREATED) {
+                    if (obj.hasOwnProperty("editType")) {
+                        if (obj["editType"] === this.VALUE_CREATED) {
                             var setObj = {
                                 set: obj["new"]
                             };
                             changeEdit[path] = setObj;
-                        } else if (obj["op"] === this.VALUE_DELETED) {
+                        } else if (obj["editType"] === this.VALUE_DELETED) {
                             changeEdit[path] = "delete";
                             currentEdit[path] = obj["old"];
-                        } else if (obj["op"] === this.VALUE_UPDATED) {
+                        } else if (obj["editType"] === this.VALUE_UPDATED) {
                             var setObj = {
                                 set: obj["new"]
                             };
@@ -906,6 +968,9 @@
                         }
                     } else {
                         for (var key in obj) {
+                            if (key === "version") {
+                                changeEdit[key] = "increment";
+                            }
                             var mapObj = obj[key];
                             var path1;
                             var value = Number(key);
@@ -927,7 +992,7 @@
                         }
                     ];
                     var op = {
-                        type: obj["eval"]["parentType"],
+                        type: $("#type-list").val(),
                         edit: listEdit
                     };
                     editor.load(op);
@@ -1134,15 +1199,13 @@
             };
             var params = $.param(obj);
             var json = JSON.stringify(editor.get());
-            editor = null;
-            $("#json-display").hide();
-            $("#add-edit-op-btn").hide();
             $.ajax({
                 url: '/api/auth/process-operation?' + params,
                 type: 'POST',
                 data: json,
                 contentType: 'application/json; charset=utf-8'
-            }).done(function(data){  $("#result").html(data); loadData();})
+            }).done(function(data){
+                $("#result").html(data); loadData();  editor = null; $("#json-display").hide();$("#add-edit-op-btn").hide(); })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
         $("#login-btn").click(function() {

@@ -177,46 +177,6 @@ public class OpBlockchainTest {
 
 		assertTrue(blc.removeAllQueueOperations());
 	}
-
-	@Test
-	public void testRemoveQueueOperationsByListOfRowHashes() {
-		final int amountOperationsForRemoving = 5;
-
-		Deque<OpOperation> dequeOperations = blc.getQueueOperations();
-		assertFalse(dequeOperations.isEmpty());
-
-		int i = 0;
-		Set<String> operationsToDelete = new HashSet<>();
-
-		Iterator<OpOperation> iterator = dequeOperations.descendingIterator();
-		while (i < amountOperationsForRemoving) {
-			operationsToDelete.add(iterator.next().getRawHash());
-			i++;
-		}
-
-		Set<String> removedOperations = blc.removeQueueOperations(operationsToDelete);
-		assertEquals(amountOperationsForRemoving, removedOperations.size());
-	}
-
-	@Test
-	public void testRemoveQueueOperationsByEmptyListOfHashes() {
-		assertFalse(blc.getQueueOperations().isEmpty());
-
-		Set<String> operationsToDelete = new HashSet<>();
-
-		assertTrue(blc.removeQueueOperations(operationsToDelete).isEmpty());
-	}
-
-	@Test
-	public void testRemoveQueueOperationsByNotExistingHash() {
-		assertFalse(blc.getQueueOperations().isEmpty());
-
-		Set<String> operationsToDelete = new HashSet<>();
-		operationsToDelete.add(UUID.randomUUID().toString());
-
-		assertTrue(blc.removeQueueOperations(operationsToDelete).isEmpty());
-	}
-
 	@Test
 	public void testReplicateBlockWithNotImmutableOpBlock() throws FailedVerificationException {
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
@@ -321,7 +281,14 @@ public class OpBlockchainTest {
 		opOperation.makeImmutable();
 
 		int amountLoadedOperations = blc.getQueueOperations().size();
-		blc.removeQueueOperations(new HashSet<>(Collections.singletonList(loadedOperation.getRawHash())));
+
+		OpBlockChain blockchain = new OpBlockChain(blc.getParent(), blc.getRules());
+		for (OpOperation o : blc.getQueueOperations()) {
+			if (!o.getRawHash().equals(loadedOperation.getRawHash())) {
+				blockchain.addOperation(o);
+			}
+		}
+		blc = blockchain;
 
 		assertEquals(amountLoadedOperations - 1, blc.getQueueOperations().size());
 		assertTrue(blc.addOperation(opOperation));
@@ -363,7 +330,14 @@ public class OpBlockchainTest {
 		opOperation.makeImmutable();
 
 		int amountLoadedOperations = blc.getQueueOperations().size();
-		blc.removeQueueOperations(new HashSet<>(Collections.singletonList(loadedOperation.getRawHash())));
+
+		OpBlockChain blockchain = new OpBlockChain(blc.getParent(), blc.getRules());
+		for (OpOperation o : blc.getQueueOperations()) {
+			if (!o.getRawHash().equals(loadedOperation.getRawHash())) {
+				blockchain.addOperation(o);
+			}
+		}
+		blc = blockchain;
 		assertEquals(amountLoadedOperations - 1, blc.getQueueOperations().size());
 
 		assertTrue(blc.validateOperation(opOperation));

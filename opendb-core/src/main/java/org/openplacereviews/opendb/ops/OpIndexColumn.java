@@ -27,12 +27,21 @@ public class OpIndexColumn {
 	private final String opType;
 	private final ColumnDef columnDef;
 	private List<List<String>> fieldsExpression = Collections.emptyList();
-	private boolean cacheRuntime = true;
+	private int cacheRuntimeBlocks = 64;
+	private int cacheDBBlocks = 64;
 	
 	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
 		this.opType = opType;
 		this.indexId = indexId;
 		this.columnDef = columnDef;
+	}
+	
+	public void setCacheDBBlocks(int cacheDB) {
+		this.cacheDBBlocks = cacheDB;
+	}
+	
+	public void setCacheRuntimeBlocks(int cacheRuntimeBlocks) {
+		this.cacheRuntimeBlocks = cacheRuntimeBlocks;
 	}
 	
 	public String getOpType() {
@@ -91,35 +100,22 @@ public class OpIndexColumn {
 	}
 
 
-	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> streamObjects(OpPrivateObjectInstancesById oi, 
-			String type, int limit, ObjectsSearchRequest request, Object[] args) {
-		int ev = oi.getEditVersion();
-		CacheObject cacheObject = oi.getCacheObjectByKey(this);
-		Set<Object> keys = null;
-		if(cacheObject != null && cacheObject.cacheVersion == ev) {
-			keys = (Set<Object>) cacheObject.cacheObject;
+			int superBlockSize, String type, int limit, ObjectsSearchRequest request, Object[] args) {
+		Set<Object> keys = getKeysFromCache(oi);
+		if (keys == null) {
+			if((oi.getDbAccess() != null && cacheDBBlocks >= superBlockSize) || 
+					 (oi.getDbAccess() == null && cacheRuntimeBlocks >= superBlockSize)) {
+				keys = buildCacheKeys(oi, type);
+			}
+		}
+		if(keys != null && !keys.contains(toNativeType(args[0]))) {
+			return Stream.empty();
 		}
 		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(oi.getDbAccess() != null){
 			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
 		} else {
-			if (cacheRuntime && keys == null) {
-				keys = new HashSet<Object>();
-				List<Object> array = new ArrayList<Object>();
-				for (OpObject o : oi.getRawObjects().values()) {
-					array.clear();
-					array = eval(o, array);
-					for (Object k : array) {
-						keys.add(k);
-					}
-				}
-				oi.setCacheObjectByKey(this, keys, ev);
-			}
-			if(keys != null && !keys.contains(toNativeType(args[0]))) {
-				return Stream.empty();
-			}
-			
 			stream = oi.getRawObjects().entrySet().stream();
 			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
 				@Override
@@ -130,6 +126,50 @@ public class OpIndexColumn {
 			
 		}
 		return stream;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Set<Object> getKeysFromCache(OpPrivateObjectInstancesById oi) {
+		int ev = oi.getEditVersion();
+		CacheObject cacheObject = oi.getCacheObjectByKey(this);
+		Set<Object> keys = null;
+		if(cacheObject != null && cacheObject.cacheVersion == ev) {
+			keys = (Set<Object>) cacheObject.cacheObject;
+		}
+		return keys;
+	}
+
+	private synchronized Set<Object> buildCacheKeys(OpPrivateObjectInstancesById oi, String type) {
+		Set<Object> keys = getKeysFromCache(oi);
+		if (keys != null) {
+			return keys;
+		}
+		int ev = oi.getEditVersion();
+		if (oi.getDbAccess() != null) {
+			Iterator<Entry<CompoundKey, OpObject>> it = oi.getDbAccess().streamObjects(type, -1).iterator();
+			keys = buildCacheKeys(it);
+			oi.setCacheObjectByKey(this, keys, ev);
+		} else if (oi.getDbAccess() == null) {
+			keys = buildCacheKeys(oi.getRawObjects().entrySet().iterator());
+			oi.setCacheObjectByKey(this, keys, ev);
+		}
+		return keys;
+	}
+
+	private Set<Object> buildCacheKeys(Iterator<Entry<CompoundKey, OpObject>> it) {
+		Set<Object> keys;
+		List<Object> array = new ArrayList<Object>();
+		keys = new HashSet<Object>();
+		while(it.hasNext()) {
+			Entry<CompoundKey, OpObject> e = it.next();
+			OpObject o = e.getValue();
+			array.clear();
+			array = eval(o, array);
+			for (Object k : array) {
+				keys.add(k);
+			}
+		}
+		return keys;
 	}
 	
 	private Object toNativeType(Object o) {

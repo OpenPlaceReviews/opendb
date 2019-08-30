@@ -51,6 +51,11 @@ public class ObjectGeneratorTest {
 		addOperationFromList(formatter, blc, VOTING_LIST);
 	}
 
+	public static void generateOperationsByList(JsonFormatter formatter, OpBlockChain blc, String[] listNames) throws
+			FailedVerificationException {
+		addOperationFromList(formatter, blc, listNames);
+	}
+
 	public static List<OpOperation> getVotingOperations(JsonFormatter formatter,  OpBlockChain blc, int amount) throws FailedVerificationException {
 		OpOperation[] lst = formatter.fromJson(
 				new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/voting-process.json")),
