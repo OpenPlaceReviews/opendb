@@ -22,7 +22,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.LIMIT_FOR_EXTRACTING_OBJECTS;
 import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
 import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
@@ -437,14 +436,12 @@ public class HistoryManager {
 	public static class HistoryObjectRequest {
 		public String historyType;
 		public List<String> key;
-		public int limit = LIMIT_FOR_EXTRACTING_OBJECTS;
+		public int limit;
 		public String sort;
 		public List<HistoryEdit> historySearchResult;
 
 		public HistoryObjectRequest(String historyType, List<String> key, int limit, String sort) {
-			if (limit < LIMIT_FOR_EXTRACTING_OBJECTS) {
-				this.limit = limit;
-			}
+			this.limit = limit;
 			this.historyType = historyType;
 			this.key = key;
 			this.sort = sort;

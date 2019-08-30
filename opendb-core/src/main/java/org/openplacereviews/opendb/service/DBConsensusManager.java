@@ -474,7 +474,9 @@ public class DBConsensusManager {
 
 					@Override
 					public void processRow(ResultSet rs) throws SQLException {
-						op[0] = formatter.parseOperation(rs.getString(1));
+						if (rs.next()) {
+							op[0] = formatter.parseOperation(rs.getString(1));
+						}
 					}
 				}, sbhash, ophash);
 				return op[0];

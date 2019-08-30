@@ -93,12 +93,6 @@ public class ApiController {
 		return formatter.fullObjectToJson(bl);
 	}
 
-	@GetMapping(path = "/queue/size")
-	@ResponseBody
-	public Integer queueSize() {
-		return manager.getBlockchain().getQueueOperations().size();
-	}
-
 	public static class LogResult {
 		public Collection<LogEntry> logs;
 	}
@@ -279,7 +273,7 @@ public class ApiController {
 		OpBlockChain blc = manager.getBlockchain();
 		ObjectsResult res = new ObjectsResult();
 		ObjectsSearchRequest r = new ObjectsSearchRequest();
-		r.setLimit(limit);
+		r.limit = limit;
 		blc.fetchAllObjects(type, r);
 		res.objects = r.result;
 		return formatter.fullObjectToJson(res);

@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.stream.Stream;
 
 import static org.openplacereviews.opendb.ops.OpBlock.*;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.LIMIT_FOR_EXTRACTING_OBJECTS;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
 import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
 import static org.openplacereviews.opendb.ops.OpObject.F_OP;
@@ -1142,7 +1141,7 @@ public class OpBlockChain {
 
 	public static class ObjectsSearchRequest {
 		public int editVersion;
-		public int limit = LIMIT_FOR_EXTRACTING_OBJECTS;
+		public int limit = -1;
 		public boolean requestCache = false;
 		public SearchType searchType = SearchType.EQUALS;
 
@@ -1152,12 +1151,6 @@ public class OpBlockChain {
 
 		Object internalMapToFilterDuplicates;
 		OpPrivateObjectInstancesById objToSetCache;
-
-		public void setLimit(int limit) {
-			if (limit < LIMIT_FOR_EXTRACTING_OBJECTS) {
-				this.limit = limit;
-			}
-		}
 	}
 	
 	public enum SearchType {

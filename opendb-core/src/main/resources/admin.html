@@ -298,6 +298,7 @@
 <script>
     var loginName = "";
     var metricsData = [];
+    var limitForObjectResponse = 10000;
 
     function loadDataDelay(d=1500) {
         setTimeout(function() { loadData(); }, d);
@@ -315,7 +316,6 @@
 
     function loadAllData() {
         loadStatusData();
-        loadOperationsData();
         loadObjectsData();
         loadBlocksData();
         if(loginName != "") {
@@ -465,6 +465,7 @@
             var items = "";
             $("#blockchain-status").html(data.status);
             $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
+            $("#operations-tab").html("Operations (" + data.sblocks[0] + ")");
 
             $("#admin-user").html(data.serverUser);
             var ophS = Object.keys(data.orphanedBlocks);
@@ -576,11 +577,6 @@
                     (selectBot == bot["id"] ? "selected" : "") + ">" + bot["id"] + "</option>";
             }
             $("#bot-list").html(botItems);
-        });
-    }
-    function loadOperationsData() {
-        $.getJSON( "/api/queue/size", function( data ) {
-            $("#operations-tab").html("Operations (Q-" + data + ")");
         });
     }
 
@@ -711,7 +707,7 @@
         var obj = {
             "type": searchType,
             "key": key,
-            "limit": $("#limit-field").val(),
+            "limit": $("#limit-field").val() > limitForObjectResponse ? limitForObjectResponse : $("#limit-field").val(),
             "sort": "DESC"
         };
         var items = "";
