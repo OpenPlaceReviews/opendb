@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static org.openplacereviews.opendb.ops.OpBlockChain.*;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.LIMIT_FOR_EXTRACTING_OBJECTS;
 import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
 import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
@@ -83,7 +84,7 @@ public class HistoryManager {
 		switch (historyObjectRequest.historyType) {
 			case HISTORY_BY_USER: {
 				StringBuilder userString = getUserSqlRequestString(historyObjectRequest);
-				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status, ophash FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						userString + " ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
@@ -93,7 +94,7 @@ public class HistoryManager {
 				if (historyObjectRequest.key.size() > 1) {
 					objType = historyObjectRequest.key.get(0);
 				}
-				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status, ophash FROM " + OP_OBJ_HISTORY_TABLE + " WHERE " +
 						(objType == null ? "" : " type = ? AND ") + dbSchema.generatePKString(OP_OBJ_HISTORY_TABLE, "p%1$d = ?", " AND ",
 						(objType == null ? historyObjectRequest.key.size() : historyObjectRequest.key.size() - 1)) +
 						" ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
@@ -102,7 +103,7 @@ public class HistoryManager {
 			}
 			case HISTORY_BY_TYPE: {
 				historyObjectRequest.key = Collections.singletonList(historyObjectRequest.key.get(0));
-				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status FROM " + OP_OBJ_HISTORY_TABLE +
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status, ophash FROM " + OP_OBJ_HISTORY_TABLE +
 						" WHERE type = ?" + " ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
 				loadHistory(sql, historyObjectRequest);
 				break;
@@ -135,13 +136,11 @@ public class HistoryManager {
 	protected void loadHistory(String sql, HistoryObjectRequest historyObjectRequest) {
 		Object[] keyObject = historyObjectRequest.key.toArray();
 		keyObject = generateUserSearchObject(historyObjectRequest, keyObject);
-		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, keyObject, new ResultSetExtractor<Map<List<String>, List<HistoryEdit>>>() {
+		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, keyObject, new ResultSetExtractor<List<HistoryEdit>>() {
 			@Override
-			public Map<List<String>, List<HistoryEdit>> extractData(ResultSet rs) throws SQLException, DataAccessException {
-				Map<List<String>, List<HistoryEdit>> result = new LinkedHashMap<>();
+			public List<HistoryEdit> extractData(ResultSet rs) throws SQLException, DataAccessException {
+				List<HistoryEdit> result = new LinkedList<>();
 
-				List<List<String>> objIds = new LinkedList<>();
-				List<HistoryEdit> allObjects = new LinkedList<>();
 				while (rs.next()) {
 					List<String> users = new ArrayList<>();
 					String user = "";
@@ -170,19 +169,15 @@ public class HistoryManager {
 							rs.getString(12),
 							formatter.parseObject(rs.getString(11)),
 							formatFullDate(rs.getTimestamp(10)),
-							HistoryManager.Status.getStatus(rs.getInt(13))
+							HistoryManager.Status.getStatus(rs.getInt(13)),
+							SecUtils.hexify(rs.getBytes(14))
 					);
 					if (historyObject.getStatus().equals(HistoryManager.Status.EDITED)) {
 						historyObject.setDeltaChanges(formatter.fromJsonToTreeMap(rs.getString(11)));
 					}
 					historyObject.setId(ids);
-
-					allObjects.add(historyObject);
-					if (!objIds.contains(ids)) {
-						objIds.add(ids);
-					}
+					result.add(historyObject);
 				}
-				generateObjMapping(objIds, allObjects, result);
 
 				result = generateHistoryObj(result, historyObjectRequest.sort);
 				return result;
@@ -224,27 +219,19 @@ public class HistoryManager {
 	}
 
 
-	public Map<List<String>, List<HistoryEdit>> generateHistoryObj(Map<List<String>, List<HistoryEdit>> historyMap, String sort) {
-		Map<List<String>, List<HistoryEdit>> newHistoryMap = new LinkedHashMap<>();
+	public List<HistoryEdit> generateHistoryObj(List<HistoryEdit> historyList, String sort) {
+		List<HistoryEdit> newHistoryList = new ArrayList<>();
 
-		for(List<String> keys : historyMap.keySet()) {
-			List<HistoryEdit> loadedList = historyMap.get(keys);
-			List<HistoryEdit> newHistoryList = new LinkedList<>();
-			OpObject originObject = null;
-			HistoryEdit previousHistoryEdit = null;
-			if (sort.equals(ASC_SORT)) {
-				Collections.reverse(loadedList);
-			}
-			for (HistoryEdit historyEdit : loadedList) {
-				originObject = getPreviousOpObject(originObject, previousHistoryEdit, historyEdit);
-				previousHistoryEdit = historyEdit;
-				newHistoryList.add(historyEdit);
-			}
-
-			newHistoryMap.put(keys, newHistoryList);
+		Map<List<String>, HistoryEdit> previousHistoryEditMap = new HashMap<>();
+		Map<List<String>, OpObject> originObjectMap = new HashMap<>();
+		for (HistoryEdit historyEdit : historyList) {
+			OpObject originObject = getPreviousOpObject(originObjectMap.get(historyEdit.id), previousHistoryEditMap.get(historyEdit.id), historyEdit);
+			previousHistoryEditMap.put(historyEdit.id, historyEdit);
+			newHistoryList.add(historyEdit);
+			originObjectMap.put(historyEdit.id, originObject);
 		}
 
-		return newHistoryMap;
+		return newHistoryList;
 	}
 
 
@@ -450,14 +437,16 @@ public class HistoryManager {
 	public static class HistoryObjectRequest {
 		public String historyType;
 		public List<String> key;
-		public int limit;
+		public int limit = LIMIT_FOR_EXTRACTING_OBJECTS;
 		public String sort;
-		public Map<List<String>, List<HistoryEdit>> historySearchResult;
+		public List<HistoryEdit> historySearchResult;
 
 		public HistoryObjectRequest(String historyType, List<String> key, int limit, String sort) {
+			if (limit < LIMIT_FOR_EXTRACTING_OBJECTS) {
+				this.limit = limit;
+			}
 			this.historyType = historyType;
 			this.key = key;
-			this.limit = limit;
 			this.sort = sort;
 		}
 	}
@@ -470,13 +459,15 @@ public class HistoryManager {
 		private TreeMap<String, Object> deltaChanges;
 		private String date;
 		private Status status;
+		private String opHash;
 
-		public HistoryEdit(List<String> userId, String objType, OpObject objEdit, String date, Status status) {
+		public HistoryEdit(List<String> userId, String objType, OpObject objEdit, String date, Status status, String ophash) {
 			this.userId = userId;
 			this.objType = objType;
 			this.objEdit = objEdit;
 			this.date = date;
 			this.status = status;
+			this.opHash = ophash;
 		}
 
 		public List<String> getId() {

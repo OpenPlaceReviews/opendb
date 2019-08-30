@@ -29,6 +29,7 @@ public class OpBlockchainRules {
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 4096;
+	public static final int LIMIT_FOR_EXTRACTING_OBJECTS = 10000;
 	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
 	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
