@@ -1,23 +1,9 @@
 package org.openplacereviews.opendb.api;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpIndexColumn;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
 import org.openplacereviews.opendb.service.BlocksManager;
@@ -32,11 +18,9 @@ import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
 
 @Controller
 @RequestMapping("/api")
@@ -206,6 +190,47 @@ public class ApiController {
 			return "{}";
 		}
 		return formatter.fullObjectToJson(op);
+	}
+
+	@GetMapping(path = "/ops-by-obj-id", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String getOperationByObjectId(@RequestParam(required = true) String id) {
+		if (!id.contains(",")) {
+			return "{}";
+		}
+		List<String> keys = Arrays.asList(id.split(","));
+		OpBlock opBlock = manager.getBlockchain().getGeneratedOpBlockWithOperationsByObjectId(keys);
+		return formatter.fullObjectToJson(opBlock);
+	}
+
+	@GetMapping(path = "/ops-by-block-id",  produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String getOperationsByBlockId(@RequestParam(required = true) int blockId) {
+		OpBlock opBlock = manager.getBlockchain().getFullBlockByBlockId(blockId);
+		if (opBlock != null) {
+			OpBlock bl = new OpBlock();
+			for (OpOperation ob : opBlock.getOperations()) {
+				bl.addOperation(ob);
+			}
+			return formatter.fullObjectToJson(bl);
+		} else {
+			return "{}";
+		}
+	}
+
+	@GetMapping(path = "/ops-by-block-hash",  produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String getOperationsByBlockHash(@RequestParam(required = true) String hash) {
+		OpBlock opBlock = manager.getBlockchain().getFullBlockByRawHash(hash);
+		if (opBlock != null) {
+			OpBlock bl = new OpBlock();
+			for (OpOperation ob : opBlock.getOperations()) {
+				bl.addOperation(ob);
+			}
+			return formatter.fullObjectToJson(bl);
+		}
+
+		return "{}";
 	}
 	
 	

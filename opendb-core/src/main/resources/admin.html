@@ -15,11 +15,10 @@
 <p id="result"></p>
 <ul class="nav nav-tabs" id="tabspanel">
     <li class="active"><a data-toggle="tab" href="#home">Status</a></li>
-    <li><a data-toggle="tab" href="#queue" id="queue-tab">Queue</a></li>
     <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
-    <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
+    <li><a data-toggle="tab" href="#operations" id="operations-tab">Operations</a></li>
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
-    <li><a data-toggle="tab" href="#history" id="history-tab">History</a></li>
+    <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
     <li><a data-toggle="tab" href="#bot" id="bot-tab">Bots</a></li>
     <li><a data-toggle="tab" href="#metrics" id="metrics-tab">Metrics</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
@@ -65,17 +64,34 @@
 
         </div>
     </div>
-    <div id="queue" class="tab-pane fade">
-        <h3>Operations in Queue</h3>
-        <ul id="operations-list">
+
+    <div id="blocks" class="tab-pane fade">
+        <h3>Blocks</h3>
+        <label>Load:&nbsp;</label><select id="blocks-search">
+            <option selected value="all">All blocks</option>
+            <option value="from">blocks from</option>
+            <option value="last">last blocks</option>
+        </select>
+        <label id="block-hash-input" hidden="true">Input start block hash</label><input type="text" id="search-block-field" hidden="true">
+        <label id="blocks-limit" hidden="true">input limit</label><input type="text" id="block-limit-value" hidden="true">
+        <input type="button" id="block-load-btn" value="Load">
+        <ul id="blocks-list">
         </ul>
 
     </div>
 
-    <div id="blocks" class="tab-pane fade">
-        <h3>Blocks</h3>
-        <ul id="blocks-list">
-        </ul>
+    <div id="operations" class="tab-pane fade">
+        <h3>Operations</h3>
+        <br><label>Load:&nbsp;</label><select id="operations-search">
+            <option selected value="queue">Queue</option>
+            <option value="id">by Id</option>
+            <option value="blockId">by block Id</option>
+            <option value="blockHash">by block Hash</option>
+    </select>
+        <label id="input-search-operation-key" hidden="true">Input</label><input type="text" id="operations-key" hidden="true">
+        <input type="button" id="operations-search-btn" value="Load">
+        <br><h5 id="amount-operations" hidden="true"></h5>
+        <ul id="operations-list"></ul>
 
     </div>
 
@@ -83,20 +99,23 @@
         <h3>Objects</h3>
 
         <label>Select type:&nbsp;</label><select id="type-list"></select>
-        <br><br>
         <label>Search:&nbsp;</label><select id="search-type-list">
             <option selected value="all">all</option>
+            <option value="userId">by userId</option>
         </select>
-        <br><br>
+        <label for="historyCheckbox">Show history</label>
+        <input type="checkbox" id="historyCheckbox" name="scales">
         <div id="search-key-input" hidden="true">
-        <label>Input search key:&nbsp;</label><input type="text" id="search-key"/>
+            <br><label id="name-key-field"></label><input type="text" id="search-key"/>
         </div>
+        <br><label>Amount entries (Limit):</label><input type="text" id="limit-field" value="50"/>
         <input type="submit" value="Search" id="load-objects-btn">
-        <br><br>
+        <br>
         <h5 id="amount-objects"></h5>
 
         <pre id="json-display" hidden="true"></pre>
         <input type="button" value="Finish edit" hidden="true" id="finish-edit-btn">
+        <input type="button" value="Stop edit" hidden="true" id="stop-edit-btn">
         <input type="button" value="Add edit op" hidden="true" id="add-edit-op-btn">
 
         <p id="object-type-description"/>
@@ -131,28 +150,6 @@
         <ul id="errors-list">
         </ul>
 
-    </div>
-
-    <div id="history" class="tab-pane fade">
-        <h3>History</h3>
-        <label>Select history type:&nbsp;</label><select id="history-type-list">
-        <option value="user">User</option>
-        <option value="object">Object</option>
-        <option value="type">Type</option>
-    </select>
-        <br>
-        <label>Time sorting ASC/DESC:&nbsp;</label>
-        <div>
-            <label>ASC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="ASC" id="load-history-sort-asc"/>
-            <label>DESC sorting</label> <input class="history-checkbox-sort" type="checkbox" class="radio" value="DESC" id="load-history-sort-desc" checked/>
-        </div>
-        <label>Input search key:</label><input type="text" id="history-search-field"/>
-        <br>
-        <label>Input amount entries (Limit):</label><input type="text" id="history-limit-field" value="20"/>
-        <br>
-        <input type="submit" value="Load history" id="load-history-btn">
-        <br>
-        <ul id="history-list"></ul>
     </div>
 
     <div id="bot" class="tab-pane fade">
@@ -301,6 +298,7 @@
 <script>
     var loginName = "";
     var metricsData = [];
+    var limitForObjectResponse = 10000;
 
     function loadDataDelay(d=1500) {
         setTimeout(function() { loadData(); }, d);
@@ -318,7 +316,6 @@
 
     function loadAllData() {
         loadStatusData();
-        loadQueueData();
         loadObjectsData();
         loadBlocksData();
         if(loginName != "") {
@@ -468,6 +465,7 @@
             var items = "";
             $("#blockchain-status").html(data.status);
             $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
+            $("#operations-tab").html("Operations (" + data.sblocks[0] + ")");
 
             $("#admin-user").html(data.serverUser);
             var ophS = Object.keys(data.orphanedBlocks);
@@ -511,35 +509,42 @@
         });
     }
 
+    function processBlocksResult(data) {
+        var items = "";
+        var blocks = data.blocks;
+        // SHOW currentBlock, currentTx - as in progress or failed
+        $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
+        var superblockId = 0;
+        var superblockHash = "";
+        for(var i = 0; i < blocks.length; i++) {
+            let op = blocks[i];
+            items += "<br><li><b>Block id</b>: " + op.block_id;
+            items += "<input type=\"button\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
+            items += "<br><b>Hash</b>: " + op.hash;
+            if (op.eval) {
+                if (op.eval.superblock_hash != superblockHash) {
+                    superblockHash = op.eval.superblock_hash;
+                    superblockId = superblockId + 1;
+                }
+                items += "<br><b>Operations count</b>: " + op.eval.operations_size;
+                items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
+            }
+            items += "<br><b>Signed by</b>: " + op.signed_by;
+            items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
+            items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
+            items += "<br><b>Details</b>: " + op.details;
+            // items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
+            items += "<br><details><summary><b>Simple json</b></summary><pre>" +
+                JSON.stringify(op, null, 4) + "</pre></details>";
+            items += "</li>";
+        }
+
+        return items;
+    }
+
     function loadBlocksData() {
         $.getJSON( "/api/blocks", function( data ) {
-            var items = "";
-            var blocks = data.blocks;
-            // SHOW currentBlock, currentTx - as in progress or failed
-            $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
-            var superblockId = 0;
-            var superblockHash = "";
-            for(var i = 0; i < blocks.length; i++)  {
-                let op = blocks[i];
-                items += "<br><li><b>Block id</b>: " + op.block_id;
-                items += "<br><b>Hash</b>: " + op.hash;
-                if(op.eval) {
-                    if(op.eval.superblock_hash != superblockHash) {
-                        superblockHash = op.eval.superblock_hash;
-                        superblockId = superblockId + 1;
-                    }
-                    items += "<br><b>Operations count</b>: " + op.eval.operations_size;
-                    items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
-                }
-                items += "<br><b>Signed by</b>: " + op.signed_by;
-                items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
-                items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
-                items += "<br><b>Details</b>: " + op.details;
-                // items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
-                items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                    JSON.stringify(op, null, 4) + "</pre></details>";
-                items += "</li>";
-            }
+            var items = processBlocksResult(data);
             $("#blocks-list").html(items);
         });
     }
@@ -574,11 +579,11 @@
             $("#bot-list").html(botItems);
         });
     }
-    function loadQueueData() {
-        $.getJSON( "/api/queue", function( data ) {
-            var items = "";
-            $("#queue-tab").html("Queue (" + data.ops.length + ")");
-            for(var i = 0; i < data.ops.length; i++)  {
+
+    function generateOperationResponse(data) {
+        var items = "";
+        if (JSON.stringify(data) !== '{}') {
+            for (var i = 0; i < data.ops.length; i++) {
                 let op = data.ops[i];
                 let clone = JSON.parse(JSON.stringify(op));
                 delete clone.hash;
@@ -586,53 +591,54 @@
                 delete clone.signature_hash;
                 delete clone.validation;
                 delete clone.eval;
-                if(clone.create) {
-                    for(var ik = 0; ik < clone.create.length; ik++ ) {
-                        if(clone.create[ik].changesForObject) {
-                            for(var il = 0; il < clone.create[ik].changesForObject.length; il++ ) {
+                if (clone.create) {
+                    for (var ik = 0; ik < clone.create.length; ik++) {
+                        if (clone.create[ik].changesForObject) {
+                            for (var il = 0; il < clone.create[ik].changesForObject.length; il++) {
                                 delete clone.create[ik].changesForObject[il].eval;
                             }
                         }
                         delete clone.create[ik].eval;
                     }
                 }
-                if(clone.edit) {
-                    for(var j = 0; j < clone.edit.length; j++ ) {
+                if (clone.edit) {
+                    for (var j = 0; j < clone.edit.length; j++) {
                         delete clone.edit[j].eval;
                     }
                 }
 
-                if(clone.delete) {
-                    for(var j = 0; j < clone.delete.length; j++ ) {
+                if (clone.delete) {
+                    for (var j = 0; j < clone.delete.length; j++) {
                         delete clone.delete[j].eval;
                     }
                 }
 
                 sha256(JSON.stringify(clone)).then(digestValue => {
-                    if(("json:sha256:" + digestValue) != op.hash) {
-                    alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue +"'");
+                    if(("json:sha256:" + digestValue) != op.hash){
+                    alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue + "'");
                     // console.log("'"+JSON.stringify(clone)+"'");
-                }
-            });
+                }});
                 items += "<br><li><b>Operation</b>: " + op.type;
                 items += "<br><b>Hash</b>: " + op.hash;
                 items += "<br><b>Added/removed/edited objects</b>: " +
                     (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
                     (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + " / " +
                     (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0"));
-                if(op.create && op.create.length > 0) {
+                if (op.create && op.create.length > 0) {
                     items += "<br><b>Name</b>: " + op.create[0].id;
-                } else if(op.delete && op.delete.length > 0) {
+                } else if (op.delete && op.delete.length > 0) {
                     items += "<br><b>Name</b>: " + op.delete[0].id;
                 }
                 items += "<br><b>Signed by</b>: " + op.signed_by;
-                items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
                 items += "<br><details><summary><b>JSON</b></summary><pre>" +
                     JSON.stringify(op, null, 4) + "</pre></details>";
                 items += "</li>";
             }
-            $("#operations-list").html(items);
-        });
+            $("#amount-operations").html("Amount operations: " + data.ops.length);
+        } else {
+            $("#amount-operations").html("Amount operations: " + 0);
+        }
+        $("#operations-list").html(items);
     }
 
     var editor = {};
@@ -649,10 +655,160 @@
             }, 1000);
         }
         $("#finish-edit-btn").show();
+        $("#stop-edit-btn").show();
         delete obj.eval;
         originObject = obj;
         editor = new JsonEditor('#json-display', obj);
         editor.load(obj);
+    }
+
+    function showOperationsByBlockRowHash(blockHash) {
+        blockHash = blockHash.split(':')[1];
+        saveCurrentState("#blocks", '/api/admin?tab=blocks&type=' + $("#blocks-search").val() + '&showOpByHash=' + blockHash);
+        $(".nav-tabs a[href=\"#operations\"]").tab('show');
+        $("#operations-search").val("blockHash").change();
+        $("#operations-key").val(blockHash);
+
+        // TODO change this
+        setTimeout(function(){
+            $("#operations-search-btn").click();
+        }, 200);
+    }
+
+    function getHistoryObjects(obj) {
+        var items = "";
+        items += "<br><li><b>Id</b>: " + obj.id;
+        items += "<br><b>Date</b>: " + obj.date;
+        if (obj.objEdit.eval !== undefined) {
+            items += "<br><b>Type</b>: " + obj.objType;
+            items += "<br><b>Op hash</b>: " + obj.opHash;
+        }
+        if (obj.objEdit.comment !== undefined) {
+            items += "<br><b>Comment</b>: " + obj.objEdit.comment;
+        }
+        if (obj.userId.length !== 0) {
+            items += "<br><b>User</b>: " + obj.userId;
+        }
+        items += "<br><b>Status</b>: " + obj.status;
+        if ('objEdit' in obj) {
+            delete obj.objEdit.eval;
+            items += "<details><summary><b>Obj json: </b></summary><pre>" +
+                JSON.stringify(obj.objEdit, null, 4) + "</pre></details>";
+        }
+        if ('deltaChanges' in obj) {
+            items += "<details><summary><b>Delta json: </b></summary><pre>" +
+                JSON.stringify(obj.deltaChanges, null, 4) + "</pre></details>";
+        }
+        items += "</li>";
+        return items;
+    }
+
+    function getHistoryForObject(searchType, key) {
+        var obj = {
+            "type": searchType,
+            "key": key,
+            "limit": $("#limit-field").val() > limitForObjectResponse ? limitForObjectResponse : $("#limit-field").val(),
+            "sort": "DESC"
+        };
+        var items = "";
+        var amount = 0;
+        $.ajax({url:"/api/history", type:"get", async:false, data:obj,
+            success: function(data) {
+                for (var i = 0; i < data.length; i++) {
+                    var object = data[i];
+                    items += getHistoryObjects(object);
+                }
+                amount = data.length;
+            },
+            error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }});
+
+        return {
+          items: items,
+          amount: amount
+        };
+    }
+
+    function loadHistoryForObject(searchType,id, type) {
+        $("#search-type-list").val("id");
+        $("#historyCheckbox").prop('checked', true);
+        $("#search-key-input").show();
+        $("#name-key-field").text("Input Object ID")
+        $("#search-key").val(id);
+
+        var _res = getHistoryForObject("object", type + "," + id);
+
+        $("#objects-list").html(_res.items);
+        $("#amount-objects").html("Count results: " + _res.amount);
+        saveCurrentState("#objects", "/api/admin?tab=objects&search=" + searchType + "&type=" + type + "&key=" + id + "&history=true");
+    }
+
+    function saveCurrentState(tab, url) {
+        if (window.location.pathname + window.location.search !== url && url !== window.location.pathname && url !== (window.location.pathname + "?")) {
+            if (tab === "#objects") {
+                saveObjectTabState(tab, url);
+            } else if (tab === "#operations") {
+                saveOperationTabState(tab, url);
+            } else if (tab === "#blocks") {
+                saveBlocksTabState(tab, url);
+            }
+        }
+    }
+
+    function saveBlocksTabState(tab, url) {
+        var idStorage = '_' +  Math.random().toString(36).substr(2, 9);
+        var res = {
+            tab: tab,
+            blockSearch: $("#blocks-search").val(),
+            showInput: $("#block-hash-input").is(":hidden"),
+            inputKey: $("#search-block-field").val(),
+            showLimit: $("#blocks-limit").is(":hidden"),
+            inputLimit: $("#block-limit-value").val(),
+            idStorage: idStorage
+        };
+
+        sessionStorage.setItem(idStorage,  document.getElementById("blocks-list").innerHTML);
+        window.history.pushState(res, "State Blocks", url);
+    }
+
+    function saveOperationTabState(tab, url) {
+        var idStorage = '_' +  Math.random().toString(36).substr(2, 9);
+        var res = {
+            tab: tab,
+            inputSearch:$("#input-search-operation-key").text(),
+            keyHidden:$("#input-search-operation-key").is(":hidden"),
+            keyValue: $("#operations-key").val(),
+            load: $("#operations-search").val(),
+            countElements: $("#amount-operations").text(),
+            idStorage: idStorage
+        };
+
+        console.log($("#input-search-operation-key").is(":hidden"));
+        sessionStorage.setItem(idStorage, document.getElementById("operations-list").innerHTML);
+        window.history.pushState(res, "State Operations", url);
+    }
+
+    function saveObjectTabState(tab, url) {
+        var idStorage = '_' + Math.random().toString(36).substr(2, 9);
+        var res = {
+            tab: tab,
+            searchType: $("#search-type-list").val(),
+            type: $("#type-list").val(),
+            showHistory: $("#historyCheckbox").is(":checked"),
+            historyDisabled: $("#historyCheckbox").is(":disabled"),
+            limit: $("#limit-field").val(),
+            countElements: $("#amount-objects").text(),
+            idStorage: idStorage
+        };
+
+        sessionStorage.setItem(idStorage, document.getElementById("objects-list").innerHTML);
+        console.log(res);
+        window.history.pushState(res, "State Objects", url);
+        console.log(window.history);
+    }
+
+    function showOperations(data, url) {
+        generateOperationResponse(data);
+        saveCurrentState("#operations", url);
     }
 
     $( document ).ready(function() {
@@ -682,10 +838,24 @@
 
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all" || selectedSearchType === "count") {
+            if (selectedSearchType === "all") {
                 $("#search-key-input").hide();
+                $("#historyCheckbox").prop("disabled", false);
+            } else if ( selectedSearchType === "count") {
+                $("#search-key-input").hide();
+                $("#historyCheckbox").prop("disabled", true).prop('checked', false);
+            } else if (selectedSearchType === "userId") {
+                $("#search-key-input").show();
+                $("#name-key-field").text("Input User ID");
+                $("#historyCheckbox").prop('checked', true).prop("disabled", true);
             } else {
                 $("#search-key-input").show();
+                if (selectedSearchType === "id") {
+                    $("#name-key-field").text("Input Object ID");
+                } else {
+                    $("#name-key-field").text("Input " + $("#search-type-list").val());
+                }
+                $("#historyCheckbox").prop("disabled", false);
             }
         });
 
@@ -696,12 +866,14 @@
                 searchTypes += "<option value = 'all' selected>all</option>";
                 searchTypes += "<option value = 'id' >by id</option>";
                 searchTypes += "<option value = 'count' >count</option>";
+                searchTypes += "<option value = 'userId' >by userId</option>";
                 for (var i = 0; i < data.length; i++) {
-                    var obj = data[i]
+                    var obj = data[i];
                     searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
                 }
 
                 $("#search-type-list").html(searchTypes);
+                $("#historyCheckbox").prop("disabled", false);
                 $("#search-key-input").hide();
             });
 
@@ -711,6 +883,45 @@
             } else {
                 $("#search-key-input").show();
             }
+        });
+
+        $("#operations-search").change(function () {
+           var type = $("#operations-search").val();
+           if (type === "queue") {
+               $("#operations-key").hide();
+               $("#input-search-operation-key").hide();
+
+           } else {
+               $("#operations-key").show();
+               $("#input-search-operation-key").show();
+               if (type === "id") {
+                   $("#input-search-operation-key").text("Input object id");
+               } else if (type === "blockId") {
+                   $("#input-search-operation-key").text("Input block Id");
+               } else {
+                   $("#input-search-operation-key").text("Input block hash");
+               }
+           }
+        });
+
+        $("#blocks-search").change(function () {
+           var type = $("#blocks-search").val();
+           if (type === "all") {
+               $("#blocks-limit").hide();
+               $("#block-limit-value").hide();
+               $("#search-block-field").hide();
+               $("#block-hash-input").hide();
+           } else if (type === "from") {
+               $("#blocks-limit").show();
+               $("#block-hash-input").show();
+               $("#block-limit-value").show();
+               $("#search-block-field").show();
+           } else {
+               $("#blocks-limit").show();
+               $("#block-limit-value").show();
+               $("#block-hash-input").hide();
+               $("#search-block-field").hide();
+           }
         });
         
         $("#metrics-all").click(function() {
@@ -812,49 +1023,124 @@
             var key = $("#search-key").val();
             $("#json-display").hide();
             $("#finish-edit-btn").hide();
-            
+            $("#stop-edit-btn").hide();
+
 			if (searchType === "count") {
             	$.getJSON( "/api/objects-count?type=" + type, function( data ) {
                     var items = "";
                     globalObjects = [];
                     $("#objects-list").html(items);
                     $("#amount-objects").html("Count results: " + data.count);
+                    saveCurrentState('#objects','/api/admin?tab=objects&search=' + type + 'type=' + searchType+ '&history=' + $("#historyCheckbox").is(":checked"));
                 });
             } else {
-            	let funcProcResults = function( data ) {
+            	let funcProcResults = function( data, url ) {
                     var items = "";
+                    var amountResults = 0;
                     globalObjects = data.objects;
                     for(var i = 0; i < data.objects.length; i++)  {
                         let obj = data.objects[i];
-                        items += "<br><li><b>Object id</b>: " + obj.id;
-                        items += "&nbsp;&nbsp;<input type=\"button\" value=\"Edit\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
-                        items += "<br><b>Comment</b>: " + obj.comment;
-                        items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                            JSON.stringify(obj, null, 4) + "</pre></details>";
-                        items += "</li>";
+                        if ($("#historyCheckbox").is(":checked") === true) {
+                            var _res = getHistoryForObject("object", type + "," + obj.id);
+                            items += _res.items;
+                            amountResults += _res.amount;
+                        } else {
+                            items += "<br><li><b>Id</b>: " + obj.id;
+                            items += "<input type=\"button\" value=\"EDIT\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
+                            if ($("#historyCheckbox").is(":checked") !== true) {
+                                items += "&nbsp;&nbsp;<input type=\"button\" value=\"SHOW HISTORY\" onclick=\" loadHistoryForObject('" + searchType + "','" + obj.id + "','" + type + "')\">";
+                            }
+                            items += "<br><b>Op hash</b>: " + obj.eval.parentHash;
+                            if (obj.comment !== undefined) {
+                                items += "<br><b>Comment</b>: " + obj.comment;
+                            }
+                            items += "<br><details><summary><b>Object json</b></summary><pre>" +
+                                JSON.stringify(obj, null, 4) + "</pre></details>";
+                            items += "</li>";
+                        }
                     }
                     $("#objects-list").html(items);
-                    $("#amount-objects").html("Count results: " + data.objects.length);
+                    $("#amount-objects").html("Count results: " + (amountResults === 0 ? data.objects.length : amountResults));
+                    saveCurrentState('#objects', url);
                 };
-            	//index
             	if(searchType === "all") {
-            		$.getJSON( "/api/objects?type=" + type, funcProcResults);
+            		$.getJSON( "/api/objects?type=" + type, function (data) {
+            		    funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked"));
+                    });
+
             	} else if (searchType === "id") {
                     let obj = {
                         "type" : type,
                         "key" : key
                     };
-                    $.getJSON("/api/objects-by-id", obj, funcProcResults);
+                    $.getJSON("/api/objects-by-id", obj, function (data) {
+                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history="+ $("#historyCheckbox").is(":checked"));
+                    });
+            	} else if (searchType === "userId") {
+                    var _res = getHistoryForObject("user", key);
+                    $("#objects-list").html(_res.items);
+                    $("#amount-objects").html("Count results: " + _res.amount);
+                    saveCurrentState('#objects', '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked"));
             	} else {
-                	let obj = {
-                    	"type" : type,
-                    	"index": $("#search-type-list").val(),
-                    	"key" : key
-                	};
-                	$.getJSON( "/api/objects-by-index", obj, funcProcResults);
-            	}
+                    let obj = {
+                        "type" : type,
+                        "index": $("#search-type-list").val(),
+                        "key" : key
+                    };
+                    $.getJSON( "/api/objects-by-index", obj, function (data) {
+                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '#key=' + key + '$history=' + $("#historyCheckbox").is(":checked"));
+                    });
+                }
             }
         });
+
+        window.onpopstate = function (event) {
+            if (window.history.state && history.state.idStorage) {
+                if (history.state.tab === "#objects") {
+                    $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
+                    document.getElementById("objects-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
+                    console.log(history.state);
+                    $("#search-type-list").val(history.state.searchType);
+                    $("#type-list").val(history.state.type);
+                    $("#historyCheckbox").prop("checked", history.state.showHistory).prop("disabled", history.state.historyDisabled);
+                    $("#limit-field").val(history.state.limit);
+                    $("#amount-objects").text(history.state.countElements);
+                } else if (history.state.tab === "#operations") {
+                    $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
+                    document.getElementById("operations-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
+                    console.log(history.state);
+                    if (!history.state.keyHidden) {
+                        $("#input-search-operation-key").show().text(history.state.inputSearch);
+                        $("#operations-key").show().val(history.state.keyValue);
+                    } else {
+                        $("#input-search-operation-key").hide();
+                        $("#operations-key").hide();
+                    }
+                    $("#operations-search").val(history.state.load);
+                    $("#amount-operations").text(history.state.countElements);
+                } else if (history.state.tab === "#blocks") {
+                    $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
+                    document.getElementById("blocks-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
+                    $("#blocks-search").val(history.state.blockSearch);
+                    if (!history.state.showInput) {
+                        $("#block-hash-input").show();
+                        $("#search-block-field").show();
+                        $("#search-block-field").val(history.state.inputKey);
+                    } else {
+                        $("#block-hash-input").hide();
+                        $("#search-block-field").hide();
+                    }
+                    if (!history.state.showLimit) {
+                        $("#blocks-limit").show();
+                        $("#block-limit-value").show();
+                        $("#block-limit-value").val(history.state.inputLimit);
+                    } else {
+                        $("#blocks-limit").hide();
+                        $("#block-limit-value").hide();
+                    }
+                }
+            }
+        };
 
         $("#finish-edit-btn").click(function () {
             try {
@@ -872,6 +1158,15 @@
             } catch (e) {
                 alert(e);
             }
+        });
+
+        $("#stop-edit-btn").click(function () {
+            editor = null;
+            originObject = null;
+            $("#finish-edit-btn").hide();
+            $("#add-edit-op-btn").hide();
+            $("#json-display").hide();
+            $("#stop-edit-btn").hide();
         });
 
         var deepDiffMapper = function() {
@@ -1053,43 +1348,59 @@
                 .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
         });
 
-        $("#load-history-btn").click(function () {
-            var obj = {
-                "type":$("#history-type-list").val(),
-                "key":$("#history-search-field").val(),
-                "limit":$("#history-limit-field").val(),
-                "sort":$('.history-checkbox-sort:checked').val()
-            };
-            $.get("/api/history", obj)
-                .done(function(data) {
-                    var items = "";
-                    for (var key in data) {
-                        if (data.hasOwnProperty(key)) {
-                            let arrays = data[key];
-                            items += "<br><li><b>Object id</b>: " + key;
+        $("#operations-search-btn").click(function () {
+            var typeSearch = $("#operations-search").val();
+            var key = $("#operations-key").val();
 
-                            for (var i = 0; i < arrays.length; i++) {
-                                items +="<div class='tabcontent'>";
-                                items += "<br><b>Status</b>: " + arrays[i].status;
-                                items += "<br><b>User</b>: " + arrays[i].userId;
-                                items += "<br><b>Type</b>: " + arrays[i].objType;
-                                items += "<br><b>Date</b>: " + arrays[i].date;
-                                if ('deltaChanges' in arrays[i]) {
-                                    items += "<br><details><summary><b>DeltaChanges: </b></summary><pre>" +
-                                        JSON.stringify(arrays[i].deltaChanges, null, 4) + "</pre></details>";
-                                }
-                                if ('objEdit' in arrays[i]) {
-                                    items += "<details><summary><b>ObjEdit: </b></summary><pre>" +
-                                        JSON.stringify(arrays[i].objEdit, null, 4) + "</pre></details>";
-                                }
-                                items += "</li></div>";
-                            }
-                        }
-                    }
-                    $("#history-list").html(items);
-                    loadData();
+            if (typeSearch === "queue") {
+                $.getJSON( "/api/queue", function( data ) {
+                    showOperations(data, '/api/admin?tab=operations&load=' + typeSearch);
+                    $("#amount-operations").hide();
+                });
+            } else if (typeSearch === "id") {
+                $.getJSON("/api/ops-by-obj-id?id=" + key, function (data) {
+                    showOperations(data, '/api/admin?tab=operations&loadBy=' + typeSearch + '&key=' + key);
+                    $("#amount-operations").show();
                 })
-                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+            } else if (typeSearch === "blockId") {
+                $.getJSON( "/api/ops-by-block-id?blockId=" + key, function( data ) {
+                    showOperations(data, '/api/admin?tab=operations&loadBy=' + typeSearch + '&key=' + key);
+                    $("#amount-operations").show();
+                });
+            } else { //blockHash
+                $.getJSON( "/api/ops-by-block-hash?hash=" + key, function( data ) {
+                    showOperations(data, '/api/admin?tab=operations&loadBy=' + typeSearch + '&key=' + key);
+                    $("#amount-operations").show();
+                });
+            }
+        });
+
+        $("#block-load-btn").click(function () {
+            var type = $("#blocks-search").val();
+            if (type === "all") {
+                loadBlocksData();
+                saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type)
+            } else if (type === "from") {
+                let obj = {
+                    from: $("#search-block-field").val(),
+                    depth: $("#block-limit-value").val()
+                };
+                $.getJSON("/api/blocks", obj, function (data) {
+                    var items = processBlocksResult(data);
+                    $("#blocks-list").html(items);
+                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type +"&hash=" +
+                        $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
+                })
+            } else {
+                let obj = {
+                    depth: $("#block-limit-value").val()
+                };
+                $.getJSON("/api/blocks", obj, function (data) {
+                    var items = processBlocksResult(data);
+                    $("#blocks-list").html(items);
+                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type + "&limit=" + $("#block-limit-value").val());
+                })
+            }
         });
 
         $("#add-file-btn").click(function () {
@@ -1205,7 +1516,7 @@
                 data: json,
                 contentType: 'application/json; charset=utf-8'
             }).done(function(data){
-                $("#result").html(data); loadData();  editor = null; $("#json-display").hide();$("#add-edit-op-btn").hide(); })
+                $("#result").html(data); loadData();  editor = null; $("#json-display").hide();$("#add-edit-op-btn").hide(); $("#stop-edit-btn").hide()})
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
         $("#login-btn").click(function() {
