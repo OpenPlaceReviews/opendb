@@ -518,6 +518,7 @@
         for(var i = 0; i < blocks.length; i++) {
             let op = blocks[i];
             items += "<br><li><b>Block id</b>: " + op.block_id;
+            items += "<input type=\"button\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
             items += "<br><b>Hash</b>: " + op.hash;
             if (op.eval) {
                 if (op.eval.superblock_hash != superblockHash) {
@@ -665,6 +666,19 @@
         editor.load(obj);
     }
 
+    function showOperationsByBlockRowHash(blockHash) {
+        blockHash = blockHash.split(':')[1];
+        saveCurrentState("#blocks", '/api/admin?tab=blocks&showOpByHash=' + blockHash);
+        $(".nav-tabs a[href=\"#operations\"]").tab('show');
+        $("#operations-search").val("blockHash");
+        $("#operations-key").val(blockHash).show();
+        $("#input-search-operation-key").text("Input block hash").show();
+        $.getJSON( "/api/ops-by-block-hash?hash=" + blockHash, function( data ) {
+            showOperations(data, '/api/admin?tab=operations&loadBy=blockHash&key=' + blockHash);
+            $("#amount-operations").show();
+        });
+    }
+
     function getHistoryObjects(obj) {
         var items = "";
         items += "<br><li><b>Id</b>: " + obj.id;
@@ -794,6 +808,11 @@
         console.log(res);
         window.history.pushState(res, "State Objects", url);
         console.log(window.history);
+    }
+
+    function showOperations(data, url) {
+        generateOperationResponse(data);
+        saveCurrentState("#operations", url);
     }
 
     $( document ).ready(function() {
@@ -1031,7 +1050,7 @@
                             amountResults += _res.amount;
                         } else {
                             items += "<br><li><b>Id</b>: " + obj.id;
-                            items += "&nbsp;&nbsp;<input type=\"button\" value=\"EDIT\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
+                            items += "<input type=\"button\" value=\"EDIT\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
                             if ($("#historyCheckbox").is(":checked") !== true) {
                                 items += "&nbsp;&nbsp;<input type=\"button\" value=\"SHOW HISTORY\" onclick=\" loadHistoryForObject('" + searchType + "','" + obj.id + "','" + type + "')\">";
                             }
@@ -1333,16 +1352,9 @@
                 .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
         });
 
-        $("#refresh-queue-size").click(loadOperationsData);
-
         $("#operations-search-btn").click(function () {
             var typeSearch = $("#operations-search").val();
             var key = $("#operations-key").val();
-
-            function showOperations(data, url) {
-                generateOperationResponse(data);
-                saveCurrentState("#operations", url);
-            }
 
             if (typeSearch === "queue") {
                 $.getJSON( "/api/queue", function( data ) {
