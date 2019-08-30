@@ -670,13 +670,13 @@
         blockHash = blockHash.split(':')[1];
         saveCurrentState("#blocks", '/api/admin?tab=blocks&type=' + $("#blocks-search").val() + '&showOpByHash=' + blockHash);
         $(".nav-tabs a[href=\"#operations\"]").tab('show');
-        $("#operations-search").val("blockHash");
-        $("#operations-key").val(blockHash).show();
-        $("#input-search-operation-key").text("Input block hash").show();
-        $.getJSON( "/api/ops-by-block-hash?hash=" + blockHash, function( data ) {
-            showOperations(data, '/api/admin?tab=operations&loadBy=blockHash&key=' + blockHash);
-            $("#amount-operations").show();
-        });
+        $("#operations-search").val("blockHash").change();
+        $("#operations-key").val(blockHash);
+
+        // TODO change this
+        setTimeout(function(){
+            $("#operations-search-btn").click();
+        }, 200);
     }
 
     function getHistoryObjects(obj) {
@@ -747,7 +747,7 @@
     }
 
     function saveCurrentState(tab, url) {
-        if (window.location.href !== url) {
+        if (window.location.pathname + window.location.search !== url && url !== window.location.pathname && url !== (window.location.pathname + "?")) {
             if (tab === "#objects") {
                 saveObjectTabState(tab, url);
             } else if (tab === "#operations") {
