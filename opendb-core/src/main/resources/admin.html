@@ -756,7 +756,7 @@
             idStorage: idStorage
         };
 
-        localStorage.setItem(idStorage,  document.getElementById("blocks-list").innerHTML);
+        sessionStorage.setItem(idStorage,  document.getElementById("blocks-list").innerHTML);
         window.history.pushState(res, "State Blocks", url);
     }
 
@@ -773,7 +773,7 @@
         };
 
         console.log($("#input-search-operation-key").is(":hidden"));
-        localStorage.setItem(idStorage, document.getElementById("operations-list").innerHTML);
+        sessionStorage.setItem(idStorage, document.getElementById("operations-list").innerHTML);
         window.history.pushState(res, "State Operations", url);
     }
 
@@ -790,7 +790,7 @@
             idStorage: idStorage
         };
 
-        localStorage.setItem(idStorage, document.getElementById("objects-list").innerHTML);
+        sessionStorage.setItem(idStorage, document.getElementById("objects-list").innerHTML);
         console.log(res);
         window.history.pushState(res, "State Objects", url);
         console.log(window.history);
@@ -1083,7 +1083,7 @@
             if (window.history.state && history.state.idStorage) {
                 if (history.state.tab === "#objects") {
                     $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
-                    document.getElementById("objects-list").innerHTML = localStorage.getItem(event.state.idStorage);
+                    document.getElementById("objects-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     console.log(history.state);
                     $("#search-type-list").val(history.state.searchType);
                     $("#type-list").val(history.state.type);
@@ -1092,7 +1092,7 @@
                     $("#amount-objects").text(history.state.countElements);
                 } else if (history.state.tab === "#operations") {
                     $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
-                    document.getElementById("operations-list").innerHTML = localStorage.getItem(event.state.idStorage);
+                    document.getElementById("operations-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     console.log(history.state);
                     if (!history.state.keyHidden) {
                         $("#input-search-operation-key").show().text(history.state.inputSearch);
@@ -1105,7 +1105,7 @@
                     $("#amount-operations").text(history.state.countElements);
                 } else if (history.state.tab === "#blocks") {
                     $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
-                    document.getElementById("blocks-list").innerHTML = localStorage.getItem(event.state.idStorage);
+                    document.getElementById("blocks-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     $("#blocks-search").val(history.state.blockSearch);
                     if (!history.state.showInput) {
                         $("#block-hash-input").show();
