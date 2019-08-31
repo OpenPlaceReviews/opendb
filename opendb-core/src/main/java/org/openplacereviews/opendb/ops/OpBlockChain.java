@@ -552,26 +552,6 @@ public class OpBlockChain {
 		return null;
 	}
 
-	public OpBlock getGeneratedOpBlockWithOperationsByObjectId(List<String> id) {
-		OpBlock opBlock = new OpBlock();
-		if (id.size() > 1) {
-			String type = id.get(0);
-			id = id.subList(1, id.size());
-			List<OpObject> opObjectList = new ArrayList<>();
-			getAllObjectsByName(type, id, opObjectList);
-			for (OpObject opObject : opObjectList) {
-				OpOperation opOperation = getOperationByHash(opObject.parentHash);
-				if (opOperation != null) {
-					opBlock.addOperation(opOperation);
-				}
-			}
-		} else {
-
-		}
-
-		return opBlock;
-	}
-
 	public String getSuperBlockHash() {
 		return blocks.getSuperBlockHash();
 	}

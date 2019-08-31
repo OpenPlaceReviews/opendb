@@ -194,14 +194,15 @@ public class ApiController {
 		return formatter.fullObjectToJson(op);
 	}
 
-	@GetMapping(path = "/ops-by-obj-id", produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/ops-by-id", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getOperationByObjectId(@RequestParam(required = true) String id) {
-		if (!id.contains(",")) {
-			return "{}";
-		}
 		List<String> keys = Arrays.asList(id.split(","));
-		OpBlock opBlock = manager.getBlockchain().getGeneratedOpBlockWithOperationsByObjectId(keys);
+		OpBlock opBlock = new OpBlock();
+		for (String k : keys) {
+			OpOperation op = manager.getBlockchain().getOperationByHash(k);
+			opBlock.addOperation(op);
+		}
 		return formatter.fullObjectToJson(opBlock);
 	}
 

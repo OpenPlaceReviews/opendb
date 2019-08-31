@@ -85,8 +85,8 @@
         <br><label>Load:&nbsp;</label><select id="operations-search">
             <option selected value="queue">Queue</option>
             <option value="id">by Id</option>
-            <option value="blockId">by block Id</option>
-            <option value="blockHash">by block Hash</option>
+            <option value="blockId">by Block Id</option>
+            <option value="blockHash">by Block Hash</option>
     </select>
         <label id="input-search-operation-key" hidden="true">Input</label><input type="text" id="operations-key" hidden="true">
         <input type="button" id="operations-search-btn" value="Load">
@@ -1363,7 +1363,7 @@
                     $("#amount-operations").hide();
                 });
             } else if (typeSearch === "id") {
-                $.getJSON("/api/ops-by-obj-id?id=" + key, function (data) {
+                $.getJSON("/api/ops-by-id?id=" + key, function (data) {
                     showOperations(data, '/api/admin?tab=operations&loadBy=' + typeSearch + '&key=' + key);
                     $("#amount-operations").show();
                 })
