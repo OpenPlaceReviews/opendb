@@ -53,10 +53,11 @@ public class OpenDBScheduledServices {
 	
 	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
 	public void runBots() throws FailedVerificationException {
+		long now = System.currentTimeMillis();
 		if (blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && blocksManager.isBlockCreationOn()
-				&& (System.currentTimeMillis() - previousBotsCheck) >= botsMinInterval * 1000l) {
-			previousBotsCheck = System.currentTimeMillis();
-			for(BotInfo bi :botManager.getBots().values()) {
+				&& (now - previousBotsCheck) >= botsMinInterval * 1000l) {
+			previousBotsCheck = now;
+			for (BotInfo bi : botManager.getBots().values()) {
 				botManager.startBot(bi.getId());
 			}
 		}

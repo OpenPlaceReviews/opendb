@@ -35,8 +35,12 @@ public class BotManager {
 		String api;
 		String id;
 		int version;
+		long started;
 		IOpenDBBot<?> instance;
 
+		public long getStarted() {
+			return started;
+		}
 		
 		public String getId() {
 			return id;
@@ -99,6 +103,7 @@ public class BotManager {
 			return false;
 		}
 		if (botObj.instance != null) {
+			botObj.started = System.currentTimeMillis();
 			futures.add(service.submit(botObj.instance));
 			return true;
 		}
