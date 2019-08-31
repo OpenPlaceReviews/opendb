@@ -33,28 +33,30 @@
         <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
         <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
 
-        <h3>Admin actions</h3>
+        
         <form id="admin-login-div">
             <input type="text" id="admin-login-name"/>
             <input type="password" id="admin-login-key"/>
             <input type="submit" value="Login as admin" id="admin-login-btn"/>
         </form>
         <div id="admin-actions" >
-
+            <h3>Admin actions</h3>
             <input type="submit" value="Create block" id="block-create-btn"/>
             <input type="submit" value="Clear log" id="clear-log-btn" />
             <input type="submit" value="Compact" id="compact-btn" />
             <input type="submit" value="Replicate" id="replicate-btn" />
             <br><br>
-
+            <input type="submit" value="Lock/unlock blockchain" id="ops-pause-btn"/>
+            <input type="submit" value="Pause/resume new blocks" id="blocks-pause-btn"/>
+            <input type="submit" value="Pause/resume replication" id="replicate-pause-btn"/>
+            
+        </div>
+        <div id="owner-actions" >
+            <h3>Owner actions</h3>
             <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
             <input type="submit" value="Revert super block" id="block-revert-btn"/>
             <input type="submit" value="Revert 1 block" id="block-1revert-btn"/>
             <input type="submit" value="Clear queue" id="clear-list-btn" />
-            <br><br>
-            <input type="submit" value="Lock/unlock blockchain" id="ops-pause-btn"/>
-            <input type="submit" value="Pause/resume new blocks" id="blocks-pause-btn"/>
-            <input type="submit" value="Pause/resume replication" id="replicate-pause-btn"/>
             <br><br>
             <input type="text" id="remove-orphaned-blocks-txt"/>
             <input type="submit" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
@@ -63,6 +65,7 @@
             <input type="submit" value="Remove queue operations" id="remove-queue-ops-btn"/>
 
         </div>
+        
     </div>
 
     <div id="blocks" class="tab-pane fade">
@@ -329,6 +332,7 @@
         if(loginName != "") {
             $("#admin-login-user").html(loginName);
             $("#admin-actions").show();
+            $("#owner-actions").show();
             $("#admin-login-div").hide();
             $("#reg").show();
             $("#errors-tab").show();
@@ -338,6 +342,7 @@
             $("#ipfs-tab").show();
         } else {
             $("#admin-actions").hide();
+            $("#owner-actions").hide();
             $("#admin-login-div").show();
             $("#errors-tab").hide();
             $("#reg-tab").hide();
