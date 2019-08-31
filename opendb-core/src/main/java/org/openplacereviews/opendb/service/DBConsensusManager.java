@@ -742,7 +742,7 @@ public class DBConsensusManager {
 							dbIndexes.add(index);
 						}
 					}
-					List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, indexes);
+					List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, dbIndexes);
 					String table = dbSchema.getTableByType(type);
 					dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, dbIndexes);
 				}
