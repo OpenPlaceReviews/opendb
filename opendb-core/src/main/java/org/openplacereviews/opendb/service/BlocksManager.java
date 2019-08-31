@@ -525,15 +525,11 @@ public class BlocksManager {
 	public Collection<OpIndexColumn> getIndicesForType(String type) {
 		return dataManager.getIndicesForType(type);
 	}
-
-	public List<OpObject> getObjectsByIndex(String type, String indexId, OpBlockChain.ObjectsSearchRequest req, Object... valueToSearch) throws DBStaleException {
-		OpIndexColumn indexCol = dataManager.getIndex(type, indexId);
-		if (indexCol != null) {
-			blockchain.retrieveObjectsByIndex(type, indexCol, req, valueToSearch);
-		}
-		return req.result;
+	
+	public OpIndexColumn getIndex(String type, String indexId) {
+		return dataManager.getIndex(type, indexId);
 	}
-
+	
 	public void setBootstrapList(List<String> bootstrapList) {
 		this.bootstrapList = bootstrapList;
 	}

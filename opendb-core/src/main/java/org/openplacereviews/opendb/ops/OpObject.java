@@ -53,7 +53,7 @@ public class OpObject {
 	public static final String F_SUBMITTED_OP_HASH = "submittedOpHash";
 	public static final String F_USER = "user";
 
-	public static final OpObject NULL = new OpObject();
+	public static final OpObject NULL = new OpObject(true);
 
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 	static {
@@ -66,10 +66,14 @@ public class OpObject {
 	
 	protected transient String parentType;
 	protected transient String parentHash;
-	
+	protected transient boolean deleted;
 	
 	
 	public OpObject() {}
+	
+	public OpObject(boolean deleted) {
+		this.deleted = deleted;
+	}
 	
 	public OpObject(OpObject cp) {
 		this(cp, false);
@@ -83,6 +87,7 @@ public class OpObject {
 	private OpObject createOpObjectCopy(OpObject opObject, boolean copyCacheFields) {
 		this.parentType = opObject.parentType;
 		this.parentHash = opObject.parentHash;
+		this.deleted = opObject.deleted;
 		this.fields = (Map<String, Object>) copyingObjects(opObject.fields, copyCacheFields);
 		if (opObject.cacheFields != null && copyCacheFields) {
 			this.cacheFields = (Map<String, Object>) copyingObjects(opObject.cacheFields, copyCacheFields);
@@ -90,6 +95,10 @@ public class OpObject {
 		this.isImmutable = false;
 
 		return this;
+	}
+	
+	public boolean isDeleted() {
+		return deleted;
 	}
 
 	@SuppressWarnings("unchecked")

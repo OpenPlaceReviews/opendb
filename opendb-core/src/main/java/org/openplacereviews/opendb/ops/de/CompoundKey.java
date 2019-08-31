@@ -5,10 +5,10 @@ import org.openplacereviews.opendb.util.OUtils;
 import java.util.*;
 
 public class CompoundKey implements Collection<String> {
-	final String first;
-	final String second;
-	final int hashcode;
-	final List<String> others;
+	public final String first;
+	public final String second;
+	public final int hashcode;
+	public final List<String> others;
 
 	public CompoundKey(String first, String second) {
 		int result = 1;

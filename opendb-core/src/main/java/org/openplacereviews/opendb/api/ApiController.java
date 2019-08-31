@@ -27,6 +27,8 @@ import java.util.*;
 public class ApiController {
 
 	protected static final Log LOGGER = LogFactory.getLog(ApiController.class);
+	
+	public static final int LIMIT_RESULTS = 10000;
 
 	@Autowired
 	private BlocksManager manager;
@@ -273,6 +275,9 @@ public class ApiController {
 		OpBlockChain blc = manager.getBlockchain();
 		ObjectsResult res = new ObjectsResult();
 		ObjectsSearchRequest r = new ObjectsSearchRequest();
+		if(limit < 0 || limit > LIMIT_RESULTS) {
+			limit = LIMIT_RESULTS;
+		}
 		r.limit = limit;
 		blc.fetchAllObjects(type, r);
 		res.objects = r.result;
@@ -315,10 +320,21 @@ public class ApiController {
 	@ResponseBody
 	public String objectsByIndex(@RequestParam(required = true) String type,
 								 @RequestParam(required = true) String index,
-								 @RequestParam(required = true) String key) {
+								 @RequestParam(required = true) String key,
+								 @RequestParam(required = false, defaultValue = "100") int limit) {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
+		if(limit < 0 || limit > LIMIT_RESULTS) {
+			limit = LIMIT_RESULTS;
+		}
+		req.limit = limit;
 		ObjectsResult r = new ObjectsResult();
-		r.objects = manager.getObjectsByIndex(type, index, req, key);
+		OpIndexColumn indexCol = manager.getIndex(type, index);
+		if (indexCol != null) {
+			manager.getBlockchain().fetchObjectsByIndex(type, indexCol, req, key);
+			r.objects = req.result;
+		} else {
+			throw new UnsupportedOperationException();
+		}
 		return formatter.fullObjectToJson(r);
 	}
 
@@ -326,10 +342,13 @@ public class ApiController {
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,
 						  @RequestParam(required = true) List<String> key,
-						  @RequestParam(required = false, defaultValue = "20") int limit,
+						  @RequestParam(required = false, defaultValue = "100") int limit,
 						  @RequestParam(required = true) String sort) {
 		if (key.isEmpty() || !historyManager.isRunning()) {
 			return "{}";
+		}
+		if(limit < 0 || limit > LIMIT_RESULTS) {
+			limit = LIMIT_RESULTS;
 		}
 		HistoryObjectRequest historyObjectRequest = new HistoryObjectRequest(type, key, limit, sort);
 		historyManager.retrieveHistory(historyObjectRequest);

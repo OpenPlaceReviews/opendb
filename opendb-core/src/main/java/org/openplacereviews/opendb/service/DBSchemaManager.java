@@ -55,6 +55,12 @@ public class DBSchemaManager {
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	protected static final int MAX_KEY_SIZE = 5;
+	public static final String[] INDEX_P = new String[MAX_KEY_SIZE];
+	{
+		for(int i = 0; i < MAX_KEY_SIZE; i++) {
+			INDEX_P[i] = "p" + (i + 1);
+		}
+	}
 	protected static final int HISTORY_USERS_SIZE = 2;
 
 	// loaded from config
@@ -298,14 +304,23 @@ public class DBSchemaManager {
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
+			registerObjTable(tableName, i);
 			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
 			objTableDefs.put(tableName, ott);
+			
 			
 			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
 			if(tps != null) {
 				for(String type : tps.values()) {
 					typeToTables.put(type, tableName);
 					ott.types.add(type);
+					for(ColumnDef c : schema.get(tableName)) {
+						for(int indId = 0 ; indId < MAX_KEY_SIZE; indId++) {
+							if(c.getColName().equals(INDEX_P[indId])) {
+								addIndexCol(new OpIndexColumn(type, INDEX_P[indId], indId, c));
+							}
+						}
+					}
 				}
 			}
 			Map<String, Map<String, Object>> cii = (Map<String, Map<String, Object>>) objtables.get(tableName).get("columns");
@@ -332,7 +347,7 @@ public class DBSchemaManager {
 					Map<String, String> fld = (Map<String, String>) entry.get("field");
 					if (fld != null) {
 						for (String type : ott.types) {
-							OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
+							OpIndexColumn indexColumn = new OpIndexColumn(type, name, -1,  cd);
 							if(cacheRuntime != null) {
 								indexColumn.setCacheRuntimeBlocks(cacheRuntime);
 							}
@@ -340,18 +355,21 @@ public class DBSchemaManager {
 								indexColumn.setCacheDBBlocks(cacheDB);
 							}
 							indexColumn.setFieldsExpression(fld.values());
-							if (!indexes.containsKey(type)) {
-								indexes.put(type, new TreeMap<String, OpIndexColumn>());
-							}
-							indexes.get(type).put(name, indexColumn);
 						}
 					}
 					registerColumn(tableName, cd);
 				}
 			}
-			registerObjTable(tableName, i);
+			
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
+	}
+
+	private void addIndexCol(OpIndexColumn indexColumn) {
+		if (!indexes.containsKey(indexColumn.getOpType())) {
+			indexes.put(indexColumn.getOpType(), new TreeMap<String, OpIndexColumn>());
+		}
+		indexes.get(indexColumn.getOpType()).put(indexColumn.getIndexId(), indexColumn);
 	}
 
 

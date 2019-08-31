@@ -360,7 +360,9 @@ public class OpBlockChain {
 		String objType = u.getType();
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-			oinf.add(deletedRef, OpObject.NULL);
+			OpObject dl = new OpObject(true);
+			dl.setParentOp(u.getType(), u.getHash());
+			oinf.add(deletedRef, dl);
 		}
 		queueOperations.add(u);
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
@@ -651,7 +653,7 @@ public class OpBlockChain {
 			OpObject obj = ot.getObjectById(key, secondary);
 			m.capture();
 			if (obj != null) {
-				if(obj == OpObject.NULL) {
+				if(obj.isDeleted()) {
 					return null;
 				}
 				return obj;
@@ -670,7 +672,7 @@ public class OpBlockChain {
 			OpObject obj = ot.getObjectById(o);
 			m.capture();
 			if (obj != null) {
-				if(obj == OpObject.NULL) {
+				if(obj.isDeleted()) {
 					return null;
 				}
 				return obj;
@@ -714,6 +716,7 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return;
 		}
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch.all.total").start();
 		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 		if(oi == null) {
 			parent.fetchAllObjects(type, request);
@@ -728,60 +731,60 @@ public class OpBlockChain {
 					return;
 				}
 			}
-			fetchObjectsInternal(type, request, null);
+			Map<CompoundKey, OpObject> res = fetchObjectsInternal(type, request, null);
+			request.setResult(res);
 		}
-	}
-	
-	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
-		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + index.getIndexId() + ".total").start();
-		fetchObjectsInternal(type, request, index, argsToSearch);
 		m.capture();
 	}
+	
+	
+	public void fetchObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + index.getIndexId() + ".total").start();
+		Map<CompoundKey, OpObject> res = fetchObjectsInternal(type, request, index, argsToSearch);
+		request.setResult(res);
+		m.capture();
+	}
+	
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
+		Map<CompoundKey, OpObject> res = new LinkedHashMap<>();
 		if(isNullBlock()) {
-			return Collections.emptyMap();
+			return res;
 		}
 		String mid = "blc.fetch." + (col == null ? "all" : col.getIndexId());
 		mid += isDbAccessed()?  ".db" : ".ram";
 		Metric m = PerformanceMetrics.i().getMetric(mid).start();
 		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
 		// don't check for all queries
-		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
-		if(o != null) {
+		if (o != null) {
 			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, getSuperblockSize(), col, args);
 			Iterator<Entry<CompoundKey, OpObject>> it = stream.iterator();
-			while(it.hasNext()) {
+			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();
-				request.result.add(e.getValue());
-				if(fetchedToCheck != null) {
-					fetchedToCheck.put(e.getKey(), e.getValue());
-				}
-				if(request.limit >= 0 && request.result.size() >= request.limit) {
+				res.put(e.getKey(), e.getValue());
+				if (request.limit >= 0 && res.size() >= request.limit) {
 					m.capture();
-					return fetchedToCheck;
+					return res;
 				}
 			}
 		}
 		m.capture();
-		if(request.limit < 0 || request.result.size() < request.limit) {
-			Map<CompoundKey, OpObject> prKeys = parent.fetchObjectsInternal(type, request, col, args);
-			// HERE we need to check that newer version doesn't exist in current blockchain 
-			if(prKeys != null) {
-				for(CompoundKey c : prKeys.keySet()) {
+		if (request.limit < 0 || request.result.size() < request.limit) {
+			Map<CompoundKey, OpObject> prres = parent.fetchObjectsInternal(type, request, col, args);
+			// HERE we need to check that newer version doesn't exist in current blockchain
+			prres.putAll(res);
+			if (col != null) {
+				for (CompoundKey c : prres.keySet()) {
 					OpObject i = o.getByKey(c);
-					if(i != null) {
+					if (i != null && !res.containsKey(c)) {
 						// object was overridden
-						OpObject oldObj = prKeys.get(c);
-						request.result.remove(oldObj);
+						prres.remove(c);
 					}
 				}
 			}
-			if(fetchedToCheck != null) {
-				fetchedToCheck.putAll(prKeys);
-			}
+			res = prres;
 		}
-		return fetchedToCheck;
+		return res;
 	}
 
 	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMap(String type) {
@@ -1113,7 +1116,7 @@ public class OpBlockChain {
 		 * extraParamsWithCondition[0] - extra and "sql condition"
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
-		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException;
+		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, boolean onlyKeys, Object... extraParamsWithCondition) throws DBStaleException;
 		
 		int countObjects(String type, Object... extraParamsWithCondition) throws DBStaleException;
 
@@ -1144,13 +1147,27 @@ public class OpBlockChain {
 		public int limit = -1;
 		public boolean requestCache = false;
 		public SearchType searchType = SearchType.EQUALS;
+		public boolean requestOnlyKeys = false;
 
+		public List<CompoundKey> keys = new ArrayList<CompoundKey>();
 		public List<OpObject> result = new ArrayList<OpObject>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
 
-		Object internalMapToFilterDuplicates;
 		OpPrivateObjectInstancesById objToSetCache;
+		
+		public void setResult(Map<CompoundKey, OpObject> res) {
+			Iterator<Entry<CompoundKey, OpObject>> it = res.entrySet().iterator();
+			while(it.hasNext()) {
+				Entry<CompoundKey, OpObject> e = it.next();
+				if (e.getValue() != null && !e.getValue().isDeleted()) {
+					if (!requestOnlyKeys) {
+						result.add(e.getValue());
+					}
+					keys.add(e.getKey());
+				}
+			}
+		}
 	}
 	
 	public enum SearchType {
