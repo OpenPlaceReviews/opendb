@@ -355,6 +355,7 @@ public class DBSchemaManager {
 								indexColumn.setCacheDBBlocks(cacheDB);
 							}
 							indexColumn.setFieldsExpression(fld.values());
+							addIndexCol(indexColumn);
 						}
 					}
 					registerColumn(tableName, cd);
