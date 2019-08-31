@@ -361,7 +361,7 @@ public class OpBlockChain {
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			OpObject dl = new OpObject(true);
-			dl.setParentOp(u.getType(), u.getHash());
+			dl.setParentOp(u.getType(), u.getRawHash());
 			oinf.add(deletedRef, dl);
 		}
 		queueOperations.add(u);
