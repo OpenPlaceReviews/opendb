@@ -507,6 +507,7 @@ public class DBConsensusManager {
 			}
 			if (isSuperblockReferenceActive) {
 				// to do faster to load by superblock reference, so it could be 1 sql
+				// but it need to handle correctly DBStaleException
 			}
 			LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
 			for (OpBlock b : blockHeaders) {

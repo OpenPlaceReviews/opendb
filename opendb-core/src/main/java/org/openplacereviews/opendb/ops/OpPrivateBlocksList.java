@@ -4,6 +4,7 @@ import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

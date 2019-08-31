@@ -660,22 +660,6 @@ public class OpBlockChain {
 		return parent.getObjectByName(type, o);
 	}
 
-	public OpObject getAllObjectsByName(String type, List<String> o, List<OpObject> opObjects) throws DBStaleException {
-		if (isNullBlock()) {
-			return null;
-		}
-		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
-		if (ot != null) {
-			Metric m = mFetchById.start();
-			OpObject obj = ot.getObjectById(o);
-			m.capture();
-			if (obj != null) {
-				opObjects.add(obj);
-			}
-		}
-		return parent.getAllObjectsByName(type, o, opObjects);
-	}
-
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {
 		if(request.objToSetCache != null) {
 			request.objToSetCache.setCacheObject(cacheObject, request.editVersion);
