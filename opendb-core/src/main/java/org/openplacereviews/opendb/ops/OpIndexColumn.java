@@ -123,7 +123,7 @@ public class OpIndexColumn {
 		if(oi.getDbAccess() != null){
 			stream = oi.getDbAccess().streamObjects(type, limit, request.requestOnlyKeys, getDbCondition(request, args));
 		} else {
-			stream = oi.getRawObjects().entrySet().stream();
+			stream = oi.getRawObjects();
 			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
 				@Override
 				public boolean test(Entry<CompoundKey, OpObject> t) {
@@ -157,7 +157,7 @@ public class OpIndexColumn {
 			keys = buildCacheKeys(it);
 			oi.setCacheObjectByKey(this, keys, ev);
 		} else if (oi.getDbAccess() == null) {
-			keys = buildCacheKeys(oi.getRawObjects().entrySet().iterator());
+			keys = buildCacheKeys(oi.getRawObjects().iterator());
 			oi.setCacheObjectByKey(this, keys, ev);
 		}
 		return keys;

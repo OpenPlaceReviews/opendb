@@ -509,17 +509,17 @@ public class OpBlockChain {
 		return blocks.getAllBlocks();
 	}
 
-
-	public Map<String, Map<CompoundKey, OpObject>> getRawSuperblockObjects() {
+	
+	public Collection<String> getRawSuperblockTypes() {
 		if(dbAccess != null) {
-			throw new UnsupportedOperationException();
+			return dbAccess.getObjectTypes();
 		}
-		Map<String, Map<CompoundKey, OpObject>> mp = new TreeMap<String, Map<CompoundKey, OpObject>>();
-		for(String type : objByName.keySet()) {
-			OpPrivateObjectInstancesById bid = objByName.get(type);
-			mp.put(type, bid.getRawObjects());
-		}
-		return mp;
+		return objByName.keySet();
+	}
+
+	public Stream<Entry<CompoundKey, OpObject>> getRawSuperblockObjects(String type) {
+		OpPrivateObjectInstancesById bid = getOrCreateObjectsByIdMap(type);
+		return bid.getRawObjects();
 	}
 
 	public List<OpBlock> getBlockHeaders(int depth) {
@@ -815,6 +815,9 @@ public class OpBlockChain {
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
+		if(!u.hasCreated() && !u.hasEdited() && !u.hasDeleted()) {
+			return rules.error(u, ErrorType.OP_EMPTY, u.getType(), ctx.blockHash);
+		}
 		OpOperation oin = getOperationByHash(u.getRawHash());
 		if(oin != null) {
 			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
@@ -1105,6 +1108,8 @@ public class OpBlockChain {
 		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) throws DBStaleException ;
 
 		OpBlock getBlockByHash(String rawHash) throws DBStaleException ;
+		
+		Collection<String> getObjectTypes();
 
 	}
 	

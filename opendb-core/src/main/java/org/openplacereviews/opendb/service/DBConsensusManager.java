@@ -524,6 +524,27 @@ public class DBConsensusManager {
 			return loadBlock(rawHash);
 		}
 
+		@Override
+		public Collection<String> getObjectTypes() {
+			readLock.lock();
+			try {
+				Set<String> types = new LinkedHashSet<String>();
+				checkNotStale();
+				jdbcTemplate.query("SELECT distinct type from " + OPERATIONS_TABLE + " where superblock = ?", new RowCallbackHandler() {
+
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						if (rs.next()) {
+							types.add(rs.getString(1));
+						}
+					}
+				}, sbhash);
+				return types;
+			} finally {
+				readLock.unlock();
+			}
+		}
+
 	}
 
 	protected BlockDbAccessInterface createDbAccess(String superblock, Collection<OpBlock> blockHeaders) {
@@ -732,9 +753,8 @@ public class DBConsensusManager {
 					}
 				}
 
-				Map<String, Map<CompoundKey, OpObject>> so = blc.getRawSuperblockObjects();
-				for (String type : so.keySet()) {
-					Map<CompoundKey, OpObject> objects = so.get(type);
+				for (String type : blc.getRawSuperblockTypes()) {
+					Stream<Map.Entry<CompoundKey, OpObject>> objects = blc.getRawSuperblockObjects(type);
 					Collection<OpIndexColumn> indexes = dbSchema.getIndicesForType(type);
 					List<OpIndexColumn> dbIndexes = new ArrayList<OpIndexColumn>();
 					for (OpIndexColumn index : indexes) {
@@ -754,12 +774,12 @@ public class DBConsensusManager {
 		});
 	}
 
-	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
+	protected List<Object[]> prepareInsertObjBatch(Stream<Map.Entry<CompoundKey, OpObject>> objects, String type,
 												   byte[] superBlockHash, Map<String, Long> opsId, Collection<OpIndexColumn> indexes) {
 
-		List<Object[]> insertBatch = new ArrayList<>(objects.size());
+		List<Object[]> insertBatch = new ArrayList<>();
 		int ksize = dbSchema.getKeySizeByType(type);
-		Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
+		Iterator<Entry<CompoundKey, OpObject>> it = objects.iterator();
 		try {
 			Connection conn = jdbcTemplate.getDataSource().getConnection();
 			while (it.hasNext()) {
@@ -890,7 +910,7 @@ public class DBConsensusManager {
 							"WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
 									+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
 									+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
-									+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
+									+ " (id, hash, time, type, content) SELECT dbid, hash, now(), type, content FROM moved_rows",
 							SecUtils.getHashBytes(op));
 				}
 				return deleted;
@@ -1041,6 +1061,7 @@ public class DBConsensusManager {
 				pGobject.setType("jsonb");
 
 				String js = formatter.opToJson(op);
+				String type = op.getType();
 				try {
 					pGobject.setValue(js);
 				} catch (SQLException e) {
@@ -1048,7 +1069,7 @@ public class DBConsensusManager {
 				}
 				byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-				jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", bhash, pGobject);
+				jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, type, content) VALUES (?, ?, ?)", bhash, type, pGobject);
 				return op;
 			}
 			

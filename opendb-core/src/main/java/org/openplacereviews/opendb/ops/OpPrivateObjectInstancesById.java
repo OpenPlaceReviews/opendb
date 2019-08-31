@@ -46,11 +46,11 @@ class OpPrivateObjectInstancesById {
 	}
 	
 
-	Map<CompoundKey, OpObject> getRawObjects() {
+	Stream<Entry<CompoundKey, OpObject>> getRawObjects() {
 		if (dbAccess != null) {
-			throw new UnsupportedOperationException();
+			return dbAccess.streamObjects(type, -1, false);
 		}
-		return objects;
+		return objects.entrySet().stream();
 	}
 	
 	BlockDbAccessInterface getDbAccess() {
