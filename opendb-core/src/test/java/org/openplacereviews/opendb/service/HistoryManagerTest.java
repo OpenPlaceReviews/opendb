@@ -25,7 +25,8 @@ public class HistoryManagerTest {
 				"sys.operation",
 				generateTestDeletedDeltaObject(),
 				new Date().toString(),
-				HistoryManager.Status.DELETED
+				HistoryManager.Status.DELETED,
+				"0x"
 		);
 
 		originObject = historyManager.getPreviousOpObject(originObject, previousHistoryEdit, historyEdit);
@@ -80,7 +81,8 @@ public class HistoryManagerTest {
 				"sys.operation",
 				delataChanges,
 				new Date().toString(),
-				status
+				status,
+				"0x"
 		);
 		historyEdit.setDeltaChanges(objEdit);
 

@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -93,7 +94,13 @@ public class DBHistoryManagerTest {
 		);
 		historyManager.retrieveHistory(historyObjectRequest);
 
-		List<HistoryManager.HistoryEdit> historyObject = historyObjectRequest.historySearchResult.get(Arrays.asList("osm.place","12345662"));
+		List<HistoryManager.HistoryEdit> historyObject = new ArrayList<>();
+		for (HistoryManager.HistoryEdit historyEdit : historyObjectRequest.historySearchResult) {
+			if (historyEdit.getId().equals(Arrays.asList("osm.place","12345662"))) {
+				historyObject.add(historyEdit);
+			}
+		}
+
 		assertEquals(2, historyObject.size());
 
 	}

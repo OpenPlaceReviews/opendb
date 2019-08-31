@@ -531,7 +531,7 @@ public class OpBlockChain {
 		if(nullObject) {
 			return null;
 		}
-		if(parent.getLastBlockId() > id) {
+		if(parent.getLastBlockId() >= id) {
 			return parent.getBlockHeadersById(id);
 		}
 		for(OpBlock o : blocks.getAllBlockHeaders()) {
@@ -540,6 +540,35 @@ public class OpBlockChain {
 			}
 		}
 		return null;
+	}
+
+	public OpBlock getFullBlockByBlockId(int id) {
+		OpBlock b = getBlockHeadersById(id);
+		if (b != null) {
+			return getFullBlockByRawHash(b.getRawHash());
+		}
+
+		return null;
+	}
+
+	public OpBlock getGeneratedOpBlockWithOperationsByObjectId(List<String> id) {
+		OpBlock opBlock = new OpBlock();
+		if (id.size() > 1) {
+			String type = id.get(0);
+			id = id.subList(1, id.size());
+			List<OpObject> opObjectList = new ArrayList<>();
+			getAllObjectsByName(type, id, opObjectList);
+			for (OpObject opObject : opObjectList) {
+				OpOperation opOperation = getOperationByHash(opObject.parentHash);
+				if (opOperation != null) {
+					opBlock.addOperation(opOperation);
+				}
+			}
+		} else {
+
+		}
+
+		return opBlock;
 	}
 
 	public String getSuperBlockHash() {
@@ -648,6 +677,22 @@ public class OpBlockChain {
 			}
 		}
 		return parent.getObjectByName(type, o);
+	}
+
+	public OpObject getAllObjectsByName(String type, List<String> o, List<OpObject> opObjects) throws DBStaleException {
+		if (isNullBlock()) {
+			return null;
+		}
+		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
+		if (ot != null) {
+			Metric m = mFetchById.start();
+			OpObject obj = ot.getObjectById(o);
+			m.capture();
+			if (obj != null) {
+				opObjects.add(obj);
+			}
+		}
+		return parent.getAllObjectsByName(type, o, opObjects);
 	}
 
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {
