@@ -417,7 +417,6 @@ public class OpBlockChain {
 				it.remove();
 			}
 		}
-		//  TODO check history object context
 		for (OpOperation o : ops) {
 			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>");
 			validateAndPrepareOperation(o, validationCtx, null);

@@ -767,10 +767,15 @@ public class DBConsensusManager {
 				CompoundKey pkey = e.getKey();
 				OpObject obj = e.getValue();
 				// OpObject.NULL doesn't have parent hash otherwise it should be a separate object
-				long l = obj == OpObject.NULL ? 0 : opsId.get(obj.getParentHash());
+				Long l = opsId.get(obj.getParentHash());
+				if (obj == OpObject.NULL) {
+					l = 0l;
+				}
+				if(l == null) {
+					throw new IllegalArgumentException(String.format("Not found op: '%s'", obj.getParentHash()));
+				}
 				int sblockid = OUtils.first(l);
 				int sorder = OUtils.second(l);
-
 				if (pkey.size() > ksize) {
 					throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
 				}

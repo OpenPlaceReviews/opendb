@@ -134,7 +134,8 @@ class OpPrivateObjectInstancesById {
 		return r;
 	}
 	
-	public OpObject remove(List<String> id) {
+	// Be attentive this method deletes 1 object version, but doesn't hide it 
+	public OpObject internalRemove(List<String> id) {
 		if (dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}
