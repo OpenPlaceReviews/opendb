@@ -761,28 +761,28 @@ public class OpBlockChain {
 			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();
 				res.put(e.getKey(), e.getValue());
-				if (request.limit >= 0 && res.size() >= request.limit) {
+				request.internalProgress++;
+				if (request.limit >= 0 && request.internalProgress >= request.limit) {
 					m.capture();
 					return res;
 				}
 			}
 		}
 		m.capture();
-		if (request.limit < 0 || request.result.size() < request.limit) {
-			Map<CompoundKey, OpObject> prres = parent.fetchObjectsInternal(type, request, col, args);
-			// HERE we need to check that newer version doesn't exist in current blockchain
-			prres.putAll(res);
-			if (col != null) {
-				for (CompoundKey c : prres.keySet()) {
-					OpObject i = o.getByKey(c);
-					if (i != null && !res.containsKey(c)) {
-						// object was overridden
-						prres.remove(c);
-					}
+		// capture parent results
+		Map<CompoundKey, OpObject> prres = parent.fetchObjectsInternal(type, request, col, args);
+		// HERE we need to check that newer version doesn't exist in current blockchain
+		prres.putAll(res);
+		if (col != null) {
+			for (CompoundKey c : prres.keySet()) {
+				OpObject i = o.getByKey(c);
+				if (i != null && !res.containsKey(c)) {
+					// object was overridden
+					prres.remove(c);
 				}
 			}
-			res = prres;
 		}
+		res = prres;
 		return res;
 	}
 
@@ -1154,6 +1154,7 @@ public class OpBlockChain {
 		public Object cacheObject;
 
 		OpPrivateObjectInstancesById objToSetCache;
+		int internalProgress;
 		
 		public void setResult(Map<CompoundKey, OpObject> res) {
 			Iterator<Entry<CompoundKey, OpObject>> it = res.entrySet().iterator();
