@@ -10,7 +10,6 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 
@@ -47,11 +46,11 @@ class OpPrivateObjectInstancesById {
 	}
 	
 
-	Map<CompoundKey, OpObject> getRawObjects() {
+	Stream<Entry<CompoundKey, OpObject>> getRawObjects() {
 		if (dbAccess != null) {
-			throw new UnsupportedOperationException();
+			return dbAccess.streamObjects(type, -1, false);
 		}
-		return objects;
+		return objects.entrySet().stream();
 	}
 	
 	BlockDbAccessInterface getDbAccess() {
@@ -67,7 +66,6 @@ class OpPrivateObjectInstancesById {
 			return objects.size();
 		}
 	}
-	@SuppressWarnings("unchecked")
 	public Stream<Entry<CompoundKey, OpObject>> fetchObjects(ObjectsSearchRequest request, 
 			int superBlockSize, OpIndexColumn col, Object... args) throws DBStaleException {
 		// limit will be negative
@@ -77,27 +75,12 @@ class OpPrivateObjectInstancesById {
 			stream = col.streamObjects(this, superBlockSize, type, limit, request, args);
 		} else {
 			if (dbAccess != null) {
-				stream = dbAccess.streamObjects(type, limit);
+				stream = dbAccess.streamObjects(type, limit, request.requestOnlyKeys);
 			} else {
 				stream = objects.entrySet().stream();
 			}
 		}
-		if (request.internalMapToFilterDuplicates == null) {
-			request.internalMapToFilterDuplicates = new HashSet<CompoundKey>();
-		}
-		final Set<CompoundKey> mp = (Set<CompoundKey>) request.internalMapToFilterDuplicates;
-		return stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
-
-			@Override
-			public boolean test(Entry<CompoundKey, OpObject> entr) {
-				if (!mp.contains(entr.getKey())) {
-					mp.add(entr.getKey());
-					return entr.getValue() != OpObject.NULL && entr.getValue() != null;
-				} else {
-					return false;
-				}
-			}
-		});
+		return stream;
 	}
 
 	OpObject getByKey(CompoundKey k) throws DBStaleException {
@@ -151,7 +134,8 @@ class OpPrivateObjectInstancesById {
 		return r;
 	}
 	
-	public OpObject remove(List<String> id) {
+	// Be attentive this method deletes 1 object version, but doesn't hide it 
+	public OpObject internalRemove(List<String> id) {
 		if (dbAccess != null) {
 			throw new UnsupportedOperationException();
 		}

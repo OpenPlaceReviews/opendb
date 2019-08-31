@@ -235,9 +235,11 @@ public class DBConsensusManager {
 		private final int keySize; 
 		private LinkedList<Map.Entry<CompoundKey, OpObject>> results = new LinkedList<>();
 		private boolean end;
-		SuperblockDbSpliterator(SuperblockDbAccess dbAccess, int keySize,  SqlRowSet rowSet) throws DBStaleException {
+		private boolean onlyKeys;
+		SuperblockDbSpliterator(SuperblockDbAccess dbAccess, int keySize, boolean onlyKeys, SqlRowSet rowSet) throws DBStaleException {
 			this.dbAccess = dbAccess;
 			this.keySize = keySize;
+			this.onlyKeys = onlyKeys;
 			this.rs = rowSet;
 			readEntries();
 		}
@@ -261,11 +263,14 @@ public class DBConsensusManager {
 						ls.add(rs.getString(i + 4));
 					}
 					final CompoundKey k = new CompoundKey(0, ls);
-					String cont = rs.getString(1);
-					final OpObject obj = cont == null ? OpObject.NULL : formatter.parseObject(cont);
-					if(cont != null) {
-						obj.setParentOp(rs.getString(2), SecUtils.hexify((byte[]) rs.getObject(3)));
+					final OpObject obj ;
+					if(!onlyKeys) {
+						String cont = rs.getString(1);
+						obj = cont == null ? new OpObject(true) : formatter.parseObject(cont);
+					} else {
+						obj = new OpObject(rs.getBoolean(1));
 					}
+					obj.setParentOp(rs.getString(2), SecUtils.hexify((byte[]) rs.getObject(3)));
 					results.add(new Map.Entry<CompoundKey, OpObject>() {
 
 						@Override
@@ -386,10 +391,12 @@ public class DBConsensusManager {
 							return null;
 						}
 						String cnt = rs.getString(1);
+						OpObject obj;
 						if(cnt == null) {
-							return OpObject.NULL;
+							obj = new OpObject(true);
+						} else {
+							obj = formatter.parseObject(cnt);
 						}
-						OpObject obj = formatter.parseObject(cnt);
 						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
 						return obj;
 					}
@@ -405,7 +412,7 @@ public class DBConsensusManager {
 			}
 		}
 
-		public Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type,  int limit,  Object... extraParams) throws DBStaleException {
+		public Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type,  int limit, boolean onlyKeys, Object... extraParams) throws DBStaleException {
 			readLock.lock();
 			try {
 				checkNotStale();
@@ -423,14 +430,18 @@ public class DBConsensusManager {
 				}
 				String objTable = dbSchema.getTableByType(type);
 				final int keySize = dbSchema.getKeySizeByType(type);
-				String sql = "select content, type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
+				String cntField = "content";
+				if(onlyKeys) {
+					 cntField = "case when content is null then true else false end";
+				}
+				String sql = "select "+cntField+", type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
 						+ "  from " + objTable + " where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond); 
 				if (limit > 0) {
 					sql = sql + " limit " + limit;
 				}
 				
 				final SqlRowSet rs = jdbcTemplate.queryForRowSet(sql, o);
-				return StreamSupport.stream(new SuperblockDbSpliterator(this, keySize, rs), false); 
+				return StreamSupport.stream(new SuperblockDbSpliterator(this, keySize, onlyKeys, rs), false); 
 			} finally {
 				readLock.unlock();
 			}
@@ -496,6 +507,7 @@ public class DBConsensusManager {
 			}
 			if (isSuperblockReferenceActive) {
 				// to do faster to load by superblock reference, so it could be 1 sql
+				// but it need to handle correctly DBStaleException
 			}
 			LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
 			for (OpBlock b : blockHeaders) {
@@ -513,6 +525,26 @@ public class DBConsensusManager {
 			return loadBlock(rawHash);
 		}
 
+		@Override
+		public Collection<String> getObjectTypes() {
+			readLock.lock();
+			try {
+				Set<String> types = new LinkedHashSet<String>();
+				checkNotStale();
+				jdbcTemplate.query("SELECT distinct type from " + OPERATIONS_TABLE + " where superblock = ?", new RowCallbackHandler() {
+
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						if (rs.next()) {
+							types.add(rs.getString(1));
+						}
+					}
+				}, sbhash);
+				return types;
+			} finally {
+				readLock.unlock();
+			}
+		}
 
 	}
 
@@ -722,13 +754,18 @@ public class DBConsensusManager {
 					}
 				}
 
-				Map<String, Map<CompoundKey, OpObject>> so = blc.getRawSuperblockObjects();
-				for (String type : so.keySet()) {
-					Map<CompoundKey, OpObject> objects = so.get(type);
+				for (String type : blc.getRawSuperblockTypes()) {
+					Stream<Map.Entry<CompoundKey, OpObject>> objects = blc.getRawSuperblockObjects(type);
 					Collection<OpIndexColumn> indexes = dbSchema.getIndicesForType(type);
-					List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, indexes);
+					List<OpIndexColumn> dbIndexes = new ArrayList<OpIndexColumn>();
+					for (OpIndexColumn index : indexes) {
+						if(index.getIdIndex() < 0) {
+							dbIndexes.add(index);
+						}
+					}
+					List<Object[]> insertBatch = prepareInsertObjBatch(objects, type, superBlockHash, opsId, dbIndexes);
 					String table = dbSchema.getTableByType(type);
-					dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, indexes);
+					dbSchema.insertObjIntoTableBatch(insertBatch, table, jdbcTemplate, dbIndexes);
 				}
 				OpBlockChain dbchain = new OpBlockChain(blc.getParent(), blockHeaders, createDbAccess(superBlockHashStr, blockHeaders),
 						blc.getRules());
@@ -738,12 +775,12 @@ public class DBConsensusManager {
 		});
 	}
 
-	protected List<Object[]> prepareInsertObjBatch(Map<CompoundKey, OpObject> objects, String type,
+	protected List<Object[]> prepareInsertObjBatch(Stream<Map.Entry<CompoundKey, OpObject>> objects, String type,
 												   byte[] superBlockHash, Map<String, Long> opsId, Collection<OpIndexColumn> indexes) {
 
-		List<Object[]> insertBatch = new ArrayList<>(objects.size());
+		List<Object[]> insertBatch = new ArrayList<>();
 		int ksize = dbSchema.getKeySizeByType(type);
-		Iterator<Entry<CompoundKey, OpObject>> it = objects.entrySet().iterator();
+		Iterator<Entry<CompoundKey, OpObject>> it = objects.iterator();
 		try {
 			Connection conn = jdbcTemplate.getDataSource().getConnection();
 			while (it.hasNext()) {
@@ -751,10 +788,15 @@ public class DBConsensusManager {
 				CompoundKey pkey = e.getKey();
 				OpObject obj = e.getValue();
 				// OpObject.NULL doesn't have parent hash otherwise it should be a separate object
-				long l = obj == OpObject.NULL ? 0 : opsId.get(obj.getParentHash());
+				Long l = opsId.get(obj.getParentHash());
+				if (obj == OpObject.NULL) {
+					l = 0l;
+				}
+				if(l == null) {
+					throw new IllegalArgumentException(String.format("Not found op: '%s'", obj.getParentHash()));
+				}
 				int sblockid = OUtils.first(l);
 				int sorder = OUtils.second(l);
-
 				if (pkey.size() > ksize) {
 					throw new UnsupportedOperationException("Key is too long to be stored: " + pkey.toString());
 				}
@@ -768,7 +810,7 @@ public class DBConsensusManager {
 
 				args[ind++] = sblockid;
 				args[ind++] = sorder;
-				if (obj != OpObject.NULL) {
+				if (!obj.isDeleted()) {
 					PGobject contentObj = new PGobject();
 					contentObj.setType("jsonb");
 					try {
@@ -782,7 +824,7 @@ public class DBConsensusManager {
 				}
 
 				for (OpIndexColumn index : indexes) {
-					if (obj != OpObject.NULL) {
+					if (!obj.isDeleted()) {
 						args[ind++] = index.evalDBValue(obj, conn);
 					} else {
 						args[ind++] = null;
@@ -869,7 +911,7 @@ public class DBConsensusManager {
 							"WITH moved_rows AS ( DELETE FROM " + OPERATIONS_TABLE
 									+ "     a WHERE hash = ? and (blocks = '{}' or blocks is null) RETURNING a.*) "
 									+ " INSERT INTO " + OPERATIONS_TRASH_TABLE
-									+ " (id, hash, time, content) SELECT dbid, hash, now(), content FROM moved_rows",
+									+ " (id, hash, time, type, content) SELECT dbid, hash, now(), type, content FROM moved_rows",
 							SecUtils.getHashBytes(op));
 				}
 				return deleted;
@@ -1020,6 +1062,7 @@ public class DBConsensusManager {
 				pGobject.setType("jsonb");
 
 				String js = formatter.opToJson(op);
+				String type = op.getType();
 				try {
 					pGobject.setValue(js);
 				} catch (SQLException e) {
@@ -1027,7 +1070,7 @@ public class DBConsensusManager {
 				}
 				byte[] bhash = SecUtils.getHashBytes(op.getHash());
 
-				jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, content) VALUES (?, ?)", bhash, pGobject);
+				jdbcTemplate.update("INSERT INTO " + OPERATIONS_TABLE + "(hash, type, content) VALUES (?, ?, ?)", bhash, type, pGobject);
 				return op;
 			}
 			

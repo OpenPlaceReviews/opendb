@@ -9,6 +9,7 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
+import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -109,9 +110,8 @@ public class OpBlockchainGettersTest {
 	@Parameters(method = "opblockchainBasicParameterWithoutBlock")
 	public void testGetSuperblockObjects(OpBlockChain opBlockChain) {
 		final int amountLoadedObjects = 7;
-		Map<String, Map<CompoundKey, OpObject>> superBlockObject = opBlockChain.getRawSuperblockObjects();
-
-		assertEquals(amountLoadedObjects, superBlockObject.size());
+		Collection<String> tps = opBlockChain.getRawSuperblockTypes();
+		assertEquals(amountLoadedObjects, tps.size());
 	}
 
 	@Test

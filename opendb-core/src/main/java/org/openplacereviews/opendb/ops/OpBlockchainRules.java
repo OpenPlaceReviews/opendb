@@ -677,6 +677,7 @@ public class OpBlockchainRules {
 		OP_SIZE_IS_EXCEEDED("Operation '%s' size '%d' exceeds the limit '%d'"),
 		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
 		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
+		OP_EMPTY("Empty operation '%s' is not allowed in block %s"),
 		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
 
 		LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED("Operation '%s': exceeded amount of created objects"),

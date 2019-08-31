@@ -22,17 +22,20 @@ import java.util.stream.Stream;
 public class OpIndexColumn {
 
 	protected static final Log LOGGER = LogFactory.getLog(OpIndexColumn.class);
-
+	
 	private final String indexId;
 	private final String opType;
 	private final ColumnDef columnDef;
-	private List<List<String>> fieldsExpression = Collections.emptyList();
+	private final int idIndex;
+	private List<IndexExpression> fieldsExpression = Collections.emptyList();
 	private int cacheRuntimeBlocks = 64;
 	private int cacheDBBlocks = 64;
+
 	
-	public OpIndexColumn(String opType, String indexId, ColumnDef columnDef) {
+	public OpIndexColumn(String opType, String indexId, int idIndex, ColumnDef columnDef) {
 		this.opType = opType;
 		this.indexId = indexId;
+		this.idIndex = idIndex;
 		this.columnDef = columnDef;
 	}
 	
@@ -52,16 +55,20 @@ public class OpIndexColumn {
 		return indexId;
 	}
 	
+	public int getIdIndex() {
+		return idIndex;
+	}
+	
 	public void setFieldsExpression(Collection<String> fieldsExpression) {
-		List<List<String>> nf = new ArrayList<>();
+		List<IndexExpression> nf = new ArrayList<>();
 		if (fieldsExpression != null) {
 			for (String o : fieldsExpression) {
+				IndexExpression ie = new IndexExpression();
 				String[] split = o.split("\\.");
-				List<String> fld = new ArrayList<String>();
-				for(String s : split) {
-					fld.add(s);
+				for (String s : split) {
+					ie.expression.add(s);
 				}
-				nf.add(fld);
+				nf.add(ie);
 			}
 		}
 		this.fieldsExpression = nf;
@@ -73,20 +80,20 @@ public class OpIndexColumn {
 	
 	public Object evalDBValue(OpObject opObject, Connection conn) {
 		List<Object> array = eval(opObject, null);
-		if(array != null) {
+		if (array != null) {
 			Iterator<Object> it = array.iterator();
-			while(it.hasNext()) {
+			while (it.hasNext()) {
 				Object o = it.next();
-				if(o == null) {
+				if (o == null) {
 					it.remove();
 				}
 			}
 		}
-		if(array == null || array.size() == 0) {
+		if (array == null || array.size() == 0) {
 			return null;
 		}
 		// here we can convert to native db type
-		if(columnDef.isArray()) {
+		if (columnDef.isArray()) {
 			try {
 				Array ar = conn.createArrayOf(columnDef.getScalarType(), array.toArray(new Object[array.size()]));
 				return ar;
@@ -114,9 +121,9 @@ public class OpIndexColumn {
 		}
 		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(oi.getDbAccess() != null){
-			stream = oi.getDbAccess().streamObjects(type, limit, getDbCondition(request, args));
+			stream = oi.getDbAccess().streamObjects(type, limit, request.requestOnlyKeys, getDbCondition(request, args));
 		} else {
-			stream = oi.getRawObjects().entrySet().stream();
+			stream = oi.getRawObjects();
 			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
 				@Override
 				public boolean test(Entry<CompoundKey, OpObject> t) {
@@ -146,11 +153,11 @@ public class OpIndexColumn {
 		}
 		int ev = oi.getEditVersion();
 		if (oi.getDbAccess() != null) {
-			Iterator<Entry<CompoundKey, OpObject>> it = oi.getDbAccess().streamObjects(type, -1).iterator();
+			Iterator<Entry<CompoundKey, OpObject>> it = oi.getDbAccess().streamObjects(type, -1, false).iterator();
 			keys = buildCacheKeys(it);
 			oi.setCacheObjectByKey(this, keys, ev);
 		} else if (oi.getDbAccess() == null) {
-			keys = buildCacheKeys(oi.getRawObjects().entrySet().iterator());
+			keys = buildCacheKeys(oi.getRawObjects().iterator());
 			oi.setCacheObjectByKey(this, keys, ev);
 		}
 		return keys;
@@ -207,15 +214,23 @@ public class OpIndexColumn {
 		return false;
 	}
 
-	private List<Object> eval(OpObject opObject, List<Object> array ) {
-		for (List<String> f : fieldsExpression) {
-			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f, array);
+	private List<Object> eval(OpObject opObject, List<Object> array) {
+		if (idIndex >= 0) {
+			if (array == null) {
+				array = new ArrayList<Object>();
+			}
+			array.add(opObject.getId().get(idIndex));
+		}
+		for (IndexExpression f : fieldsExpression) {
+			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f.expression, array);
 		}
 		return array;
 	}
 
 	
-
+	private static class IndexExpression {
+		List<String> expression = new ArrayList<String>();
+	}
 	
 	
 }

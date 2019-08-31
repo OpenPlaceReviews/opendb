@@ -114,6 +114,10 @@ public class OpOperation extends OpObject {
 		}
 		return l;
 	}
+	
+	public boolean hasDeleted() {
+		return getDeleted().size() > 0;
+	}
 
 	public void addDeleted(List<String> id) {
 		if(!fields.containsKey(F_DELETE)) {
@@ -156,6 +160,7 @@ public class OpOperation extends OpObject {
 	public boolean hasEdited() {
 		return editedObjects.size() > 0;
 	}
+	
 
 	public String getName() {
 		return getStringValue(F_NAME);

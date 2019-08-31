@@ -176,12 +176,9 @@ public class OpBlockchainGettersDbAccessTest {
 	}
 
 
-	@Test(expected = UnsupportedOperationException.class)
 	public void testGetSuperblockObjectsWithDBAccess() throws FailedVerificationException {
 		opBlockchainGettersTest.blc.createBlock(serverName, serverKeyPair);
-
 		OpBlockChain blockChain = generateBlockchainWithDBAccess();
-
 		opBlockchainGettersTest.testGetSuperblockObjects(blockChain);
 	}
 

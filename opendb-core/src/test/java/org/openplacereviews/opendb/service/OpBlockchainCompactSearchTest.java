@@ -7,6 +7,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
@@ -199,7 +200,8 @@ public class OpBlockchainCompactSearchTest {
 		blocksManager.createBlock();
 
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-		blocksManager.getObjectsByIndex(opType, "osmid", objectsSearchRequest, 232423451);
+		OpIndexColumn ind = blocksManager.getIndex(opType, "osmid");
+		blocksManager.getBlockchain().fetchObjectsByIndex(opType, ind, objectsSearchRequest, 232423451);
 
 		assertEquals(1, objectsSearchRequest.result.size());
 	}
@@ -216,7 +218,8 @@ public class OpBlockchainCompactSearchTest {
 		}
 
 		OpBlockChain.ObjectsSearchRequest objectsSearchRequest = new OpBlockChain.ObjectsSearchRequest();
-		blocksManager.getObjectsByIndex(opType, "osmid", objectsSearchRequest, 232423451);
+		OpIndexColumn ind = blocksManager.getIndex(opType, "osmid");
+		blocksManager.getBlockchain().fetchObjectsByIndex(opType, ind, objectsSearchRequest, 232423451);
 
 		assertEquals(1, objectsSearchRequest.result.size());
 	}

@@ -360,7 +360,9 @@ public class OpBlockChain {
 		String objType = u.getType();
 		for (List<String> deletedRef : deletedRefs) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
-			oinf.add(deletedRef, OpObject.NULL);
+			OpObject dl = new OpObject(true);
+			dl.setParentOp(u.getType(), u.getRawHash());
+			oinf.add(deletedRef, dl);
 		}
 		queueOperations.add(u);
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
@@ -415,7 +417,6 @@ public class OpBlockChain {
 				it.remove();
 			}
 		}
-		//  TODO check history object context
 		for (OpOperation o : ops) {
 			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>");
 			validateAndPrepareOperation(o, validationCtx, null);
@@ -508,17 +509,17 @@ public class OpBlockChain {
 		return blocks.getAllBlocks();
 	}
 
-
-	public Map<String, Map<CompoundKey, OpObject>> getRawSuperblockObjects() {
+	
+	public Collection<String> getRawSuperblockTypes() {
 		if(dbAccess != null) {
-			throw new UnsupportedOperationException();
+			return dbAccess.getObjectTypes();
 		}
-		Map<String, Map<CompoundKey, OpObject>> mp = new TreeMap<String, Map<CompoundKey, OpObject>>();
-		for(String type : objByName.keySet()) {
-			OpPrivateObjectInstancesById bid = objByName.get(type);
-			mp.put(type, bid.getRawObjects());
-		}
-		return mp;
+		return objByName.keySet();
+	}
+
+	public Stream<Entry<CompoundKey, OpObject>> getRawSuperblockObjects(String type) {
+		OpPrivateObjectInstancesById bid = getOrCreateObjectsByIdMap(type);
+		return bid.getRawObjects();
 	}
 
 	public List<OpBlock> getBlockHeaders(int depth) {
@@ -549,26 +550,6 @@ public class OpBlockChain {
 		}
 
 		return null;
-	}
-
-	public OpBlock getGeneratedOpBlockWithOperationsByObjectId(List<String> id) {
-		OpBlock opBlock = new OpBlock();
-		if (id.size() > 1) {
-			String type = id.get(0);
-			id = id.subList(1, id.size());
-			List<OpObject> opObjectList = new ArrayList<>();
-			getAllObjectsByName(type, id, opObjectList);
-			for (OpObject opObject : opObjectList) {
-				OpOperation opOperation = getOperationByHash(opObject.parentHash);
-				if (opOperation != null) {
-					opBlock.addOperation(opOperation);
-				}
-			}
-		} else {
-
-		}
-
-		return opBlock;
 	}
 
 	public String getSuperBlockHash() {
@@ -651,7 +632,7 @@ public class OpBlockChain {
 			OpObject obj = ot.getObjectById(key, secondary);
 			m.capture();
 			if (obj != null) {
-				if(obj == OpObject.NULL) {
+				if(obj.isDeleted()) {
 					return null;
 				}
 				return obj;
@@ -670,29 +651,13 @@ public class OpBlockChain {
 			OpObject obj = ot.getObjectById(o);
 			m.capture();
 			if (obj != null) {
-				if(obj == OpObject.NULL) {
+				if(obj.isDeleted()) {
 					return null;
 				}
 				return obj;
 			}
 		}
 		return parent.getObjectByName(type, o);
-	}
-
-	public OpObject getAllObjectsByName(String type, List<String> o, List<OpObject> opObjects) throws DBStaleException {
-		if (isNullBlock()) {
-			return null;
-		}
-		OpPrivateObjectInstancesById ot = getOrCreateObjectsByIdMap(type);
-		if (ot != null) {
-			Metric m = mFetchById.start();
-			OpObject obj = ot.getObjectById(o);
-			m.capture();
-			if (obj != null) {
-				opObjects.add(obj);
-			}
-		}
-		return parent.getAllObjectsByName(type, o, opObjects);
 	}
 
 	public void setCacheAfterSearch(ObjectsSearchRequest request, Object cacheObject) {
@@ -714,6 +679,7 @@ public class OpBlockChain {
 		if(isNullBlock()) {
 			return;
 		}
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch.all.total").start();
 		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
 		if(oi == null) {
 			parent.fetchAllObjects(type, request);
@@ -728,60 +694,60 @@ public class OpBlockChain {
 					return;
 				}
 			}
-			fetchObjectsInternal(type, request, null);
+			Map<CompoundKey, OpObject> res = fetchObjectsInternal(type, request, null);
+			request.setResult(res);
 		}
-	}
-	
-	public void retrieveObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
-		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + index.getIndexId() + ".total").start();
-		fetchObjectsInternal(type, request, index, argsToSearch);
 		m.capture();
 	}
+	
+	
+	public void fetchObjectsByIndex(String type, OpIndexColumn index, ObjectsSearchRequest request, Object... argsToSearch) throws DBStaleException {
+		Metric m = PerformanceMetrics.i().getMetric("blc.fetch." + index.getIndexId() + ".total").start();
+		Map<CompoundKey, OpObject> res = fetchObjectsInternal(type, request, index, argsToSearch);
+		request.setResult(res);
+		m.capture();
+	}
+	
 
 	private Map<CompoundKey, OpObject> fetchObjectsInternal(String type, ObjectsSearchRequest request, OpIndexColumn col, Object... args) throws DBStaleException {
+		Map<CompoundKey, OpObject> res = new LinkedHashMap<>();
 		if(isNullBlock()) {
-			return Collections.emptyMap();
+			return res;
 		}
 		String mid = "blc.fetch." + (col == null ? "all" : col.getIndexId());
 		mid += isDbAccessed()?  ".db" : ".ram";
 		Metric m = PerformanceMetrics.i().getMetric(mid).start();
 		OpPrivateObjectInstancesById o = getOrCreateObjectsByIdMap(type);
 		// don't check for all queries
-		Map<CompoundKey, OpObject> fetchedToCheck = col == null ? null : new HashMap<>();
-		if(o != null) {
+		if (o != null) {
 			Stream<Entry<CompoundKey, OpObject>> stream = o.fetchObjects(request, getSuperblockSize(), col, args);
 			Iterator<Entry<CompoundKey, OpObject>> it = stream.iterator();
-			while(it.hasNext()) {
+			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();
-				request.result.add(e.getValue());
-				if(fetchedToCheck != null) {
-					fetchedToCheck.put(e.getKey(), e.getValue());
-				}
-				if(request.limit >= 0 && request.result.size() >= request.limit) {
+				res.put(e.getKey(), e.getValue());
+				request.internalProgress++;
+				if (request.limit >= 0 && request.internalProgress >= request.limit) {
 					m.capture();
-					return fetchedToCheck;
+					return res;
 				}
 			}
 		}
 		m.capture();
-		if(request.limit < 0 || request.result.size() < request.limit) {
-			Map<CompoundKey, OpObject> prKeys = parent.fetchObjectsInternal(type, request, col, args);
-			// HERE we need to check that newer version doesn't exist in current blockchain 
-			if(prKeys != null) {
-				for(CompoundKey c : prKeys.keySet()) {
-					OpObject i = o.getByKey(c);
-					if(i != null) {
-						// object was overridden
-						OpObject oldObj = prKeys.get(c);
-						request.result.remove(oldObj);
-					}
+		// capture parent results
+		Map<CompoundKey, OpObject> prres = parent.fetchObjectsInternal(type, request, col, args);
+		// HERE we need to check that newer version doesn't exist in current blockchain
+		prres.putAll(res);
+		if (col != null) {
+			for (CompoundKey c : prres.keySet()) {
+				OpObject i = o.getByKey(c);
+				if (i != null && !res.containsKey(c)) {
+					// object was overridden
+					prres.remove(c);
 				}
 			}
-			if(fetchedToCheck != null) {
-				fetchedToCheck.putAll(prKeys);
-			}
 		}
-		return fetchedToCheck;
+		res = prres;
+		return res;
 	}
 
 	private OpPrivateObjectInstancesById getOrCreateObjectsByIdMap(String type) {
@@ -832,6 +798,9 @@ public class OpBlockChain {
 		Metric pm = mPrepareTotal.start();
 		if(OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
+		}
+		if(!u.hasCreated() && !u.hasEdited() && !u.hasDeleted()) {
+			return rules.error(u, ErrorType.OP_EMPTY, u.getType(), ctx.blockHash);
 		}
 		OpOperation oin = getOperationByHash(u.getRawHash());
 		if(oin != null) {
@@ -1113,7 +1082,7 @@ public class OpBlockChain {
 		 * extraParamsWithCondition[0] - extra and "sql condition"
 		 * extraParamsWithCondition[1+...] - parameters to bind
 		 */
-		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, Object... extraParamsWithCondition) throws DBStaleException;
+		Stream<Map.Entry<CompoundKey, OpObject>> streamObjects(String type, int limit, boolean onlyKeys, Object... extraParamsWithCondition) throws DBStaleException;
 		
 		int countObjects(String type, Object... extraParamsWithCondition) throws DBStaleException;
 
@@ -1123,6 +1092,8 @@ public class OpBlockChain {
 		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) throws DBStaleException ;
 
 		OpBlock getBlockByHash(String rawHash) throws DBStaleException ;
+		
+		Collection<String> getObjectTypes();
 
 	}
 	
@@ -1144,13 +1115,28 @@ public class OpBlockChain {
 		public int limit = -1;
 		public boolean requestCache = false;
 		public SearchType searchType = SearchType.EQUALS;
+		public boolean requestOnlyKeys = false;
 
+		public List<CompoundKey> keys = new ArrayList<CompoundKey>();
 		public List<OpObject> result = new ArrayList<OpObject>();
 		public int cacheVersion = -1;
 		public Object cacheObject;
 
-		Object internalMapToFilterDuplicates;
 		OpPrivateObjectInstancesById objToSetCache;
+		int internalProgress;
+		
+		public void setResult(Map<CompoundKey, OpObject> res) {
+			Iterator<Entry<CompoundKey, OpObject>> it = res.entrySet().iterator();
+			while(it.hasNext()) {
+				Entry<CompoundKey, OpObject> e = it.next();
+				if (e.getValue() != null && !e.getValue().isDeleted()) {
+					if (!requestOnlyKeys) {
+						result.add(e.getValue());
+					}
+					keys.add(e.getKey());
+				}
+			}
+		}
 	}
 	
 	public enum SearchType {

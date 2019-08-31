@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.util.JsonFormatter;
@@ -33,6 +34,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
 
@@ -41,7 +43,7 @@ import org.springframework.stereotype.Service;
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 1;
+	private static final int OPENDB_SCHEMA_VERSION = 2;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -55,7 +57,14 @@ public class DBSchemaManager {
 
 	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
 	protected static final int MAX_KEY_SIZE = 5;
+	public static final String[] INDEX_P = new String[MAX_KEY_SIZE];
+	{
+		for(int i = 0; i < MAX_KEY_SIZE; i++) {
+			INDEX_P[i] = "p" + (i + 1);
+		}
+	}
 	protected static final int HISTORY_USERS_SIZE = 2;
+	private static final int BATCH_SIZE = 1000;
 
 	// loaded from config
 	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
@@ -115,6 +124,7 @@ public class DBSchemaManager {
 
 		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", NOT_INDEXED);
 		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		registerColumn(OPERATIONS_TABLE, "type", "text", INDEXED);
 		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", INDEXED);
 		registerColumn(OPERATIONS_TABLE, "sblockid", "int", INDEXED);
 		registerColumn(OPERATIONS_TABLE, "sorder", "int", INDEXED);
@@ -138,6 +148,7 @@ public class DBSchemaManager {
 
 		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", INDEXED);
 		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", INDEXED);
+		registerColumn(OPERATIONS_TRASH_TABLE, "type", "text", INDEXED);
 		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
 		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
@@ -213,17 +224,46 @@ public class DBSchemaManager {
 	private void migrateDBSchema(JdbcTemplate jdbcTemplate) {
 		int dbVersion = getIntSetting(jdbcTemplate, "opendb.version");
 		if(dbVersion < OPENDB_SCHEMA_VERSION) {
+			if(dbVersion <= 1) {
+				setOperationsType(jdbcTemplate, OPERATIONS_TABLE);
+				setOperationsType(jdbcTemplate, OPERATIONS_TRASH_TABLE);
+			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if(dbVersion > OPENDB_SCHEMA_VERSION) {
 			throw new UnsupportedOperationException();
 		}
 	}
 	
+	private void handleBatch(JdbcTemplate jdbcTemplate, List<Object[]> batchArgs, String batchQuery, boolean force) {
+		if(batchArgs.size() >= BATCH_SIZE || (force && batchArgs.size() > 0)) {
+			jdbcTemplate.batchUpdate(batchQuery, batchArgs);
+			batchArgs.clear();
+		}
+	}
+	
+	private void setOperationsType(JdbcTemplate jdbcTemplate, String table) {
+		LOGGER.info("Indexing operation types required for db version 2: " + table);
+		List<Object[]> batchArgs = new ArrayList<Object[]>();
+		String batchQuery = "update " + table + " set type = ? where hash = ?";
+		jdbcTemplate.query("select hash, content from " + table, new RowCallbackHandler() {
+
+			@Override
+			public void processRow(ResultSet rs) throws SQLException {
+				OpOperation op = formatter.parseOperation(rs.getString(2));
+				Object[] args = new Object[2];
+				args[0] = op.getType();
+				args[1] = rs.getObject(1);
+				batchArgs.add(args);
+				handleBatch(jdbcTemplate, batchArgs, batchQuery, false);
+			}
+		});
+		handleBatch(jdbcTemplate, batchArgs, batchQuery, true);
+	}
+
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
 		createTable(metadataDB, jdbcTemplate, SETTINGS_TABLE, schema.get(SETTINGS_TABLE));
 		
 		prepareObjTableMapping();
-		migrateDBSchema(jdbcTemplate);
 		for (String tableName : schema.keySet()) {
 			if(tableName.equals(SETTINGS_TABLE))  {
 				 continue;
@@ -231,6 +271,7 @@ public class DBSchemaManager {
 			List<ColumnDef> cls = schema.get(tableName);
 			createTable(metadataDB, jdbcTemplate, tableName, cls);
 		}
+		migrateDBSchema(jdbcTemplate);
 		
 		migrateObjMappingIfNeeded(jdbcTemplate);
 	}
@@ -298,14 +339,23 @@ public class DBSchemaManager {
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
+			registerObjTable(tableName, i);
 			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
 			objTableDefs.put(tableName, ott);
+			
 			
 			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
 			if(tps != null) {
 				for(String type : tps.values()) {
 					typeToTables.put(type, tableName);
 					ott.types.add(type);
+					for(ColumnDef c : schema.get(tableName)) {
+						for(int indId = 0 ; indId < MAX_KEY_SIZE; indId++) {
+							if(c.getColName().equals(INDEX_P[indId])) {
+								addIndexCol(new OpIndexColumn(type, INDEX_P[indId], indId, c));
+							}
+						}
+					}
 				}
 			}
 			Map<String, Map<String, Object>> cii = (Map<String, Map<String, Object>>) objtables.get(tableName).get("columns");
@@ -332,7 +382,7 @@ public class DBSchemaManager {
 					Map<String, String> fld = (Map<String, String>) entry.get("field");
 					if (fld != null) {
 						for (String type : ott.types) {
-							OpIndexColumn indexColumn = new OpIndexColumn(type, name, cd);
+							OpIndexColumn indexColumn = new OpIndexColumn(type, name, -1,  cd);
 							if(cacheRuntime != null) {
 								indexColumn.setCacheRuntimeBlocks(cacheRuntime);
 							}
@@ -340,18 +390,22 @@ public class DBSchemaManager {
 								indexColumn.setCacheDBBlocks(cacheDB);
 							}
 							indexColumn.setFieldsExpression(fld.values());
-							if (!indexes.containsKey(type)) {
-								indexes.put(type, new TreeMap<String, OpIndexColumn>());
-							}
-							indexes.get(type).put(name, indexColumn);
+							addIndexCol(indexColumn);
 						}
 					}
 					registerColumn(tableName, cd);
 				}
 			}
-			registerObjTable(tableName, i);
+			
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
+	}
+
+	private void addIndexCol(OpIndexColumn indexColumn) {
+		if (!indexes.containsKey(indexColumn.getOpType())) {
+			indexes.put(indexColumn.getOpType(), new TreeMap<String, OpIndexColumn>());
+		}
+		indexes.get(indexColumn.getOpType()).put(indexColumn.getIndexId(), indexColumn);
 	}
 
 
@@ -381,11 +435,16 @@ public class DBSchemaManager {
 					if (c.getColName().equals(m.columnName)) {
 						found = true;
 						break;
+						
 					}
 				}
 				if (!found) {
-					throw new UnsupportedOperationException(String.format("Missing column '%s' in table '%s' ",
-							c.getColName(), tableName));
+					String alterTable = String.format("alter table %s add column %s %s", tableName, 
+							c.getColName(), c.getColType());
+					jdbcTemplate.execute(alterTable);
+					if(c.getIndex() != NOT_INDEXED) {
+						jdbcTemplate.execute(generateIndexQuery(c));
+					}
 				}
 			}
 		}
