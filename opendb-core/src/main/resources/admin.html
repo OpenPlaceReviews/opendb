@@ -320,11 +320,14 @@
         loadStatusData();
         loadObjectsData();
         loadBlocksData();
-        if(loginName != "") {
-        	loadMetricsData();
-        	loadBotData();	
-        	loadErrorsData();
-        	loadIpfsStatusData();
+        if (loginName != "") {
+            loadMetricsData();
+            loadBotData();
+            loadErrorsData();
+            loadIpfsStatusData();
+        }
+        if (window.location.search !== "") {
+            checkUrlParam();
         }
     }
 
@@ -799,6 +802,7 @@
             type: $("#type-list").val(),
             showHistory: $("#historyCheckbox").is(":checked"),
             historyDisabled: $("#historyCheckbox").is(":disabled"),
+            key: $("#search-key").val(),
             limit: $("#limit-field").val(),
             countElements: $("#amount-objects").text(),
             idStorage: idStorage
@@ -813,6 +817,81 @@
     function showOperations(data, url) {
         generateOperationResponse(data);
         saveCurrentState("#operations", url);
+    }
+
+    function checkUrlParam() {
+        // objects -> http://localhost:6463/api/admin?tab=objects&search=osm.place&type=id&key=12345662&history=true
+        // operations -> http://localhost:6463/api/admin?tab=operations&loadBy=blockId&key=0
+        // blocks -> http://localhost:6463/api/admin?tab=blocks&search=from&hash=213&limit=123
+        var url = new URL(window.location.href);
+        if (window.location.href.toLowerCase().indexOf('api/admin?tab=objects') > 1) {
+            $(".nav-tabs a[href=\"#objects\"]").tab('show');
+            setTimeout(function(){
+                var searchTypeListValue = url.searchParams.get('search');
+                if (searchTypeListValue !== null) {
+                    $("#type-list").val(searchTypeListValue);
+                }
+                var typeSearch = url.searchParams.get('type');
+                if (typeSearch !== null) {
+                    $("#type-list").change();
+                    setTimeout(function() {
+                        $("#search-type-list").val(typeSearch).change();
+                    }, 200);
+                }
+                var checkboxValue = url.searchParams.get('history');
+                if (checkboxValue !== null) {
+                    $("#historyCheckbox").prop('checked', checkboxValue === "true");
+                } else {
+                    $("#search-type-list").change();
+                }
+                var limitValue = url.searchParams.get('limit');
+                if (limitValue !== null) {
+                    $("#limit-field").val(limitValue);
+                }
+                var keyValue = url.searchParams.get('key');
+                if (keyValue !== null) {
+                    $("#search-key").val(keyValue);
+                }
+
+                $("#load-objects-btn").click();
+            }, 200);
+        } else if (window.location.href.toLowerCase().indexOf('api/admin?tab=operations') > 1) {
+            $(".nav-tabs a[href=\"#operations\"]").tab('show');
+            var loadType = url.searchParams.get('loadBy');
+            if (loadType !== null) {
+                setTimeout(function() {
+                    $("#operations-search").val(loadType).change();
+                }, 200);
+            }
+            var key = url.searchParams.get('key');
+            if (key !== null) {
+                $("#operations-key").val(key);
+            }
+
+            setTimeout(function(){
+                $("#operations-search-btn").click();
+            }, 200);
+        } else if (window.location.href.toLowerCase().indexOf('api/admin?tab=blocks') > 1) {
+            $(".nav-tabs a[href=\"#blocks\"]").tab('show');
+            var searchType = url.searchParams.get('search');
+            if (searchType !== null) {
+                setTimeout(function() {
+                    $("#blocks-search").val(searchType).change();
+                }, 200);
+            }
+            var hashValue = url.searchParams.get('hash');
+            if (hashValue !== null) {
+                $("#search-block-field").val(hashValue);
+            }
+            var limit = url.searchParams.get('limit');
+            if (limit !== null) {
+                $("#block-limit-value").val(limit);
+            }
+
+            setTimeout(function() {
+                $("#block-load-btn").click();
+            }, 200);
+        }
     }
 
     $( document ).ready(function() {
@@ -863,9 +942,8 @@
             }
         });
 
-        $("#type-list").change(function () {
-            var type = $("#type-list").val();
-            $.getJSON( "/api/indices-by-type?type=" + type, function( data ) {
+        function loadSearchTypeByOpType(type) {
+            $.getJSON("/api/indices-by-type?type=" + type, function (data) {
                 var searchTypes = "";
                 searchTypes += "<option value = 'all' selected>all</option>";
                 searchTypes += "<option value = 'id' >by id</option>";
@@ -881,12 +959,11 @@
                 $("#search-key-input").hide();
             });
 
-            var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all" || selectedSearchType === "count") {
-                $("#search-key-input").hide();
-            } else {
-                $("#search-key-input").show();
-            }
+        }
+
+        $("#type-list").change(function () {
+            var type = $("#type-list").val();
+            loadSearchTypeByOpType(type);
         });
 
         $("#operations-search").change(function () {
@@ -1074,7 +1151,7 @@
                     };
                     
             		$.getJSON( "/api/objects", obj, function (data) {
-            		    funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked"));
+            		    funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
                     });
 
             	} else if (searchType === "id") {
@@ -1083,13 +1160,13 @@
                         "key" : key
                     };
                     $.getJSON("/api/objects-by-id", obj, function (data) {
-                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history="+ $("#historyCheckbox").is(":checked"));
+                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history="+ $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
                     });
             	} else if (searchType === "userId") {
                     var _res = getHistoryForObject("user", key);
                     $("#objects-list").html(_res.items);
                     $("#amount-objects").html("Count results: " + _res.amount);
-                    saveCurrentState('#objects', '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked"));
+                    saveCurrentState('#objects', '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
             	} else {
                     let obj = {
                         "type" : type,
@@ -1098,7 +1175,7 @@
                         "key" : key
                     };
                     $.getJSON( "/api/objects-by-index", obj, function (data) {
-                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '#key=' + key + '$history=' + $("#historyCheckbox").is(":checked"));
+                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
                     });
                 }
             }
@@ -1110,10 +1187,13 @@
                     $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
                     document.getElementById("objects-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     console.log(history.state);
-                    $("#search-type-list").val(history.state.searchType);
-                    $("#type-list").val(history.state.type);
+                    $("#type-list").val(history.state.type).change();
+                    setTimeout(function() {
+                        $("#search-type-list").val(history.state.searchType).change();
+                    }, 200);
                     $("#historyCheckbox").prop("checked", history.state.showHistory).prop("disabled", history.state.historyDisabled);
                     $("#limit-field").val(history.state.limit);
+                    $("#search-key").val(history.state.key);
                     $("#amount-objects").text(history.state.countElements);
                 } else if (history.state.tab === "#operations") {
                     $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
