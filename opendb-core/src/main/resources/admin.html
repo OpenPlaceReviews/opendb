@@ -853,7 +853,9 @@
                     $("#search-key").val(keyValue);
                 }
 
-                $("#load-objects-btn").click();
+                setTimeout(function() {
+                    $("#load-objects-btn").click();
+                }, 200);
             }, 200);
         } else if (window.location.href.toLowerCase().indexOf('api/admin?tab=operations') > 1) {
             $(".nav-tabs a[href=\"#operations\"]").tab('show');
