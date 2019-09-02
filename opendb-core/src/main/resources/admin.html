@@ -105,6 +105,7 @@
         <label>Search:&nbsp;</label><select id="search-type-list">
             <option selected value="all">all</option>
             <option value="userId">by userId</option>
+            <option value = "opHash" >by opHash</option>
         </select>
         <label for="historyCheckbox">Show history</label>
         <input type="checkbox" id="historyCheckbox" name="scales">
@@ -528,12 +529,12 @@
             items += "<br><li><b>Block id</b>: " + op.block_id;
             items += "<input type=\"button\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
             items += "<br><b>Hash</b>: " + op.hash;
+            items += "<br><b>Operations count</b>: " + op.operations_size;
             if (op.eval) {
                 if (op.eval.superblock_hash != superblockHash) {
                     superblockHash = op.eval.superblock_hash;
                     superblockId = superblockId + 1;
                 }
-                items += "<br><b>Operations count</b>: " + op.eval.operations_size;
                 items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
             }
             items += "<br><b>Signed by</b>: " + op.signed_by;
@@ -626,6 +627,7 @@
                     // console.log("'"+JSON.stringify(clone)+"'");
                 }});
                 items += "<br><li><b>Operation</b>: " + op.type;
+                items += "<input type=\"button\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
                 items += "<br><b>Hash</b>: " + op.hash;
                 items += "<br><b>Added/removed/edited objects</b>: " +
                     (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
@@ -749,6 +751,22 @@
         saveCurrentState("#objects", "/api/admin?tab=objects&search=" + searchType + "&type=" + type + "&key=" + id + "&history=true");
     }
 
+    function loadHistoryByOperationHash(key) {
+        $(".nav-tabs a[href=\"#objects\"]").tab('show');
+
+        $("#search-type-list").val("opHash");
+        $("#historyCheckbox").prop('checked', true).prop("disabled", true);
+        $("#search-key-input").show();
+        $("#name-key-field").text("Input Op Hash")
+        $("#search-key").val(key);
+
+        var _res = getHistoryForObject("operation", key);
+
+        $("#objects-list").html(_res.items);
+        $("#amount-objects").html("Count results: " + _res.amount);
+        saveCurrentState("#objects", "/api/admin?tab=objects&search=none" + "&type=opHash" + "&key=" + key + "&history=true");
+    }
+
     function saveCurrentState(tab, url) {
         if (window.location.pathname + window.location.search !== url && url !== window.location.pathname && url !== (window.location.pathname + "?")) {
             if (tab === "#objects") {
@@ -829,7 +847,10 @@
             setTimeout(function(){
                 var searchTypeListValue = url.searchParams.get('search');
                 if (searchTypeListValue !== null) {
-                    $("#type-list").val(searchTypeListValue);
+                    $("#type-list").change();
+                    setTimeout(function() {
+                        $("#type-list").val(searchTypeListValue);
+                    }, 200);
                 }
                 var typeSearch = url.searchParams.get('type');
                 if (typeSearch !== null) {
@@ -933,6 +954,10 @@
                 $("#search-key-input").show();
                 $("#name-key-field").text("Input User ID");
                 $("#historyCheckbox").prop('checked', true).prop("disabled", true);
+            } else if (selectedSearchType === "opHash") {
+                $("#search-key-input").show();
+                $("#name-key-field").text("Input Op Hash");
+                $("#historyCheckbox").prop('checked', true).prop("disabled", true);
             } else {
                 $("#search-key-input").show();
                 if (selectedSearchType === "id") {
@@ -951,6 +976,7 @@
                 searchTypes += "<option value = 'id' >by id</option>";
                 searchTypes += "<option value = 'count' >count</option>";
                 searchTypes += "<option value = 'userId' >by userId</option>";
+                searchTypes += "<option value = 'opHash' >by opHash</option>";
                 for (var i = 0; i < data.length; i++) {
                     var obj = data[i];
                     searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
@@ -1108,23 +1134,23 @@
             $("#finish-edit-btn").hide();
             $("#stop-edit-btn").hide();
 
-			if (searchType === "count") {
-            	$.getJSON( "/api/objects-count?type=" + type, function( data ) {
+            if (searchType === "count") {
+                $.getJSON("/api/objects-count?type=" + type, function (data) {
                     var items = "";
                     globalObjects = [];
                     $("#objects-list").html(items);
                     $("#amount-objects").html("Count results: " + data.count);
-                    saveCurrentState('#objects','/api/admin?tab=objects&search=' + type + 'type=' + searchType+ '&history=' + $("#historyCheckbox").is(":checked"));
+                    saveCurrentState('#objects', '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked"));
                 });
             } else {
-            	let funcProcResults = function( data, url ) {
+                let funcProcResults = function (data, url) {
                     var items = "";
                     var amountResults = 0;
                     globalObjects = data.objects;
-                    for(var i = 0; i < data.objects.length; i++)  {
+                    for (var i = 0; i < data.objects.length; i++) {
                         let obj = data.objects[i];
                         if ($("#historyCheckbox").is(":checked") === true) {
-                            var _res = getHistoryForObject("object", type + "," + obj.id);
+                            let _res = getHistoryForObject("object", type + "," + obj.id);
                             items += _res.items;
                             amountResults += _res.amount;
                         } else {
@@ -1146,37 +1172,49 @@
                     $("#amount-objects").html("Count results: " + (amountResults === 0 ? data.objects.length : amountResults));
                     saveCurrentState('#objects', url);
                 };
-            	if(searchType === "all") {
-                    let obj = {
-                        "type" : type,
-                        "limit": $("#limit-field").val()
-                    };
-                    
-            		$.getJSON( "/api/objects", obj, function (data) {
-            		    funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-                    });
+                if (searchType === "all") {
+                    if (type === "none") {
+                        let _res = getHistoryForObject("all", null);
+                        $("#objects-list").html(_res.items);
+                        $("#amount-objects").html("Count results: " + _res.amount);
+                        saveCurrentState('#objects', url);
+                    } else {
+                        let obj = {
+                            "type": type,
+                            "limit": $("#limit-field").val()
+                        };
 
-            	} else if (searchType === "id") {
+                        $.getJSON("/api/objects", obj, function (data) {
+                            funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
+                        });
+                    }
+
+                } else if (searchType === "id") {
                     let obj = {
-                        "type" : type,
-                        "key" : key
+                        "type": type,
+                        "key": key
                     };
                     $.getJSON("/api/objects-by-id", obj, function (data) {
-                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history="+ $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
+                        funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
                     });
-            	} else if (searchType === "userId") {
-                    var _res = getHistoryForObject("user", key);
+                } else if (searchType === "userId") {
+                    let _res = getHistoryForObject("user", key);
                     $("#objects-list").html(_res.items);
                     $("#amount-objects").html("Count results: " + _res.amount);
                     saveCurrentState('#objects', '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-            	} else {
+                } else if (searchType === "opHash") {
+                    let _res = getHistoryForObject("operation", key);
+                    $("#objects-list").html(_res.items);
+                    $("#amount-objects").html("Count results: " + _res.amount);
+                    saveCurrentState('#objects', '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
+                } else {
                     let obj = {
-                        "type" : type,
+                        "type": type,
                         "index": $("#search-type-list").val(),
                         "limit": $("#limit-field").val(),
-                        "key" : key
+                        "key": key
                     };
-                    $.getJSON( "/api/objects-by-index", obj, function (data) {
+                    $.getJSON("/api/objects-by-index", obj, function (data) {
                         funcProcResults(data, '/api/admin?tab=objects&search=' + type + '&type=' + searchType + '&key=' + key + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
                     });
                 }

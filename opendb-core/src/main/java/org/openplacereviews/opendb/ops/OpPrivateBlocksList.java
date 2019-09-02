@@ -101,7 +101,6 @@ public class OpPrivateBlocksList {
 
 	private void addBlockHeader(OpBlock block, int superBlockDepth) {
 		OpBlock blockHeader = new OpBlock(block, false, true).makeImmutable();
-		blockHeader.putCacheObject(OpBlock.F_OPERATIONS_SIZE, block.getOperations().size());
 		blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 		blockHeaders.push(blockHeader);
 		updateHeaders(superBlockDepth);

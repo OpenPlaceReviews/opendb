@@ -35,7 +35,9 @@ public class HistoryManager {
 	protected static final String HISTORY_BY_USER = "user";
 	protected static final String HISTORY_BY_OBJECT = "object";
 	protected static final String HISTORY_BY_TYPE = "type";
-	
+	protected static final String HISTORY_ALL = "all";
+	protected static final String HISTORY_BY_OPERATION_HASH = "operation";
+
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(OpObject.DATE_FORMAT);
 
 	@Value("${opendb.db.store-history}")
@@ -107,6 +109,18 @@ public class HistoryManager {
 				loadHistory(sql, historyObjectRequest);
 				break;
 			}
+			case HISTORY_ALL: {
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status, ophash FROM " + OP_OBJ_HISTORY_TABLE +
+						" ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+				loadHistory(sql, historyObjectRequest);
+				break;
+			}
+			case HISTORY_BY_OPERATION_HASH: {
+				sql = "SELECT usr_1, login_1, usr_2, login_2, p1, p2, p3, p4, p5, time, obj, type, status, ophash FROM " + OP_OBJ_HISTORY_TABLE +
+						" WHERE ophash = ? ORDER BY sorder " + historyObjectRequest.sort + " LIMIT " + historyObjectRequest.limit;
+				loadHistory(sql, historyObjectRequest);
+				break;
+			}
 		}
 	}
 
@@ -133,8 +147,15 @@ public class HistoryManager {
 	}
 
 	protected void loadHistory(String sql, HistoryObjectRequest historyObjectRequest) {
-		Object[] keyObject = historyObjectRequest.key.toArray();
-		keyObject = generateUserSearchObject(historyObjectRequest, keyObject);
+		Object[] keyObject = null;
+		if (historyObjectRequest.key != null) {
+			if (historyObjectRequest.historyType.equals(HISTORY_BY_OPERATION_HASH)) {
+				keyObject = new Object[] {SecUtils.getHashBytes(historyObjectRequest.key.get(0))};
+			} else {
+				keyObject = historyObjectRequest.key.toArray();
+				keyObject = generateUserSearchObject(historyObjectRequest, keyObject);
+			}
+		}
 		historyObjectRequest.historySearchResult = jdbcTemplate.query(sql, keyObject, new ResultSetExtractor<List<HistoryEdit>>() {
 			@Override
 			public List<HistoryEdit> extractData(ResultSet rs) throws SQLException, DataAccessException {

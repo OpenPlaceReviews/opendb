@@ -342,10 +342,10 @@ public class ApiController {
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String history(@RequestParam(required = true) String type,
-						  @RequestParam(required = true) List<String> key,
+						  @RequestParam(required = false) List<String> key,
 						  @RequestParam(required = false, defaultValue = "100") int limit,
 						  @RequestParam(required = true) String sort) {
-		if (key.isEmpty() || !historyManager.isRunning()) {
+		if (!historyManager.isRunning()) {
 			return "{}";
 		}
 		if(limit < 0 || limit > LIMIT_RESULTS) {
