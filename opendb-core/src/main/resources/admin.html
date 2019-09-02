@@ -630,7 +630,9 @@
                     // console.log("'"+JSON.stringify(clone)+"'");
                 }});
                 items += "<br><li><b>Operation</b>: " + op.type;
-                items += "<input type=\"button\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
+                if ($("#operations-search").val() !== "queue") {
+                    items += "<input type=\"button\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
+                }
                 items += "<br><b>Hash</b>: " + op.hash;
                 items += "<br><b>Added/removed/edited objects</b>: " +
                     (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
