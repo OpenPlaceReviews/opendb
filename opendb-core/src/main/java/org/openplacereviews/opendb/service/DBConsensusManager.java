@@ -40,7 +40,6 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static org.openplacereviews.opendb.ops.OpBlock.F_OPERATIONS_SIZE;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
@@ -656,7 +655,6 @@ public class DBConsensusManager {
 		blockHeaderObj.setType("jsonb");
 		try {
 			blockObj.setValue(formatter.toJson(opBlock));
-			blockheader.putObjectValue(F_OPERATIONS_SIZE, opBlock.getOperations().size());
 			blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
 		} catch (SQLException e) {
 			throw new IllegalArgumentException(e);

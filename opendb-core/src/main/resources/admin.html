@@ -943,8 +943,12 @@
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
             if (selectedSearchType === "all") {
-                $("#search-key-input").hide();
-                $("#historyCheckbox").prop("disabled", false);
+                if ($("#type-list").val() === "none") {
+                    $("#historyCheckbox").prop('checked', true)
+                } else {
+                    $("#search-key-input").hide();
+                    $("#historyCheckbox").prop("disabled", false);
+                }
             } else if ( selectedSearchType === "count") {
                 $("#search-key-input").hide();
                 $("#historyCheckbox").prop("disabled", true).prop('checked', false);
@@ -1175,7 +1179,7 @@
                     saveCurrentState('#objects', url);
                 };
                 if (searchType === "all") {
-                    if (type === "none") {
+                    if (type === "none" && $("#historyCheckbox").is(":checked") === true) {
                         let _res = getHistoryForObject("all", null);
                         $("#objects-list").html(_res.items);
                         $("#amount-objects").html("Count results: " + _res.amount);
