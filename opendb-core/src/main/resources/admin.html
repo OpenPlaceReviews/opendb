@@ -453,18 +453,21 @@
         $("#index-list-id").hide();
 
         let selectType = $("#type-list").val();
-        $.getJSON( "/api/objects?type=sys.operation", function( data ) {
-            var types = "<option value = 'none'>none</option>";
-            $("#objects-tab").html("Objects (" + data.objects.length + ")");
-            for(var i = 0; i < data.objects.length; i++)  {
-                let obj = data.objects[i];
-                let objType = obj.id[0];
-                globalObjectTypes[objType] = obj;
+        $.ajax({url:"/api/objects?type=sys.operation", type:"get", async:false,
+            success: function(data) {
+                var types = "<option value = 'none'>none</option>";
+                $("#objects-tab").html("Objects (" + data.objects.length + ")");
+                for(var i = 0; i < data.objects.length; i++)  {
+                    let obj = data.objects[i];
+                    let objType = obj.id[0];
+                    globalObjectTypes[objType] = obj;
 
-                types += "<option value = '"+objType+"' " +
-                    (selectType == objType ? "selected" : "") + ">"+objType+"</option>";
-            }
-            $("#type-list").html(types);
+                    types += "<option value = '"+objType+"' " +
+                        (selectType == objType ? "selected" : "") + ">"+objType+"</option>";
+                }
+                $("#type-list").html(types);
+            },
+            error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
         });
     }
 
@@ -847,17 +850,12 @@
             setTimeout(function(){
                 var searchTypeListValue = url.searchParams.get('search');
                 if (searchTypeListValue !== null) {
+                    $("#type-list").val(searchTypeListValue);
                     $("#type-list").change();
-                    setTimeout(function() {
-                        $("#type-list").val(searchTypeListValue);
-                    }, 200);
                 }
                 var typeSearch = url.searchParams.get('type');
                 if (typeSearch !== null) {
-                    $("#type-list").change();
-                    setTimeout(function() {
-                        $("#search-type-list").val(typeSearch).change();
-                    }, 200);
+                    $("#search-type-list").val(typeSearch).change();
                 }
                 var checkboxValue = url.searchParams.get('history');
                 if (checkboxValue !== null) {
@@ -970,21 +968,24 @@
         });
 
         function loadSearchTypeByOpType(type) {
-            $.getJSON("/api/indices-by-type?type=" + type, function (data) {
-                var searchTypes = "";
-                searchTypes += "<option value = 'all' selected>all</option>";
-                searchTypes += "<option value = 'id' >by id</option>";
-                searchTypes += "<option value = 'count' >count</option>";
-                searchTypes += "<option value = 'userId' >by userId</option>";
-                searchTypes += "<option value = 'opHash' >by opHash</option>";
-                for (var i = 0; i < data.length; i++) {
-                    var obj = data[i];
-                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
-                }
+            $.ajax({url:"/api/indices-by-type?type=" + type, type:"get", async:false,
+                success: function(data) {
+                    var searchTypes = "";
+                    searchTypes += "<option value = 'all' selected>all</option>";
+                    searchTypes += "<option value = 'id' >by id</option>";
+                    searchTypes += "<option value = 'count' >count</option>";
+                    searchTypes += "<option value = 'userId' >by userId</option>";
+                    searchTypes += "<option value = 'opHash' >by opHash</option>";
+                    for (var i = 0; i < data.length; i++) {
+                        var obj = data[i];
+                        searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
+                    }
 
-                $("#search-type-list").html(searchTypes);
-                $("#historyCheckbox").prop("disabled", false);
-                $("#search-key-input").hide();
+                    $("#search-type-list").html(searchTypes);
+                    $("#historyCheckbox").prop("disabled", false);
+                    $("#search-key-input").hide();
+                },
+                error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
             });
 
         }
