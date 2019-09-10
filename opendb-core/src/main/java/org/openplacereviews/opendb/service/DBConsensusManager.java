@@ -13,7 +13,6 @@ import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -40,6 +39,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static org.openplacereviews.opendb.ops.OpBlock.*;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
@@ -48,11 +48,6 @@ public class DBConsensusManager {
 	protected static final Log LOGGER = LogFactory.getLog(DBConsensusManager.class);
 
 	// check SimulateSuperblockCompactSequences to verify numbers
-	@Value("${opendb.db.compactCoefficient}")
-	private double compactCoefficient = 1;
-
-	@Value("${opendb.db.dbSuperblockSize}")
-	private int superblockSize = 32;
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
@@ -71,6 +66,9 @@ public class DBConsensusManager {
 
 	@Autowired
 	private LogOperationService logSystem;
+
+	@Autowired
+	private SettingsManager settingsManager;
 
 	private Map<String, OpBlock> blocks = new ConcurrentHashMap<String, OpBlock>();
 	private Map<String, OpBlock> orphanedBlocks = new ConcurrentHashMap<String, OpBlock>();
@@ -554,7 +552,8 @@ public class DBConsensusManager {
 
 	private OpBlockChain loadBlockHeadersAndBuildMainChain(final OpBlockchainRules rules) {
 		OpBlockChain[] res = new OpBlockChain[]{OpBlockChain.NULL};
-		jdbcTemplate.query("SELECT hash, phash, blockid, superblock, header from " + BLOCKS_TABLE + " order by blockId asc", new RowCallbackHandler() {
+		jdbcTemplate.query("SELECT hash, phash, blockid, superblock, header, pg_column_size(content), opcount, " +
+				"objdeleted, objedited, objadded from " + BLOCKS_TABLE + " order by blockId asc", new RowCallbackHandler() {
 
 			LinkedList<OpBlock> blockHeaders = new LinkedList<OpBlock>();
 
@@ -565,6 +564,12 @@ public class DBConsensusManager {
 				String superblock = SecUtils.hexify(rs.getBytes(4));
 				OpBlock parentBlockHeader = blocks.get(pblockHash);
 				OpBlock blockHeader = formatter.parseBlock(rs.getString(5));
+				blockHeader.makeImmutable();
+				blockHeader.putCacheObject(F_BLOCK_SIZE, rs.getString(6));
+				blockHeader.putCacheObject(F_OPERATIONS_SIZE, rs.getInt(7));
+				blockHeader.putCacheObject(F_OBJ_DELETED, rs.getInt(8));
+				blockHeader.putCacheObject(F_OBJ_ADDED, rs.getInt(9));
+				blockHeader.putCacheObject(F_OBJ_EDITED, rs.getInt(10));
 				blocks.put(blockHash, blockHeader);
 				if (!OUtils.isEmpty(pblockHash) && parentBlockHeader == null) {
 					LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash));
@@ -669,9 +674,16 @@ public class DBConsensusManager {
 
 			@Override
 			public Void doInTransaction(TransactionStatus status) {
+				int added = 0, edited = 0, deleted = 0;
+				for (OpOperation opOperation : opBlock.getOperations()) {
+					added += opOperation.getCreated().size();
+					edited += opOperation.getEdited().size();
+					deleted += opOperation.getDeleted().size();
+				}
 				jdbcTemplate.update("INSERT INTO " + BLOCKS_TABLE
-						+ " (hash, phash, blockid, header, content ) VALUES (?, ?, ?, ?, ?)", blockHash, prevBlockHash,
-				opBlock.getBlockId(), blockHeaderObj, blockObj);
+				+ " (hash, phash, blockid, header, content, opcount, objdeleted, objedited, objadded) " +
+								"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", blockHash, prevBlockHash,
+						opBlock.getBlockId(), blockHeaderObj, blockObj, opBlock.getOperations().size(), deleted, added, edited);
 				for (OpOperation o : opBlock.getOperations()) {
 					int upd = jdbcTemplate.update(
 							"UPDATE " + OPERATIONS_TABLE + " set blocks = blocks || ? where hash = ?", 
@@ -688,6 +700,18 @@ public class DBConsensusManager {
 		backupManager.insertBlock(opBlock);
 		blocks.put(rawHash, blockheader);
 		orphanedBlocks.put(rawHash, blockheader);
+	}
+
+	public Long getBlockSize(String hash) {
+		return jdbcTemplate.query("SELECT pg_column_size(content) from " + BLOCKS_TABLE + " where hash = ?", new ResultSetExtractor<Long>() {
+					@Override
+					public Long extractData(ResultSet rs) throws SQLException, DataAccessException {
+						if (rs.next()) {
+							return rs.getLong(1);
+						}
+						return null;
+					}
+				}, new Object[] {SecUtils.getHashBytes(hash)});
 	}
 
 
@@ -710,7 +734,7 @@ public class DBConsensusManager {
 			}
 			blc = blc.getParent();
 		}
-		if (lastNotSaved != null && lastNotSaved.getSuperblockSize() >= superblockSize) {
+		if (lastNotSaved != null && lastNotSaved.getSuperblockSize() >= settingsManager.OPENDB_SUPERBLOCK_SIZE.get()) {
 			OpBlockChain saved = saveSuperblock(lastNotSaved);
 			if (beforeLast != null) {
 				if (!beforeLast.changeToEqualParent(saved)) {
@@ -851,7 +875,7 @@ public class DBConsensusManager {
 			compactedParent = compact(blc.getSuperblockSize(), blc.getParent(), db);
 			// only 1 compact at a time
 			boolean compact = compactedParent == blc.getParent();
-			compact = compact && ((double) blc.getSuperblockSize() + compactCoefficient * prevSize) > ((double) blc.getParent().getSuperblockSize());
+			compact = compact && ((double) blc.getSuperblockSize() + settingsManager.OPENDB_COMPACT_COEFICIENT.get() * prevSize) > ((double) blc.getParent().getSuperblockSize());
 			if (compact) {
 				LOGGER.info("Chain to compact: ");
 				printBlockChain(blc);
@@ -1090,6 +1114,33 @@ public class DBConsensusManager {
 		return res[0];
 	}
 
-	
+	public boolean setSettings(String key, String value) {
+		return dbSchema.setSetting(jdbcTemplate, key, value);
+	}
+
+	public String getSetting(String key) {
+		return dbSchema.getSetting(jdbcTemplate, key);
+	}
+
+	public List<BotManager.BotHistory> getBotHistory(String botName) {
+		return jdbcTemplate.query("SELECT bot, start_date, end_date, total, processed, status FROM " + BOT_STATS_TABLE + " WHERE bot = ? ORDER BY id DESC ", new ResultSetExtractor<List<BotManager.BotHistory>>() {
+			@Override
+			public List<BotManager.BotHistory> extractData(ResultSet rs) throws SQLException {
+				List<BotManager.BotHistory> historyList = new ArrayList<>();
+				while (rs.next()) {
+					BotManager.BotHistory botHistory = new BotManager.BotHistory();
+					botHistory.bot = rs.getString(1);
+					botHistory.startDate = rs.getTimestamp(2);
+					botHistory.endDate = rs.getTimestamp(3);
+					botHistory.total = rs.getInt(4);
+					botHistory.processed = rs.getInt(5);
+					botHistory.status = rs.getString(6);
+					historyList.add(botHistory);
+				}
+
+				return historyList;
+			}
+		}, botName);
+	}
 
 }

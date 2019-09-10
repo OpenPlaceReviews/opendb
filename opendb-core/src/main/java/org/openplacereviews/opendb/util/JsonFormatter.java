@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
-
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -119,7 +118,11 @@ public class JsonFormatter {
 	public TreeMap<String, Object> fromJsonToTreeMap(String json) {
 		return gson.fromJson(json, TreeMap.class);
 	}
-	
+
+	public Map<String, Map> fromJsonToOpendbPreferenceMap(String json) {
+		return gson.fromJson(json, Map.class);
+	}
+
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
 		return gson.fromJson(json, classOfT);
 	}

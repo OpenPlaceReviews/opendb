@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static org.openplacereviews.opendb.ops.OpBlock.F_OPERATIONS_SIZE;
+import static org.openplacereviews.opendb.ops.OpBlock.*;
 
 public class OpPrivateBlocksList {
 
@@ -103,8 +103,17 @@ public class OpPrivateBlocksList {
 
 	private void addBlockHeader(OpBlock block, int superBlockDepth) {
 		OpBlock blockHeader = new OpBlock(block, false, true);
-		blockHeader.putObjectValue(F_OPERATIONS_SIZE, block.getOperations().size());
 		blockHeader.makeImmutable();
+		int added = 0, edited = 0, deleted = 0;
+		for (OpOperation opOperation : block.getOperations()) {
+			added += opOperation.getCreated().size();
+			edited += opOperation.getEdited().size();
+			deleted += opOperation.getDeleted().size();
+		}
+		blockHeader.putCacheObject(F_OBJ_DELETED, deleted);
+		blockHeader.putCacheObject(F_OBJ_ADDED, added);
+		blockHeader.putCacheObject(F_OBJ_EDITED, edited);
+		blockHeader.putCacheObject(F_OPERATIONS_SIZE, block.getOperations().size());
 		blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 		blockHeaders.push(blockHeader);
 		updateHeaders(superBlockDepth);

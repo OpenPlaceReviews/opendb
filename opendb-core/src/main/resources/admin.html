@@ -19,7 +19,8 @@
     <li><a data-toggle="tab" href="#operations" id="operations-tab">Operations</a></li>
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
     <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
-    <li><a data-toggle="tab" href="#bot" id="bot-tab">Bots</a></li>
+    <li><a data-toggle="tab" href="#api" id="api-tab">API</a></li>
+    <li><a data-toggle="tab" href="#settings" id="settings-tab">Settings</a></li>
     <li><a data-toggle="tab" href="#metrics" id="metrics-tab">Metrics</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
     <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
@@ -156,16 +157,229 @@
 
     </div>
 
-    <div id="bot" class="tab-pane fade">
-        <h3>Bots</h3>
-        <label>Select bot:</label><select id="bot-list">
-    </select>
-        <br>
-        <input type="submit" value="start bot" id="start-bot-btn">
-        <input type="submit" value="stop bot" id="stop-bot-btn">
-        <input type="submit" value="load bot stats" id="load-bot-stats-btn">
-        <br><br>
-        <table id="bot-table" border="1" gridHeight="auto" style="width:400px"></table>
+    <div id="api" class="tab-pane fade">
+
+        <!--BOT state-->
+        <div class="row">
+            <div class="col-md-12">
+                <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+
+                <!--Bot table-->
+                <div class="table-responsive">
+                    <table id="bots-table" class="table table-bordred table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th colspan="6">Bot Info</th>
+                        </tr>
+                        <tr>
+                            <th>Id</th>
+                            <th>Task name</th>
+                            <th>Task description</th>
+                            <th>Last launch</th>
+                            <th>Interval</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!--modal window for bot history-->
+                <div class="modal fade" id="bot-history-modal" role="dialog">
+                    <div class="modal-dialog modal-lg">
+
+                        <!-- Modal content-->
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                <h4 class="modal-title" id="bot-history-header"></h4>
+                                <p class="modal-title" id="history-bot-name"></p>
+                            </div>
+                            <div class="modal-body">
+                                <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                                <div class="table-responsive">
+                                    <table id="bots-history-table" class="table table-bordred table-striped table-hover">
+                                        <thead>
+                                        <tr>
+                                            <th>Bot ID</th>
+                                            <th>Start Date</th>
+                                            <th>End Date</th>
+                                            <th>Total</th>
+                                            <th>Processed</th>
+                                            <th>Status</th>
+                                        </tr>
+                                        </thead>
+
+                                        <tbody>
+                                        </tbody>
+
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <h4>DB Index</h4> <button class="btn btn-primary" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                <div class="table-responsive">
+                    <table id="index-table" class="table table-bordred table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th colspan="4">Bot Info</th>
+                            <th colspan="5">Bot State</th>
+                        </tr>
+                        <tr>
+                            <th>Id</th>
+                            <th>API</th>
+                            <th>Version</th>
+                            <th>Started</th>
+
+                            <th>Task description</th>
+                            <th>Task name</th>
+                            <th>Task count</th>
+                            <th>Total</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        </tbody>
+
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <h4>Downloads</h4> <button class="btn btn-primary" id="refresh-api-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                <div class="table-responsive">
+                    <table id="api-table" class="table table-bordred table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th colspan="4">Bot Info</th>
+                            <th colspan="5">State</th>
+                        </tr>
+                        <tr>
+                            <th>Id</th>
+                            <th>API</th>
+                            <th>Version</th>
+                            <th>Started</th>
+
+                            <th>Task description</th>
+                            <th>Task name</th>
+                            <th>Task count</th>
+                            <th>Total</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        </tbody>
+
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings" class="tab-pane fade">
+        <h3>Settings</h3>
+        <button class="btn btn-primary" id="show-add-new-preference-btn" style="display: block;">Add new preference</button>
+        <div style="display: none;" id="add-new-preference">
+            <div class="col-md-12 container">
+                <div class="col-md-4">
+                    <label for="new-preference-key">Preference key:</label>
+                    <input type="text" class="form-control" id="new-preference-key">
+                </div>
+                <div class="col-md-4">
+                    <label for="new-preference-value">Preference value:</label>
+                    <textarea class="form-control" rows="1" id="new-preference-value"></textarea>
+                </div>
+                <div class="col-md-2">
+                    <label for="new-preference-type">Preference type:</label>
+                    <select class="form-control" id="new-preference-type">
+                        <option value="String" selected>String</option>
+                        <option value="Long">Long</option>
+                        <option value="Integer">Integer</option>
+                        <option value="Float">Float</option>
+                        <option value="Map">Map</option>
+                        <option value="Boolean">Boolean</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="new-preference-restart">Restart is needed:</label>
+                    <select class="form-control" id="new-preference-restart">
+                        <option value="false" selected>false</option>
+                        <option value="true">true</option>
+                    </select>
+                </div>
+            </div>
+            <br>
+            <hr>
+            <button class="btn btn-primary" id="add-new-preference-btn"></span> Add</button>
+            <button class="btn btn-primary" id="cancel-new-preference-btn"></span> Cancel</button>
+        </div>
+        <hr>
+
+        <div class="modal fade" id="settings-edit-modal" role="dialog">
+            <div class="modal-dialog modal-lg">
+
+                <!-- Modal content-->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title" id="settings-edit-header"></h4>
+                        <p class="modal-title" id="settings-name"></p>
+                    </div>
+                    <div class="modal-body">
+                        <div class="container">
+                            <h5 class="modal-title" id="settings-type-edit-header"></h5>
+                            <p class="modal-title" id="settings-type" hidden="true"></p>
+                        </div>
+                        <hr>
+                        <div class="container">
+                            <div class="col-md-4">
+                                <label for="edit-preference-value">Preference value:</label>
+                                <textarea class="form-control" rows="5" id="edit-preference-value"></textarea>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit-preference-restart">Restart is needed:</label>
+                                <select class="form-control" id="edit-preference-restart">
+                                    <option value="false">false</option>
+                                    <option value="true">true</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="save-new-value-for-settings-btn">Save</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="settings-result-list">
+        </div>
     </div>
 
     <div id="ipfs" class="tab-pane fade">
@@ -324,6 +538,7 @@
         if (loginName != "") {
             loadMetricsData();
             loadBotData();
+            loadConfiguration();
             loadErrorsData();
             loadIpfsStatusData();
         }
@@ -341,7 +556,8 @@
             $("#reg").show();
             $("#errors-tab").show();
             $("#metrics-tab").show();
-            $("#bot-tab").show();
+            $("#api-tab").show();
+            $("#settings-tab").show();
             $("#reg-tab").show();
             $("#ipfs-tab").show();
         } else {
@@ -350,7 +566,8 @@
             $("#admin-login-div").show();
             $("#errors-tab").hide();
             $("#reg-tab").hide();
-            $("#bot-tab").hide();
+            $("#api-tab").hide();
+            $("#settings-tab").hide();
             $("#metrics-tab").hide();
             $("#reg").hide();
             $("#ipfs-tab").hide();
@@ -532,19 +749,20 @@
             items += "<br><li><b>Block id</b>: " + op.block_id;
             items += "<input type=\"button\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
             items += "<br><b>Hash</b>: " + op.hash;
-            items += "<br><b>Operations count</b>: " + op.operations_size;
             if (op.eval) {
                 if (op.eval.superblock_hash != superblockHash) {
                     superblockHash = op.eval.superblock_hash;
                     superblockId = superblockId + 1;
                 }
+                items += "<br><b>Operations count</b>: " + op.eval.operations_size;
+                items += "<br><b>Block size</b>: " + (op.eval.block_size/1024).toFixed(3) + " KB";
+                items += "<br><b>Added/Edited/removed objects</b>: " + op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted;
                 items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
             }
             items += "<br><b>Signed by</b>: " + op.signed_by;
             items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
             items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
             items += "<br><b>Details</b>: " + op.details;
-            // items += "<br><b>Validation</b>: " + JSON.stringify(op.validation);
             items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                 JSON.stringify(op, null, 4) + "</pre></details>";
             items += "</li>";
@@ -578,16 +796,99 @@
             });
         });
     }
-    function loadBotData() {
-        let selectBot = $("#bot-list").val();
-        $.getJSON("/api/bot", function (data) {
-            var botItems = "";
+
+    function editPreferenceObject(i) {
+        console.log(globalConfig[i]);
+        if (globalConfig[i].type === "Map") {
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value));
+        } else {
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(globalConfig[i].value);
+
+        }
+        $("#settings-edit-modal .modal-body #settings-type-edit-header").html("Preference type: " + globalConfig[i].type);
+        $("#settings-edit-modal .modal-body #settings-type").html(globalConfig[i].type);
+        $("#settings-edit-modal .modal-body #edit-preference-restart").val(globalConfig[i].restartIsNeeded.toString());
+        $("#settings-edit-modal .modal-header #settings-name").val(globalConfig[i].id);
+        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference editor for: " + globalConfig[i].id);
+    }
+
+    var globalConfig = {};
+    function loadConfiguration() {
+        $.getJSON("/api/mgmt/config", function (data) {
+            // var items = "";
+            var items = "";
+            globalConfig = data;
             for (var i = 0; i < data.length; i++) {
-                let bot = data[i];
-                botItems += "<option value = '" + bot["id"] + "' " +
-                    (selectBot == bot["id"] ? "selected" : "") + ">" + bot["id"] + "</option>";
+                obj = data[i];
+                items += "<div class=\"panel panel-default\">";
+                    items += "<div class=\"panel-heading\"><button type=\"button\" class=\"btn btn-primary btn-sm pull-right\" data-toggle=\"modal\" data-target=\"#settings-edit-modal\" onclick=\"editPreferenceObject(" + i + ")\">Edit</button></a> <h4>" + obj.id + "</h4></div>";
+                    items += "<div class=\"panel-body\">";
+
+                    if (obj.type === "Map") {
+                        items += "<h5><b>Value: </b></h5>";
+                        items += "<pre>" + JSON.stringify(obj.value, null, 4) +"</pre>"
+                    } else {
+                        items += "<h5><b>Value: </b>" + obj.value + "</h5>";
+                    }
+                    items += "<h5><b>Preference type: </b>"+ obj.type + "</h5>";
+                    items += "<div class=\"clearfix\"></div>";
+                    items += "<hr>";
+                    items += "<div class=\"row\">";
+                    if (obj.restartIsNeeded === true) {
+                        items += "<div class=\"alert alert-warning\" role=\"alert\">This parameter will be accepted after server restarting!</div>";
+                    }
+                    items += "</div>";
+                    items += "</div>";
+                items += "</div>";
             }
-            $("#bot-list").html(botItems);
+
+            $("#settings-result-list").html(items);
+        });
+    };
+
+    function loadBotData() {
+        $.getJSON("/api/bot/stats", function (data) {
+            var items = "";
+            for (var key in data) {
+                var obj = data[key];
+                items += "<tr>";
+                items += "<td>" + obj.id + "</td>";
+                if ('botStats' in obj) {
+                items += "<td>" + obj.botStats.taskName + "</td>";
+                items += "<td>" + obj.botStats.taskDescription + "</td>";
+                } else {
+                    items += "<td></td>";
+                }
+                items += "<td>" + new Date(obj.started).toLocaleString() + "</td>";
+                items += "<td>" + obj.interval + "</td>";
+                if ('botStats' in obj) {
+                    if (!obj.botStats.isRunning) {
+                        items += "<td>NOT RUNNING</td>"
+                    } else {
+                        var progressBarValue = parseInt((obj.botStats.progress / obj.botStats.total) * 100);
+                        items += "<td><div class=\"progress\">\n" +
+                            "  <div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\"\n" +
+                            "  aria-valuenow=\"" + progressBarValue + "\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width:" + progressBarValue + "%\">\n" +
+                            progressBarValue + "%" +
+                            "  </div>\n" +
+                            "</div></td>";
+                    }
+                } else {
+                    items += "<td></td>";
+                }
+                items += "<td>";
+                if ('botStats' in obj && obj.botStats.isRunning === false) {
+                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
+                } else {
+                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
+                }
+                items += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>";
+                items += "</td>";
+                items += "</tr>";
+
+            }
+
+            $("#bots-table > tbody").html(items);
         });
     }
 
@@ -852,12 +1153,16 @@
             setTimeout(function(){
                 var searchTypeListValue = url.searchParams.get('search');
                 if (searchTypeListValue !== null) {
-                    $("#type-list").val(searchTypeListValue);
-                    $("#type-list").change();
+                    setTimeout(function() {
+                        $("#type-list").val(searchTypeListValue);
+                        $("#type-list").change();
+                    }, 200);
                 }
                 var typeSearch = url.searchParams.get('type');
                 if (typeSearch !== null) {
-                    $("#search-type-list").val(typeSearch).change();
+                    setTimeout(function() {
+                        $("#search-type-list").val(typeSearch).change();
+                    }, 200);
                 }
                 var checkboxValue = url.searchParams.get('history');
                 if (checkboxValue !== null) {
@@ -877,7 +1182,7 @@
                 setTimeout(function() {
                     $("#load-objects-btn").click();
                 }, 200);
-            }, 200);
+            }, 300);
         } else if (window.location.href.toLowerCase().indexOf('api/admin?tab=operations') > 1) {
             $(".nav-tabs a[href=\"#operations\"]").tab('show');
             var loadType = url.searchParams.get('loadBy');
@@ -917,6 +1222,64 @@
         }
     }
 
+    function startBot(bot) {
+        var obj = {
+            "botName":bot
+        };
+        $.get("/api/bot/start", obj)
+            .done(function (data) {$("#result").html(data)})
+            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+    }
+
+
+    function stopBot(bot) {
+        var obj = {
+            "botName":bot
+        };
+        $.get("/api/bot/stop", obj)
+            .done(function (data) {$("#result").html(data)})
+            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+    }
+
+    function showBotHistory(bot) {
+        var obj = {
+            "botName" : bot
+        };
+        //[{"bot":"opr-type","status":"SUCCESS","startDate":"Sep 5, 2019, 11:50:45 AM","endDate":"Sep 5, 2019, 11:51:40 AM","total":25858,"processed":25858}]
+        $.getJSON("/api/bot/history", obj)
+            .done(function (data) {
+                var items = "";
+                for (var i=0; i < data.length; i++) {
+                    var obj = data[i];
+                    items += "<tr>";
+                    items += "<td>" + obj.bot + "</td>";
+                    items += "<td>" + new Date(obj.startDate).toLocaleString() + "</td>";
+                    if (obj.endDate !== undefined) {
+                        items += "<td>" + new Date(obj.endDate).toLocaleString() + "</td>";
+                    } else {
+                        items += "<td></td>"
+                    }
+                    items += "<td>" + obj.total + "</td>";
+                    items += "<td>" + obj.processed + "</td>";
+                    items += "<td>" + obj.status + "</td>";
+                    items += "</tr>";
+                }
+                $(".modal-body #bots-history-table  > tbody").html(items);
+                $(".modal-header #history-bot-name").val(bot);
+                $(".modal-header #bot-history-header").html("History of the launches for bot: " + bot);
+            })
+            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+    }
+
+    function closeBotHistory() {
+        $("#bots-history-table").hide();
+    }
+
+    setInterval(function(){
+        $("#refresh-bot-table-btn").click();
+        loadStatusData();
+    }, 15000);
+
     $( document ).ready(function() {
         loadData();
         $("#clear-list-btn").click(function(){
@@ -940,6 +1303,15 @@
             $.post("/api/mgmt/replicate", {},  function(data, status){
                 loadDataDelay();
             });
+        });
+
+        $("#config-list").change(function () {
+            var selected = $("#config-list").val();
+            if (globalConfig[selected].toString() === "[object Object]") {
+                $("#config-value").val(JSON.stringify(globalConfig[selected], null, 4)).attr("rows", 20);
+            } else {
+                $("#config-value").val(globalConfig[selected]).attr("rows", 1);
+            }
         });
 
         $("#search-type-list").change(function() {
@@ -1448,43 +1820,115 @@
             }
         }();
 
-        $("#start-bot-btn").click(function () {
-            var obj = {
-                "botName":$("#bot-list").val()
-            };
-            $.get("/api/bot/start", obj)
-                .done(function (data) {$("#result").html(data)})
-                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
-        });
-
-        $("#stop-bot-btn").click(function () {
-            var obj = {
-                "botName":$("#bot-list").val()
-            };
-            $.get("/api/bot/stop", obj)
-                .done(function (data) {$("#result").html(data)})
-                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
-        });
-
         $("#load-bot-stats-btn").click(function () {
-            $.get("/api/bot/stats")
+            $.getJSON("/api/bot/stats")
                 .done(function (data) {
-                    var rows =
-                        "<tr>" +
-                        "<td>Name</td>" +
-                        "<td>Status</td>" +
-                        "</tr>";
+                    var items = "";
                     for (var key in data) {
-                        rows +=
-                            "<tr>" +
-                            "<td>  " + key + "  </td>" +
-                            "<td>  " + data[key] + "  </td>" +
-                            "</tr>";
-                    }
-                    $("#bot-table").html(rows);
+                        var obj = data[key];
+                        items += "<br><li><b>Id</b>: " + obj.id;
+                        items += "<br><b>API</b>: " + obj.api;
+                        items += "<br><b>Version</b>: " + obj.version;
+                        items += "<br><b>Started</b>: " + obj.started;
+                        if ('botStats' in obj) {
+                            items += "<br><b>Task description</b>: " + obj.botStats.taskDescription;
+                            items += "<br><b>Task name</b>: " + obj.botStats.taskName;
+                            items += "<br><b>Task count</b>: " + obj.botStats.taskCount;
+                            items += "<br><b>Total tasks</b>: " + obj.botStats.total;
+                            if (obj.botStats.taskCount === obj.botStats.total) {
+                                items += "<span class=\"label label-primary\">Not enabled</span>";
+                            } else {
+                                items += "<div class=\"progress\">\n" +
+                                    "<div class=\"progress-bar progress-bar-striped progress-bar-animated\" role=\"progressbar\" aria-valuenow=\"" + obj.botStats.progress + "\" aria-valuemin=\"0\" aria-valuemax=\"" + obj.botStats.total + "\" style=\"width: " + obj.botStats.progress + "%\"></div>\n" +
+                                    "</div>";
+                            }
+                        }
+                        items += "<br></li>";
+                    };
+                    $("#bot-list-stats").html(items);
                 })
                 .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
         });
+        
+        $("#refresh-bot-history-btn").click(function () {
+            var botName = $(".modal-header #history-bot-name").val();
+            showBotHistory(botName);
+        });
+
+        $("#refresh-bot-table-btn").click(function () {
+            loadBotData();
+        });
+
+        $("#update-settings").click(function () {
+            var keyConfig = $("#config-list").val();
+            if (globalConfig[keyConfig] !== $("#config-value").val() && keyConfig !== null) {
+                var obj = {
+                    key: keyConfig,
+                    value: $("#config-value").val()
+                };
+                $.post("/api/mgmt/config", obj)
+                    .done(function (data) {
+                        $("#result").html("SUCCESS: " + data);
+                        loadConfiguration();
+                        setTimeout(function() {
+                            $("#config-list").val(keyConfig).change();
+                        }, 200);
+                    })
+                    .fail(function (xhr, status, error) {
+                        $("#result").html("ERROR: " + error);
+                    });
+                $("#settings-warn-alert").show();
+            } else {
+                $("#result").html("ERROR: " + "Nothing to update");
+            }
+        });
+
+       $("#show-add-new-preference-btn").click(function () {
+          $("#add-new-preference").show();
+          $("#show-add-new-preference-btn").hide();
+       });
+
+       $("#add-new-preference-btn").click(function () {
+           var obj = {
+               key: $("#new-preference-key").val(),
+               value: $("#new-preference-value").val(),
+               type: $("#new-preference-type").val(),
+               restartIsNeeded: $("#new-preference-restart").val()
+           };
+           $.post("/api/mgmt/config", obj)
+               .done(function (data) {
+                   $("#result").html("SUCCESS: " + data);
+                   loadConfiguration();
+               })
+               .fail(function (xhr, status, error) {
+                   $("#result").html("ERROR: " + error);
+               });
+       });
+
+       $("#cancel-new-preference-btn").click(function () {
+           $("#add-new-preference").hide();
+           $("#show-add-new-preference-btn").show();
+
+       });
+
+       $("#save-new-value-for-settings-btn").click(function () {
+           var obj = {
+               key: $("#settings-name").val(),
+               value: $("#edit-preference-value").val(),
+               type: $("#settings-type").text(),
+               restartIsNeeded: $("#edit-preference-restart").val()
+           };
+           $.post("/api/mgmt/config", obj)
+               .done(function (data) {
+                   $("#result").html("SUCCESS: " + data);
+                   loadConfiguration();
+               })
+               .fail(function (xhr, status, error) {
+                   $("#result").html("ERROR: " + error);
+               });
+
+           $("#settings-edit-modal .close").click();
+       });
 
         $("#operations-search-btn").click(function () {
             var typeSearch = $("#operations-search").val();

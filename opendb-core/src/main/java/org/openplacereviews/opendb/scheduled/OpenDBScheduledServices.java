@@ -1,18 +1,18 @@
 package org.openplacereviews.opendb.scheduled;
 
-import java.util.Date;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.BotManager;
 import org.openplacereviews.opendb.service.BotManager.BotInfo;
+import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.Date;
 
 @Component
 public class OpenDBScheduledServices {
@@ -23,21 +23,6 @@ public class OpenDBScheduledServices {
 	
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBScheduledServices.class);
 	private static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
-	
-	@Value("${opendb.block-create.minSecondsInterval:15}")
-	public int minSecondsInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS;
-	
-	@Value("${opendb.block-create.minCapacity:0.8}")
-	public double minCapacity = 0.7;
-	
-	@Value("${opendb.block-create.maxSecondsInterval:900}")
-	public int maxSecondsInterval = 60 * 15;
-	
-	@Value("${opendb.replicate.interval:30}")
-	public int replicateInterval = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * 2;
-	
-	@Value("${opendb.bots.minInterval:1800}")
-	public int botsMinInterval = 1800;
 
 	private long previousReplicateCheck = 0;
 	
@@ -50,12 +35,15 @@ public class OpenDBScheduledServices {
 	
 	@Autowired
 	private BotManager botManager;
+
+	@Autowired
+	private SettingsManager settingsManager;
 	
 	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
 	public void runBots() throws FailedVerificationException {
 		long now = System.currentTimeMillis();
 		if (blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && blocksManager.isBlockCreationOn()
-				&& (now - previousBotsCheck) >= botsMinInterval * 1000l) {
+				&& (now - previousBotsCheck) >= getBotsMinInterval()) {
 			previousBotsCheck = now;
 			for (BotInfo bi : botManager.getBots().values()) {
 				botManager.startBot(bi.getId());
@@ -68,7 +56,7 @@ public class OpenDBScheduledServices {
 		if(blocksManager.isReplicateOn()) {
 			try {
 				long now = System.currentTimeMillis() / 1000;
-				if (now - previousReplicateCheck > replicateInterval) {
+				if (now - previousReplicateCheck > getReplicateInterval()) {
 					int d = blocksManager.getBlockchain().getDepth();
 					blocksManager.replicate();
 					// ignore if replication was successful or not
@@ -97,15 +85,36 @@ public class OpenDBScheduledServices {
 			}
 			long timePast = (System.currentTimeMillis() - opsAppeared) / 1000;
 			double cp = blocksManager.getQueueCapacity();
-			if(timePast > maxSecondsInterval) {
+			if(timePast > getMaxSecondsInterval()) {
 				blocksManager.createBlock(0);
 				opsAppeared = 0;
-			} else if(timePast > minSecondsInterval && cp >= minCapacity) {
-				blocksManager.createBlock(minCapacity);
+			} else if(timePast > getMinSecondsInterval() && cp >= getMinCapacity()) {
+				blocksManager.createBlock(getMinCapacity());
 			}
 		} else if(sz == 0) {
 			opsAppeared = 0;
 		}
 	}
+
+	public int getReplicateInterval() {
+		return settingsManager.OPENDB_REPLICATE_INTERVAL.get();
+	}
+
+	public int getMaxSecondsInterval() {
+		return settingsManager.OPENDB_BLOCK_CREATE_MAX_SECONDS_INTERVAL.get();
+	}
+
+	public double getMinCapacity() {
+		return settingsManager.OPENDB_BLOCK_CREATE_MIN_CAPACITY.get();
+	}
+
+	public int getMinSecondsInterval() {
+		return settingsManager.OPENDB_BLOCK_CREATE_MIS_SECONDS_INTERVAL.get();
+	}
+
+	public Long getBotsMinInterval() {
+		return settingsManager.OPENDB_BOTS_MIN_INTERVAL.get() * 1000L;
+	}
+
 }
 

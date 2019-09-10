@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
+import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -12,10 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
 import java.io.StringReader;
@@ -37,6 +35,9 @@ public class MgmtController {
     
     @Autowired
     private LogOperationService logService;
+
+    @Autowired
+	private SettingsManager settingsManager;
     
     @Autowired
     private JsonFormatter formatter;
@@ -228,6 +229,34 @@ public class MgmtController {
 		Set<String> removeQueueOperations = manager.removeQueueOperations(toDelete);
 		return ResponseEntity.ok(formatter.fullObjectToJson(removeQueueOperations));
 	}
-    
-    
+
+	@GetMapping(path = "/config", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> getAppPreferences(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+
+		return ResponseEntity.ok(formatter.fullObjectToJson(settingsManager.getPreferences()));
+	}
+
+	@PostMapping(path = "/config", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> updatePreference(HttpSession session,
+												   @RequestParam String key,
+												   @RequestParam String value,
+												   @RequestParam(required = false) String type,
+												   @RequestParam Boolean restartIsNeeded) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+
+		if (settingsManager.updatePreference(key, settingsManager.generateObjectByType(value, type), restartIsNeeded, true)) {
+			settingsManager.savePreferences();
+			return ResponseEntity.ok("Preference was update");
+		} else {
+			return ResponseEntity.ok("Preference type is not valid");
+		}
+	}
+
 }

@@ -16,9 +16,7 @@ public class FileBackupManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(FileBackupManager.class);
 	private static final String SEPARATOR_STRING = "\n---------------------\n";
-	
-	@Value("${opendb.files-backup.directory}")
-	private String DIRECTORY = "";
+
 	private File mainDirectory;
 	
 	@Value("${opendb.files-backup.file-prefix:}")
@@ -35,10 +33,13 @@ public class FileBackupManager {
 
 	@Autowired
 	private JsonFormatter formatter;
+
+	@Autowired
+	private SettingsManager settingsManager;
 	
 	public void init() {
-		if(DIRECTORY.length() > 0) {
-			mainDirectory = new File(DIRECTORY);
+		if(getDirectory().length() > 0) {
+			mainDirectory = new File(getDirectory());
 			mainDirectory.mkdirs();
 		}
 		if(mainDirectory.exists()) {
@@ -75,7 +76,9 @@ public class FileBackupManager {
 		}
 		
 	}
-	
-	
+
+	private String getDirectory() {
+		return settingsManager.OPENDB_FILE_BACKUP_DIRECTORY.get();
+	}
 	
 }

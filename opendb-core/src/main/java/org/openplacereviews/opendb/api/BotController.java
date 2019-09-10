@@ -22,7 +22,7 @@ public class BotController {
 	@GetMapping(path = "", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public String getBots() {
-		return jsonFormatter.fullObjectToJson(botManager.getBots().values());
+		return jsonFormatter.fullObjectToJson(botManager.getBots().keySet());
 	}
 
 	@GetMapping(path = "start", produces = "text/html;charset=UTF-8")
@@ -48,7 +48,12 @@ public class BotController {
 	@GetMapping(path = "stats", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getBotStats() {
-		// TODO stats formatting
 		return jsonFormatter.fullObjectToJson(botManager.getBots());
+	}
+
+	@GetMapping(path = "/history", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public String getBotHistory(@RequestParam String botName) {
+		return jsonFormatter.fullObjectToJson(botManager.getBotHistory(botName));
 	}
 }

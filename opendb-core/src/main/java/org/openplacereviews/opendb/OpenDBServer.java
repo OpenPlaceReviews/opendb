@@ -3,10 +3,7 @@ package org.openplacereviews.opendb;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
-import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.DBConsensusManager;
-import org.openplacereviews.opendb.service.IPFSFileManager;
-import org.openplacereviews.opendb.service.LogOperationService;
+import org.openplacereviews.opendb.service.*;
 import org.openplacereviews.opendb.util.DBConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.servlet.MultipartConfigElement;
+import java.io.IOException;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -46,14 +44,15 @@ public class OpenDBServer {
 	IPFSFileManager externalResourcesService;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	SettingsManager settingsManager;
 
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
 		SpringApplication.run(OpenDBServer.class, args);
 	}
 
-	public void preStartApplication() {
-
+	public void preStartApplication() throws IOException, IllegalAccessException {
 	}
 
 	public MetadataDb loadMetadata() {
@@ -86,6 +85,8 @@ public class OpenDBServer {
 			try {
 				LOGGER.info("Application starting...");
 				preStartApplication();
+				addNewPreferences();
+				settingsManager.initPrefs();
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
@@ -122,6 +123,25 @@ public class OpenDBServer {
 			return "Column [name=" + name + ", columnName=" + columnName + ", sqlType=" + sqlType
 					+ ", dataType=" + dataType + ", columnSize=" + columnSize + "]";
 		}
+	}
+
+	private void addNewPreferences() {
+		//settingsManager.registerMapPreference("opendb.db-schema.objtables.obj_osm", getDefaultObjOsmPreferences(), true, false);
+	}
+
+	//obj_osm: { "types": ["osm.place"], "keysize":1 , "columns": [{"name": "osmid", "field": ["source.osm.id"], "sqlmapping":"array", "sqltype": "bigint[]", "index":"GIN"}] }
+	private Map<String, Object> getDefaultObjOsmPreferences() {
+		Map<String, Object> obj_logins = new TreeMap<>();
+		obj_logins.put("types", Arrays.asList("osm.place"));
+		obj_logins.put("keysize", 1);
+		Map<String, Object> columnMap = new TreeMap<>();
+		columnMap.put("name", "osmid");
+		columnMap.put("filed", Arrays.asList("osm.id"));
+		columnMap.put("sqlmapping", "array");
+		columnMap.put("sqltype", "bigint[]");
+		columnMap.put("index", "GIN");
+		obj_logins.put("columns", Arrays.asList(columnMap));
+		return obj_logins;
 	}
 
 }

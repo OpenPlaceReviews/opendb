@@ -71,10 +71,10 @@ public class ApiController {
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
 		if (manager.isBlockCreationOn()) {
-			res.status += " (blocks every " + scheduledServices.minSecondsInterval + " seconds)";
+			res.status += " (blocks every " + scheduledServices.getMinSecondsInterval() + " seconds)";
 		} else if (manager.isReplicateOn()) {
 			res.status += String.format(" (replicate from %s every %d seconds)	", manager.getReplicateUrl(),
-					scheduledServices.replicateInterval);
+					scheduledServices.getReplicateInterval());
 		}
 		return formatter.fullObjectToJson(res);
 	}

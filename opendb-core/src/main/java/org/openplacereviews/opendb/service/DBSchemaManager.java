@@ -1,28 +1,12 @@
 package org.openplacereviews.opendb.service;
 
 
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.GIN;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.GIST;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
@@ -30,23 +14,29 @@ import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
+
 
 @Service
-@ConfigurationProperties(prefix = "opendb.db-schema", ignoreInvalidFields = false, ignoreUnknownFields = true)
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 2;
+	private static final int OPENDB_SCHEMA_VERSION = 3;
+	private final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
+	public static final String BOT_STATS_TABLE = "bot_stats";
 	protected static final String BLOCKS_TABLE = "blocks";
 	protected static final String OPERATIONS_TABLE = "operations";
 	protected static final String OBJS_TABLE = "objs";
@@ -67,7 +57,7 @@ public class DBSchemaManager {
 	private static final int BATCH_SIZE = 1000;
 
 	// loaded from config
-	private TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
+	private Map<String, Map<String, Object>> objtables;
 	private TreeMap<String, ObjectTypeTable> objTableDefs = new TreeMap<String, ObjectTypeTable>();
 	private TreeMap<String, String> typeToTables = new TreeMap<String, String>();
 	private TreeMap<String, Map<String, OpIndexColumn>> indexes = new TreeMap<>();
@@ -75,6 +65,9 @@ public class DBSchemaManager {
 
 	@Autowired
 	private JsonFormatter formatter;
+
+	@Autowired
+	private SettingsManager settingsManager;
 
 	static class ObjectTypeTable {
 		public ObjectTypeTable(String tableName, int keySize) {
@@ -158,6 +151,14 @@ public class DBSchemaManager {
 		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
 		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
 
+		registerColumn(BOT_STATS_TABLE, "id", "serial not null", NOT_INDEXED);
+		registerColumn(BOT_STATS_TABLE, "bot", "text", NOT_INDEXED);
+		registerColumn(BOT_STATS_TABLE, "start_date", "timestamp", NOT_INDEXED);
+		registerColumn(BOT_STATS_TABLE, "end_date", "timestamp", NOT_INDEXED);
+		registerColumn(BOT_STATS_TABLE, "total", "int", NOT_INDEXED);
+		registerColumn(BOT_STATS_TABLE, "processed", "int", NOT_INDEXED);
+		registerColumn(BOT_STATS_TABLE, "status", "text", NOT_INDEXED);
+
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
 
 	}
@@ -174,12 +175,19 @@ public class DBSchemaManager {
 		registerColumn(tbName, "content", "jsonb", NOT_INDEXED);
 	}
 
-	public TreeMap<String, Map<String, Object>> getObjtables() {
-		return objtables;
-	}
-	
-	public void setObjtables(TreeMap<String, Map<String, Object>> objtables) {
-		this.objtables = objtables;
+	public Map<String, Map<String, Object>> getObjtables() {
+		if (objtables != null) {
+			return objtables;
+		} else {
+			Map<String, Map<String, Object>> objtable = new TreeMap<>();
+			List<SettingsManager.OpendbPreference<?>> preferences = settingsManager.loadPreferencesByKey(OBJTABLE_PROPERTY_NAME);
+			for (SettingsManager.OpendbPreference opendbPreference : preferences) {
+				String tableName = opendbPreference.getId().substring(opendbPreference.getId().lastIndexOf(".") + 1);
+				objtable.put(tableName, (Map<String, Object>) opendbPreference.get());
+			}
+			objtables = objtable;
+			return objtable;
+		}
 	}
 
 	public Collection<String> getObjectTables() {
@@ -228,6 +236,9 @@ public class DBSchemaManager {
 				setOperationsType(jdbcTemplate, OPERATIONS_TABLE);
 				setOperationsType(jdbcTemplate, OPERATIONS_TRASH_TABLE);
 			}
+			if (dbVersion <= 2) {
+				addBlockAdditionalInfo(jdbcTemplate);
+			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if(dbVersion > OPENDB_SCHEMA_VERSION) {
 			throw new UnsupportedOperationException();
@@ -239,6 +250,33 @@ public class DBSchemaManager {
 			jdbcTemplate.batchUpdate(batchQuery, batchArgs);
 			batchArgs.clear();
 		}
+	}
+
+	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Adding new columns : 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
+		jdbcTemplate.update("ALTER TABLE " + BLOCKS_TABLE + " add opcount int, add objdeleted int, add objedited int, add objadded int");
+
+		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
+			@Override
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				int i = 0;
+				while (rs.next()) {
+					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
+					int added = 0, edited = 0, deleted = 0;
+					for (OpOperation opOperation : opBlock.getOperations()) {
+						added += opOperation.getCreated().size();
+						edited += opOperation.getEdited().size();
+						deleted += opOperation.getDeleted().size();
+					}
+					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set opcount = ?, objdeleted = ?, objedited = ?, objadded = ? " +
+									" WHERE hash = ?", opBlock.getOperations().size(), deleted, edited, added,
+							SecUtils.getHashBytes(opBlock.getRawHash()));
+					i++;
+				}
+				LOGGER.info("Updated " + i + " blocks");
+				return null;
+			}
+		});
 	}
 	
 	private void setOperationsType(JdbcTemplate jdbcTemplate, String table) {
@@ -279,16 +317,16 @@ public class DBSchemaManager {
 	@SuppressWarnings("unchecked")
 	private void migrateObjMappingIfNeeded(JdbcTemplate jdbcTemplate) {
 		String objMapping = getSetting(jdbcTemplate, "opendb.mapping");
-		String newMapping = formatter.toJsonElement(objtables).toString();
+		String newMapping = formatter.toJsonElement(getObjtables()).toString();
 		if (!OUtils.equals(newMapping, objMapping)) {
 			LOGGER.info(String.format("Start object mapping migration from '%s' to '%s'", objMapping, newMapping));
 			TreeMap<String, String> previousTypeToTable = new TreeMap<>();
 			if (objMapping != null && objMapping.length() > 0) {
 				TreeMap<String, Object> previousMapping = formatter.fromJsonToTreeMap(objMapping);
 				for(String tableName : previousMapping.keySet()) {
-					Map<String, String> otypes = ((Map<String, Map<String, String>>) previousMapping.get(tableName)).get("types");
+					List<String> otypes = ((Map<String, List<String>>) previousMapping.get(tableName)).get("types");
 					if(otypes != null) {
-						for(String type : otypes.values()) {
+						for(String type : otypes) {
 							previousTypeToTable.put(type, tableName);
 						}
 					}
@@ -334,8 +372,8 @@ public class DBSchemaManager {
 
 	@SuppressWarnings("unchecked")
 	private void prepareObjTableMapping() {
-		for(String tableName : objtables.keySet()) {
-			Integer i = (Integer) objtables.get(tableName).get("keysize");
+		for(String tableName : getObjtables().keySet()) {
+			Integer i = ((Number)getObjtables().get(tableName).get("keysize")).intValue();
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
@@ -344,9 +382,9 @@ public class DBSchemaManager {
 			objTableDefs.put(tableName, ott);
 			
 			
-			Map<String, String> tps = (Map<String, String>) objtables.get(tableName).get("types");
+			List<String> tps = (List<String>) getObjtables().get(tableName).get("types");
 			if(tps != null) {
-				for(String type : tps.values()) {
+				for(String type : tps) {
 					typeToTables.put(type, tableName);
 					ott.types.add(type);
 					for(ColumnDef c : schema.get(tableName)) {
@@ -358,14 +396,14 @@ public class DBSchemaManager {
 					}
 				}
 			}
-			Map<String, Map<String, Object>> cii = (Map<String, Map<String, Object>>) objtables.get(tableName).get("columns");
+			List<Map<String, Object>> cii = (List<Map<String, Object>>) getObjtables().get(tableName).get("columns");
 			if (cii != null) {
-				for (Map<String, Object> entry : cii.values()) {
+				for (Map<String, Object> entry : cii) {
 					String name = (String) entry.get("name");
 					String colType = (String) entry.get("sqltype");
 					String index = (String) entry.get("index");
-					Integer cacheRuntime = (Integer) entry.get("cache-runtime-max");
-					Integer cacheDB = (Integer) entry.get("cache-db-max");
+					Integer cacheRuntime = entry.get("cache-runtime-max") == null ? null : ((Number) entry.get("cache-runtime-max")) .intValue();
+					Integer cacheDB = entry.get("cache-db-max") ==  null ? null : ((Number) entry.get("cache-db-max")).intValue();
 					IndexType di = null;
 					if(index != null) {
 						if(index.equalsIgnoreCase("true")) {
@@ -466,7 +504,7 @@ public class DBSchemaManager {
 	}
 
 
-	private boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
+	protected boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
 		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?) "
 				+ " ON CONFLICT (key) DO UPDATE SET value = ? ", key, v, v) != 0;
 	}
@@ -478,8 +516,8 @@ public class DBSchemaManager {
 		}
 		return Integer.parseInt(s);
 	}
-	
-	private String getSetting(JdbcTemplate jdbcTemplate, String key) {
+
+	protected String getSetting(JdbcTemplate jdbcTemplate, String key) {
 		String s = null;
 		try {
 			s = jdbcTemplate.query("select value from " + SETTINGS_TABLE + " where key = ?", new ResultSetExtractor<String>() {

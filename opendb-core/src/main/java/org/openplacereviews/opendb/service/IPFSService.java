@@ -18,7 +18,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.dto.IpfsStatusDTO;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -38,25 +38,20 @@ public class IPFSService {
 
 	public static final String BASE_URI = "%s://%s:%s/";
 	protected static final Log LOGGER = LogFactory.getLog(IPFSService.class);
-	@Value("${opendb.storage.ipfs.node.host:}")
-	public String ipfsHost;
-
-	@Value("${opendb.storage.ipfs.node.port:5001}")
-	public int ipfsPort;
-
-	@Value("${opendb.storage.ipfs.node.readTimeoutMs:10000}")
-	public int ipfsReadTimeoutMs;
 
 	private IPFS ipfs;
 	private ExecutorService pool;
 	private RetryPolicy<Object> retryPolicy;
 
+	@Autowired
+	private SettingsManager settingsManager;
+
 	public void connect() throws IOException {
-		if (!OUtils.isEmpty(ipfsHost)) {
-			ipfs = new IPFS(ipfsHost, ipfsPort);
+		if (!OUtils.isEmpty(getIpfsHost())) {
+			ipfs = new IPFS(getIpfsHost(), getIpfsPort());
 			configureThreadPool(10);
 			configureRetry(1, Duration.ofSeconds(1));
-			LOGGER.info(String.format("Connected to ipfs [host: %s, port: %d]: Node v.%s", ipfsHost, ipfsPort,
+			LOGGER.info(String.format("Connected to ipfs [host: %s, port: %d]: Node v.%s", getIpfsHost(), getIpfsPort(),
 					ipfs.version()));
 		}
 	}
@@ -199,12 +194,12 @@ public class IPFSService {
 					try {
 						Multihash filePointer = Multihash.fromBase58(id);
 						Future<byte[]> ipfsFetcherResult = pool.submit(new IPFSContentFetcher(ipfs, filePointer));
-						byte[] content = ipfsFetcherResult.get(this.ipfsReadTimeoutMs, TimeUnit.MILLISECONDS);
+						byte[] content = ipfsFetcherResult.get(getIpfsReadTimeoutMs(), TimeUnit.MILLISECONDS);
 						IOUtils.write(content, output);
 						return output;
 					} catch (java.util.concurrent.TimeoutException ex) {
 						LOGGER.error(String.format("Timeout Exception while fetching file from IPFS [id: %s, timeout: %d ms]", id,
-								ipfsReadTimeoutMs));
+								getIpfsReadTimeoutMs()));
 						throw new TimeoutException("Timeout Exception while fetching file from IPFS [id: " + id + "]");
 					} catch (Exception ex) {
 						LOGGER.error(String.format("Execution Exception while fetching file from IPFS [id: %s]", id), ex);
@@ -235,5 +230,15 @@ public class IPFSService {
 		}
 	}
 
+	public int getIpfsPort() {
+		return settingsManager.OPENDB_STORAGE_IPFS_NODE_PORT.get();
+	}
 
+	public String getIpfsHost() {
+		return settingsManager.OPENDB_STORAGE_IPFS_NODE_HOST.get();
+	}
+
+	public int getIpfsReadTimeoutMs() {
+		return settingsManager.OPENDB_STORAGE_IPFS_NODE_READ_TIMEOUT_MS.get();
+	}
 }

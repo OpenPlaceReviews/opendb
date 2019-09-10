@@ -7,7 +7,6 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -40,9 +39,6 @@ public class HistoryManager {
 
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(OpObject.DATE_FORMAT);
 
-	@Value("${opendb.db.store-history}")
-	private boolean isRunning;
-
 	@Autowired
 	private DBSchemaManager dbSchema;
 
@@ -58,8 +54,11 @@ public class HistoryManager {
 	@Autowired
 	private JsonFormatter formatter;
 
+	@Autowired
+	private SettingsManager settingsManager;
+
 	public boolean isRunning() {
-		return isRunning;
+		return settingsManager.OPENDB_STORE_HISTORY.get();
 	}
 	
 	public void saveHistoryForBlockOperations(OpBlock opBlock, DeletedObjectCtx hctx) {

@@ -10,7 +10,6 @@ import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
-import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -26,12 +25,15 @@ import java.net.URL;
 import java.security.KeyPair;
 import java.util.*;
 
+import static org.openplacereviews.opendb.ops.OpBlock.F_BLOCK_SIZE;
+
 @Service
 public class BlocksManager {
 
 	public static final String BOOT_STD_OPS_DEFINTIONS = "std-ops-defintions";
 	public static final String BOOT_STD_ROLES = "std-roles";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
+	public static final String BLOCKCHAIN_SETTINGS = "opendb.blockchain-status";
 
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
@@ -50,10 +52,10 @@ public class BlocksManager {
 	@Autowired
 	private IPFSFileManager extResourceService;
 
+	@Autowired
+	private SettingsManager settingsManager;
+
 	protected List<String> bootstrapList = new ArrayList<>();
-	
-	@Value("${opendb.replicate.url}")
-	private String replicateUrl;
 	
 	@Value("${opendb.mgmt.user}")
 	private String serverUser;
@@ -69,10 +71,27 @@ public class BlocksManager {
 	
 	private OpBlockChain blockchain; 
 	
-	private enum BlockchainMgmtStatus {
+	public enum BlockchainMgmtStatus {
 		BLOCK_CREATION,
 		REPLICATION,
-		NONE,
+		NONE;
+
+		public static BlockchainMgmtStatus getStatus(String value) {
+			switch (value) {
+				case "BLOCK_CREATION": {
+					return BLOCK_CREATION;
+				}
+				case "REPLICATION": {
+					return REPLICATION;
+				}
+				case "NONE": {
+					return NONE;
+				}
+				default: {
+					return NONE;
+				}
+			}
+		}
 	}
 	
 	public String getServerPrivateKey() {
@@ -92,11 +111,11 @@ public class BlocksManager {
 	}
 	
 	public boolean isReplicateOn() {
-		return this.mgmtStatus == BlockchainMgmtStatus.REPLICATION && !OUtils.isEmpty(replicateUrl);
+		return this.mgmtStatus == BlockchainMgmtStatus.REPLICATION && !OUtils.isEmpty(getReplicateUrl());
 	}
 	
 	public String getReplicateUrl() {
-		return replicateUrl;
+		return settingsManager.OPENDB_REPLICATE_URL.get();
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
@@ -105,6 +124,8 @@ public class BlocksManager {
 		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.REPLICATION) {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
 		}
+		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name(), false);
+		settingsManager.savePreferences();
 	}
 	
 	public synchronized void setBlockCreationOn(boolean on) {
@@ -112,6 +133,19 @@ public class BlocksManager {
 			this.mgmtStatus = BlockchainMgmtStatus.BLOCK_CREATION;
 		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.BLOCK_CREATION) {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
+		}
+		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name(), false);
+		settingsManager.savePreferences();
+	}
+
+	private synchronized void initBlockStatus() {
+		String loadedStatus = settingsManager.OPENDB_BLOCKCHAIN_STATUS.get();
+		if (loadedStatus != null) {
+			this.mgmtStatus = BlockchainMgmtStatus.getStatus(loadedStatus);
+		} else {
+			this.mgmtStatus = BlockchainMgmtStatus.NONE;
+			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name(), false);
+			settingsManager.savePreferences();
 		}
 	}
 	
@@ -123,7 +157,7 @@ public class BlocksManager {
 			throw new RuntimeException(e);
 		}
 		this.blockchain = initBlockchain;
-		
+		initBlockStatus();
 		String msg = "";
 		// db is bootstraped
 		LOGGER.info("+++ Blockchain is inititialized. " + msg);
@@ -233,7 +267,7 @@ public class BlocksManager {
 		Metric m = mBlockSaveBlock.start();
 		dataManager.insertBlock(opBlock);
 		m.capture();
-		
+
 		
 		m = mBlockSaveHistory.start();
 		historyManager.saveHistoryForBlockOperations(opBlock, hctx);
@@ -246,10 +280,11 @@ public class BlocksManager {
 			return null;
 		}
 		m.capture();
-		
 
+		OpBlock blockHeader = blockchain.getBlockHeaderByRawHash(opBlock.getRawHash());
+		blockHeader.putCacheObject(F_BLOCK_SIZE, dataManager.getBlockSize(blockHeader.getFullHash()));
 		compact();
-		logSystem.logSuccessBlock(opBlock, 
+		logSystem.logSuccessBlock(opBlock,
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		pm.capture();
@@ -296,7 +331,7 @@ public class BlocksManager {
 			try {
 				String from = blockchain.getLastBlockRawHash();
 				BlocksListResult replicateBlockHeaders = formatter.fromJson(
-						readerFromUrl(replicateUrl + "blocks?from=" + from), 
+						readerFromUrl(getReplicateUrl() + "blocks?from=" + from),
 								BlocksListResult.class);
 				LinkedList<OpBlock> headersToReplicate = replicateBlockHeaders.blocks;
 				if(!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
@@ -327,14 +362,14 @@ public class BlocksManager {
 				return true;
 			} catch (IOException e) {
 				LOGGER.error(e.getMessage(), e);
-				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED, "Failed to replicate from " + replicateUrl, e);
+				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED, "Failed to replicate from " + getReplicateUrl(), e);
 			}
 		}
 		return false;
 	}
 
 	private OpBlock downloadBlock(OpBlock header) throws MalformedURLException, IOException {
-		URL downloadByHash = new URL(replicateUrl + "block-by-hash?hash=" + header.getRawHash());
+		URL downloadByHash = new URL(getReplicateUrl() + "block-by-hash?hash=" + header.getRawHash());
 		OpBlock res = formatter.fromJson(new InputStreamReader(downloadByHash.openStream()), OpBlock.class);
 		if(res.getBlockId() == -1) {
 			return null;

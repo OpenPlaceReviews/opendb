@@ -12,7 +12,6 @@ import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -31,12 +30,6 @@ public class IPFSFileManager {
 	private static final int SPLIT_FOLDERS_DEPTH = 3;
 	private static final int FOLDER_LENGTH = 4;
 
-	@Value("${opendb.storage.local-storage:}")
-	private String directory;
-
-	@Value("${opendb.storage.timeToStoreUnusedSec:86400}")
-	private int timeToStoreUnusedObjectsSeconds;
-
 	private File folder;
 
 	@Autowired
@@ -45,10 +38,13 @@ public class IPFSFileManager {
 	@Autowired
 	private IPFSService ipfsService;
 
+	@Autowired
+	private SettingsManager settingsManager;
+
 	public void init() {
 		try {
-			if (!OUtils.isEmpty(directory)) {
-				folder = new File(directory);
+			if (!OUtils.isEmpty(getDirectory())) {
+				folder = new File(getDirectory());
 				folder.mkdirs();
 				ipfsService.connect();
 				LOGGER.info(String.format("Init directory to store external images at %s", folder.getAbsolutePath()));
@@ -102,7 +98,7 @@ public class IPFSFileManager {
 		if (full) {
 			stat.setAmountDBResources(dbManager.getAmountResourcesInDB());
 			stat.setMissingResources(getMissingImagesInIPFS());
-			stat.setDeprecatedResources(dbManager.getResources(false, timeToStoreUnusedObjectsSeconds));
+			stat.setDeprecatedResources(dbManager.getResources(false, getTimeToStoreUnusedObjectsSeconds()));
 		}
 		return stat;
 	}
@@ -132,7 +128,7 @@ public class IPFSFileManager {
 	}
 
 	public List<ResourceDTO> removeUnusedImageObjectsFromSystemAndUnpinningThem() throws IOException {
-		List<ResourceDTO> notActiveImageObjects = dbManager.getResources(false, timeToStoreUnusedObjectsSeconds);
+		List<ResourceDTO> notActiveImageObjects = dbManager.getResources(false, getTimeToStoreUnusedObjectsSeconds());
 		notActiveImageObjects.parallelStream().forEach(res -> {
 			try {
 				removeImageObject(res);
@@ -236,5 +232,11 @@ public class IPFSFileManager {
 		return fPath.toString();
 	}
 
+	public String getDirectory() {
+		return settingsManager.OPENDB_STORAGE_LOCAL_STORAGE_PATH.get();
+	}
 
+	public int getTimeToStoreUnusedObjectsSeconds() {
+		return settingsManager.OPENDB_STORAGE_TIME_TO_STORE_UNUSED_RESOURCE_SEC.get();
+	}
 }

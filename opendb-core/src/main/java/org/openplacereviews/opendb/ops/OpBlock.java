@@ -23,11 +23,15 @@ public class OpBlock extends OpObject {
 	public static final String F_MERKLE_TREE_HASH = "merkle_tree_hash";
 	public static final String F_SIG_MERKLE_TREE_HASH = "sig_merkle_tree_hash";
 	public static final String F_OPERATIONS = "ops";
-	
+	public static final String F_BLOCK_SIZE = "block_size";
+	public static final String F_OBJ_DELETED = "obj_deleted";
+	public static final String F_OBJ_ADDED = "obj_added";
+	public static final String F_OBJ_EDITED = "obj_edited";
+	public static final String F_OPERATIONS_SIZE = "operations_size";
+
 	// transient (depends on the chain where block belongs to)
 	public static final String F_SUPERBLOCK_HASH = "superblock_hash";
-	public static final String F_OPERATIONS_SIZE = "operations_size";
-	
+
 	protected List<OpOperation> operations = new ArrayList<OpOperation>();
 	
 	// cache for immutable

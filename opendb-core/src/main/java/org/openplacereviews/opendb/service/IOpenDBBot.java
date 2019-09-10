@@ -35,4 +35,8 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	 */
 	public boolean interrupt();
 
+	/**
+	 * @Return current status for bot
+	 */
+	public boolean isRunning();
 }
