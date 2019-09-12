@@ -78,9 +78,10 @@ public class DBSchemaManager {
 		int keySize;
 		Set<String> types = new TreeSet<>();
 	}
-	
-	
-	
+
+	public TreeMap<String, Map<String, OpIndexColumn>> getIndexes() {
+		return indexes;
+	}
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType basicIndexType) {
 		ColumnDef cd = new ColumnDef(tableName, colName, colType, basicIndexType);
@@ -180,7 +181,7 @@ public class DBSchemaManager {
 			return objtables;
 		} else {
 			Map<String, Map<String, Object>> objtable = new TreeMap<>();
-			List<SettingsManager.OpendbPreference<?>> preferences = settingsManager.loadPreferencesByKey(OBJTABLE_PROPERTY_NAME);
+			List<SettingsManager.OpendbPreference<?>> preferences = settingsManager.loadContainsPreferencesByKey(OBJTABLE_PROPERTY_NAME);
 			for (SettingsManager.OpendbPreference opendbPreference : preferences) {
 				String tableName = opendbPreference.getId().substring(opendbPreference.getId().lastIndexOf(".") + 1);
 				objtable.put(tableName, (Map<String, Object>) opendbPreference.get());
@@ -417,7 +418,7 @@ public class DBSchemaManager {
 					// to be used array
 					// String sqlmapping = (String) entry.get("sqlmapping");
 					
-					Map<String, String> fld = (Map<String, String>) entry.get("field");
+					List<String> fld = (List<String>) entry.get("field");
 					if (fld != null) {
 						for (String type : ott.types) {
 							OpIndexColumn indexColumn = new OpIndexColumn(type, name, -1,  cd);
@@ -427,7 +428,7 @@ public class DBSchemaManager {
 							if(cacheDB != null) {
 								indexColumn.setCacheDBBlocks(cacheDB);
 							}
-							indexColumn.setFieldsExpression(fld.values());
+							indexColumn.setFieldsExpression(fld);
 							addIndexCol(indexColumn);
 						}
 					}

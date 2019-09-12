@@ -126,22 +126,6 @@ public class OpenDBServer {
 	}
 
 	private void addNewPreferences() {
-		//settingsManager.registerMapPreference("opendb.db-schema.objtables.obj_osm", getDefaultObjOsmPreferences(), true, false);
-	}
-
-	//obj_osm: { "types": ["osm.place"], "keysize":1 , "columns": [{"name": "osmid", "field": ["source.osm.id"], "sqlmapping":"array", "sqltype": "bigint[]", "index":"GIN"}] }
-	private Map<String, Object> getDefaultObjOsmPreferences() {
-		Map<String, Object> obj_logins = new TreeMap<>();
-		obj_logins.put("types", Arrays.asList("osm.place"));
-		obj_logins.put("keysize", 1);
-		Map<String, Object> columnMap = new TreeMap<>();
-		columnMap.put("name", "osmid");
-		columnMap.put("filed", Arrays.asList("osm.id"));
-		columnMap.put("sqlmapping", "array");
-		columnMap.put("sqltype", "bigint[]");
-		columnMap.put("index", "GIN");
-		obj_logins.put("columns", Arrays.asList(columnMap));
-		return obj_logins;
 	}
 
 }

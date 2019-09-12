@@ -357,4 +357,10 @@ public class ApiController {
 		return formatter.fullObjectToJson(historyObjectRequest.historySearchResult);
 	}
 
+	@GetMapping(path = "/index",  produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String getIndexInfo() {
+		return formatter.fullObjectToJson(manager.getIndices());
+	}
+
 }

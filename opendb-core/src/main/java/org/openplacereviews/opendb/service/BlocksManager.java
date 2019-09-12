@@ -607,7 +607,11 @@ public class BlocksManager {
 		}
 		return null;
 	}
-	
+
+	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
+		return dataManager.getIndices();
+	}
+
 	public static class BlocksListResult {
 		public LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
 		public int blockDepth;

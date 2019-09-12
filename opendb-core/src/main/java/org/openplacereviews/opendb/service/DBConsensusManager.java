@@ -1143,4 +1143,8 @@ public class DBConsensusManager {
 		}, botName);
 	}
 
+	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
+		return dbSchema.getIndexes();
+	}
+
 }

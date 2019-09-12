@@ -28,42 +28,62 @@
 <div class="tab-content">
     <div id="home" class="tab-pane fade in active">
         <h1>Admin harness for OpenDB</h1>
-        <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
-        <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
-        <p id="blockchain-orphaned-blocks-header"><b>Orphaned blocks:</b> &nbsp;&nbsp;<span id="blockchain-orphaned-blocks"></span></p>
-        <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
-        <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
+        <div class="row col-sm-12">
+            <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
+            <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
+            <p id="blockchain-orphaned-blocks-header"><b>Orphaned blocks:</b> &nbsp;&nbsp;<span id="blockchain-orphaned-blocks"></span></p>
+            <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
+            <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
 
-        
-        <form id="admin-login-div">
-            <input type="text" id="admin-login-name"/>
-            <input type="password" id="admin-login-key"/>
-            <input type="submit" value="Login as admin" id="admin-login-btn"/>
-        </form>
-        <div id="admin-actions" >
-            <h3>Admin actions</h3>
-            <input type="submit" value="Create block" id="block-create-btn"/>
-            <input type="submit" value="Clear log" id="clear-log-btn" />
-            <input type="submit" value="Compact" id="compact-btn" />
-            <input type="submit" value="Replicate" id="replicate-btn" />
-            <br><br>
-            <input type="submit" value="Lock/unlock blockchain" id="ops-pause-btn"/>
-            <input type="submit" value="Pause/resume new blocks" id="blocks-pause-btn"/>
-            <input type="submit" value="Pause/resume replication" id="replicate-pause-btn"/>
-            
         </div>
-        <div id="owner-actions" >
-            <h3>Owner actions</h3>
-            <input type="submit" value="Bootstrap" id="block-bootstrap-btn"/>
-            <input type="submit" value="Revert super block" id="block-revert-btn"/>
-            <input type="submit" value="Revert 1 block" id="block-1revert-btn"/>
-            <input type="submit" value="Clear queue" id="clear-list-btn" />
+        <div class="row col-sm-12" id="admin-login-div">
+            <div class="col-md-6 form-group row">
+                <div class="col-sm-3">
+                    <input type="text" class="form-control" id="admin-login-name"/>
+                </div>
+                <div class="col-sm-3">
+                    <input type="password" class="form-control" id="admin-login-key"/>
+                </div>
+                <div class="col-sm-2">
+                    <input type="button" class="btn btn-primary" value="Login as admin" id="admin-login-btn"/>
+                </div>
+            </div>
+        </div>
+        <div class="row col-sm-12" id="admin-actions" >
+            <h3>Admin actions</h3>
+            <input type="button" class="btn btn-primary" value="Create block" id="block-create-btn"/>
+            <input type="button" class="btn btn-primary" value="Clear log" id="clear-log-btn" />
+            <input type="button" class="btn btn-primary" value="Compact" id="compact-btn" />
+            <input type="button" class="btn btn-primary" value="Replicate" id="replicate-btn" />
             <br><br>
-            <input type="text" id="remove-orphaned-blocks-txt"/>
-            <input type="submit" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
+            <input type="button" class="btn btn-primary" value="Lock/unlock blockchain" id="ops-pause-btn"/>
+            <input type="button" class="btn btn-primary" value="Pause/resume new blocks" id="blocks-pause-btn"/>
+            <input type="button" class="btn btn-primary" value="Pause/resume replication" id="replicate-pause-btn"/>
+        </div>
+        <div class="col-12" id="owner-actions" >
+            <div class="col-6">
+                <h3>Owner actions</h3>
+                <input type="button" class="btn btn-primary" value="Bootstrap" id="block-bootstrap-btn"/>
+                <input type="button" class="btn btn-primary" value="Revert super block" id="block-revert-btn"/>
+                <input type="button" class="btn btn-primary" value="Revert 1 block" id="block-1revert-btn"/>
+                <input type="button" class="btn btn-primary" value="Clear queue" id="clear-list-btn" />
+            </div>
             <br><br>
-            <input type="text" id="remove-queue-ops-txt"/>
-            <input type="submit" value="Remove queue operations" id="remove-queue-ops-btn"/>
+
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="remove-orphaned-blocks-txt"/>
+            </div>
+            <div class="col-md-5">
+                <input type="button" class="btn btn-primary" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
+            </div>
+            <br><br>
+
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="remove-queue-ops-txt"/>
+            </div>
+            <div class="col-md-5">
+                <input type="button" class="btn btn-primary" value="Remove queue operations" id="remove-queue-ops-btn"/>
+            </div>
 
         </div>
         
@@ -71,61 +91,155 @@
 
     <div id="blocks" class="tab-pane fade">
         <h3>Blocks</h3>
-        <label>Load:&nbsp;</label><select id="blocks-search">
-            <option selected value="all">All blocks</option>
-            <option value="from">blocks from</option>
-            <option value="last">last blocks</option>
-        </select>
-        <label id="block-hash-input" hidden="true">Input start block hash</label><input type="text" id="search-block-field" hidden="true">
-        <label id="blocks-limit" hidden="true">input limit</label><input type="text" id="block-limit-value" hidden="true">
-        <input type="button" id="block-load-btn" value="Load">
-        <ul id="blocks-list">
+        <div class="row col-12">
+            <div class="col-sm-1">
+                <label for="blocks-search" class="col-1 col-form-label col-form-label-lg">Load:</label>
+
+            </div>
+            <div class="col-sm-7">
+                <select id="blocks-search" class="form-control">
+                    <option selected value="all">All blocks</option>
+                    <option value="from">blocks from</option>
+                </select>
+            </div>
+            <!--<div class="col-11">-->
+                <!---->
+            <!--</div>-->
+        </div>
+        <div class="col-12" hidden="true" id="block-from-fields" style="margin-top: 5px">
+            <div class="col-md-12">
+            <!--<div class="col-6">-->
+                <div class="col-md-2">
+                    <label id="block-hash-input" for="search-block-field"  class="col-form-label">Input start block hash</label>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" id="search-block-field"class="form-control" placeholder="Start block" aria-label="Start block">
+                </div>
+            </div>
+            <!--</div>-->
+            <div class="col-md-12">
+                <div class="col-md-2">
+                    <label id="blocks-limit" for="block-limit-value"class="col-form-label">input limit</label>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" id="block-limit-value" class="form-control" placeholder="Limit-value" aria-label="Limit-value">
+                </div>
+            </div>
+        </div>
+        <div class="row col-12">
+            <input type="button" class="btn btn-primary" id="block-load-btn" value="Load">
+        </div>
+        <div class="row col-12">
+            <ul class="list-group" id="blocks-list">
+        </div>
         </ul>
 
     </div>
 
     <div id="operations" class="tab-pane fade">
         <h3>Operations</h3>
-        <br><label>Load:&nbsp;</label><select id="operations-search">
-            <option selected value="queue">Queue</option>
-            <option value="id">by Id</option>
-            <option value="blockId">by Block Id</option>
-            <option value="blockHash">by Block Hash</option>
-    </select>
-        <label id="input-search-operation-key" hidden="true">Input</label><input type="text" id="operations-key" hidden="true">
-        <input type="button" id="operations-search-btn" value="Load">
-        <br><h5 id="amount-operations" hidden="true"></h5>
-        <ul id="operations-list"></ul>
+        <div class="row col-12">
+            <label for="operations-search" class="col-md-1 col-form-label">Load:&nbsp;</label>
+            <div class="col-md-3">
+                <select id="operations-search" class="form-control">
+                    <option selected value="queue">Queue</option>
+                    <option value="id">by Id</option>
+                    <option value="blockId">by Block Id</option>
+                    <option value="blockHash">by Block Hash</option>
+                </select>
+            </div>
+            <div class="col-md-8" hidden="true" id="operations-search-fields">
+                <div class="col-md-2">
+                    <label id="input-search-operation-key" class="col-form-label">Input</label>
+                </div>
+                <div class="col-md-5">
+                    <input type="text" id="operations-key" class="form-control">
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <input type="button" id="operations-search-btn" value="Load" class="btn btn-primary">
+        </div>
+        <div class="col-12">
+            <h5 id="amount-operations" hidden="true"></h5>
+        </div>
+        <div class="col-12">
+            <ul class="list-group" id="operations-list"></ul>
+        </div>
 
     </div>
 
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
 
-        <label>Select type:&nbsp;</label><select id="type-list"></select>
-        <label>Search:&nbsp;</label><select id="search-type-list">
-            <option selected value="all">all</option>
-            <option value="userId">by userId</option>
-            <option value = "opHash" >by opHash</option>
-        </select>
-        <label for="historyCheckbox">Show history</label>
-        <input type="checkbox" id="historyCheckbox" name="scales">
-        <div id="search-key-input" hidden="true">
-            <br><label id="name-key-field"></label><input type="text" id="search-key"/>
+        <div class="col-9 row">
+            <div class="col-md-1">
+                <label class="col-form-label">Select type:&nbsp;</label>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" id="type-list"></select>
+            </div>
+            <div class="col-md-1">
+                <label class="col-form-label">Search:&nbsp;</label>
+            </div>
+            <div class="col-md-2">
+                <select class="form-control" id="search-type-list">
+                    <option selected value="all">all</option>
+                    <option value="userId">by userId</option>
+                    <option value = "opHash" >by opHash</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="col-form-label">Show history</label>
+            </div>
+            <div class="col-md-1">
+                <input type="checkbox" id="historyCheckbox" name="scales">
+            </div>
         </div>
-        <br><label>Amount entries (Limit):</label><input type="text" id="limit-field" value="50"/>
-        <input type="submit" value="Search" id="load-objects-btn">
-        <br>
-        <h5 id="amount-objects"></h5>
+        <div class="col-12 row">
+            <div class="col-8" id="search-key-input" hidden="true" style="margin-top: 5px">
+                <div class="col-md-2">
+                    <label id="name-key-field"></label>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" id="search-key" class="form-control"/>
+                </div>
+            </div>
+        </div>
 
-        <pre id="json-display" hidden="true"></pre>
-        <input type="button" value="Finish edit" hidden="true" id="finish-edit-btn">
-        <input type="button" value="Stop edit" hidden="true" id="stop-edit-btn">
-        <input type="button" value="Add edit op" hidden="true" id="add-edit-op-btn">
+        <div class="col-6 row" style="margin-top: 5px">
+            <div class="col-md-2">
+                <label>Amount entries (Limit):</label>
+            </div>
+            <div class="col-md-2">
+                <input type="text" id="limit-field" value="50"/>
+            </div>
+            <div class="col-md-1">
+                <input type="submit" value="Search" id="load-objects-btn" class="btn btn-primary">
+            </div>
+        </div>
+        <div class="col-md-12 row">
+            <h5 id="amount-objects"></h5>
+        </div>
 
-        <p id="object-type-description"/>
-        <ul id="objects-list">
-        </ul>
+        <div class="col-md-12">
+            <pre id="json-display" hidden="true"></pre>
+        </div>
+        <div class="col-12 row">
+            <div id="stop-edit-objects" class="col-md-1" hidden="true">
+                <input type="button" value="Stop edit" id="stop-edit-btn" class="btn btn-primary">
+            </div>
+            <div id="editing-objects" class="col-md-1" hidden="true">
+                <input type="button" value="Finish edit" id="finish-edit-btn" class="btn btn-primary">
+            </div>
+            <div id="add-edited-obj" class="col-md-1" hidden="true">
+                <input type="button" value="Add edit op" id="add-edit-op-btn" class="btn btn-primary">
+            </div>
+        </div>
+
+        <div class="col-12">
+            <ul class="list-group" id="objects-list"></ul>
+        </div>
     </div>
     
     <div id="metrics" class="tab-pane fade">
@@ -152,7 +266,7 @@
 
     <div id="errors" class="tab-pane fade">
         <h3>Log</h3>
-        <ul id="errors-list">
+        <ul class="list-group" id="errors-list">
         </ul>
 
     </div>
@@ -166,10 +280,10 @@
 
                 <!--Bot table-->
                 <div class="table-responsive">
-                    <table id="bots-table" class="table table-bordred table-striped table-hover">
+                    <table id="bots-table" class="table table-bordered table-striped table-hover">
                         <thead>
                         <tr>
-                            <th colspan="6">Bot Info</th>
+                            <th colspan="7">Bot Info</th>
                         </tr>
                         <tr>
                             <th>Id</th>
@@ -235,24 +349,27 @@
             <div class="col-md-12">
                 <h4>DB Index</h4> <button class="btn btn-primary" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
                 <div class="table-responsive">
-                    <table id="index-table" class="table table-bordred table-striped table-hover">
+                    <table id="index-table" class="table table-bordered table-striped table-hover">
                         <thead>
                         <tr>
-                            <th colspan="4">Bot Info</th>
-                            <th colspan="5">Bot State</th>
+                            <th colspan="2">Index Info</th>
+                            <th colspan="4">Column def</th>
+                            <th colspan="1">Expression</th>
+                            <th colspan="2">Additional info</th>
                         </tr>
                         <tr>
-                            <th>Id</th>
-                            <th>API</th>
-                            <th>Version</th>
-                            <th>Started</th>
+                            <th>Index</th>
+                            <th>Op type</th>
 
-                            <th>Task description</th>
-                            <th>Task name</th>
-                            <th>Task count</th>
-                            <th>Total</th>
-                            <th>Progress</th>
-                            <th>Actions</th>
+                            <th>Table name</th>
+                            <th>Column name</th>
+                            <th>Column type</th>
+                            <th>Index</th>
+
+                            <th>Field expression</th>
+
+                            <th>Cache Runtime Blocks</th>
+                            <th>Cache DB Blocks</th>
                         </tr>
                         </thead>
 
@@ -269,23 +386,18 @@
             <div class="col-md-12">
                 <h4>Downloads</h4> <button class="btn btn-primary" id="refresh-api-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
                 <div class="table-responsive">
-                    <table id="api-table" class="table table-bordred table-striped table-hover">
+                    <table id="api-table" class="table table-bordered table-striped table-hover">
                         <thead>
                         <tr>
-                            <th colspan="4">Bot Info</th>
-                            <th colspan="5">State</th>
+                            <th colspan="4">Report Info</th>
+                            <th colspan="1"></th>
                         </tr>
                         <tr>
-                            <th>Id</th>
-                            <th>API</th>
-                            <th>Version</th>
-                            <th>Started</th>
+                            <th>File name</th>
+                            <th>Path to file</th>
+                            <th>Size</th>
+                            <th>Date of Creation</th>
 
-                            <th>Task description</th>
-                            <th>Task name</th>
-                            <th>Task count</th>
-                            <th>Total</th>
-                            <th>Progress</th>
                             <th>Actions</th>
                         </tr>
                         </thead>
@@ -518,7 +630,9 @@
     var metricsData = [];
     
     function loadDataDelay(d=1500) {
-        setTimeout(function() { loadData(); }, d);
+        setTimeout(function() {
+            loadData();
+        }, d);
     }
 
     function loadData() {
@@ -538,6 +652,8 @@
         if (loginName != "") {
             loadMetricsData();
             loadBotData();
+            loadDBIndexData();
+            loadReportFiles();
             loadConfiguration();
             loadErrorsData();
             loadIpfsStatusData();
@@ -629,7 +745,7 @@
             var errs = 0;
             for(var i = 0; i < data.logs.length; i++)  {
                 let op = data.logs[i];
-                items += "<br><li><b>Status</b>: " + op.status;
+                items += "<br><li class=\"list-group-item\"><b>Status</b>: " + op.status;
                 if(op.status) {
                     errs++;
                 }
@@ -680,7 +796,7 @@
                     globalObjectTypes[objType] = obj;
 
                     types += "<option value = '"+objType+"' " +
-                        (selectType == objType ? "selected" : "") + ">"+objType+"</option>";
+                        (selectType === objType ? "selected" : "") + ">"+objType+"</option>";
                 }
                 $("#type-list").html(types);
             },
@@ -746,8 +862,8 @@
         var superblockHash = "";
         for(var i = 0; i < blocks.length; i++) {
             let op = blocks[i];
-            items += "<br><li><b>Block id</b>: " + op.block_id;
-            items += "<input type=\"button\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
+            items += "<br><li class=\"list-group-item\"><b>Block id</b>: " + op.block_id;
+            items += "<input type=\"button\" style=\"margin-left: 5px\" class=\"btn btn-primary\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
             items += "<br><b>Hash</b>: " + op.hash;
             if (op.eval) {
                 if (op.eval.superblock_hash != superblockHash) {
@@ -778,6 +894,12 @@
         });
     }
 
+    function laadBlockAmount() {
+        $.getJSON( "/api/blocks", function( data ) {
+            $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
+        });
+    }
+
     function loadFullIpfsStatus() {
         $(document).ready(function () {
             $.getJSON("/api/ipfs/status?full=true", function (data) {
@@ -800,7 +922,7 @@
     function editPreferenceObject(i) {
         console.log(globalConfig[i]);
         if (globalConfig[i].type === "Map") {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value));
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value, null, 4));
         } else {
             $("#settings-edit-modal .modal-body #edit-preference-value").val(globalConfig[i].value);
 
@@ -844,7 +966,7 @@
 
             $("#settings-result-list").html(items);
         });
-    };
+    }
 
     function loadBotData() {
         $.getJSON("/api/bot/stats", function (data) {
@@ -857,6 +979,7 @@
                 items += "<td>" + obj.botStats.taskName + "</td>";
                 items += "<td>" + obj.botStats.taskDescription + "</td>";
                 } else {
+                    items += "<td></td>";
                     items += "<td></td>";
                 }
                 items += "<td>" + new Date(obj.started).toLocaleString() + "</td>";
@@ -890,6 +1013,58 @@
 
             $("#bots-table > tbody").html(items);
         });
+    }
+
+    function loadReportFiles() {
+        $.getJSON("/api/places/report", function (data) {
+            var items = "";
+            for (var i = 0; i < data.length; i++) {
+                var obj = data[i];
+                items += "<tr>";
+                items += "<td>" + obj.fileName + "</td>";
+                items += "<td>" + obj.filePath + "</td>";
+                items += "<td>" + (obj.size/1024/1024).toFixed(3) + " MB" + "</td>";
+                items += "<td>" + obj.date + "</td>";
+                items += "<td>";
+                    items += "<a href=\"/api/places/report/" + obj.fileName + "\" download=\"" + obj.fileName + "\">\n" +
+                        "  <span class=\"glyphicon glyphicon-download\"></span>" +
+                        "</a>"
+                items += "</td>";
+                items += "</tr>";
+            }
+
+            $("#api-table > tbody").html(items);
+        })
+    }
+
+    function loadDBIndexData() {
+        $.getJSON("/api/index", function (data) {
+            var items = "";
+            for (var key in data) {
+                var obj = data[key];
+                items += "<tr><td class='info' colspan='9'>" + key + "</td></tr>";
+                for (var keyObj in obj) {
+                    var index = obj[keyObj];
+                    console.log(index);
+                    items += "<tr>";
+                    items += "<td>" + index.indexId + "</td>";
+                    items += "<td>" + index.opType + "</td>";
+                    items += "<td>" + index.columnDef.tableName + "</td>";
+                    items += "<td>" + index.columnDef.colName + "</td>";
+                    items += "<td>" + index.columnDef.colType + "</td>";
+                    items += "<td>" + index.columnDef.index + "</td>";
+                    if (index.fieldsExpression.length >= 1) {
+                        items += "<td>" + index.fieldsExpression[0].expression + "</td>";
+                    } else {
+                        items += "<td></td>";
+                    }
+                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
+                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
+                    items += "</tr>";
+                }
+            }
+            $("#index-table > tbody").html(items);
+        })
     }
 
     function generateOperationResponse(data) {
@@ -930,9 +1105,9 @@
                     alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue + "'");
                     // console.log("'"+JSON.stringify(clone)+"'");
                 }});
-                items += "<br><li><b>Operation</b>: " + op.type;
+                items += "<br><li class=\"list-group-item\"><b>Operation</b>: " + op.type;
                 if ($("#operations-search").val() !== "queue") {
-                    items += "<input type=\"button\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
+                    items += "<input type=\"button\" class=\"btn btn-primary\" style=\"margin-left: 5px\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
                 }
                 items += "<br><b>Hash</b>: " + op.hash;
                 items += "<br><b>Added/removed/edited objects</b>: " +
@@ -969,8 +1144,8 @@
                 scrollTop: target.offset().top
             }, 1000);
         }
-        $("#finish-edit-btn").show();
-        $("#stop-edit-btn").show();
+        $("#editing-objects").show();
+        $("#stop-edit-objects").show();
         delete obj.eval;
         originObject = obj;
         editor = new JsonEditor('#json-display', obj);
@@ -992,7 +1167,7 @@
 
     function getHistoryObjects(obj) {
         var items = "";
-        items += "<br><li><b>Id</b>: " + obj.id;
+        items += "<br><li class=\"list-group-item\"><b>Id</b>: " + obj.id;
         items += "<br><b>Date</b>: " + obj.date;
         if (obj.objEdit.eval !== undefined) {
             items += "<br><b>Type</b>: " + obj.objType;
@@ -1090,9 +1265,8 @@
         var res = {
             tab: tab,
             blockSearch: $("#blocks-search").val(),
-            showInput: $("#block-hash-input").is(":hidden"),
+            showInput: $("#block-from-fields").is(":hidden"),
             inputKey: $("#search-block-field").val(),
-            showLimit: $("#blocks-limit").is(":hidden"),
             inputLimit: $("#block-limit-value").val(),
             idStorage: idStorage
         };
@@ -1106,14 +1280,13 @@
         var res = {
             tab: tab,
             inputSearch:$("#input-search-operation-key").text(),
-            keyHidden:$("#input-search-operation-key").is(":hidden"),
+            keyHidden:$("#operations-search-fields").is(":hidden"),
             keyValue: $("#operations-key").val(),
             load: $("#operations-search").val(),
             countElements: $("#amount-operations").text(),
             idStorage: idStorage
         };
 
-        console.log($("#input-search-operation-key").is(":hidden"));
         sessionStorage.setItem(idStorage, document.getElementById("operations-list").innerHTML);
         window.history.pushState(res, "State Operations", url);
     }
@@ -1231,7 +1404,6 @@
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
     }
 
-
     function stopBot(bot) {
         var obj = {
             "botName":bot
@@ -1278,6 +1450,7 @@
     setInterval(function(){
         $("#refresh-bot-table-btn").click();
         loadStatusData();
+        laadBlockAmount();
     }, 15000);
 
     $( document ).ready(function() {
@@ -1377,12 +1550,14 @@
         $("#operations-search").change(function () {
            var type = $("#operations-search").val();
            if (type === "queue") {
-               $("#operations-key").hide();
-               $("#input-search-operation-key").hide();
+               $("#operations-search-fields").hide();
+               // $("#operations-key").hide();
+               // $("#input-search-operation-key").hide();
 
            } else {
-               $("#operations-key").show();
-               $("#input-search-operation-key").show();
+               $("#operations-search-fields").show();
+               // $("#operations-key").show();
+               // $("#input-search-operation-key").show();
                if (type === "id") {
                    $("#input-search-operation-key").text("Input object id");
                } else if (type === "blockId") {
@@ -1393,23 +1568,20 @@
            }
         });
 
+        $("#refresh-index-table-btn").click(function () {
+           loadDBIndexData();
+        });
+
+        $("#refresh-api-table-btn").click(function () {
+            loadReportFiles();
+        });
+
         $("#blocks-search").change(function () {
            var type = $("#blocks-search").val();
            if (type === "all") {
-               $("#blocks-limit").hide();
-               $("#block-limit-value").hide();
-               $("#search-block-field").hide();
-               $("#block-hash-input").hide();
+               $("#block-from-fields").hide();
            } else if (type === "from") {
-               $("#blocks-limit").show();
-               $("#block-hash-input").show();
-               $("#block-limit-value").show();
-               $("#search-block-field").show();
-           } else {
-               $("#blocks-limit").show();
-               $("#block-limit-value").show();
-               $("#block-hash-input").hide();
-               $("#search-block-field").hide();
+               $("#block-from-fields").show();
            }
         });
         
@@ -1511,8 +1683,9 @@
             var type = $("#type-list").val();
             var key = $("#search-key").val();
             $("#json-display").hide();
-            $("#finish-edit-btn").hide();
-            $("#stop-edit-btn").hide();
+            $("#editing-objects").hide();
+            $("#stop-edit-objects").hide();
+            $("#add-edited-obj").hide();
 
             if (searchType === "count") {
                 $.getJSON("/api/objects-count?type=" + type, function (data) {
@@ -1534,10 +1707,10 @@
                             items += _res.items;
                             amountResults += _res.amount;
                         } else {
-                            items += "<br><li><b>Id</b>: " + obj.id;
-                            items += "<input type=\"button\" value=\"EDIT\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
+                            items += "<br><li class=\"list-group-item\"><b>Id</b>: " + obj.id;
+                            items += "<input type=\"button\" value=\"EDIT\" class=\"btn btn-primary\" style=\"margin-left: 5px\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
                             if ($("#historyCheckbox").is(":checked") !== true) {
-                                items += "&nbsp;&nbsp;<input type=\"button\" value=\"SHOW HISTORY\" onclick=\" loadHistoryForObject('" + searchType + "','" + obj.id + "','" + type + "')\">";
+                                items += "&nbsp;&nbsp;<input type=\"button\" value=\"SHOW HISTORY\" class=\"btn btn-primary\" style=\"margin-left: 5px\" onclick=\" loadHistoryForObject('" + searchType + "','" + obj.id + "','" + type + "')\">";
                             }
                             items += "<br><b>Op hash</b>: " + obj.eval.parentHash;
                             if (obj.comment !== undefined) {
@@ -1620,11 +1793,13 @@
                     document.getElementById("operations-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     console.log(history.state);
                     if (!history.state.keyHidden) {
-                        $("#input-search-operation-key").show().text(history.state.inputSearch);
-                        $("#operations-key").show().val(history.state.keyValue);
+                        $("#operations-search-fields").show();
+                        $("#input-search-operation-key").text(history.state.inputSearch);
+                        $("#operations-key").val(history.state.keyValue);
                     } else {
-                        $("#input-search-operation-key").hide();
-                        $("#operations-key").hide();
+                        $("#operations-search-fields").hide();
+                        // $("#input-search-operation-key").hide();
+                        // $("#operations-key").hide();
                     }
                     $("#operations-search").val(history.state.load);
                     $("#amount-operations").text(history.state.countElements);
@@ -1633,20 +1808,12 @@
                     document.getElementById("blocks-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     $("#blocks-search").val(history.state.blockSearch);
                     if (!history.state.showInput) {
-                        $("#block-hash-input").show();
-                        $("#search-block-field").show();
+                        $("#block-from-fields").show();
                         $("#search-block-field").val(history.state.inputKey);
-                    } else {
-                        $("#block-hash-input").hide();
-                        $("#search-block-field").hide();
-                    }
-                    if (!history.state.showLimit) {
-                        $("#blocks-limit").show();
-                        $("#block-limit-value").show();
                         $("#block-limit-value").val(history.state.inputLimit);
+
                     } else {
-                        $("#blocks-limit").hide();
-                        $("#block-limit-value").hide();
+                        $("#block-from-fields").hide();
                     }
                 }
             }
@@ -1663,8 +1830,9 @@
                 deepDiffMapper.generateEditOp(originObject, changeEdit, currentEdit);
 
                 originObject = null;
-                $("#finish-edit-btn").hide();
-                $("#add-edit-op-btn").show();
+                $("#editing-objects").hide();
+                $("#stop-edit-objects").show();
+                $("#add-edited-obj").show();
             } catch (e) {
                 alert(e);
             }
@@ -1673,11 +1841,13 @@
         $("#stop-edit-btn").click(function () {
             editor = null;
             originObject = null;
-            $("#finish-edit-btn").hide();
-            $("#add-edit-op-btn").hide();
+            $("#editing-objects").hide();
+            $("#add-edited-obj").hide();
+            $("#stop-edit-objects").hide();
             $("#json-display").hide();
-            $("#stop-edit-btn").hide();
         });
+
+        z
 
         var deepDiffMapper = function() {
             return {
@@ -2098,8 +2268,10 @@
                 data: json,
                 contentType: 'application/json; charset=utf-8'
             }).done(function(data){
-                $("#result").html(data); loadData();  editor = null; $("#json-display").hide();$("#add-edit-op-btn").hide(); $("#stop-edit-btn").hide()})
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
+                $("#result").html(data); loadData();  editor = null;
+                $("#json-display").hide();$("#stop-edit-objects").hide();
+                $("#add-edited-obj").hide()})
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
         });
         $("#login-btn").click(function() {
             var obj = {

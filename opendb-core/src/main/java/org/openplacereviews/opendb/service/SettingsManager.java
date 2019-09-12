@@ -43,7 +43,11 @@ public class SettingsManager {
 		return registeredPreferences.values();
 	}
 
-	public List<OpendbPreference<?>> loadPreferencesByKey(String keyPreference) {
+	public OpendbPreference<?> loadPreferenceByKey(String keyPreference) {
+		return registeredPreferences.get(keyPreference);
+	}
+
+	public List<OpendbPreference<?>> loadContainsPreferencesByKey(String keyPreference) {
 		List<OpendbPreference<?>> opendbPreferences = new ArrayList<>();
 		for (String key : registeredPreferences.keySet()) {
 			if (key.contains(keyPreference)) {
