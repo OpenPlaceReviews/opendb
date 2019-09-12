@@ -155,6 +155,7 @@ public class DBConsensusManager {
 		for (OpBlock b : topBlockInfo) {
 			String blockHash = b.getRawHash();
 			OpBlock rawBlock = loadBlock(blockHash);
+			rawBlock.putCacheObject(F_BLOCK_SIZE, b.getCacheObject(F_BLOCK_SIZE));
 			OpBlock replicateBlock = blc.replicateBlock(rawBlock);
 			if (replicateBlock == null) {
 				throw new IllegalStateException("Could not replicate block " + blockHash + " "

@@ -1024,7 +1024,7 @@
                 items += "<td>" + obj.fileName + "</td>";
                 items += "<td>" + obj.filePath + "</td>";
                 items += "<td>" + (obj.size/1024/1024).toFixed(3) + " MB" + "</td>";
-                items += "<td>" + obj.date + "</td>";
+                items += "<td>" + new Date(obj.date).toLocaleString() + "</td>";
                 items += "<td>";
                     items += "<a href=\"/api/places/report/" + obj.fileName + "\" download=\"" + obj.fileName + "\">\n" +
                         "  <span class=\"glyphicon glyphicon-download\"></span>" +
@@ -1451,6 +1451,7 @@
         $("#refresh-bot-table-btn").click();
         loadStatusData();
         laadBlockAmount();
+        loadBotData();
     }, 15000);
 
     $( document ).ready(function() {
@@ -1574,6 +1575,10 @@
 
         $("#refresh-api-table-btn").click(function () {
             loadReportFiles();
+        });
+
+        $("#refresh-bot-table-btn").click(function () {
+            loadBotData();
         });
 
         $("#blocks-search").change(function () {
@@ -1847,8 +1852,6 @@
             $("#json-display").hide();
         });
 
-        z
-
         var deepDiffMapper = function() {
             return {
                 VALUE_CREATED: 'created',
@@ -2023,10 +2026,6 @@
         $("#refresh-bot-history-btn").click(function () {
             var botName = $(".modal-header #history-bot-name").val();
             showBotHistory(botName);
-        });
-
-        $("#refresh-bot-table-btn").click(function () {
-            loadBotData();
         });
 
         $("#update-settings").click(function () {
