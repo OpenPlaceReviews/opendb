@@ -396,7 +396,7 @@
                             <th>File name</th>
                             <th>Path to file</th>
                             <th>Size</th>
-                            <th>Date of Creation</th>
+                            <th>Last modified</th>
 
                             <th>Actions</th>
                         </tr>
@@ -1028,7 +1028,8 @@
                 items += "<td>";
                     items += "<a href=\"/api/places/report/" + obj.fileName + "\" download=\"" + obj.fileName + "\">\n" +
                         "  <span class=\"glyphicon glyphicon-download\"></span>" +
-                        "</a>"
+                        "</a>";
+                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"updateReport('" + obj.fileName + "')\"><span class=\"glyphicon glyphicon-refresh\"></span></button>";
                 items += "</td>";
                 items += "</tr>";
             }
@@ -1441,6 +1442,13 @@
                 $(".modal-header #bot-history-header").html("History of the launches for bot: " + bot);
             })
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+    }
+
+    function updateReport(file) {
+        $.ajax({url:"/api/places/report/" + file, type:"PUT", async:false,
+            success: function (data) {$("#result").html(data)},
+            error:function(xhr, status, error) { $("#result").html("ERROR: " + error); }
+        });
     }
 
     function closeBotHistory() {
