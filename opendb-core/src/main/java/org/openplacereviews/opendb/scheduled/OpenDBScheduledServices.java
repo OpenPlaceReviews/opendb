@@ -16,10 +16,10 @@ import java.util.Date;
 
 @Component
 public class OpenDBScheduledServices {
-	protected static final int SECOND = 1000;
-	protected static final int MINUTE = 60 * SECOND;
-	protected static final int HOUR = 60 * MINUTE;
-	protected static final long DAY = 24l * HOUR;
+	public static final int SECOND = 1000;
+	public static final int MINUTE = 60 * SECOND;
+	public static final int HOUR = 60 * MINUTE;
+	public static final long DAY = 24l * HOUR;
 	
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBScheduledServices.class);
 	private static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
