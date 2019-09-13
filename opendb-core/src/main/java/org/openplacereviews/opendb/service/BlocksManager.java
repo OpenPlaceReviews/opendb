@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
+import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
@@ -610,6 +611,10 @@ public class BlocksManager {
 
 	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
 		return dataManager.getIndices();
+	}
+
+	public boolean addNewDbIndex(RequestIndexBody requestIndexBody) {
+		return dataManager.addNewDbIndex(requestIndexBody);
 	}
 
 	public static class BlocksListResult {

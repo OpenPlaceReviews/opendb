@@ -6,6 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -303,6 +304,7 @@ public class DBSchemaManager {
 		createTable(metadataDB, jdbcTemplate, SETTINGS_TABLE, schema.get(SETTINGS_TABLE));
 		
 		prepareObjTableMapping();
+		prepareCustomIndices(jdbcTemplate);
 		for (String tableName : schema.keySet()) {
 			if(tableName.equals(SETTINGS_TABLE))  {
 				 continue;
@@ -346,7 +348,8 @@ public class DBSchemaManager {
 			}
 			for (String type : previousTypeToTable.keySet()) {
 				String prevTable = previousTypeToTable.get(type);
-				migrateObjDataBetweenTables(type, OBJS_TABLE, prevTable, MAX_KEY_SIZE, jdbcTemplate);
+				int keySize = objTableDefs.get(prevTable).keySize;
+				migrateObjDataBetweenTables(type, OBJS_TABLE, prevTable, keySize, jdbcTemplate);
 			}
 			setSetting(jdbcTemplate, "opendb.mapping", newMapping);
 		}
@@ -368,6 +371,49 @@ public class DBSchemaManager {
 
 			
 			LOGGER.info(String.format("Migrate %d objects of type '%s'.", update, type));
+		}
+	}
+
+	private void prepareCustomIndices(JdbcTemplate jdbcTemplate) {
+		String customIndices = getSetting(jdbcTemplate, "opendb.indices");
+		if (customIndices != null) {
+			RequestIndexBody[] objects = formatter.fromJsonToListIndices(customIndices);
+
+			for(RequestIndexBody requestIndexBody : objects) {
+				IndexType indexType;
+				if(requestIndexBody.index.equals("true")) {
+					indexType = INDEXED;
+				} else {
+					indexType = IndexType.valueOf(requestIndexBody.index);
+				}
+
+				ColumnDef columnDef = new ColumnDef(requestIndexBody.tableName, requestIndexBody.colName, requestIndexBody.colType, indexType);
+
+				List<String> types = Arrays.asList(requestIndexBody.types);
+				if (requestIndexBody.field != null) {
+					generateIndexColumn(requestIndexBody, columnDef, types);
+				} else {
+					for (String type : types) {
+						addIndexCol(new OpIndexColumn(type, requestIndexBody.colName, -1, columnDef));
+					}
+				}
+
+				registerColumn(requestIndexBody.tableName, columnDef);
+			}
+		}
+	}
+
+	private void generateIndexColumn(RequestIndexBody requestIndexBody, ColumnDef columnDef, List<String> types) {
+		for (String typ : types) {
+			OpIndexColumn indexColumn = new OpIndexColumn(typ, requestIndexBody.colName, -1, columnDef);
+			if (requestIndexBody.cacheRuntimeMax != null) {
+				indexColumn.setCacheRuntimeBlocks(requestIndexBody.cacheRuntimeMax);
+			}
+			if (requestIndexBody.cacheDbIndex != null) {
+				indexColumn.setCacheDBBlocks(requestIndexBody.cacheDbIndex);
+			}
+			indexColumn.setFieldsExpression(requestIndexBody.field);
+			addIndexCol(indexColumn);
 		}
 	}
 
@@ -408,7 +454,7 @@ public class DBSchemaManager {
 					IndexType di = null;
 					if(index != null) {
 						if(index.equalsIgnoreCase("true")) {
-							di = INDEXED;	
+							di = INDEXED;
 						} else {
 							di = IndexType.valueOf(index);
 						}
@@ -447,6 +493,59 @@ public class DBSchemaManager {
 		indexes.get(indexColumn.getOpType()).put(indexColumn.getIndexId(), indexColumn);
 	}
 
+	public boolean addNewDbIndex(RequestIndexBody requestIndexBody, JdbcTemplate jdbcTemplate) {
+		List<ColumnDef> tableDefs = schema.get(requestIndexBody.tableName);
+		if (tableDefs == null) {
+			return false;
+		}
+
+		boolean found = false;
+		for (ColumnDef columnDef : tableDefs) {
+			if (columnDef.getColName().equals(requestIndexBody.colName)) {
+				found = true;
+				break;
+			}
+		}
+
+		if (found) {
+			return false;
+		}
+
+		IndexType indexType;
+		List<String> type = Arrays.asList(requestIndexBody.types);
+		if(requestIndexBody.index.equalsIgnoreCase("true")) {
+			indexType = INDEXED;
+		} else {
+			indexType = IndexType.valueOf(requestIndexBody.index);
+		}
+
+		ColumnDef columnDef = new ColumnDef(requestIndexBody.tableName, requestIndexBody.colName, requestIndexBody.colType, indexType);
+		if (requestIndexBody.field != null) {
+			generateIndexColumn(requestIndexBody, columnDef, type);
+		} else {
+			addIndexCol(new OpIndexColumn(type.get(0), requestIndexBody.colName, -1, columnDef));
+		}
+		registerColumn(requestIndexBody.tableName, columnDef);
+
+		String alterTable = String.format("alter table %s add column %s %s", requestIndexBody.tableName,
+				columnDef.getColName(), columnDef.getColType());
+		jdbcTemplate.execute(alterTable);
+		if(columnDef.getIndex() != NOT_INDEXED) {
+			jdbcTemplate.execute(generateIndexQuery(columnDef));
+		}
+
+		String customIndices = getSetting(jdbcTemplate, "opendb.indices");
+		List<RequestIndexBody> objects;
+		if (customIndices != null) {
+			objects = new ArrayList<>(Arrays.asList(formatter.fromJsonToListIndices(customIndices)));
+		} else {
+			objects = new ArrayList<>();
+		}
+		objects.add(requestIndexBody);
+		setSetting(jdbcTemplate, "opendb.indices", formatter.listIndicesToJson(objects));
+
+		return true;
+	}
 
 	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
 		List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);

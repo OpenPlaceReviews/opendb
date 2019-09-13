@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.api ;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
@@ -257,6 +258,19 @@ public class MgmtController {
 		} else {
 			return ResponseEntity.ok("Preference type is not valid");
 		}
+	}
+
+	@PostMapping(path = "/index",  produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> addNewDbIndex(HttpSession session,
+												@RequestBody RequestIndexBody requestIndexBody) {
+    	if (!validateServerLogin(session)) {
+    		return unauthorizedByServer();
+		}
+
+		boolean state = manager.addNewDbIndex(requestIndexBody);
+
+		return ResponseEntity.ok(Boolean.toString(state));
 	}
 
 }

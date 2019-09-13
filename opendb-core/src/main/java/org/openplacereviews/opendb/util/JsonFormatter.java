@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
+import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -117,6 +118,15 @@ public class JsonFormatter {
 	@SuppressWarnings("unchecked")
 	public TreeMap<String, Object> fromJsonToTreeMap(String json) {
 		return gson.fromJson(json, TreeMap.class);
+	}
+
+	@SuppressWarnings("unchecked")
+	public RequestIndexBody[] fromJsonToListIndices(String json) {
+		return new Gson().fromJson(json, (Type) RequestIndexBody[].class);
+	}
+
+	public String listIndicesToJson(List<RequestIndexBody> requestIndexBodyList) {
+		return gson.toJson(requestIndexBodyList);
 	}
 
 	public Map<String, Map> fromJsonToOpendbPreferenceMap(String json) {

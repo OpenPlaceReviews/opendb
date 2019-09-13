@@ -347,7 +347,9 @@
 
         <div class="row">
             <div class="col-md-12">
-                <h4>DB Index</h4> <button class="btn btn-primary" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                <h4>DB Index</h4>
+                <button class="btn btn-primary" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                <button class="btn btn-primary"  data-toggle="modal" data-target="#new-index-modal" id="add-new-index-table-btn"><span class="glyphicon glyphicon-plus"></span> Add new DB Index</button>
                 <div class="table-responsive">
                     <table id="index-table" class="table table-bordered table-striped table-hover">
                         <thead>
@@ -377,6 +379,59 @@
                         </tbody>
 
                     </table>
+
+                </div>
+            </div>
+
+            <!--modal window for bot history-->
+            <div class="modal fade" id="new-index-modal" role="dialog">
+                <div class="modal-dialog modal-lg">
+
+                    <!-- Modal content-->
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h4 class="modal-title" id="new-bot-index-header">Adding new DB index</h4>
+                        </div>
+                        <div class="modal-body">
+                            <h4>Bots</h4>
+                            <label class="col-form-label">Input table name</label>
+                            <input type="text" id="index-table-name" placeholder="table name" class="form-control">
+                            <br>
+                            <label class="col-form-label">Input column name</label>
+                            <input type="text" id="index-col-name" placeholder="new column name" class="form-control">
+                            <br>
+                            <label class="col-form-label">Input column type</label>
+                            <input type="text" id="index-col-type" placeholder="text, bigint[], ..." class="form-control">
+                            <br>
+                            <label class="col-form-label">Input op type</label>
+                            <select class="form-control" multiple id="index-op-types"></select>
+                            <br>
+                            <label class="col-form-label">Input index type</label>
+                            <select class="form-control" id="index-type">
+                                <option selected value="true">true</option>
+                                <option value="GIN">Gin</option>
+                                <option value="GIST">Gist</option>
+                            </select>
+                            <br>
+                            <label class="col-form-label">Input field</label>
+                            <input type="text" id="index-field" placeholder="array -> source.osm.id, source.osm.tags" class="form-control">
+                            <br>
+                            <label class="col-form-label">Input sql mapping</label>
+                            <input type="text" id="index-col-sql-mapping"  placeholder="array, single, ..." class="form-control">
+                            <br>
+                            <label class="col-form-label">Input cache runtime index</label>
+                            <input type="text" id="index-cacheRuntimeMax" placeholder="64, 128, ..." class="form-control">
+                            <br>
+                            <label class="col-form-label">Input cache db index</label>
+                            <input type="text" id="index-cacheDbIndex" placeholder="64, 128, ..." class="form-control">
+                            <br>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-primary" id="add-new-index-btn"><span class="glyphicon glyphicon-plus"></span> Add</button>
+                            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -799,6 +854,8 @@
                         (selectType === objType ? "selected" : "") + ">"+objType+"</option>";
                 }
                 $("#type-list").html(types);
+                $("#index-op-types").html(types);
+                $("#index-op-types").editableSelect();
             },
             error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
         });
@@ -1029,7 +1086,7 @@
                     items += "<a href=\"/api/places/report/" + obj.fileName + "\" download=\"" + obj.fileName + "\">\n" +
                         "  <span class=\"glyphicon glyphicon-download\"></span>" +
                         "</a>";
-                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"updateReport('" + obj.fileName + "')\"><span class=\"glyphicon glyphicon-refresh\"></span></button>";
+                    items += "<button type=\"button\" class=\"btn btn-link\" style=\"margin-left:5px;\" onclick=\"updateReport('" + obj.fileName + "')\"><span class=\"glyphicon glyphicon-refresh\"></span></button>";
                 items += "</td>";
                 items += "</tr>";
             }
@@ -1446,7 +1503,10 @@
 
     function updateReport(file) {
         $.ajax({url:"/api/places/report/" + file, type:"PUT", async:false,
-            success: function (data) {$("#result").html(data)},
+            success: function (data) {
+                $("#result").html(data);
+                $("#refresh-api-table-btn").click();
+            },
             error:function(xhr, status, error) { $("#result").html("ERROR: " + error); }
         });
     }
@@ -1579,6 +1639,31 @@
 
         $("#refresh-index-table-btn").click(function () {
            loadDBIndexData();
+        });
+
+        $("#add-new-index-btn").click(function () {
+            var myJSObject = {
+                tableName:$("#index-table-name").val(),
+                colName:$("#index-col-name").val(),
+                colType:$("#index-col-type").val(),
+                types:$("#index-op-types").val(),
+                index:$("#index-type").val(),
+                sqlMapping:$("#index-col-sql-mapping").val(),
+                cacheRuntimeMax:$("#index-cacheRuntimeMax").val(),
+                cacheDbIndex:$("#index-cacheDbIndex").val(),
+                field:($("#index-field").val()).split(",")
+            };
+            $.ajax("/api/mgmt/index", {
+                data: JSON.stringify(myJSObject),
+                contentType: 'application/json',
+                type: 'POST',
+                success: function(data) {
+
+                },
+                error: function(xhr, status, error) {
+
+                }
+            });
         });
 
         $("#refresh-api-table-btn").click(function () {

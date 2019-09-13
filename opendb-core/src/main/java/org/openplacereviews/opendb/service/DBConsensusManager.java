@@ -5,6 +5,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
@@ -1146,6 +1147,10 @@ public class DBConsensusManager {
 
 	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
 		return dbSchema.getIndexes();
+	}
+
+	public boolean addNewDbIndex(RequestIndexBody requestIndexBody) {
+		return dbSchema.addNewDbIndex(requestIndexBody, jdbcTemplate);
 	}
 
 }

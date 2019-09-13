@@ -183,7 +183,7 @@ public class SettingsManager {
 
 	public abstract class CommonPreference<T> implements OpendbPreference<T> {
 		private final String id;
-		private T value;
+		protected T value;
 		private boolean restartIsNeeded;
 		private String type;
 
@@ -288,7 +288,17 @@ public class SettingsManager {
 			return map.containsKey(key);
 		}
 
-		public void setValue(String key, Object value) {
+		@Override
+		public boolean set(Map<String, Object> obj, Boolean restartIsNeeded) {
+			if (obj != null) {
+				this.value = obj;
+				return false;
+			}
+
+			return false;
+		}
+
+		public void set(String key, Object value) {
 			Map<String, Object> map = get();
 			map.put(key, value);
 		}
