@@ -4,8 +4,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.BotManager;
-import org.openplacereviews.opendb.service.BotManager.BotInfo;
 import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,34 +20,17 @@ public class OpenDBScheduledServices {
 	public static final long DAY = 24l * HOUR;
 	
 	protected static final Log LOGGER = LogFactory.getLog(OpenDBScheduledServices.class);
-	private static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
+	protected static final int BLOCK_CREATION_PULSE_INTERVAL_SECONDS = 15;
 
 	private long previousReplicateCheck = 0;
-	
-	private long previousBotsCheck = 0;
 	
 	private long opsAppeared = 0;
 	
 	@Autowired
 	private BlocksManager blocksManager;
-	
-	@Autowired
-	private BotManager botManager;
 
 	@Autowired
 	private SettingsManager settingsManager;
-	
-	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
-	public void runBots() throws FailedVerificationException {
-		long now = System.currentTimeMillis();
-		if (blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && blocksManager.isBlockCreationOn()
-				&& (now - previousBotsCheck) >= getBotsMinInterval()) {
-			previousBotsCheck = now;
-			for (BotInfo bi : botManager.getBots().values()) {
-				botManager.startBot(bi.getId());
-			}
-		}
-	}
 	
 	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
 	public void replicateBlock() {
