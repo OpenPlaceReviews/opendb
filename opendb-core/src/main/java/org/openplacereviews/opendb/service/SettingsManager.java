@@ -36,11 +36,11 @@ public class SettingsManager {
 
 	private static final String PREFERENCES_NAME = "opendb.settings";
 
-	private Map<String, OpendbPreference<?>> registeredPreferences = new LinkedHashMap<>();
+	private Map<String, OpendbPreference<?>> preferences = new LinkedHashMap<>();
 
 	public boolean savePreferences() {
 		Map<String, OpendbPreference<?>> mapForStoring = new HashMap<>();
-		for (Map.Entry<String, OpendbPreference<?>> entry : registeredPreferences.entrySet()) {
+		for (Map.Entry<String, OpendbPreference<?>> entry : preferences.entrySet()) {
 			if (entry.getValue().isCanEdit() || entry.getValue() == OPENDB_BLOCKCHAIN_STATUS) {
 				mapForStoring.put(entry.getKey(), entry.getValue());
 			}
@@ -49,18 +49,20 @@ public class SettingsManager {
 	}
 
 	public Collection<OpendbPreference<?>> getPreferences() {
-		return registeredPreferences.values();
+		return preferences.values();
 	}
 
-	public OpendbPreference<?> loadPreferenceByKey(String keyPreference) {
-		return registeredPreferences.get(keyPreference);
+	@SuppressWarnings("unchecked")
+	public <T> OpendbPreference<T> loadPreferenceByKey(String keyPreference) {
+		return (OpendbPreference<T>) preferences.get(keyPreference);
 	}
 
-	public List<OpendbPreference<?>> loadContainsPreferencesByKey(String keyPreference) {
-		List<OpendbPreference<?>> opendbPreferences = new ArrayList<>();
-		for (String key : registeredPreferences.keySet()) {
+	@SuppressWarnings("unchecked")
+	public <T> List<OpendbPreference<T>> loadContainsPreferencesByKey(String keyPreference) {
+		List<OpendbPreference<T>> opendbPreferences = new ArrayList<>();
+		for (String key : preferences.keySet()) {
 			if (key.contains(keyPreference)) {
-				opendbPreferences.add(registeredPreferences.get(key));
+				opendbPreferences.add((OpendbPreference<T>) preferences.get(key));
 			}
 		}
 
@@ -71,8 +73,8 @@ public class SettingsManager {
 	protected void initPrefs() {
 		String settings = dbSchemaManager.getSetting(jdbcTemplate, PREFERENCES_NAME);
 		if (settings != null) {
-			for(Map.Entry<String, Map> opendbPreferenceEntry : jsonFormatter.fromJsonToOpendbPreferenceMap(settings).entrySet()) {
-				OpendbPreference<?> preference = registeredPreferences.get(opendbPreferenceEntry.getKey());
+			for(Map.Entry<String, Map<?, ?>> opendbPreferenceEntry : jsonFormatter.fromJsonToOpendbPreferenceMap(settings).entrySet()) {
+				OpendbPreference<?> preference = preferences.get(opendbPreferenceEntry.getKey());
 				if (preference != null) {
 					Object value = opendbPreferenceEntry.getValue().get("value");
 					value = generateObjectByType(value, (String) opendbPreferenceEntry.getValue().get("type"));
@@ -131,8 +133,9 @@ public class SettingsManager {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public boolean updatePreference(String key, Object value) {
-		OpendbPreference<?> preference = registeredPreferences.get(key);
+		OpendbPreference<?> preference = preferences.get(key);
 		if (preference != null && (preference.isCanEdit() || preference == OPENDB_BLOCKCHAIN_STATUS)) {
 			if (preference instanceof BooleanPreference) {
 				if (value instanceof Boolean) {
@@ -191,7 +194,7 @@ public class SettingsManager {
 			this.restartIsNeeded = restartIsNeeded;
 			this.description = description;
 			this.canEdit = canEdit;
-			registeredPreferences.put(id, this);
+			preferences.put(id, this);
 		}
 
 		public String getDescription() {
@@ -371,61 +374,61 @@ public class SettingsManager {
 
 	@SuppressWarnings("unchecked")
 	public CommonPreference<Boolean> registerBooleanPreference(String id, boolean defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (registeredPreferences.containsKey(id)) {
-			return (CommonPreference<Boolean>) registeredPreferences.get(id);
+		if (preferences.containsKey(id)) {
+			return (CommonPreference<Boolean>) preferences.get(id);
 		}
 		BooleanPreference p = new BooleanPreference(id, defValue, neededRestart, description, canEdit);
-		registeredPreferences.put(id, p);
+		preferences.put(id, p);
 		return p;
 	}
 
 	@SuppressWarnings("unchecked")
 	public CommonPreference<String> registerStringPreference(String id, String defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (registeredPreferences.containsKey(id)) {
-			return (CommonPreference<String>) registeredPreferences.get(id);
+		if (preferences.containsKey(id)) {
+			return (CommonPreference<String>) preferences.get(id);
 		}
 		StringPreference p = new StringPreference(id, defValue, neededRestart, description, canEdit);
-		registeredPreferences.put(id, p);
+		preferences.put(id, p);
 		return p;
 	}
 
 	@SuppressWarnings("unchecked")
 	public CommonPreference<Integer> registerIntPreference(String id, int defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (registeredPreferences.containsKey(id)) {
-			return (CommonPreference<Integer>) registeredPreferences.get(id);
+		if (preferences.containsKey(id)) {
+			return (CommonPreference<Integer>) preferences.get(id);
 		}
 		IntPreference p = new IntPreference(id, defValue, neededRestart, description, canEdit);
-		registeredPreferences.put(id, p);
+		preferences.put(id, p);
 		return p;
 	}
 
 	@SuppressWarnings("unchecked")
 	public CommonPreference<Long> registerLongPreference(String id, long defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (registeredPreferences.containsKey(id)) {
-			return (CommonPreference<Long>) registeredPreferences.get(id);
+		if (preferences.containsKey(id)) {
+			return (CommonPreference<Long>) preferences.get(id);
 		}
 		LongPreference p = new LongPreference(id, defValue, neededRestart, description, canEdit);
-		registeredPreferences.put(id, p);
+		preferences.put(id, p);
 		return p;
 	}
 
 	@SuppressWarnings("unchecked")
 	public CommonPreference<Float> registerFloatPreference(String id, float defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (registeredPreferences.containsKey(id)) {
-			return (CommonPreference<Float>) registeredPreferences.get(id);
+		if (preferences.containsKey(id)) {
+			return (CommonPreference<Float>) preferences.get(id);
 		}
 		FloatPreference p = new FloatPreference(id, defValue, neededRestart, description, canEdit);
-		registeredPreferences.put(id, p);
+		preferences.put(id, p);
 		return p;
 	}
 
 	@SuppressWarnings("unchecked")
 	public CommonPreference<Map<String, Object>> registerMapPreference(String id, Map<String, Object> defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (registeredPreferences.containsKey(id)) {
-			return (CommonPreference<Map<String, Object>>) registeredPreferences.get(id);
+		if (preferences.containsKey(id)) {
+			return (CommonPreference<Map<String, Object>>) preferences.get(id);
 		}
 		MapStringObjectPreference p = new MapStringObjectPreference(id, defValue, neededRestart, description, canEdit);
-		registeredPreferences.put(id, p);
+		preferences.put(id, p);
 		return p;
 	}
 

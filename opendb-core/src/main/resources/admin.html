@@ -5,7 +5,7 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="../js/jquery.json-editor.min.js"></script>
 <style>
-    body {padding: 40px;}
+    body {padding: 40px; }
 </style>
 </head>
 <head>
@@ -91,43 +91,27 @@
 
     <div id="blocks" class="tab-pane fade">
         <h3>Blocks</h3>
-        <div class="row col-12">
-            <div class="col-md-1">
-                <label for="blocks-search" class="col-form-label col-form-label-lg">Select load :</label>
+        <div class="row form-group form-horizontal">
+        	<div class="col-md-3">
+            	<select id="blocks-search" class="form-control">
+					<option selected value="all">All blocks</option>
+					<option value="from">Blocks from</option>
+            	</select>
             </div>
-            <div class="col-md-7">
-                <select id="blocks-search" class="form-control">
-                    <option selected value="all">All blocks</option>
-                    <option value="from">blocks from</option>
-                </select>
+            <div class="col-md-3" hidden="true" id="block-from-fields" >
+                <input type="text" id="search-block-field" class="form-control" placeholder="Start block" aria-label="Block hash">
             </div>
-        </div>
-        <div class="col-12" hidden="true" id="block-from-fields" >
-            <div class="col-md-12">
-            <!--<div class="col-6">-->
-                <div class="col-md-2">
-                    <label id="block-hash-input" for="search-block-field"  class="col-form-label">Input start block hash</label>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" id="search-block-field"class="form-control" placeholder="Start block" aria-label="Start block">
-                </div>
-            </div>
-            <!--</div>-->
-            <div class="col-md-12">
-                <div class="col-md-2">
-                    <label id="blocks-limit" for="block-limit-value"class="col-form-label">input limit</label>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" id="block-limit-value" class="form-control" placeholder="Limit-value" aria-label="Limit-value">
-                </div>
+           	<label id="blocks-limit" for="block-limit-value" class="control-label col-md-1">Limit</label>
+            <div class="col-md-2">
+               	<input type="text" id="block-limit-value" class="form-control" placeholder="Limit-value" aria-label="Number of blocks">
             </div>
         </div>
-        <div class="col-12">
-            <input type="button" class="btn btn-primary" id="block-load-btn" value="Load">
+        <div class="row form-group">
+        	<div class="col-md-2">
+        		<input type="button" class="btn btn-primary form-control" id="block-load-btn" value="Load">
+        	</div>
         </div>
-        <div class="col-12">
-            <ul class="list-group" id="blocks-list">
-        </div>
+        <ul class="list-group" id="blocks-list">
         </ul>
 
     </div>

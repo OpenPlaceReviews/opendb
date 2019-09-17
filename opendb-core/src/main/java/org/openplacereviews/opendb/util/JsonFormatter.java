@@ -120,7 +120,6 @@ public class JsonFormatter {
 		return gson.fromJson(json, TreeMap.class);
 	}
 
-	@SuppressWarnings("unchecked")
 	public RequestIndexBody[] fromJsonToListIndices(String json) {
 		return new Gson().fromJson(json, (Type) RequestIndexBody[].class);
 	}
@@ -129,7 +128,8 @@ public class JsonFormatter {
 		return gson.toJson(requestIndexBodyList);
 	}
 
-	public Map<String, Map> fromJsonToOpendbPreferenceMap(String json) {
+	@SuppressWarnings("unchecked")
+	public Map<String, Map<?, ?>> fromJsonToOpendbPreferenceMap(String json) {
 		return gson.fromJson(json, Map.class);
 	}
 

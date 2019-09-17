@@ -33,7 +33,7 @@ public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
 	private static final int OPENDB_SCHEMA_VERSION = 3;
-	private final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
+	private static final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -182,8 +182,8 @@ public class DBSchemaManager {
 			return objtables;
 		} else {
 			Map<String, Map<String, Object>> objtable = new TreeMap<>();
-			List<SettingsManager.OpendbPreference<?>> preferences = settingsManager.loadContainsPreferencesByKey(OBJTABLE_PROPERTY_NAME);
-			for (SettingsManager.OpendbPreference opendbPreference : preferences) {
+			List<SettingsManager.OpendbPreference<Map<String, Object>>> preferences = settingsManager.loadContainsPreferencesByKey(OBJTABLE_PROPERTY_NAME);
+			for (SettingsManager.OpendbPreference<Map<String, Object>> opendbPreference : preferences) {
 				String tableName = opendbPreference.getId().substring(opendbPreference.getId().lastIndexOf(".") + 1);
 				objtable.put(tableName, (Map<String, Object>) opendbPreference.get());
 			}
@@ -327,7 +327,13 @@ public class DBSchemaManager {
 			if (objMapping != null && objMapping.length() > 0) {
 				TreeMap<String, Object> previousMapping = formatter.fromJsonToTreeMap(objMapping);
 				for(String tableName : previousMapping.keySet()) {
-					List<String> otypes = ((Map<String, List<String>>) previousMapping.get(tableName)).get("types");
+					Object types = ((Map<String, Object>) previousMapping.get(tableName)).get("types");
+					Collection<String> otypes = null;
+					if(types instanceof Collection) {
+						otypes = (Collection<String>) types;
+					} else if(types instanceof Map) {
+						otypes = ((Map<Object, String>) types).values();
+					}
 					if(otypes != null) {
 						for(String type : otypes) {
 							previousTypeToTable.put(type, tableName);
@@ -420,12 +426,12 @@ public class DBSchemaManager {
 	@SuppressWarnings("unchecked")
 	private void prepareObjTableMapping() {
 		for(String tableName : getObjtables().keySet()) {
-			Integer i = ((Number)getObjtables().get(tableName).get("keysize")).intValue();
+			Number i = ((Number) getObjtables().get(tableName).get("keysize"));
 			if(i == null) {
 				i = MAX_KEY_SIZE;
 			}
-			registerObjTable(tableName, i);
-			ObjectTypeTable ott = new ObjectTypeTable(tableName, i);
+			registerObjTable(tableName, i.intValue());
+			ObjectTypeTable ott = new ObjectTypeTable(tableName, i.intValue());
 			objTableDefs.put(tableName, ott);
 			
 			
