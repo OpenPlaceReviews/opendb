@@ -113,6 +113,20 @@
         </div>
         <ul class="list-group" id="blocks-list">
         </ul>
+        <ul hidden="true" id="blocks-list-item">
+        	<li class="panel panel-default">
+        		<div class="panel-heading">
+        			<b><a href="#id">Block <span did="block-id"></span></a></b>
+        			<span class="pull-right"  did="block-hash"></span>
+        		</div>
+        		<div class="panel-body">
+        			<p>Previous block hash: <span did="prev-block-hash"> </span></p>
+        			<p>Operations count: <span did="op-count"> </span></p>
+        			<p>Signed by: <span did="signed-by"> </span></p>
+        		</div>
+        	</li>
+        </ul>
+        
 
     </div>
 
@@ -896,9 +910,17 @@
         $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
         var superblockId = 0;
         var superblockHash = "";
+        let templateItem = $("#blocks-list-item");
         for(var i = 0; i < blocks.length; i++) {
             let op = blocks[i];
-            items += "<br><li class=\"list-group-item\"><b>Block id</b>: " + op.block_id;
+            var it = templateItem.clone();
+            it.find("[did='block-id']").html(op.block_id);
+            it.find("[did='signed-by']").html(op.signed_by);
+            it.find("[did='block-hash']").html(op.hash);
+            it.find("[did='prev-block-hash']").html(op.previous_block_hash);
+            // it.find("[did='details']").html(op.details);
+            it.find("[did='op-count']").html(op.eval.operations_size);
+            /* items += "<br><li class=\"list-group-item\"><b>Block id</b>: " + op.block_id;
             items += "<input type=\"button\" style=\"margin-left: 5px\" class=\"btn btn-primary\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
             items += "<br><b>Hash</b>: " + op.hash;
             if (op.eval) {
@@ -918,6 +940,10 @@
             items += "<br><details><summary><b>Simple json</b></summary><pre>" +
                 JSON.stringify(op, null, 4) + "</pre></details>";
             items += "</li>";
+          */   
+          
+          items += it.html(); 
+          
         }
 
         return items;
