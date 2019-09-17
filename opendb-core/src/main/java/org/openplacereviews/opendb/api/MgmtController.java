@@ -246,13 +246,12 @@ public class MgmtController {
 	public ResponseEntity<String> updatePreference(HttpSession session,
 												   @RequestParam String key,
 												   @RequestParam String value,
-												   @RequestParam(required = false) String type,
-												   @RequestParam Boolean restartIsNeeded) {
+												   @RequestParam(required = false) String type) {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
 		}
 
-		if (settingsManager.updatePreference(key, settingsManager.generateObjectByType(value, type), restartIsNeeded, true)) {
+		if (settingsManager.updatePreference(key, settingsManager.generateObjectByType(value, type))) {
 			settingsManager.savePreferences();
 			return ResponseEntity.ok("Preference was update");
 		} else {

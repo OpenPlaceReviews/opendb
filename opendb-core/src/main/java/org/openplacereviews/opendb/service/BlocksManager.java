@@ -125,7 +125,7 @@ public class BlocksManager {
 		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.REPLICATION) {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
 		}
-		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name(), false);
+		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
 		settingsManager.savePreferences();
 	}
 	
@@ -135,7 +135,7 @@ public class BlocksManager {
 		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.BLOCK_CREATION) {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
 		}
-		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name(), false);
+		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
 		settingsManager.savePreferences();
 	}
 
@@ -145,7 +145,7 @@ public class BlocksManager {
 			this.mgmtStatus = BlockchainMgmtStatus.getStatus(loadedStatus);
 		} else {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
-			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name(), false);
+			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
 			settingsManager.savePreferences();
 		}
 	}

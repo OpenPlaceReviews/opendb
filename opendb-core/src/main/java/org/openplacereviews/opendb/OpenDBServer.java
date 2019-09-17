@@ -85,8 +85,7 @@ public class OpenDBServer {
 			try {
 				LOGGER.info("Application starting...");
 				preStartApplication();
-				addNewPreferences();
-				settingsManager.initPrefs();
+//				addNewPreferences();
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);

@@ -92,21 +92,17 @@
     <div id="blocks" class="tab-pane fade">
         <h3>Blocks</h3>
         <div class="row col-12">
-            <div class="col-sm-1">
-                <label for="blocks-search" class="col-1 col-form-label col-form-label-lg">Load:</label>
-
+            <div class="col-md-1">
+                <label for="blocks-search" class="col-form-label col-form-label-lg">Select load :</label>
             </div>
-            <div class="col-sm-7">
+            <div class="col-md-7">
                 <select id="blocks-search" class="form-control">
                     <option selected value="all">All blocks</option>
                     <option value="from">blocks from</option>
                 </select>
             </div>
-            <!--<div class="col-11">-->
-                <!---->
-            <!--</div>-->
         </div>
-        <div class="col-12" hidden="true" id="block-from-fields" style="margin-top: 5px">
+        <div class="col-12" hidden="true" id="block-from-fields" >
             <div class="col-md-12">
             <!--<div class="col-6">-->
                 <div class="col-md-2">
@@ -126,10 +122,10 @@
                 </div>
             </div>
         </div>
-        <div class="row col-12">
+        <div class="col-12">
             <input type="button" class="btn btn-primary" id="block-load-btn" value="Load">
         </div>
-        <div class="row col-12">
+        <div class="col-12">
             <ul class="list-group" id="blocks-list">
         </div>
         </ul>
@@ -139,7 +135,7 @@
     <div id="operations" class="tab-pane fade">
         <h3>Operations</h3>
         <div class="row col-12">
-            <label for="operations-search" class="col-md-1 col-form-label">Load:&nbsp;</label>
+            <label for="operations-search" class="col-md-1 col-form-label">Select load:&nbsp;</label>
             <div class="col-md-3">
                 <select id="operations-search" class="form-control">
                     <option selected value="queue">Queue</option>
@@ -277,7 +273,7 @@
         <div class="row">
             <div class="col-md-12">
                 <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-
+                <br><br>
                 <!--Bot table-->
                 <div class="table-responsive">
                     <table id="bots-table" class="table table-bordered table-striped table-hover">
@@ -350,6 +346,7 @@
                 <h4>DB Index</h4>
                 <button class="btn btn-primary" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
                 <button class="btn btn-primary"  data-toggle="modal" data-target="#new-index-modal" id="add-new-index-table-btn"><span class="glyphicon glyphicon-plus"></span> Add new DB Index</button>
+                <br><br>
                 <div class="table-responsive">
                     <table id="index-table" class="table table-bordered table-striped table-hover">
                         <thead>
@@ -440,6 +437,7 @@
         <div class="row">
             <div class="col-md-12">
                 <h4>Downloads</h4> <button class="btn btn-primary" id="refresh-api-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                <br><br>
                 <div class="table-responsive">
                     <table id="api-table" class="table table-bordered table-striped table-hover">
                         <thead>
@@ -469,7 +467,12 @@
 
     <div id="settings" class="tab-pane fade">
         <h3>Settings</h3>
-        <button class="btn btn-primary" id="show-add-new-preference-btn" style="display: block;">Add new preference</button>
+        <div class="col-12">
+            <div class="col-1">
+                <label class="col-form-label">Show editable settings</label>
+                <input type="checkbox" id="settingsCheckbox" name="scales">
+            </div>
+        </div>
         <div style="display: none;" id="add-new-preference">
             <div class="col-md-12 container">
                 <div class="col-md-4">
@@ -523,21 +526,14 @@
                         </div>
                         <hr>
                         <div class="container">
-                            <div class="col-md-4">
+                            <div class="col-md-8">
                                 <label for="edit-preference-value">Preference value:</label>
-                                <textarea class="form-control" rows="5" id="edit-preference-value"></textarea>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="edit-preference-restart">Restart is needed:</label>
-                                <select class="form-control" id="edit-preference-restart">
-                                    <option value="false">false</option>
-                                    <option value="true">true</option>
-                                </select>
+                                <textarea class="form-control" rows="1" id="edit-preference-value"></textarea>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" id="save-new-value-for-settings-btn">Save</button>
+                        <button type="button" class="btn btn-default" id="save-new-value-for-settings-btn">Save</button>
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                     </div>
                 </div>
@@ -855,7 +851,6 @@
                 }
                 $("#type-list").html(types);
                 $("#index-op-types").html(types);
-                $("#index-op-types").editableSelect();
             },
             error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
         });
@@ -988,7 +983,7 @@
         $("#settings-edit-modal .modal-body #settings-type").html(globalConfig[i].type);
         $("#settings-edit-modal .modal-body #edit-preference-restart").val(globalConfig[i].restartIsNeeded.toString());
         $("#settings-edit-modal .modal-header #settings-name").val(globalConfig[i].id);
-        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference editor for: " + globalConfig[i].id);
+        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + globalConfig[i].id);
     }
 
     var globalConfig = {};
@@ -999,9 +994,11 @@
             globalConfig = data;
             for (var i = 0; i < data.length; i++) {
                 obj = data[i];
-                items += "<div class=\"panel panel-default\">";
-                    items += "<div class=\"panel-heading\"><button type=\"button\" class=\"btn btn-primary btn-sm pull-right\" data-toggle=\"modal\" data-target=\"#settings-edit-modal\" onclick=\"editPreferenceObject(" + i + ")\">Edit</button></a> <h4>" + obj.id + "</h4></div>";
-                    items += "<div class=\"panel-body\">";
+                if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
+                    items += "<div class=\"panel panel-default col-7\">";
+                    items += "<div class=\"panel-heading\">";
+                    items += "<button type=\"button\" class=\"btn btn-default btn-sm pull-right\" data-toggle=\"modal\" data-target=\"#settings-edit-modal\" onclick=\"editPreferenceObject(" + i + ")\">Edit</button></a>";
+                    items += "<h4>" + obj.id + " - " + obj.description + "</h4></div><div class=\"panel-body\">";
 
                     if (obj.type === "Map") {
                         items += "<h5><b>Value: </b></h5>";
@@ -1009,16 +1006,28 @@
                     } else {
                         items += "<h5><b>Value: </b>" + obj.value + "</h5>";
                     }
-                    items += "<h5><b>Preference type: </b>"+ obj.type + "</h5>";
-                    items += "<div class=\"clearfix\"></div>";
-                    items += "<hr>";
                     items += "<div class=\"row\">";
                     if (obj.restartIsNeeded === true) {
                         items += "<div class=\"alert alert-warning\" role=\"alert\">This parameter will be accepted after server restarting!</div>";
                     }
                     items += "</div>";
                     items += "</div>";
-                items += "</div>";
+                    items += "</div>";
+                } else if (!($("#settingsCheckbox").is(":checked")) && obj.canEdit === false) {
+                    items += "<div class=\"panel panel-default\">";
+                    items += "<div class=\"panel-heading\">";
+                    items += "<h4>" + obj.id + " - " + obj.description + "</h4></div><div class=\"panel-body\">";
+
+                    if (obj.type === "Map") {
+                        items += "<h5><b>Value: </b></h5>";
+                        items += "<pre>" + JSON.stringify(obj.value, null, 4) +"</pre>"
+                    } else {
+                        items += "<h5><b>Value: </b>" + obj.value + "</h5>";
+                    }
+                    items += "</div>";
+                    items += "</div>";
+                }
+
             }
 
             $("#settings-result-list").html(items);
@@ -1556,6 +1565,10 @@
             }
         });
 
+        $("#settingsCheckbox").change(function () {
+           loadConfiguration();
+        });
+
         $("#search-type-list").change(function() {
             var selectedSearchType = $("#search-type-list").val();
             if (selectedSearchType === "all") {
@@ -1664,6 +1677,7 @@
 
                 }
             });
+            $("#new-index-modal .close").click();
         });
 
         $("#refresh-api-table-btn").click(function () {
@@ -2178,7 +2192,6 @@
                key: $("#settings-name").val(),
                value: $("#edit-preference-value").val(),
                type: $("#settings-type").text(),
-               restartIsNeeded: $("#edit-preference-restart").val()
            };
            $.post("/api/mgmt/config", obj)
                .done(function (data) {
