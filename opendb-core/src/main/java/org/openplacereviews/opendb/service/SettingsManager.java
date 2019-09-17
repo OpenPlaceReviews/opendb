@@ -41,7 +41,7 @@ public class SettingsManager {
 	public boolean savePreferences() {
 		Map<String, OpendbPreference<?>> mapForStoring = new HashMap<>();
 		for (Map.Entry<String, OpendbPreference<?>> entry : registeredPreferences.entrySet()) {
-			if (entry.getValue().isCanEdit()) {
+			if (entry.getValue().isCanEdit() || entry.getValue() == OPENDB_BLOCKCHAIN_STATUS) {
 				mapForStoring.put(entry.getKey(), entry.getValue());
 			}
 		}
@@ -73,7 +73,7 @@ public class SettingsManager {
 		if (settings != null) {
 			for(Map.Entry<String, Map> opendbPreferenceEntry : jsonFormatter.fromJsonToOpendbPreferenceMap(settings).entrySet()) {
 				OpendbPreference<?> preference = registeredPreferences.get(opendbPreferenceEntry.getKey());
-				if (preference != null && preference.isCanEdit()) {
+				if (preference != null) {
 					Object value = opendbPreferenceEntry.getValue().get("value");
 					value = generateObjectByType(value, (String) opendbPreferenceEntry.getValue().get("type"));
 					boolean updated = updatePreference(opendbPreferenceEntry.getKey(), value);
@@ -133,7 +133,7 @@ public class SettingsManager {
 
 	public boolean updatePreference(String key, Object value) {
 		OpendbPreference<?> preference = registeredPreferences.get(key);
-		if (preference != null && preference.isCanEdit()) {
+		if (preference != null && (preference.isCanEdit() || preference == OPENDB_BLOCKCHAIN_STATUS)) {
 			if (preference instanceof BooleanPreference) {
 				if (value instanceof Boolean) {
 					((BooleanPreference) preference).set((Boolean) value);
