@@ -31,65 +31,71 @@
 <div class="tab-content">
     <div id="home" class="tab-pane fade in active">
         <h1>Admin harness for OpenDB</h1>
-        <div class="row col-sm-12">
-            <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
-            <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
-            <p id="blockchain-orphaned-blocks-header"><b>Orphaned blocks:</b> &nbsp;&nbsp;<span id="blockchain-orphaned-blocks"></span></p>
-            <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
-            <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
-
-        </div>
-        <div class="row col-sm-12" id="admin-login-div">
-            <div class="col-md-6 form-group row">
-                <div class="col-sm-3">
-                    <input type="text" class="form-control" id="admin-login-name"/>
-                </div>
-                <div class="col-sm-3">
-                    <input type="password" class="form-control" id="admin-login-key"/>
-                </div>
-                <div class="col-sm-2">
-                    <input type="button" class="btn btn-primary" value="Login as admin" id="admin-login-btn"/>
-                </div>
+        <div class="form-group">
+            <p>Blockchain status: <b><span id="blockchain-status"></span></b></p>
+            <p>Admin server user: <b><span id="admin-user"></span></b></p>
+            <p>Admin logged in user: <b><span id="admin-login-user">not logged in</span></b></p>
+            <p>Superblocks: <ol class="breadcrumb" id="blockchain-blocks"></ol></p>
+            <p id="blockchain-orphaned-blocks-header">Orphaned blocks: <b><span id="blockchain-orphaned-blocks"></span></b></p>
+            
+		</div>
+        <div id="admin-login-div">
+            <div class="form-inline">
+                <label for="admin-login-name">Login:</label>
+                <input type="text" class="form-control" id="admin-login-name"/>
+                <label for="admin-login-key">Key:</label>
+                <input type="password" class="form-control" id="admin-login-key"/>
+                <input type="button" class="btn btn-primary" value="Login as admin" id="admin-login-btn"/>
             </div>
         </div>
-        <div class="row col-sm-12" id="admin-actions" >
-            <h3>Admin actions</h3>
-            <input type="button" class="btn btn-primary" value="Create block" id="block-create-btn"/>
-            <input type="button" class="btn btn-primary" value="Clear log" id="clear-log-btn" />
-            <input type="button" class="btn btn-primary" value="Compact" id="compact-btn" />
-            <input type="button" class="btn btn-primary" value="Replicate" id="replicate-btn" />
-            <br><br>
-            <input type="button" class="btn btn-primary" value="Lock/unlock blockchain" id="ops-pause-btn"/>
-            <input type="button" class="btn btn-primary" value="Pause/resume new blocks" id="blocks-pause-btn"/>
-            <input type="button" class="btn btn-primary" value="Pause/resume replication" id="replicate-pause-btn"/>
+        <div id="admin-actions" >
+        	<div class="panel panel-success">
+        		<div class="panel-heading"><b>Block actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Create block" id="block-create-btn"/>
+            			<input type="button" class="btn btn-primary form-control" value="Replicate blocks" id="replicate-btn" />
+            			<input type="button" class="btn btn-primary form-control" value="Compact superblocks" id="compact-btn" />
+            		</div>
+            	</div>
+            </div>
+            <div class="panel panel-success">
+        		<div class="panel-heading"><b>Blockchain actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Clear log" id="clear-log-btn" />
+            			<input type="button" class="btn btn-primary form-control" value="Lock/unlock blockchain" id="ops-pause-btn"/>
+            			<input type="button" class="btn btn-primary form-control" value="Pause/start new blocks" id="blocks-pause-btn"/>
+            			<input type="button" class="btn btn-primary form-control" value="Pause/start replication" id="replicate-pause-btn"/>
+            		</div>
+            	</div>
+            </div>
+			
         </div>
-        <div class="col-12" id="owner-actions" >
-            <div class="col-6">
-                <h3>Owner actions</h3>
-                <input type="button" class="btn btn-primary" value="Bootstrap" id="block-bootstrap-btn"/>
-                <input type="button" class="btn btn-primary" value="Revert super block" id="block-revert-btn"/>
-                <input type="button" class="btn btn-primary" value="Revert 1 block" id="block-1revert-btn"/>
-                <input type="button" class="btn btn-primary" value="Clear queue" id="clear-list-btn" />
+        <div id="owner-actions">
+        	<div class="panel panel-warning">
+        		<div class="panel-heading"><b>Management actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Bootstrap" id="block-bootstrap-btn"/>
+                		<input type="button" class="btn btn-primary form-control" value="Revert super block" id="block-revert-btn"/>
+                		<input type="button" class="btn btn-primary form-control" value="Revert 1 block" id="block-1revert-btn"/>
+            		</div>
+            	</div>
             </div>
-            <br><br>
-
-            <div class="col-md-3">
-                <input type="text" class="form-control" id="remove-orphaned-blocks-txt"/>
+        	<div class="panel panel-warning">
+        		<div class="panel-heading"><b>Delete actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Clear queue" id="clear-list-btn" />
+            			<input type="text" class="form-control" id="remove-orphaned-blocks-txt"/>
+            			<input type="button" class="btn btn-primary" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
+            			<input type="text" class="form-control" id="remove-queue-ops-txt"/>
+            			<input type="button" class="btn btn-primary" value="Remove queue operations" id="remove-queue-ops-btn"/>
+            		</div>
+            	</div>
             </div>
-            <div class="col-md-5">
-                <input type="button" class="btn btn-primary" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
-            </div>
-            <br><br>
-
-            <div class="col-md-3">
-                <input type="text" class="form-control" id="remove-queue-ops-txt"/>
-            </div>
-            <div class="col-md-5">
-                <input type="button" class="btn btn-primary" value="Remove queue operations" id="remove-queue-ops-btn"/>
-            </div>
-
         </div>
-        
     </div>
 
     <div id="blocks" class="tab-pane fade">
@@ -99,6 +105,7 @@
             	<select id="blocks-search" class="form-control">
 					<option selected value="all">All blocks</option>
 					<option value="from">Blocks from</option>
+					<option value="to">Blocks to</option>
             	</select>
             </div>
             <div class="col-md-3" hidden="true" id="block-from-fields" >
@@ -124,10 +131,10 @@
         		</div>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>
-                    <p><span did="block-objects-info"></span></p>
                     <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
+                    <p><span did="block-objects-info"></span></p>
                     <details><summary><b>More</b></summary>
-                        <pre style="margin-top: 1em; margin-bottom: 1em;">
+                        <pre>
 Previous block hash: <b><span did="prev-block-hash"></span></b>
 Superblock: <b><span did="superblock"></span></b>
 Operations: <b><span did="op-count"></span></b>
@@ -188,59 +195,54 @@ Details: <b><span did="block-details"></span></b></pre>
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
 
-        <div class="col-9 row">
-            <div class="col-md-1">
-                <label class="col-form-label">Select type:&nbsp;</label>
-            </div>
-            <div class="col-md-3">
+        <div class="form-group">
+        <form class="form-inline">
+            <div class="form-group">
+                <label for="type-list">Select type:&nbsp;</label>
                 <select class="form-control" id="type-list"></select>
             </div>
-            <div class="col-md-1">
-                <label class="col-form-label">Search:&nbsp;</label>
-            </div>
-            <div class="col-md-2">
+            <div class="form-group">
+                <label for="search-type-list">Search:&nbsp;</label>
                 <select class="form-control" id="search-type-list">
                     <option selected value="all">all</option>
                     <option value="userId">by userId</option>
                     <option value = "opHash" >by opHash</option>
                 </select>
             </div>
-            <div class="col-md-1">
-                <label class="col-form-label">Show history</label>
-            </div>
-            <div class="col-md-1">
+            <div class="form-group">
+                <label for="historyCheckbox">Show history</label>
                 <input type="checkbox" id="historyCheckbox" name="scales">
             </div>
+        </form>
         </div>
-        <div class="col-12 row">
-            <div class="col-8" id="search-key-input" hidden="true" style="margin-top: 5px">
-                <div class="col-md-2">
-                    <label id="name-key-field"></label>
+
+        <div class="form-group">
+        <form class="form-inline" id="search-key-input" hidden="true">
+            <div class="form-group">
+                <label for="search-key" id="name-key-field"></label>
+                <input type="text" id="search-key" class="form-control"/>
+            </div>
+        </form>
+        </div>
+
+        <div class="form-group">
+            <form class="form-inline">
+                <div class="form-group">
+                    <label for="limit-field">Amount entries (Limit):</label>
+                    <input type="text" class="form-control" id="limit-field" value="50"/>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" id="search-key" class="form-control"/>
-                </div>
+            </form>
+        </div>
+
+        <div class="row form-group">
+            <div class="col-md-2">
+                <input type="submit" value="Search" id="load-objects-btn" class="btn btn-primary form-control">
             </div>
         </div>
 
-        <div class="col-6 row" style="margin-top: 5px">
-            <div class="col-md-2">
-                <label>Amount entries (Limit):</label>
-            </div>
-            <div class="col-md-2">
-                <input type="text" id="limit-field" value="50"/>
-            </div>
-            <div class="col-md-1">
-                <input type="submit" value="Search" id="load-objects-btn" class="btn btn-primary">
-            </div>
-        </div>
-        <div class="col-md-12 row">
-            <h5 id="amount-objects"></h5>
-        </div>
+        <label class="col-form-label" id="amount-objects"></label>
+        <pre id="json-display" hidden="true"></pre>
 
-        <div class="col-md-12">
-            <pre id="json-display" hidden="true"></pre>
-        </div>
         <div class="col-12 row">
             <div id="stop-edit-objects" class="col-md-1" hidden="true">
                 <input type="button" value="Stop edit" id="stop-edit-btn" class="btn btn-primary">
@@ -253,9 +255,37 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
 
-        <div class="col-12">
-            <ul class="list-group" id="objects-list"></ul>
-        </div>
+        <ul class="list-group" id="objects-list"></ul>
+        <ul class="list-group" id="objects-list-item" hidden="true">
+            <li class="panel panel-default">
+                <div class="panel-heading">
+                    <b><span class="pull-right" did="op-hash"></span></b>
+                    <p>Object ID: <b><span did="obj-id"></span></b></p>
+                </div>
+                <div class="panel-body">
+                    <p did="comment">Comment: <b><span did="obj-comment"></span></b></p>
+                    <details><summary><b>Raw json</b></summary><pre did="object-json"></pre></details>
+                </div>
+            </li>
+        </ul>
+        <ul class="list-group" id="objects-history-list-item" hidden="true">
+            <li class="panel panel-default">
+                <div class="panel-heading">
+                    <b><a class="pull-right" did="operation-object-link" href="#" ><span did="op-hash"></span></a></b>
+                    <p>Object ID: <b><span did="obj-id"></span></b></p>
+                </div>
+                <div class="panel-body">
+                    <!--<p class="pull-right">Signed by: <b><span did="signed-by"></span></b></p>-->
+                    <p>Comment: <b><span did="obj-comment"></span></b></p>
+                    <p>Comment: <b><span did="obj-comment"></span></b></p>
+                    <p>Comment: <b><span did="obj-comment"></span></b></p>
+                    <p>Comment: <b><span did="obj-comment"></span></b></p>
+                    <p>Comment: <b><span did="obj-comment"></span></b></p>
+                    <details><summary><b>Raw json</b></summary><pre did="object-json"></pre></details>
+                    <details><summary><b>Raw json</b></summary><pre did="object-json"></pre></details>
+                </div>
+            </li>
+        </ul>
     </div>
     
     <div id="metrics" class="tab-pane fade">
@@ -282,7 +312,23 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <div id="errors" class="tab-pane fade">
         <h3>Log</h3>
-        <ul class="list-group" id="errors-list">
+        <ul class="list-group" id="errors-list"></ul>
+        <ul class="list-group" id="errors-list-item" hidden="true">
+            <li class="panel panel-default">
+                <div class="panel-heading">
+                    <p>Status: <b><span did="status"></span></b></p>
+                </div>
+                <div class="panel-body">
+                    <p>Message: <b><span did="log-message"></span></b></p>
+                    <p>Time: <b><span did="log-time"></span></b></p>
+                    <p did="excep-message-hidden">Exception message: <b><span did="exception-message"></span></b></p>
+                    <p did="block-hidden">Block (id, hash): <b><span did="block"></span></b></p>
+                    <p did="operation-hidden">Operation: <b><span did="operation"></span></b></p>
+                    <details did="block-json-hidden"><summary><b>Block json</b></summary><pre did="block-json"></pre></details>
+                    <details did="op-json-hidden"><summary><b>Operation json</b></summary><pre did="operation-json"></pre></details>
+                    <details did="full-json-hidden"><summary><b>Full Exception</b></summary><pre did="full-exception-json"></pre></details>
+                </div>
+            </li>
         </ul>
 
     </div>
@@ -814,38 +860,49 @@ Details: <b><span did="block-details"></span></b></pre>
         $.getJSON( "/api/logs", function( data ) {
             var items = "";
             var errs = 0;
+            var templateItem = $("#errors-list-item");
             for(var i = 0; i < data.logs.length; i++)  {
                 let op = data.logs[i];
-                items += "<br><li class=\"list-group-item\"><b>Status</b>: " + op.status;
+                var it = templateItem.clone();
+
+                it.find("[did='status']").html(op.status);
+                it.find("[did='log-message']").html(op.message);
+                it.find("[did='log-time']").html(new Date(op.utcTime).toUTCString());
+
                 if(op.status) {
                     errs++;
                 }
-                items += "<br><b>Message</b>: " + op.message;
-                items += "<br><b>Time</b>: " + new Date(op.utcTime).toUTCString();
                 if(op.cause) {
-                    items += "<br><b>Exception message</b>: " + op.cause.detailMessage;
+                    it.find("[did='exception-message']").html(op.cause.detailMessage);
+                } else {
+                    it.find("[did='excep-message-hidden']").prop("hidden", true);
                 }
                 if(op.block) {
-                    items += "<br><b>Block (id, hash)</b>: " + op.block.block_id + " " + op.block.hash;
+                    it.find("[did='block']").html(op.block.block_id + " " + op.block.hash);
+                } else {
+                    it.find("[did='block-hidden']").prop("hidden", true);
                 }
                 if(op.operation) {
-                    items += "<br><b>Operation</b>: " +
-                        op.operation.type + " " + op.operation.hash;
+                    it.find("[did='operation']").html(op.operation.type + " " + op.operation.hash);
+                } else {
+                    it.find("[did='operation-hidden']").prop("hidden", true);
                 }
-
                 if(op.block) {
-                    items += "<br><details><summary><b>Block json</b></summary><pre>" +
-                        JSON.stringify(op.block, null, 4) + "</pre></details>";
+                    it.find("[did='block-json']").html(JSON.stringify(op.block, null, 4));
+                } else {
+                    it.find("[did='block-json-hidden']").prop("hidden", true);
                 }
                 if(op.operation) {
-                    items += "<br><details><summary><b>Operation json</b></summary><pre>" +
-                        JSON.stringify(op.operation, null, 4) + "</pre></details>";
+                    it.find("[did='operation-json']").html(JSON.stringify(op.operation, null, 4));
+                } else {
+                    it.find("[did='op-json-hidden']").prop("hidden", true);
                 }
                 if(op.cause) {
-                    items += "<br><details><summary><b>Full exception</b></summary><pre>" +
-                        JSON.stringify(op.cause, null, 4) + "</pre></details>";
+                    it.find("[did='full-exception-json']").html(JSON.stringify(op.cause, null, 4));
+                } else {
+                    it.find("[did='full-json-hidden']").prop("hidden", true);
                 }
-                items += "</li>";
+                items += it.html();
             }
             $("#errors-tab").html("Logs (" + errs + " Errors)");
             $("#errors-list").html(items);
@@ -859,7 +916,7 @@ Details: <b><span did="block-details"></span></b></pre>
         let selectType = $("#type-list").val();
         $.ajax({url:"/api/objects?type=sys.operation", type:"get", async:false,
             success: function(data) {
-                var types = "<option value = 'none'>none</option>";
+                var types = "<option value = '' selected disabled>Select type</option>";
                 $("#objects-tab").html("Objects (" + data.objects.length + ")");
                 for(var i = 0; i < data.objects.length; i++)  {
                     let obj = data.objects[i];
@@ -880,7 +937,27 @@ Details: <b><span did="block-details"></span></b></pre>
         $.getJSON( "/api/status", function( data ) {
             var items = "";
             $("#blockchain-status").html(data.status);
-            $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
+            items = "";
+            for(var j = 0; j < data.sblocks.length; j++) {
+            	var url = "admin?tab=operations&load=queue";
+            	if(j > 0) {
+            		var bldescr = data.sblocks[j];
+            		if(bldescr.startsWith("DB-")) {
+            			bldescr = bldescr.substring(3);
+            		}
+            		var ind = bldescr.indexOf("-");
+            		var hash = bldescr.substring(ind + 1);
+            		var limit = parseInt(bldescr.substring(0, ind), 16);
+            		url = "admin?tab=blocks&search=to&hash="+hash+"&limit="+limit;
+            	}
+            	var name =  data.sblocks[j];
+            	if(name.length > 12) {
+            		name = name.substring(0, 12);
+            	}
+            	items += "<li><a href='"+url+"'>" + name + "</a>";
+            	
+            }
+            $("#blockchain-blocks").html(items);
             $("#operations-tab").html("Operations (" + data.sblocks[0] + ")");
 
             $("#admin-user").html(data.serverUser);
@@ -936,7 +1013,8 @@ Details: <b><span did="block-details"></span></b></pre>
         for(var i = 0; i < blocks.length; i++) {
             let op = blocks[i];
             var it = templateItem.clone();
-            // it.find("[did='block-operation-link']").attr("href", showOperationsByBlockRowHash(op.hash));
+            var onlyhash = op.hash.split(":");
+            it.find("[did='block-operation-link']").attr("href", "/api/admin?tab=operations&loadBy=blockHash&key=" + onlyhash[onlyhash.length -1]);
             it.find("[did='block-id']").html(op.block_id);
             it.find("[did='signed-by']").html(op.signed_by);
             it.find("[did='block-hash']").html(op.hash);
@@ -1023,40 +1101,36 @@ Details: <b><span did="block-details"></span></b></pre>
             // var items = "";
             var items = "";
             globalConfig = data;
+
+            function showSettings() {
+                items += "<div class=\"panel panel-default col-7\">";
+                items += "<div class=\"panel-heading\">";
+                if (obj.canEdit === true) {
+                    items += "<button type=\"button\" class=\"btn btn-default btn-sm pull-right\" data-toggle=\"modal\" data-target=\"#settings-edit-modal\" onclick=\"editPreferenceObject(" + i + ")\">Edit</button></a>";
+                }
+                items += "<h4>" + obj.id + " - " + obj.description + "</h4></div><div class=\"panel-body\">";
+
+                if (obj.type === "Map") {
+                    items += "<h5><b>Value: </b></h5>";
+                    items += "<pre>" + JSON.stringify(obj.value, null, 4) + "</pre>"
+                } else {
+                    items += "<h5><b>Value: </b>" + obj.value + "</h5>";
+                }
+                items += "<div class=\"row\">";
+                if (obj.restartIsNeeded === true) {
+                    items += "<div class=\"alert alert-warning\" role=\"alert\">This parameter will be accepted after server restarting!</div>";
+                }
+                items += "</div>";
+                items += "</div>";
+                items += "</div>";
+            }
+
             for (var i = 0; i < data.length; i++) {
                 obj = data[i];
                 if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
-                    items += "<div class=\"panel panel-default col-7\">";
-                    items += "<div class=\"panel-heading\">";
-                    items += "<button type=\"button\" class=\"btn btn-default btn-sm pull-right\" data-toggle=\"modal\" data-target=\"#settings-edit-modal\" onclick=\"editPreferenceObject(" + i + ")\">Edit</button></a>";
-                    items += "<h4>" + obj.id + " - " + obj.description + "</h4></div><div class=\"panel-body\">";
-
-                    if (obj.type === "Map") {
-                        items += "<h5><b>Value: </b></h5>";
-                        items += "<pre>" + JSON.stringify(obj.value, null, 4) +"</pre>"
-                    } else {
-                        items += "<h5><b>Value: </b>" + obj.value + "</h5>";
-                    }
-                    items += "<div class=\"row\">";
-                    if (obj.restartIsNeeded === true) {
-                        items += "<div class=\"alert alert-warning\" role=\"alert\">This parameter will be accepted after server restarting!</div>";
-                    }
-                    items += "</div>";
-                    items += "</div>";
-                    items += "</div>";
-                } else if (!($("#settingsCheckbox").is(":checked")) && obj.canEdit === false) {
-                    items += "<div class=\"panel panel-default\">";
-                    items += "<div class=\"panel-heading\">";
-                    items += "<h4>" + obj.id + " - " + obj.description + "</h4></div><div class=\"panel-body\">";
-
-                    if (obj.type === "Map") {
-                        items += "<h5><b>Value: </b></h5>";
-                        items += "<pre>" + JSON.stringify(obj.value, null, 4) +"</pre>"
-                    } else {
-                        items += "<h5><b>Value: </b>" + obj.value + "</h5>";
-                    }
-                    items += "</div>";
-                    items += "</div>";
+                    showSettings();
+                } else if (!($("#settingsCheckbox").is(":checked"))) {
+                    showSettings();
                 }
 
             }
@@ -1143,7 +1217,6 @@ Details: <b><span did="block-details"></span></b></pre>
                 items += "<tr><td class='info' colspan='9'>" + key + "</td></tr>";
                 for (var keyObj in obj) {
                     var index = obj[keyObj];
-                    console.log(index);
                     items += "<tr>";
                     items += "<td>" + index.indexId + "</td>";
                     items += "<td>" + index.opType + "</td>";
@@ -1211,11 +1284,11 @@ Details: <b><span did="block-details"></span></b></pre>
                     if (op.create.length > 1) {
                         create = op.create.length;
                     } else {
-                        create = op.create.length + " (" + op.create[0].id + ")";
+                        create = op.create.length + " [" + op.create[0].id + "]";
                     }
                 } else {
                     if (op.create) {
-                        create = "1 (" + op.create.id + ")";
+                        create = "1 [" + op.create.id + "]";
                     }
                 }
                 var edited = "";
@@ -1223,11 +1296,11 @@ Details: <b><span did="block-details"></span></b></pre>
                     if (op.edit.length > 1) {
                         edited = op.edit.length;
                     } else {
-                        edited = op.edit.length + " (" + op.edit[0].id + ")";
+                        edited = op.edit.length + " [" + op.edit[0].id + "]";
                     }
                 } else {
                     if (op.edit) {
-                        edited = "1 (" + op.edit.id + ")";
+                        edited = "1 [" + op.edit.id + "]";
                     }
                 }
                 var deleted = "";
@@ -1235,11 +1308,11 @@ Details: <b><span did="block-details"></span></b></pre>
                     if (op.delete.length > 1) {
                         deleted = op.delete.length;
                     } else {
-                        deleted = op.delete.length + " (" + op.delete[0].id + ")";
+                        deleted = op.delete.length + " [" + op.delete[0] + "]";
                     }
                 } else {
                     if (op.delete) {
-                        deleted = "1 (" + op.delete.id + ")";
+                        deleted = "1 [" + op.delete + "]";
                     }
                 }
 
@@ -1254,6 +1327,7 @@ Details: <b><span did="block-details"></span></b></pre>
                     objectInfo +=  "<b>" + deleted + "</b> removed ";
                 }
 
+                it.find("[did='operation-object-link']").attr("href", "/api/admin?tab=objects&search=null&type=opHash&key=" + op.hash + "&history=true&limit=50");
                 it.find("[did='op-hash']").html(op.hash);
                 it.find("[did='op-type']").html(op.type);
                 it.find("[did='object-info']").html(objectInfo);
@@ -1762,7 +1836,7 @@ Details: <b><span did="block-details"></span></b></pre>
            var type = $("#blocks-search").val();
            if (type === "all") {
                $("#block-from-fields").hide();
-           } else if (type === "from") {
+           } else {
                $("#block-from-fields").show();
            }
         });
@@ -1880,6 +1954,7 @@ Details: <b><span did="block-details"></span></b></pre>
             } else {
                 let funcProcResults = function (data, url) {
                     var items = "";
+                    let templateItem = $("#objects-list-item");
                     var amountResults = 0;
                     globalObjects = data.objects;
                     for (var i = 0; i < data.objects.length; i++) {
@@ -1889,18 +1964,17 @@ Details: <b><span did="block-details"></span></b></pre>
                             items += _res.items;
                             amountResults += _res.amount;
                         } else {
-                            items += "<br><li class=\"list-group-item\"><b>Id</b>: " + obj.id;
-                            items += "<input type=\"button\" value=\"EDIT\" class=\"btn btn-primary\" style=\"margin-left: 5px\" onclick=\" generateJsonFromObject(globalObjects[" + i + "]) \">";
-                            if ($("#historyCheckbox").is(":checked") !== true) {
-                                items += "&nbsp;&nbsp;<input type=\"button\" value=\"SHOW HISTORY\" class=\"btn btn-primary\" style=\"margin-left: 5px\" onclick=\" loadHistoryForObject('" + searchType + "','" + obj.id + "','" + type + "')\">";
+                            var it = templateItem.clone();
+                            it.find("[did='op-hash']").html(obj.eval.parentHash);
+                            it.find("[did='obj-id']").html(obj.id.toString());
+                            if (obj.comment) {
+                                it.find("[did='obj-comment']").html(obj.comment);
+                            } else {
+                                it.find("[did='comment']").prop("hidden", true);
                             }
-                            items += "<br><b>Op hash</b>: " + obj.eval.parentHash;
-                            if (obj.comment !== undefined) {
-                                items += "<br><b>Comment</b>: " + obj.comment;
-                            }
-                            items += "<br><details><summary><b>Object json</b></summary><pre>" +
-                                JSON.stringify(obj, null, 4) + "</pre></details>";
-                            items += "</li>";
+                            it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
+
+                            items += it.html();
                         }
                     }
                     $("#objects-list").html(items);
@@ -2304,33 +2378,17 @@ Details: <b><span did="block-details"></span></b></pre>
 
         $("#block-load-btn").click(function () {
             var type = $("#blocks-search").val();
-            if (type === "all") {
-                if ($("#block-limit-value").val() !== null || $("#block-limit-value").val() != undefined) {
-                    let obj = {
-                        depth: $("#block-limit-value").val()
-                    };
-                    $.getJSON("/api/blocks", obj, function (data) {
-                        var items = processBlocksResult(data);
-                        $("#blocks-list").html(items);
-                        saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type +"&hash=" +
-                            $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
-                    })
-                } else {
-                    loadBlocksData();
-                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type)
-                }
-            } else if (type === "from") {
-                let obj = {
-                    from: $("#search-block-field").val(),
-                    depth: $("#block-limit-value").val()
-                };
-                $.getJSON("/api/blocks", obj, function (data) {
-                    var items = processBlocksResult(data);
-                    $("#blocks-list").html(items);
-                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type +"&hash=" +
-                        $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
-                })
+            var reqObj = {
+               	depth: $("#block-limit-value").val()
+            };
+            if(type != "all") {
+            	reqObj[type] = $("#search-block-field").val();
             }
+            $.getJSON("/api/blocks", reqObj, function (data) {
+                var items = processBlocksResult(data);
+                $("#blocks-list").html(items);
+                saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type + "&limit=" + $("#block-limit-value").val());
+            });
         });
 
         $("#add-file-btn").click(function () {
