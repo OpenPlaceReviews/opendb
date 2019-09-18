@@ -6,6 +6,9 @@
 <script src="../js/jquery.json-editor.min.js"></script>
 <style>
     body {padding: 40px; }
+    li {
+        list-style-type: none;
+    }
 </style>
 </head>
 <head>
@@ -113,16 +116,26 @@
         </div>
         <ul class="list-group" id="blocks-list">
         </ul>
-        <ul hidden="true" id="blocks-list-item">
+        <ul class="list-group" hidden="true" id="blocks-list-item">
         	<li class="panel panel-default">
         		<div class="panel-heading">
-        			<b><a href="#id">Block <span did="block-id"></span></a></b>
+        			<b><a href="#id">Block #<span did="block-id"></span></a></b>
         			<span class="pull-right"  did="block-hash"></span>
         		</div>
         		<div class="panel-body">
-        			<p>Previous block hash: <span did="prev-block-hash"> </span></p>
-        			<p>Operations count: <span did="op-count"> </span></p>
-        			<p>Signed by: <span did="signed-by"> </span></p>
+                    <p>Date: <b><span did="block-date"></span></b></p>
+                    <p>Added/Edited/Removed objects: <b><span did="block-objects"></span></b></p>
+                    <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
+                    <details><summary><b>More</b></summary>
+                        <pre style="margin-top: 1em; margin-bottom: 1em;">
+Previous block hash: <b><span did="prev-block-hash"></span></b>
+Superblock: <b><span did="superblock"></span></b>
+Operations count: <b><span did="op-count"></span></b>
+Block size: <b><span did="block-size"></span></b>
+Merkle tree hash: <b><span did="merkle-tree"></span></b>
+Details: <b><span did="block-details"></span></b></pre>
+                    </details>
+                    <details><summary><b>Raw json</b></summary><pre did="block-json"></pre></details>
         		</div>
         	</li>
         </ul>
@@ -917,9 +930,26 @@
             it.find("[did='block-id']").html(op.block_id);
             it.find("[did='signed-by']").html(op.signed_by);
             it.find("[did='block-hash']").html(op.hash);
-            it.find("[did='prev-block-hash']").html(op.previous_block_hash);
-            // it.find("[did='details']").html(op.details);
             it.find("[did='op-count']").html(op.eval.operations_size);
+            it.find("[did='block-date']").html(op.date);
+
+            if (op.eval) {
+                if (op.eval.superblock_hash != superblockHash) {
+                    superblockHash = op.eval.superblock_hash;
+                    superblockId = superblockId + 1;
+                }
+
+                it.find("[did='superblock']").html(superblockId + ". " + op.eval.superblock_hash);
+                it.find("[did='block-size']").html((op.eval.block_size/1024).toFixed(3) + " KB");
+                it.find("[did='block-objects']").html(op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted);
+            }
+
+            it.find("[did='prev-block-hash']").html(op.previous_block_hash);
+            it.find("[did='merkle-tree']").html(op.merkle_tree_hash);
+            it.find("[did='block-details']").html(op.details);
+
+            it.find("[did='block-json']").html(JSON.stringify(op, null, 4));
+
             /* items += "<br><li class=\"list-group-item\"><b>Block id</b>: " + op.block_id;
             items += "<input type=\"button\" style=\"margin-left: 5px\" class=\"btn btn-primary\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
             items += "<br><b>Hash</b>: " + op.hash;
