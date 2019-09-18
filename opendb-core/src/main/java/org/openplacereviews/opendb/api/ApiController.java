@@ -56,7 +56,7 @@ public class ApiController {
 			} else {
 				String hash = o.getSuperBlockHash();
 				String sz = hash.substring(0, 8);
-				hash = hash.substring(8, 16);
+				hash = hash.substring(8);
 				while (sz.indexOf("00") == 0) {
 					sz = sz.substring(2);
 				}
@@ -136,11 +136,12 @@ public class ApiController {
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String blocksList(@RequestParam(required = false, defaultValue = "100") int depth,
-			@RequestParam(required = false) String from) throws FailedVerificationException {
+			@RequestParam(required = false) String from, @RequestParam(required = false) String to) throws FailedVerificationException {
 		BlocksListResult br = new BlocksListResult();
 		OpBlockChain blc = manager.getBlockchain();
 		br.blockDepth = blc.getDepth();
 		if (from != null) {
+			// used by replication
 			if (OUtils.isEmpty(from)) {
 				br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(-1));
 				Collections.reverse(br.blocks);
@@ -153,8 +154,18 @@ public class ApiController {
 					while (!br.blocks.isEmpty() && !OUtils.equals(br.blocks.get(0).getRawHash(), from)) {
 						br.blocks.remove(0);
 					}
-				} else {
-					br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(3));
+				}
+			}
+		} else if(!OUtils.isEmpty(to)) {
+			OpBlock found = blc.getBlockHeaderByRawHash(to);
+			if (found != null) {
+				int ldepth = depth + (blc.getLastBlockId() - found.getBlockId()) ;
+				br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(ldepth));
+				while (!br.blocks.isEmpty() && !OUtils.equals(br.blocks.get(0).getRawHash(), to)) {
+					br.blocks.remove(0);
+				}
+				while(br.blocks.size() > depth) {
+					br.blocks.removeLast();
 				}
 			}
 		} else {

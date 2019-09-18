@@ -31,65 +31,71 @@
 <div class="tab-content">
     <div id="home" class="tab-pane fade in active">
         <h1>Admin harness for OpenDB</h1>
-        <div class="row col-sm-12">
-            <p><b>Blockchain status:</b> &nbsp;&nbsp;<span id="blockchain-status"></span></p>
-            <p><b>Block chains:</b> &nbsp;&nbsp;<span id="blockchain-blocks"></span></p>
-            <p id="blockchain-orphaned-blocks-header"><b>Orphaned blocks:</b> &nbsp;&nbsp;<span id="blockchain-orphaned-blocks"></span></p>
-            <p><b>Admin server user:</b> &nbsp;&nbsp;<span id="admin-user"></span></p>
-            <p><b>Admin logged in user:</b> &nbsp;&nbsp;<span id="admin-login-user">not logged in</span></p>
-
-        </div>
-        <div class="row col-sm-12" id="admin-login-div">
-            <div class="col-md-6 form-group row">
-                <div class="col-sm-3">
-                    <input type="text" class="form-control" id="admin-login-name"/>
-                </div>
-                <div class="col-sm-3">
-                    <input type="password" class="form-control" id="admin-login-key"/>
-                </div>
-                <div class="col-sm-2">
-                    <input type="button" class="btn btn-primary" value="Login as admin" id="admin-login-btn"/>
-                </div>
+        <div class="form-group">
+            <p>Blockchain status: <b><span id="blockchain-status"></span></b></p>
+            <p>Admin server user: <b><span id="admin-user"></span></b></p>
+            <p>Admin logged in user: <b><span id="admin-login-user">not logged in</span></b></p>
+            <p>Superblocks: <ol class="breadcrumb" id="blockchain-blocks"></ol></p>
+            <p id="blockchain-orphaned-blocks-header">Orphaned blocks: <b><span id="blockchain-orphaned-blocks"></span></b></p>
+            
+		</div>
+        <div id="admin-login-div">
+            <div class="form-inline">
+                <label for="admin-login-name">Login:</label>
+                <input type="text" class="form-control" id="admin-login-name"/>
+                <label for="admin-login-key">Key:</label>
+                <input type="password" class="form-control" id="admin-login-key"/>
+                <input type="button" class="btn btn-primary" value="Login as admin" id="admin-login-btn"/>
             </div>
         </div>
-        <div class="row col-sm-12" id="admin-actions" >
-            <h3>Admin actions</h3>
-            <input type="button" class="btn btn-primary" value="Create block" id="block-create-btn"/>
-            <input type="button" class="btn btn-primary" value="Clear log" id="clear-log-btn" />
-            <input type="button" class="btn btn-primary" value="Compact" id="compact-btn" />
-            <input type="button" class="btn btn-primary" value="Replicate" id="replicate-btn" />
-            <br><br>
-            <input type="button" class="btn btn-primary" value="Lock/unlock blockchain" id="ops-pause-btn"/>
-            <input type="button" class="btn btn-primary" value="Pause/resume new blocks" id="blocks-pause-btn"/>
-            <input type="button" class="btn btn-primary" value="Pause/resume replication" id="replicate-pause-btn"/>
+        <div id="admin-actions" >
+        	<div class="panel panel-success">
+        		<div class="panel-heading"><b>Block actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Create block" id="block-create-btn"/>
+            			<input type="button" class="btn btn-primary form-control" value="Replicate blocks" id="replicate-btn" />
+            			<input type="button" class="btn btn-primary form-control" value="Compact superblocks" id="compact-btn" />
+            		</div>
+            	</div>
+            </div>
+            <div class="panel panel-success">
+        		<div class="panel-heading"><b>Blockchain actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Clear log" id="clear-log-btn" />
+            			<input type="button" class="btn btn-primary form-control" value="Lock/unlock blockchain" id="ops-pause-btn"/>
+            			<input type="button" class="btn btn-primary form-control" value="Pause/start new blocks" id="blocks-pause-btn"/>
+            			<input type="button" class="btn btn-primary form-control" value="Pause/start replication" id="replicate-pause-btn"/>
+            		</div>
+            	</div>
+            </div>
+			
         </div>
-        <div class="col-12" id="owner-actions" >
-            <div class="col-6">
-                <h3>Owner actions</h3>
-                <input type="button" class="btn btn-primary" value="Bootstrap" id="block-bootstrap-btn"/>
-                <input type="button" class="btn btn-primary" value="Revert super block" id="block-revert-btn"/>
-                <input type="button" class="btn btn-primary" value="Revert 1 block" id="block-1revert-btn"/>
-                <input type="button" class="btn btn-primary" value="Clear queue" id="clear-list-btn" />
+        <div id="owner-actions">
+        	<div class="panel panel-warning">
+        		<div class="panel-heading"><b>Management actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Bootstrap" id="block-bootstrap-btn"/>
+                		<input type="button" class="btn btn-primary form-control" value="Revert super block" id="block-revert-btn"/>
+                		<input type="button" class="btn btn-primary form-control" value="Revert 1 block" id="block-1revert-btn"/>
+            		</div>
+            	</div>
             </div>
-            <br><br>
-
-            <div class="col-md-3">
-                <input type="text" class="form-control" id="remove-orphaned-blocks-txt"/>
+        	<div class="panel panel-warning">
+        		<div class="panel-heading"><b>Delete actions</b></div>
+        		<div class="panel-body">
+            		<div class="form-inline">
+            			<input type="button" class="btn btn-primary form-control" value="Clear queue" id="clear-list-btn" />
+            			<input type="text" class="form-control" id="remove-orphaned-blocks-txt"/>
+            			<input type="button" class="btn btn-primary" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
+            			<input type="text" class="form-control" id="remove-queue-ops-txt"/>
+            			<input type="button" class="btn btn-primary" value="Remove queue operations" id="remove-queue-ops-btn"/>
+            		</div>
+            	</div>
             </div>
-            <div class="col-md-5">
-                <input type="button" class="btn btn-primary" value="Remove orphaned blocks" id="remove-orphaned-blocks-btn"/>
-            </div>
-            <br><br>
-
-            <div class="col-md-3">
-                <input type="text" class="form-control" id="remove-queue-ops-txt"/>
-            </div>
-            <div class="col-md-5">
-                <input type="button" class="btn btn-primary" value="Remove queue operations" id="remove-queue-ops-btn"/>
-            </div>
-
         </div>
-        
     </div>
 
     <div id="blocks" class="tab-pane fade">
@@ -99,6 +105,7 @@
             	<select id="blocks-search" class="form-control">
 					<option selected value="all">All blocks</option>
 					<option value="from">Blocks from</option>
+					<option value="to">Blocks to</option>
             	</select>
             </div>
             <div class="col-md-3" hidden="true" id="block-from-fields" >
@@ -127,7 +134,7 @@
                     <p><span did="block-objects-info"></span></p>
                     <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
                     <details><summary><b>More</b></summary>
-                        <pre style="margin-top: 1em; margin-bottom: 1em;">
+                        <pre>
 Previous block hash: <b><span did="prev-block-hash"></span></b>
 Superblock: <b><span did="superblock"></span></b>
 Operations: <b><span did="op-count"></span></b>
@@ -872,7 +879,27 @@ Details: <b><span did="block-details"></span></b></pre>
         $.getJSON( "/api/status", function( data ) {
             var items = "";
             $("#blockchain-status").html(data.status);
-            $("#blockchain-blocks").html(JSON.stringify(data.sblocks));
+            items = "";
+            for(var j = 0; j < data.sblocks.length; j++) {
+            	var url = "admin?tab=operations&load=queue";
+            	if(j > 0) {
+            		var bldescr = data.sblocks[j];
+            		if(bldescr.startsWith("DB-")) {
+            			bldescr = bldescr.substring(3);
+            		}
+            		var ind = bldescr.indexOf("-");
+            		var hash = bldescr.substring(ind + 1);
+            		var limit = parseInt(bldescr.substring(0, ind), 16);
+            		url = "admin?tab=blocks&search=to&hash="+hash+"&limit="+limit;
+            	}
+            	var name =  data.sblocks[j];
+            	if(name.length > 12) {
+            		name = name.substring(0, 12);
+            	}
+            	items += "<li><a href='"+url+"'>" + name + "</a>";
+            	
+            }
+            $("#blockchain-blocks").html(items);
             $("#operations-tab").html("Operations (" + data.sblocks[0] + ")");
 
             $("#admin-user").html(data.serverUser);
@@ -1737,7 +1764,7 @@ Details: <b><span did="block-details"></span></b></pre>
            var type = $("#blocks-search").val();
            if (type === "all") {
                $("#block-from-fields").hide();
-           } else if (type === "from") {
+           } else {
                $("#block-from-fields").show();
            }
         });
@@ -2279,30 +2306,17 @@ Details: <b><span did="block-details"></span></b></pre>
 
         $("#block-load-btn").click(function () {
             var type = $("#blocks-search").val();
-            if (type === "all") {
-                loadBlocksData();
-                saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type)
-            } else if (type === "from") {
-                let obj = {
-                    from: $("#search-block-field").val(),
-                    depth: $("#block-limit-value").val()
-                };
-                $.getJSON("/api/blocks", obj, function (data) {
-                    var items = processBlocksResult(data);
-                    $("#blocks-list").html(items);
-                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type +"&hash=" +
-                        $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
-                })
-            } else {
-                let obj = {
-                    depth: $("#block-limit-value").val()
-                };
-                $.getJSON("/api/blocks", obj, function (data) {
-                    var items = processBlocksResult(data);
-                    $("#blocks-list").html(items);
-                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type + "&limit=" + $("#block-limit-value").val());
-                })
+            var reqObj = {
+               	depth: $("#block-limit-value").val()
+            };
+            if(type != "all") {
+            	reqObj[type] = $("#search-block-field").val();
             }
+            $.getJSON("/api/blocks", reqObj, function (data) {
+                var items = processBlocksResult(data);
+                $("#blocks-list").html(items);
+                saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type + "&limit=" + $("#block-limit-value").val());
+            });
         });
 
         $("#add-file-btn").click(function () {
