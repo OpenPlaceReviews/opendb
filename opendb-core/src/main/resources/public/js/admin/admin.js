@@ -3,6 +3,15 @@
     var globalObjectTypes = {};
     var globalConfig = {};
 
+
+    function smallHash(hash) {
+    	var ind = hash.lastIndexOf(':');
+    	if(ind >= 0) {
+    		hash = hash.substring(ind + 1);
+    	}
+    	return hash.substring(0, 16);
+    }
+    
     function loadData() {
         refreshUser();
         $.getJSON( "/api/auth/admin-status", function( data ) {
@@ -185,10 +194,8 @@
 
     function loadObjectsData() {
         $("#index-list-id").hide();
-
         let selectType = $("#type-list").val();
-        $.ajax({url:"/api/objects?type=sys.operation", type:"get", async:false,
-            success: function(data) {
+        $.getJSON("/api/objects?type=sys.operation", function(data) {
                 var types = "<option value = '' selected disabled>Select type</option>";
                 $("#objects-tab").html("Objects (" + data.objects.length + ")");
                 for(var i = 0; i < data.objects.length; i++)  {
@@ -201,8 +208,6 @@
                 }
                 $("#type-list").html(types);
                 $("#index-op-types").html(types);
-            },
-            error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
         });
     }
 
@@ -275,13 +280,6 @@
         });
     }
     
-    function smallHash(hash) {
-    	var ind = hash.lastIndexOf(':');
-    	if(ind >= 0) {
-    		hash = hash.substring(ind + 1);
-    	}
-    	return hash.substring(0, 16);
-    }
 
     function processBlocksResult(data) {
         var items = $("#blocks-list");
@@ -771,6 +769,7 @@
     }
 
     function checkUrlParam() {
+    	// FIXME
         // objects -> http://localhost:6463/api/admin?tab=objects&search=osm.place&type=id&key=12345662&history=true
         // operations -> http://localhost:6463/api/admin?tab=operations&loadBy=blockId&key=0
         // blocks -> http://localhost:6463/api/admin?tab=blocks&search=from&hash=213&limit=123
@@ -853,6 +852,7 @@
         var obj = {
             "botName":bot
         };
+        // FIXME POST
         $.get("/api/bot/start", obj)
             .done(function (data) {$("#result").html(data)})
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
@@ -862,6 +862,7 @@
         var obj = {
             "botName":bot
         };
+        // FIXME POST
         $.get("/api/bot/stop", obj)
             .done(function (data) {$("#result").html(data)})
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });

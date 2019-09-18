@@ -5,6 +5,7 @@ import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -25,7 +26,7 @@ public class BotController {
 		return jsonFormatter.fullObjectToJson(botManager.getBots().keySet());
 	}
 
-	@GetMapping(path = "start", produces = "text/html;charset=UTF-8")
+	@PostMapping(path = "start", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public String startBot(@RequestParam String botName) {
 		if (botManager.startBot(botName)) {
@@ -35,7 +36,7 @@ public class BotController {
 		}
 	}
 	
-	@GetMapping(path = "stop", produces = "text/html;charset=UTF-8")
+	@PostMapping(path = "stop", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public String stopBot(@RequestParam String botName) {
 		if (botManager.stopBot(botName)) {
