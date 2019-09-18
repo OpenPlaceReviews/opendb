@@ -11,6 +11,10 @@
     li {
         list-style-type: none;
     }
+    .popover {
+  		word-break: break-all;
+	}
+    
 </style>
 </head>
 <head>
@@ -128,11 +132,11 @@
         </div>
         <ul class="list-group" id="blocks-list">
         </ul>
-        <ul class="list-group" hidden="true" id="blocks-list-item">
-        	<li class="panel panel-default">
+        <ul class="list-group" hidden="true">
+        	<li class="panel panel-default" id="blocks-list-item">
         		<p class="panel-heading">
         			<b><a did="block-operation-link" href="#" onclick="">Block #<span did="block-id"></span></a></b>
-        			<a href="#" class="pull-right" did="block-hash" data-toggle="popover" data-trigger="hover"></a>
+        			<a href="#" class="pull-right" did="block-hash" data-placement="left" data-toggle="popover"></a>
         		</p>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>

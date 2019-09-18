@@ -15,7 +15,9 @@
     function loadAllData() {
         loadStatusData();
         loadObjectsData();
-        loadBlocksData();
+        $.getJSON("/api/blocks", function( data ) {
+           processBlocksResult(data);
+        });
         if (loginName != "") {
             loadMetricsData();
             loadBotData();
@@ -272,9 +274,18 @@
             $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
         });
     }
+    
+    function smallHash(hash) {
+    	var ind = hash.lastIndexOf(':');
+    	if(ind >= 0) {
+    		hash = hash.substring(ind + 1);
+    	}
+    	return hash.substring(0, 16);
+    }
 
     function processBlocksResult(data) {
-        var items = "";
+        var items = $("#blocks-list");
+        items.empty();
         var blocks = data.blocks;
         // SHOW currentBlock, currentTx - as in progress or failed
         $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
@@ -288,7 +299,7 @@
             it.find("[did='block-operation-link']").attr("href", "/api/admin?tab=operations&loadBy=blockHash&key=" + onlyhash[onlyhash.length -1]);
             it.find("[did='block-id']").html(op.block_id);
             it.find("[did='signed-by']").html(op.signed_by);
-            it.find("[did='block-hash']").attr('data-content', op.hash).html(op.hash.substring(0, 11)).popover();
+            it.find("[did='block-hash']").attr('data-content', op.hash).html(smallHash(op.hash)).popover();
             it.find("[did='op-count']").html(op.eval.operations_size);
             it.find("[did='block-date']").html(op.date.replace("T", " ").replace("+0000", " UTC"));
 
@@ -309,27 +320,10 @@
             it.find("[did='prev-block-hash']").html(op.previous_block_hash);
             it.find("[did='merkle-tree']").html(op.merkle_tree_hash);
             it.find("[did='block-details']").html(op.details);
-
             it.find("[did='block-json']").html(JSON.stringify(op, null, 4));
-          
-          items += it.html(); 
-          
+            items.append(it); 
         }
-
         return items;
-    }
-
-    function loadBlocksData() {
-        $.getJSON( "/api/blocks", function( data ) {
-            var items = processBlocksResult(data);
-            $("#blocks-list").html(items);
-        });
-    }
-
-    function laadBlockAmount() {
-        $.getJSON( "/api/blocks", function( data ) {
-            $("#blocks-tab").html("Blocks (" + data.blockDepth + ")");
-        });
     }
 
     function loadFullIpfsStatus() {
@@ -1456,9 +1450,7 @@
             	reqObj[type] = $("#search-block-field").val();
             }
             $.getJSON("/api/blocks", reqObj, function (data) {
-                var items = processBlocksResult(data);
-                $("#blocks-list").html(items);
-                saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type + "&limit=" + $("#block-limit-value").val());
+                processBlocksResult(data);
             });
         });
 
