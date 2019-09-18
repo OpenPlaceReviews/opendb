@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-<script src="../js/jquery.json-editor.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+<script src="/js/jquery.json-editor.min.js"></script>
+<script src="/js/admin.js"></script>
 <style>
     body {padding: 40px; }
     li {
@@ -100,24 +101,27 @@
 
     <div id="blocks" class="tab-pane fade">
         <h3>Blocks</h3>
-        <div class="row form-group form-horizontal">
-        	<div class="col-md-3">
-            	<select id="blocks-search" class="form-control">
-					<option selected value="all">All blocks</option>
-					<option value="from">Blocks from</option>
-					<option value="to">Blocks to</option>
+        <div class="row">
+        	<div class="form-group col-md-4">
+            	<select id="blocks-search" class="form-control" >
+					<option selected value="all">All</option>
+					<option value="from">From</option>
+					<option value="to">To</option>
             	</select>
             </div>
-            <div class="col-md-3" hidden="true" id="block-from-fields" >
-                <input type="text" id="search-block-field" class="form-control" placeholder="Start block" aria-label="Block hash">
-            </div>
-           	<label id="blocks-limit" for="block-limit-value" class="control-label col-md-1">Limit</label>
-            <div class="col-md-2">
-               	<input type="text" id="block-limit-value" class="form-control" placeholder="Limit-value" aria-label="Number of blocks">
+            <div class="form-group form-inline col-md-8">
+            	<div class="form-group hidden" id="block-from-fields">
+            		<label for="search-block-field" class="control-label">Block:</label>
+                	<input type="text" id="search-block-field" class="form-control" placeholder="Block hash" aria-label="Block hash">
+                </div>
+                <div class="form-group">
+	           		<label for="block-limit-value" class="control-label">Limit:</label>
+               		<input type="text" id="block-limit-value" class="form-control" placeholder="# of blocks" aria-label="Number of blocks">
+            	</div>
             </div>
         </div>
-        <div class="row form-group">
-        	<div class="col-md-2">
+        <div class="row">
+        	<div class="col-md-2 form-group">
         		<input type="button" class="btn btn-primary form-control" id="block-load-btn" value="Load">
         	</div>
         </div>
@@ -125,10 +129,10 @@
         </ul>
         <ul class="list-group" hidden="true" id="blocks-list-item">
         	<li class="panel panel-default">
-        		<div class="panel-heading">
-        			<b><a did="block-operation-link" href="#" onclick="">Block <span did="block-id"></span></a></b>
-        			<span class="pull-right"  did="block-hash"></span>
-        		</div>
+        		<p class="panel-heading">
+        			<b><a did="block-operation-link" href="#" onclick="">Block #<span did="block-id"></span></a></b>
+        			<a href="#" class="pull-right" did="block-hash" data-toggle="popover" data-trigger="hover"></a>
+        		</p>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>
                     <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
@@ -746,11 +750,6 @@ Details: <b><span did="block-details"></span></b></pre>
     var loginName = "";
     var metricsData = [];
     
-    function loadDataDelay(d=1500) {
-        setTimeout(function() {
-            loadData();
-        }, d);
-    }
 
     function loadData() {
         refreshUser();
@@ -760,7 +759,6 @@ Details: <b><span did="block-details"></span></b></pre>
             loadAllData();
         });
     }
-
 
     function loadAllData() {
         loadStatusData();
@@ -854,6 +852,29 @@ Details: <b><span did="block-details"></span></b></pre>
         	metricsData = data.metrics;
         	setMetricsDataToTable();
         });
+    }
+    
+    function loadSearchTypeByOpType(type) {
+        $.ajax({url:"/api/indices-by-type?type=" + type, type:"get", async:false,
+            success: function(data) {
+                var searchTypes = "";
+                searchTypes += "<option value = 'all' selected>all</option>";
+                searchTypes += "<option value = 'id' >by id</option>";
+                searchTypes += "<option value = 'count' >count</option>";
+                searchTypes += "<option value = 'userId' >by userId</option>";
+                searchTypes += "<option value = 'opHash' >by opHash</option>";
+                for (var i = 0; i < data.length; i++) {
+                    var obj = data[i];
+                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
+                }
+
+                $("#search-type-list").html(searchTypes);
+                $("#historyCheckbox").prop("disabled", false);
+                $("#search-key-input").hide();
+            },
+            error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
+        });
+
     }
 
     function loadErrorsData() {
@@ -966,7 +987,7 @@ Details: <b><span did="block-details"></span></b></pre>
                 $("#blockchain-orphaned-blocks-header").show();
                 $("#blockchain-orphaned-blocks").html(
                     JSON.stringify(ophS, null, 4) +
-                    "<br><details><summary><b>Simple json</b></summary><pre>" +
+                    "<br><details><summary><b>Raw json</b></summary><pre>" +
                     JSON.stringify(data.orphanedBlocks, null, 4) + "</pre></details>");
             } else {
                 $("#blockchain-orphaned-blocks-header").hide();
@@ -1017,7 +1038,7 @@ Details: <b><span did="block-details"></span></b></pre>
             it.find("[did='block-operation-link']").attr("href", "/api/admin?tab=operations&loadBy=blockHash&key=" + onlyhash[onlyhash.length -1]);
             it.find("[did='block-id']").html(op.block_id);
             it.find("[did='signed-by']").html(op.signed_by);
-            it.find("[did='block-hash']").html(op.hash);
+            it.find("[did='block-hash']").attr('data-content', op.hash).html(op.hash.substring(0, 11)).popover();
             it.find("[did='op-count']").html(op.eval.operations_size);
             it.find("[did='block-date']").html(op.date.replace("T", " ").replace("+0000", " UTC"));
 
@@ -1062,7 +1083,6 @@ Details: <b><span did="block-details"></span></b></pre>
     }
 
     function loadFullIpfsStatus() {
-        $(document).ready(function () {
             $.getJSON("/api/ipfs/status?full=true", function (data) {
                 $("#result").html("SUCCESS: " + data);
                 $("#amount-missing-ipfs-objects").html(data.missingResources.length);
@@ -1077,7 +1097,6 @@ Details: <b><span did="block-details"></span></b></pre>
                     $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
                 };
             });
-        });
     }
 
     function editPreferenceObject(i) {
@@ -1187,26 +1206,7 @@ Details: <b><span did="block-details"></span></b></pre>
     }
 
     function loadReportFiles() {
-        $.getJSON("/api/places/report", function (data) {
-            var items = "";
-            for (var i = 0; i < data.length; i++) {
-                var obj = data[i];
-                items += "<tr>";
-                items += "<td>" + obj.fileName + "</td>";
-                items += "<td>" + obj.filePath + "</td>";
-                items += "<td>" + (obj.size/1024/1024).toFixed(3) + " MB" + "</td>";
-                items += "<td>" + new Date(obj.date).toLocaleString() + "</td>";
-                items += "<td>";
-                    items += "<a href=\"/api/places/report/" + obj.fileName + "\" download=\"" + obj.fileName + "\">\n" +
-                        "  <span class=\"glyphicon glyphicon-download\"></span>" +
-                        "</a>";
-                    items += "<button type=\"button\" class=\"btn btn-link\" style=\"margin-left:5px;\" onclick=\"updateReport('" + obj.fileName + "')\"><span class=\"glyphicon glyphicon-refresh\"></span></button>";
-                items += "</td>";
-                items += "</tr>";
-            }
-
-            $("#api-table > tbody").html(items);
-        })
+    	// TODO
     }
 
     function loadDBIndexData() {
@@ -1476,7 +1476,7 @@ Details: <b><span did="block-details"></span></b></pre>
         var res = {
             tab: tab,
             blockSearch: $("#blocks-search").val(),
-            showInput: $("#block-from-fields").is(":hidden"),
+            showInput: $("#block-from-fields").hasClass("hidden"),
             inputKey: $("#search-block-field").val(),
             inputLimit: $("#block-limit-value").val(),
             idStorage: idStorage
@@ -1691,12 +1691,12 @@ Details: <b><span did="block-details"></span></b></pre>
 
         $("#compact-btn").click(function(){
             $.post("/api/mgmt/compact", {},  function(data, status){
-                loadDataDelay();
+                loadData();
             });
         });
         $("#replicate-btn").click(function(){
             $.post("/api/mgmt/replicate", {},  function(data, status){
-                loadDataDelay();
+                loadData();
             });
         });
 
@@ -1745,28 +1745,6 @@ Details: <b><span did="block-details"></span></b></pre>
             }
         });
 
-        function loadSearchTypeByOpType(type) {
-            $.ajax({url:"/api/indices-by-type?type=" + type, type:"get", async:false,
-                success: function(data) {
-                    var searchTypes = "";
-                    searchTypes += "<option value = 'all' selected>all</option>";
-                    searchTypes += "<option value = 'id' >by id</option>";
-                    searchTypes += "<option value = 'count' >count</option>";
-                    searchTypes += "<option value = 'userId' >by userId</option>";
-                    searchTypes += "<option value = 'opHash' >by opHash</option>";
-                    for (var i = 0; i < data.length; i++) {
-                        var obj = data[i];
-                        searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
-                    }
-
-                    $("#search-type-list").html(searchTypes);
-                    $("#historyCheckbox").prop("disabled", false);
-                    $("#search-key-input").hide();
-                },
-                error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
-            });
-
-        }
 
         $("#type-list").change(function () {
             var type = $("#type-list").val();
@@ -1835,9 +1813,9 @@ Details: <b><span did="block-details"></span></b></pre>
         $("#blocks-search").change(function () {
            var type = $("#blocks-search").val();
            if (type === "all") {
-               $("#block-from-fields").hide();
+               $("#block-from-fields").addClass("hidden");
            } else {
-               $("#block-from-fields").show();
+               $("#block-from-fields").removeClass("hidden");
            }
         });
         
@@ -2064,12 +2042,12 @@ Details: <b><span did="block-details"></span></b></pre>
                     document.getElementById("blocks-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
                     $("#blocks-search").val(history.state.blockSearch);
                     if (!history.state.showInput) {
-                        $("#block-from-fields").show();
+                    	$("#block-from-fields").removeClass("hidden");
                         $("#search-block-field").val(history.state.inputKey);
                         $("#block-limit-value").val(history.state.inputLimit);
 
                     } else {
-                        $("#block-from-fields").hide();
+                    	$("#block-from-fields").addClass("hidden");
                     }
                 }
             }
