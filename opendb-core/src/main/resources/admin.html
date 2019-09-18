@@ -119,12 +119,15 @@
         <ul class="list-group" hidden="true" id="blocks-list-item">
         	<li class="panel panel-default">
         		<div class="panel-heading">
-        			<b><a href="#id">Block #<span did="block-id"></span></a></b>
+        			<b><a did="block-operation-link" href="#" onclick="">Block <span did="block-id"></span></a></b>
         			<span class="pull-right"  did="block-hash"></span>
         		</div>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>
-                    <p>Added/Edited/Removed objects: <b><span did="block-objects"></span></b></p>
+                    <p><span did="op-count"></span> operations(
+                        <span did="block-added-objects"></span> added,
+                        <span did="block-removed-objects"></span> removed,
+                        <span did="block-edited-objects"></span> edited objects)</p>
                     <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
                     <details><summary><b>More</b></summary>
                         <pre style="margin-top: 1em; margin-bottom: 1em;">
@@ -145,8 +148,8 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <div id="operations" class="tab-pane fade">
         <h3>Operations</h3>
-        <div class="row col-12">
-            <label for="operations-search" class="col-md-1 col-form-label">Select load:&nbsp;</label>
+        <div class="row form-group form-horizontal">
+            <!--<label for="operations-search" class="control-label col-md-1">Select load:&nbsp;</label>-->
             <div class="col-md-3">
                 <select id="operations-search" class="form-control">
                     <option selected value="queue">Queue</option>
@@ -155,25 +158,36 @@ Details: <b><span did="block-details"></span></b></pre>
                     <option value="blockHash">by Block Hash</option>
                 </select>
             </div>
-            <div class="col-md-8" hidden="true" id="operations-search-fields">
-                <div class="col-md-2">
-                    <label id="input-search-operation-key" class="col-form-label">Input</label>
-                </div>
-                <div class="col-md-5">
+            <div hidden="true" id="operations-search-fields">
+                <label id="input-search-operation-key" for="operations-key" class="control-label col-md-1">Input</label>
+                <div class="col-md-3">
                     <input type="text" id="operations-key" class="form-control">
                 </div>
             </div>
         </div>
-        <div class="col-12">
-            <input type="button" id="operations-search-btn" value="Load" class="btn btn-primary">
+        <div class="row form-group">
+            <div class="col-md-2">
+                <input type="button" id="operations-search-btn" value="Load" class="btn btn-primary form-control">
+            </div>
         </div>
-        <div class="col-12">
-            <h5 id="amount-operations" hidden="true"></h5>
-        </div>
-        <div class="col-12">
-            <ul class="list-group" id="operations-list"></ul>
-        </div>
-
+        <label id="amount-operations" class="col-form-label" hidden="true"></label>
+        <ul class="list-group" id="operations-list"></ul>
+        <ul class="list-group" hidden="true" id="operation-list-item">
+            <li class="panel panel-default">
+                <div class="panel-heading">
+                    <b><a did="operation-object-link" href="#" onclick="">Operation <span did="op-hash"></span></a></b>
+                    <!--<span class="pull-right"  did="block-hash"></span>-->
+                </div>
+                <div class="panel-body">
+                    <p>Operation type: <b><span did="op-type"></span></b></p>
+                    <!--<p>Hash: <b><span did="op-hash"></span></b></p>-->
+                    <p class="pull-right">Signed by: <b><span did="signed-by"></span></b></p>
+                    <p>Objects: <span did="object-info"></span></p>
+                    <!--<p>Name: <b><span did="obj-name"></span></b></p>-->
+                    <details><summary><b>Raw json</b></summary><pre did="op-json"></pre></details>
+                </div>
+            </li>
+        </ul>
     </div>
 
     <div id="objects" class="tab-pane fade">
@@ -927,6 +941,7 @@ Details: <b><span did="block-details"></span></b></pre>
         for(var i = 0; i < blocks.length; i++) {
             let op = blocks[i];
             var it = templateItem.clone();
+            // it.find("[did='block-operation-link']").attr("href", showOperationsByBlockRowHash(op.hash));
             it.find("[did='block-id']").html(op.block_id);
             it.find("[did='signed-by']").html(op.signed_by);
             it.find("[did='block-hash']").html(op.hash);
@@ -941,7 +956,9 @@ Details: <b><span did="block-details"></span></b></pre>
 
                 it.find("[did='superblock']").html(superblockId + ". " + op.eval.superblock_hash);
                 it.find("[did='block-size']").html((op.eval.block_size/1024).toFixed(3) + " KB");
-                it.find("[did='block-objects']").html(op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted);
+                it.find("[did='block-added-objects']").html(op.eval.obj_added);
+                it.find("[did='block-removed-objects']").html(op.eval.obj_deleted);
+                it.find("[did='block-edited-objects']").html(op.eval.obj_edited);
             }
 
             it.find("[did='prev-block-hash']").html(op.previous_block_hash);
@@ -949,28 +966,6 @@ Details: <b><span did="block-details"></span></b></pre>
             it.find("[did='block-details']").html(op.details);
 
             it.find("[did='block-json']").html(JSON.stringify(op, null, 4));
-
-            /* items += "<br><li class=\"list-group-item\"><b>Block id</b>: " + op.block_id;
-            items += "<input type=\"button\" style=\"margin-left: 5px\" class=\"btn btn-primary\" value=\"SHOW OPERATIONS\" onclick=\" showOperationsByBlockRowHash('"+ op.hash + "') \">";
-            items += "<br><b>Hash</b>: " + op.hash;
-            if (op.eval) {
-                if (op.eval.superblock_hash != superblockHash) {
-                    superblockHash = op.eval.superblock_hash;
-                    superblockId = superblockId + 1;
-                }
-                items += "<br><b>Operations count</b>: " + op.eval.operations_size;
-                items += "<br><b>Block size</b>: " + (op.eval.block_size/1024).toFixed(3) + " KB";
-                items += "<br><b>Added/Edited/removed objects</b>: " + op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted;
-                items += "<br><b>Superblock</b>: " + superblockId + ". " + op.eval.superblock_hash;
-            }
-            items += "<br><b>Signed by</b>: " + op.signed_by;
-            items += "<br><b>Previous block hash</b>: " + op.previous_block_hash;
-            items += "<br><b>Merkle tree hash</b>: " + op.merkle_tree_hash;
-            items += "<br><b>Details</b>: " + op.details;
-            items += "<br><details><summary><b>Simple json</b></summary><pre>" +
-                JSON.stringify(op, null, 4) + "</pre></details>";
-            items += "</li>";
-          */   
           
           items += it.html(); 
           
@@ -1176,8 +1171,10 @@ Details: <b><span did="block-details"></span></b></pre>
 
     function generateOperationResponse(data) {
         var items = "";
+        let templateItem = $("#operation-list-item");
         if (JSON.stringify(data) !== '{}') {
             for (var i = 0; i < data.ops.length; i++) {
+                var it = templateItem.clone();
                 let op = data.ops[i];
                 let clone = JSON.parse(JSON.stringify(op));
                 delete clone.hash;
@@ -1210,26 +1207,35 @@ Details: <b><span did="block-details"></span></b></pre>
                 sha256(JSON.stringify(clone)).then(digestValue => {
                     if(("json:sha256:" + digestValue) != op.hash){
                     alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue + "'");
-                    // console.log("'"+JSON.stringify(clone)+"'");
                 }});
-                items += "<br><li class=\"list-group-item\"><b>Operation</b>: " + op.type;
-                if ($("#operations-search").val() !== "queue") {
-                    items += "<input type=\"button\" class=\"btn btn-primary\" style=\"margin-left: 5px\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
-                }
-                items += "<br><b>Hash</b>: " + op.hash;
-                items += "<br><b>Added/removed/edited objects</b>: " +
-                    (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
-                    (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + " / " +
-                    (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0"));
-                if (op.create && op.create.length > 0) {
-                    items += "<br><b>Name</b>: " + op.create[0].id;
-                } else if (op.delete && op.delete.length > 0) {
-                    items += "<br><b>Name</b>: " + op.delete[0].id;
-                }
-                items += "<br><b>Signed by</b>: " + op.signed_by;
-                items += "<br><details><summary><b>JSON</b></summary><pre>" +
-                    JSON.stringify(op, null, 4) + "</pre></details>";
-                items += "</li>";
+
+                it.find("[did='op-hash']").html(op.hash);
+                it.find("[did='op-type']").html(op.type);
+                it.find("[did='object-info']").html(
+                    "<b>" + (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + "</b> added, " +
+                    "<b>" + (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0")) + "</b> edited, " +
+                    "<b>" + (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + "</b> removed");
+                it.find("[did='signed-by']").html(op.signed_by);
+                it.find("[did='op-json']").html(JSON.stringify(op, null, 4));
+
+                // items += "<br><li class=\"list-group-item\"><b>Operation</b>: " + op.type;
+                // if ($("#operations-search").val() !== "queue") {
+                //     items += "<input type=\"button\" class=\"btn btn-primary\" style=\"margin-left: 5px\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
+                // }
+                // items += "<br><b>Hash</b>: " + op.hash;
+                // items += "<br><b>Added/removed/edited objects</b>: " +
+                //     (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
+                //     (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + " / " +
+                //     (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0"));
+                // if (op.create && op.create.length > 0) {
+                //     items += "<br><b>Name</b>: " + op.create[0].id;
+                // } else if (op.delete && op.delete.length > 0) {
+                //     items += "<br><b>Name</b>: " + op.delete[0].id;
+                // }
+                // items += "<br><b>Signed by</b>: " + op.signed_by;
+                // items += "<br><details><summary><b>JSON</b></summary><pre>" +
+                //     JSON.stringify(op, null, 4) + "</pre></details>";
+                items += it.html();
             }
             $("#amount-operations").html("Amount operations: " + data.ops.length);
         } else {
@@ -2275,8 +2281,20 @@ Details: <b><span did="block-details"></span></b></pre>
         $("#block-load-btn").click(function () {
             var type = $("#blocks-search").val();
             if (type === "all") {
-                loadBlocksData();
-                saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type)
+                if ($("#block-limit-value").val() !== null || $("#block-limit-value").val() != undefined) {
+                    let obj = {
+                        depth: $("#block-limit-value").val()
+                    };
+                    $.getJSON("/api/blocks", obj, function (data) {
+                        var items = processBlocksResult(data);
+                        $("#blocks-list").html(items);
+                        saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type +"&hash=" +
+                            $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
+                    })
+                } else {
+                    loadBlocksData();
+                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type)
+                }
             } else if (type === "from") {
                 let obj = {
                     from: $("#search-block-field").val(),
@@ -2287,15 +2305,6 @@ Details: <b><span did="block-details"></span></b></pre>
                     $("#blocks-list").html(items);
                     saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type +"&hash=" +
                         $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
-                })
-            } else {
-                let obj = {
-                    depth: $("#block-limit-value").val()
-                };
-                $.getJSON("/api/blocks", obj, function (data) {
-                    var items = processBlocksResult(data);
-                    $("#blocks-list").html(items);
-                    saveCurrentState("#blocks", "/api/admin?tab=blocks&search=" + type + "&limit=" + $("#block-limit-value").val());
                 })
             }
         });
