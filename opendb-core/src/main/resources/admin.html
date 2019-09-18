@@ -124,16 +124,14 @@
         		</div>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>
-                    <p><span did="op-count"></span> operations(
-                        <span did="block-added-objects"></span> added,
-                        <span did="block-removed-objects"></span> removed,
-                        <span did="block-edited-objects"></span> edited objects)</p>
+                    <p><span did="block-objects-info"></span></p>
                     <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
                     <details><summary><b>More</b></summary>
                         <pre style="margin-top: 1em; margin-bottom: 1em;">
 Previous block hash: <b><span did="prev-block-hash"></span></b>
 Superblock: <b><span did="superblock"></span></b>
-Operations count: <b><span did="op-count"></span></b>
+Operations: <b><span did="op-count"></span></b>
+Added/Edited/Removed objects: <b><span did="block-objects"></span></b>
 Block size: <b><span did="block-size"></span></b>
 Merkle tree hash: <b><span did="merkle-tree"></span></b>
 Details: <b><span did="block-details"></span></b></pre>
@@ -175,15 +173,12 @@ Details: <b><span did="block-details"></span></b></pre>
         <ul class="list-group" hidden="true" id="operation-list-item">
             <li class="panel panel-default">
                 <div class="panel-heading">
-                    <b><a did="operation-object-link" href="#" onclick="">Operation <span did="op-hash"></span></a></b>
-                    <!--<span class="pull-right"  did="block-hash"></span>-->
+                    <b><a class="pull-right" did="operation-object-link" href="#" ><span did="op-hash"></span></a></b>
+                    <p>Operation type: <b><span did="op-type"></span></b></p>
                 </div>
                 <div class="panel-body">
-                    <p>Operation type: <b><span did="op-type"></span></b></p>
-                    <!--<p>Hash: <b><span did="op-hash"></span></b></p>-->
                     <p class="pull-right">Signed by: <b><span did="signed-by"></span></b></p>
                     <p>Objects: <span did="object-info"></span></p>
-                    <!--<p>Name: <b><span did="obj-name"></span></b></p>-->
                     <details><summary><b>Raw json</b></summary><pre did="op-json"></pre></details>
                 </div>
             </li>
@@ -946,7 +941,7 @@ Details: <b><span did="block-details"></span></b></pre>
             it.find("[did='signed-by']").html(op.signed_by);
             it.find("[did='block-hash']").html(op.hash);
             it.find("[did='op-count']").html(op.eval.operations_size);
-            it.find("[did='block-date']").html(op.date);
+            it.find("[did='block-date']").html(op.date.replace("T", " ").replace("+0000", " UTC"));
 
             if (op.eval) {
                 if (op.eval.superblock_hash != superblockHash) {
@@ -956,9 +951,10 @@ Details: <b><span did="block-details"></span></b></pre>
 
                 it.find("[did='superblock']").html(superblockId + ". " + op.eval.superblock_hash);
                 it.find("[did='block-size']").html((op.eval.block_size/1024).toFixed(3) + " KB");
-                it.find("[did='block-added-objects']").html(op.eval.obj_added);
-                it.find("[did='block-removed-objects']").html(op.eval.obj_deleted);
-                it.find("[did='block-edited-objects']").html(op.eval.obj_edited);
+                it.find("[did='block-objects']").html(op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted);
+                it.find("[did='block-objects-info']").html("<b>" +
+                		op.eval.operations_size + "</b> operations ( <b>" +
+                		op.eval.obj_added + "</b> added, <b>" + op.eval.obj_edited + "</b> edited, <b>" + op.eval.obj_deleted + "</b> removed objects )");
             }
 
             it.find("[did='prev-block-hash']").html(op.previous_block_hash);
@@ -1209,32 +1205,60 @@ Details: <b><span did="block-details"></span></b></pre>
                     alert("Warning! Hash of tx '" + op.hash + "' is not correct - 'json:sha256:" + digestValue + "'");
                 }});
 
+
+                var create = "";
+                if (Array.isArray(op.create)) {
+                    if (op.create.length > 1) {
+                        create = op.create.length;
+                    } else {
+                        create = op.create.length + " (" + op.create[0].id + ")";
+                    }
+                } else {
+                    if (op.create) {
+                        create = "1 (" + op.create.id + ")";
+                    }
+                }
+                var edited = "";
+                if (Array.isArray(op.edit)) {
+                    if (op.edit.length > 1) {
+                        edited = op.edit.length;
+                    } else {
+                        edited = op.edit.length + " (" + op.edit[0].id + ")";
+                    }
+                } else {
+                    if (op.edit) {
+                        edited = "1 (" + op.edit.id + ")";
+                    }
+                }
+                var deleted = "";
+                if (Array.isArray(op.delete)) {
+                    if (op.delete.length > 1) {
+                        deleted = op.delete.length;
+                    } else {
+                        deleted = op.delete.length + " (" + op.delete[0].id + ")";
+                    }
+                } else {
+                    if (op.delete) {
+                        deleted = "1 (" + op.delete.id + ")";
+                    }
+                }
+
+                var objectInfo = "";
+                if (create !== "") {
+                    objectInfo +=   "<b>" + create + "</b> added "
+                }
+                if (edited !== "") {
+                    objectInfo +="<b>" + edited + "</b> edited "
+                }
+                if (deleted !== "") {
+                    objectInfo +=  "<b>" + deleted + "</b> removed ";
+                }
+
                 it.find("[did='op-hash']").html(op.hash);
                 it.find("[did='op-type']").html(op.type);
-                it.find("[did='object-info']").html(
-                    "<b>" + (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + "</b> added, " +
-                    "<b>" + (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0")) + "</b> edited, " +
-                    "<b>" + (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + "</b> removed");
+                it.find("[did='object-info']").html(objectInfo);
                 it.find("[did='signed-by']").html(op.signed_by);
                 it.find("[did='op-json']").html(JSON.stringify(op, null, 4));
-
-                // items += "<br><li class=\"list-group-item\"><b>Operation</b>: " + op.type;
-                // if ($("#operations-search").val() !== "queue") {
-                //     items += "<input type=\"button\" class=\"btn btn-primary\" style=\"margin-left: 5px\" value=\"Load objects\" onclick=\" loadHistoryByOperationHash('" + op.hash + "')\">";
-                // }
-                // items += "<br><b>Hash</b>: " + op.hash;
-                // items += "<br><b>Added/removed/edited objects</b>: " +
-                //     (Array.isArray(op.create) ? op.create.length : (op.create ? "1" : "0")) + " / " +
-                //     (Array.isArray(op.delete) ? op.delete.length : (op.delete ? "1" : "0")) + " / " +
-                //     (Array.isArray(op.edit) ? op.edit.length : (op.edit ? "1" : "0"));
-                // if (op.create && op.create.length > 0) {
-                //     items += "<br><b>Name</b>: " + op.create[0].id;
-                // } else if (op.delete && op.delete.length > 0) {
-                //     items += "<br><b>Name</b>: " + op.delete[0].id;
-                // }
-                // items += "<br><b>Signed by</b>: " + op.signed_by;
-                // items += "<br><details><summary><b>JSON</b></summary><pre>" +
-                //     JSON.stringify(op, null, 4) + "</pre></details>";
                 items += it.html();
             }
             $("#amount-operations").html("Amount operations: " + data.ops.length);
