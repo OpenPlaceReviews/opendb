@@ -170,6 +170,9 @@ public class ApiController {
 			}
 		} else {
 			br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(depth));
+			while(br.blocks.size() > depth) {
+				br.blocks.removeLast();
+			}
 		}
 		
 		return formatter.fullObjectToJson(br);
