@@ -124,13 +124,14 @@
         		</div>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>
-                    <p>Added/Edited/Removed objects: <b><span did="block-objects"></span></b></p>
+                    <p><span did="block-objects-info"></span></p>
                     <p class="pull-right">Signed by: <b><span did="signed-by"> </span></b></p>
                     <details><summary><b>More</b></summary>
                         <pre style="margin-top: 1em; margin-bottom: 1em;">
 Previous block hash: <b><span did="prev-block-hash"></span></b>
 Superblock: <b><span did="superblock"></span></b>
-Operations count: <b><span did="op-count"></span></b>
+Operations: <b><span did="op-count"></span></b>
+Added/Edited/Removed objects: <b><span did="block-objects"></span></b>
 Block size: <b><span did="block-size"></span></b>
 Merkle tree hash: <b><span did="merkle-tree"></span></b>
 Details: <b><span did="block-details"></span></b></pre>
@@ -931,7 +932,7 @@ Details: <b><span did="block-details"></span></b></pre>
             it.find("[did='signed-by']").html(op.signed_by);
             it.find("[did='block-hash']").html(op.hash);
             it.find("[did='op-count']").html(op.eval.operations_size);
-            it.find("[did='block-date']").html(op.date);
+            it.find("[did='block-date']").html(op.date.replace("T", " ").replace("+0000", " UTC"));
 
             if (op.eval) {
                 if (op.eval.superblock_hash != superblockHash) {
@@ -942,6 +943,10 @@ Details: <b><span did="block-details"></span></b></pre>
                 it.find("[did='superblock']").html(superblockId + ". " + op.eval.superblock_hash);
                 it.find("[did='block-size']").html((op.eval.block_size/1024).toFixed(3) + " KB");
                 it.find("[did='block-objects']").html(op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted);
+                it.find("[did='block-objects-info']").html("<b>" +
+                		op.eval.operations_size + "</b> operations ( <b>" +
+                		op.eval.obj_added + "</b> added, <b>" + op.eval.obj_edited + "</b> edited, <b>" + op.eval.obj_deleted + "</b> removed objects )");
+                
             }
 
             it.find("[did='prev-block-hash']").html(op.previous_block_hash);
