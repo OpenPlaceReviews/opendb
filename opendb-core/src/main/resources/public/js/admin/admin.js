@@ -584,7 +584,6 @@
         } else {
             $("#amount-operations").html("Amount operations: " + 0);
         }
-        // $("#operations-list").html(items);
     }
 
     var editor = {};
@@ -669,19 +668,18 @@
     }
 
     function saveCurrentState(tab, url) {
-        // if (window.location.pathname + window.location.search !== url && url !== window.location.pathname && url !== (window.location.pathname + "?")) {
-        //     if (tab === "#objects") {
-        //         saveObjectTabState(tab, url);
-        //     } else if (tab === "#operations") {
-        //         saveOperationTabState(tab, url);
-        //     } else if (tab === "#blocks") {
-        //         saveBlocksTabState(tab, url);
-        //     }
-        // }
+        if (window.location.pathname + window.location.search !== url && url !== window.location.pathname && url !== (window.location.pathname + "?")) {
+            if (tab === "#objects") {
+                saveObjectTabState(tab, url);
+            } else if (tab === "#operations") {
+                saveOperationTabState(tab, url);
+            } else if (tab === "#blocks") {
+                saveBlocksTabState(tab, url);
+            }
+        }
     }
 
     function saveBlocksTabState(tab, url) {
-        var idStorage = '_' +  Math.random().toString(36).substr(2, 9);
         var res = {
             tab: tab,
             blockSearch: $("#blocks-search").val(),
@@ -691,12 +689,10 @@
             idStorage: idStorage
         };
 
-        sessionStorage.setItem(idStorage,  document.getElementById("blocks-list").innerHTML);
         window.history.pushState(res, "State Blocks", url);
     }
 
     function saveOperationTabState(tab, url) {
-        var idStorage = '_' +  Math.random().toString(36).substr(2, 9);
         var res = {
             tab: tab,
             inputSearch:$("#input-search-operation-key").text(),
@@ -704,15 +700,12 @@
             keyValue: $("#operations-key").val(),
             load: $("#operations-search").val(),
             countElements: $("#amount-operations").text(),
-            idStorage: idStorage
         };
 
-        sessionStorage.setItem(idStorage, document.getElementById("operations-list").innerHTML);
         window.history.pushState(res, "State Operations", url);
     }
 
     function saveObjectTabState(tab, url) {
-        var idStorage = '_' + Math.random().toString(36).substr(2, 9);
         var res = {
             tab: tab,
             searchType: $("#search-type-list").val(),
@@ -722,13 +715,9 @@
             key: $("#search-key").val(),
             limit: $("#limit-field").val(),
             countElements: $("#amount-objects").text(),
-            idStorage: idStorage
         };
 
-        sessionStorage.setItem(idStorage, document.getElementById("objects-list").innerHTML);
-        console.log(res);
         window.history.pushState(res, "State Objects", url);
-        console.log(window.history);
     }
 
     function showOperations(data, url) {
