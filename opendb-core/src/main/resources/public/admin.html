@@ -257,17 +257,18 @@ Details: <b><span did="block-details"></span></b></pre>
         </div>
 
         <label class="col-form-label" id="amount-objects"></label>
-        <pre id="json-display" hidden="true"></pre>
 
-        <div class="col-12 row">
-            <div id="stop-edit-objects" class="col-md-1" hidden="true">
-                <input type="button" value="Stop edit" id="stop-edit-btn" class="btn btn-primary">
+        <div class="row">
+            <div class="form-group hidden col-md-12" id="json-editor-div">
+                <pre id="json-display" class="form-group"></pre>
             </div>
-            <div id="editing-objects" class="col-md-1" hidden="true">
-                <input type="button" value="Finish edit" id="finish-edit-btn" class="btn btn-primary">
-            </div>
-            <div id="add-edited-obj" class="col-md-1" hidden="true">
-                <input type="button" value="Add edit op" id="add-edit-op-btn" class="btn btn-primary">
+        </div>
+
+        <div class="row">
+            <div class="form-group form-inline col-md-4">
+                <input type="button" value="Stop edit" id="stop-edit-btn" class="btn btn-primary hidden">
+                <input type="button" value="Finish edit" id="finish-edit-btn" class="btn btn-primary hidden">
+                <input type="button" value="Add edit op" id="add-edit-op-btn" class="btn btn-primary hidden">
             </div>
         </div>
 
@@ -280,6 +281,7 @@ Details: <b><span did="block-details"></span></b></pre>
                 <p class="panel-heading">
                     <a href="#" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
                     <a href="" did="history-object-link">Object Id: <b><span did="obj-id"></span></b></a>
+                    <a type="button" did="edit-object" class="btn btn-default btn-xs">Edit</a>
                 </p>
                 <div class="panel-body">
                     <p did="comment">Comment: <b><span did="obj-comment"></span></b></p>

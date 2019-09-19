@@ -12,16 +12,16 @@
     	return hash.substring(0, 16);
     }
     
-    function loadData() {
+    function loadData(checkUrl) {
         refreshUser();
         $.getJSON( "/api/auth/admin-status", function( data ) {
             loginName = data.admin;
             refreshUser();
-            loadAllData();
+            loadAllData(checkUrl);
         });
     }
 
-    function loadAllData() {
+    function loadAllData(checkUrl) {
         loadStatusData();
         loadObjectsData();
         $.getJSON("/api/blocks", function( data ) {
@@ -36,7 +36,7 @@
             loadErrorsData();
             loadIpfsStatusData();
         }
-        if (window.location.search !== "") {
+        if (window.location.search !== "" && checkUrl) {
             checkUrlParam();
         }
     }
@@ -590,7 +590,7 @@
     var originObject;
     var globalObjects = {};
     function generateJsonFromObject(obj) {
-        $("#json-display").show();
+        $("#json-editor-div").removeClass("hidden");
 
         var target = $("#json-display");
         if( target.length ) {
@@ -599,8 +599,9 @@
                 scrollTop: target.offset().top
             }, 1000);
         }
-        $("#editing-objects").show();
-        $("#stop-edit-objects").show();
+        $("#finish-edit-btn").removeClass("hidden");
+        $("#stop-edit-btn").removeClass("hidden");
+        console.log(obj);
         delete obj.eval;
         originObject = obj;
         editor = new JsonEditor('#json-display', obj);
@@ -667,63 +668,6 @@
         return amount;
     }
 
-    function saveCurrentState(tab, url) {
-        if (window.location.pathname + window.location.search !== url && url !== window.location.pathname && url !== (window.location.pathname + "?")) {
-            if (tab === "#objects") {
-                saveObjectTabState(tab, url);
-            } else if (tab === "#operations") {
-                saveOperationTabState(tab, url);
-            } else if (tab === "#blocks") {
-                saveBlocksTabState(tab, url);
-            }
-        }
-    }
-
-    function saveBlocksTabState(tab, url) {
-        var res = {
-            tab: tab,
-            blockSearch: $("#blocks-search").val(),
-            showInput: $("#block-from-fields").hasClass("hidden"),
-            inputKey: $("#search-block-field").val(),
-            inputLimit: $("#block-limit-value").val(),
-            idStorage: idStorage
-        };
-
-        window.history.pushState(res, "State Blocks", url);
-    }
-
-    function saveOperationTabState(tab, url) {
-        var res = {
-            tab: tab,
-            inputSearch:$("#input-search-operation-key").text(),
-            keyHidden:$("#operations-search-fields").is(":hidden"),
-            keyValue: $("#operations-key").val(),
-            load: $("#operations-search").val(),
-            countElements: $("#amount-operations").text(),
-        };
-
-        window.history.pushState(res, "State Operations", url);
-    }
-
-    function saveObjectTabState(tab, url) {
-        var res = {
-            tab: tab,
-            searchType: $("#search-type-list").val(),
-            type: $("#type-list").val(),
-            showHistory: $("#historyCheckbox").is(":checked"),
-            historyDisabled: $("#historyCheckbox").is(":disabled"),
-            key: $("#search-key").val(),
-            limit: $("#limit-field").val(),
-            countElements: $("#amount-objects").text(),
-        };
-
-        window.history.pushState(res, "State Objects", url);
-    }
-
-    function showOperations(data, url) {
-        generateOperationResponse(data);
-    }
-
     function checkUrlParam() {
         // objects -> http://localhost:6463/api/admin?view=objects&filter=&search=osm.place&type=id&key=12345662&history=true
         // operations -> http://localhost:6463/api/admin?view=operations&loadBy=blockId&key=0
@@ -760,7 +704,7 @@
                     $("#search-key").val(keyValue);
                 }
 
-                $("#load-objects-btn").click();
+                loadObjectView(false);
         } else if (window.location.href.toLowerCase().indexOf('api/admin?view=operations') > 1) {
             $(".nav-tabs a[href=\"#operations\"]").tab('show');
             var loadType = url.searchParams.get('loadBy');
@@ -772,7 +716,7 @@
                 $("#operations-key").val(key);
             }
 
-            $("#operations-search-btn").click();
+            loadOperationView();
         } else if (window.location.href.toLowerCase().indexOf('api/admin?view=blocks') > 1) {
             $(".nav-tabs a[href=\"#blocks\"]").tab('show');
             var searchType = url.searchParams.get('search');
@@ -788,7 +732,7 @@
                 $("#block-limit-value").val(limit);
             }
 
-            $("#block-load-btn").click();
+            loadBlockView();
         }
     }
 
@@ -814,7 +758,6 @@
         var obj = {
             "botName" : bot
         };
-        //[{"bot":"opr-type","status":"SUCCESS","startDate":"Sep 5, 2019, 11:50:45 AM","endDate":"Sep 5, 2019, 11:51:40 AM","total":25858,"processed":25858}]
         $.getJSON("/api/bot/history", obj)
             .done(function (data) {
                 var items = "";
@@ -845,8 +788,145 @@
         $("#bots-history-table").hide();
     }
 
+    function loadObjectView() {
+        var filter = $("#filter-list").val();
+        var searchType = $("#search-type-list").val();
+        var type = $("#type-list").val();
+        var key = $("#search-key").val();
+        $("#json-editor-div").addClass("hidden");
+        $("#stop-edit-btn").addClass("hidden");
+        $("#finish-edit-btn").addClass("hidden");
+        $("#add-edit-op-btn").addClass("hidden");
+
+        if (filter === "operation") {
+            let amount = getHistoryForObject("operation", key, true);
+            $("#amount-objects").html("Count results: " +  amount);
+        } else if (filter === "userid") {
+            let amount = getHistoryForObject("user", key, true);
+            $("#amount-objects").html("Count results: " +  amount);
+        } else {
+            if (searchType === "count") {
+                $.getJSON("/api/objects-count?type=" + type, function (data) {
+                    var items = "";
+                    globalObjects = [];
+                    $("#objects-list").html(items);
+                    $("#amount-objects").html("Count results: " + data.count);
+                });
+            } else {
+                let funcProcResults = function (data) {
+                    var items = $("#objects-list");
+                    items.empty();
+                    let templateItem = $("#objects-list-item");
+                    var amountResults = 0;
+                    globalObjects = data.objects;
+                    for (var i = 0; i < data.objects.length; i++) {
+                        let obj = data.objects[i];
+                        const tmp_id = i;
+                        if ($("#historyCheckbox").is(":checked") === true) {
+                            amountResults += getHistoryForObject("object", type + "," + obj.id, false);
+                        } else {
+                            var it = templateItem.clone();
+                            it.find("[did='edit-object']").click(function () {
+                                generateJsonFromObject(globalObjects[tmp_id]);
+                            });
+                            it.find("[did='object-op-hash']").attr('data-content', obj.eval.parentHash).html(smallHash(obj.eval.parentHash)).popover();
+                            it.find("[did='obj-id']").html(obj.id.toString());
+                            it.find("[did='history-object-link']").attr("href", "/api/admin?view=objects&filter=type&search=" + type + "&type=id&key=" + obj.id.toString() + "&history=true&limit=50")
+                            if (obj.comment) {
+                                it.find("[did='obj-comment']").html(obj.comment);
+                            } else {
+                                it.find("[did='comment']").prop("hidden", true);
+                            }
+                            it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
+
+                            items.append(it)
+                        }
+                    }
+                    $("#amount-objects").html("Count results: " + (amountResults === 0 ? data.objects.length : amountResults));
+                };
+                if (searchType === "all") {
+                    if (type === "none" && $("#historyCheckbox").is(":checked") === true) {
+                        var amount = getHistoryForObject("all", null, true);
+                        $("#amount-objects").html("Count results: " +  amount);
+                    } else {
+                        let obj = {
+                            "type": type,
+                            "limit": $("#limit-field").val()
+                        };
+
+                        $.getJSON("/api/objects", obj, function (data) {
+                            funcProcResults(data);
+                        });
+                    }
+
+                } else if (searchType === "id") {
+                    let obj = {
+                        "type": type,
+                        "key": key
+                    };
+                    $.getJSON("/api/objects-by-id", obj, function (data) {
+                        funcProcResults(data);
+                    });
+                } else {
+                    let obj = {
+                        "type": type,
+                        "index": $("#search-type-list").val(),
+                        "limit": $("#limit-field").val(),
+                        "key": key
+                    };
+                    $.getJSON("/api/objects-by-index", obj, function (data) {
+                        funcProcResults(data);
+                    });
+                }
+            }
+        }
+    }
+
+    function loadOperationView() {
+        var typeSearch = $("#operations-search").val();
+        var key = $("#operations-key").val();
+        if (typeSearch === "queue") {
+            $.getJSON( "/api/queue", function( data ) {
+                generateOperationResponse(data);
+                $("#amount-operations").addClass("hidden");
+            });
+        } else if (typeSearch === "id") {
+            $.getJSON("/api/ops-by-id?id=" + key, function (data) {
+                generateOperationResponse(data);
+                $("#amount-operations").removeClass("hidden");
+
+            })
+        } else if (typeSearch === "blockId") {
+            $.getJSON( "/api/ops-by-block-id?blockId=" + key, function( data ) {
+                generateOperationResponse(data);
+                $("#amount-operations").removeClass("hidden");
+
+            });
+        } else { //blockHash
+            $.getJSON( "/api/ops-by-block-hash?hash=" + key, function( data ) {
+                generateOperationResponse(data);
+                $("#amount-operations").removeClass("hidden");
+
+            });
+        }
+    }
+
+    function loadBlockView() {
+        var type = $("#blocks-search").val();
+        var reqObj = {
+            depth: $("#block-limit-value").val()
+        };
+        if(type !== "all") {
+            reqObj[type] = $("#search-block-field").val();
+        }
+
+        $.getJSON("/api/blocks", reqObj, function (data) {
+            processBlocksResult(data);
+        });
+    }
+
     $( document ).ready(function() {
-        loadData();
+        loadData(true);
         $("#clear-list-btn").click(function(){
             $.post("/api/mgmt/queue-clear", {},  function(data, status){
                 loadData();
@@ -1102,143 +1182,13 @@
             var searchType = $("#search-type-list").val();
             var type = $("#type-list").val();
             var key = $("#search-key").val();
-            $("#json-display").hide();
-            $("#editing-objects").hide();
-            $("#stop-edit-objects").hide();
-            $("#add-edited-obj").hide();
+            $("#json-editor-div").addClass("hidden");
+            $("#stop-edit-btn").addClass("hidden");
+            $("#finish-edit-btn").addClass("hidden");
+            $("#add-edit-op-btn").addClass("hidden");
 
-            if (filter === "operation") {
-                let amount = getHistoryForObject("operation", key, true);
-                $("#amount-objects").html("Count results: " +  amount);
-                //saveCurrentState('#objects', '/api/admin?view=objects&filter=operation&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-            } else if (filter === "userid") {
-                let amount = getHistoryForObject("user", key, true);
-                $("#amount-objects").html("Count results: " +  amount);
-                // saveCurrentState('#objects', '/api/admin?view=objects&filter=userid&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-            } else {
-                if (searchType === "count") {
-                    $.getJSON("/api/objects-count?type=" + type, function (data) {
-                        var items = "";
-                        globalObjects = [];
-                        $("#objects-list").html(items);
-                        $("#amount-objects").html("Count results: " + data.count);
-                        // saveCurrentState('#objects', '/api/admin?view=objects&filter=type&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked"));
-                    });
-                } else {
-                    let funcProcResults = function (data, url) {
-                        var items = $("#objects-list");
-                        items.empty();
-                        let templateItem = $("#objects-list-item");
-                        var amountResults = 0;
-                        globalObjects = data.objects;
-                        for (var i = 0; i < data.objects.length; i++) {
-                            let obj = data.objects[i];
-                            if ($("#historyCheckbox").is(":checked") === true) {
-                                amountResults += getHistoryForObject("object", type + "," + obj.id, false);
-                            } else {
-                                var it = templateItem.clone();
-                                it.find("[did='object-op-hash']").attr('data-content', obj.eval.parentHash).html(smallHash(obj.eval.parentHash)).popover();
-                                it.find("[did='obj-id']").html(obj.id.toString());
-                                it.find("[did='history-object-link']").attr("href", "/api/admin?view=objects&filter=type&search=" + type + "&type=id&key=" + obj.id.toString() + "&history=true&limit=50")
-                                if (obj.comment) {
-                                    it.find("[did='obj-comment']").html(obj.comment);
-                                } else {
-                                    it.find("[did='comment']").prop("hidden", true);
-                                }
-                                it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
-
-                                items.append(it)
-                            }
-                        }
-                        $("#amount-objects").html("Count results: " + (amountResults === 0 ? data.objects.length : amountResults));
-                        // saveCurrentState('#objects', url);
-                    };
-                    if (searchType === "all") {
-                        if (type === "none" && $("#historyCheckbox").is(":checked") === true) {
-                            var amount = getHistoryForObject("all", null, true);
-                            $("#amount-objects").html("Count results: " +  amount);
-                            // saveCurrentState('#objects', url);
-                        } else {
-                            let obj = {
-                                "type": type,
-                                "limit": $("#limit-field").val()
-                            };
-
-                            $.getJSON("/api/objects", obj, function (data) {
-                                funcProcResults(data, '/api/admin?view=objects&filter=type&search=' + type + '&type=' + searchType + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-                            });
-                        }
-
-                    } else if (searchType === "id") {
-                        let obj = {
-                            "type": type,
-                            "key": key
-                        };
-                        $.getJSON("/api/objects-by-id", obj, function (data) {
-                            funcProcResults(data, '/api/admin?view=objects&filter=type&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-                        });
-                    } else {
-                        let obj = {
-                            "type": type,
-                            "index": $("#search-type-list").val(),
-                            "limit": $("#limit-field").val(),
-                            "key": key
-                        };
-                        $.getJSON("/api/objects-by-index", obj, function (data) {
-                            funcProcResults(data, '/api/admin?view=objects&filter=type&search=' + type + '&type=' + searchType + '&key=' + key + '&history=' + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
-                        });
-                    }
-                }
-            }
-
+            window.location = '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val();
         });
-
-        window.onpopstate = function (event) {
-            if (window.history.state && history.state.idStorage) {
-                if (history.state.tab === "#objects") {
-                    $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
-                    document.getElementById("objects-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
-                    console.log(history.state);
-                    $("#type-list").val(history.state.type).change();
-                    setTimeout(function() {
-                        $("#search-type-list").val(history.state.searchType).change();
-                    }, 200);
-                    $("#historyCheckbox").prop("checked", history.state.showHistory).prop("disabled", history.state.historyDisabled);
-                    $("#limit-field").val(history.state.limit);
-                    $("#search-key").val(history.state.key);
-                    $("#amount-objects").text(history.state.countElements);
-                } else if (history.state.tab === "#operations") {
-                    $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
-                    document.getElementById("operations-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
-                    console.log(history.state);
-                    if (!history.state.keyHidden) {
-                        // $("#operations-search-fields").show();
-                        $("#operations-search-fields").removeClass("hidden");
-                        $("#input-search-operation-key").text(history.state.inputSearch);
-                        $("#operations-key").val(history.state.keyValue);
-                    } else {
-                        // $("#operations-search-fields").hide();
-                        $("#operations-search-fields").addClass("hidden");
-                        // $("#input-search-operation-key").hide();
-                        // $("#operations-key").hide();
-                    }
-                    $("#operations-search").val(history.state.load);
-                    $("#amount-operations").text(history.state.countElements);
-                } else if (history.state.tab === "#blocks") {
-                    $(".nav-tabs a[href=\""+history.state.tab+"\"]").tab('show');
-                    document.getElementById("blocks-list").innerHTML = sessionStorage.getItem(event.state.idStorage);
-                    $("#blocks-search").val(history.state.blockSearch);
-                    if (!history.state.showInput) {
-                    	$("#block-from-fields").removeClass("hidden");
-                        $("#search-block-field").val(history.state.inputKey);
-                        $("#block-limit-value").val(history.state.inputLimit);
-
-                    } else {
-                    	$("#block-from-fields").addClass("hidden");
-                    }
-                }
-            }
-        };
 
         $("#finish-edit-btn").click(function () {
             try {
@@ -1251,9 +1201,9 @@
                 DEEP_DIFF_MAPPER.generateEditOp(originObject, changeEdit, currentEdit);
 
                 originObject = null;
-                $("#editing-objects").hide();
-                $("#stop-edit-objects").show();
-                $("#add-edited-obj").show();
+                $("#stop-edit-btn").removeClass("hidden");
+                $("#finish-edit-btn").addClass("hidden");
+                $("#add-edit-op-btn").removeClass("hidden");
             } catch (e) {
                 alert(e);
             }
@@ -1262,10 +1212,10 @@
         $("#stop-edit-btn").click(function () {
             editor = null;
             originObject = null;
-            $("#editing-objects").hide();
-            $("#add-edited-obj").hide();
-            $("#stop-edit-objects").hide();
-            $("#json-display").hide();
+            $("#json-editor-div").addClass("hidden");
+            $("#stop-edit-btn").addClass("hidden");
+            $("#finish-edit-btn").addClass("hidden");
+            $("#add-edit-op-btn").addClass("hidden");
         });
 
        
@@ -1293,7 +1243,7 @@
                             }
                         }
                         items += "<br></li>";
-                    };
+                    }
                     $("#bot-list-stats").html(items);
                 })
                 .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
@@ -1378,43 +1328,13 @@
             var typeSearch = $("#operations-search").val();
             var key = $("#operations-key").val();
 
-            if (typeSearch === "queue") {
-                $.getJSON( "/api/queue", function( data ) {
-                    showOperations(data, '/api/admin?view=operations&load=' + typeSearch);
-                    $("#amount-operations").addClass("hidden");
-                });
-            } else if (typeSearch === "id") {
-                $.getJSON("/api/ops-by-id?id=" + key, function (data) {
-                    showOperations(data, '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key);
-                    $("#amount-operations").removeClass("hidden");
+            window.location = '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key;
 
-                })
-            } else if (typeSearch === "blockId") {
-                $.getJSON( "/api/ops-by-block-id?blockId=" + key, function( data ) {
-                    showOperations(data, '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key);
-                    $("#amount-operations").removeClass("hidden");
-
-                });
-            } else { //blockHash
-                $.getJSON( "/api/ops-by-block-hash?hash=" + key, function( data ) {
-                    showOperations(data, '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key);
-                    $("#amount-operations").removeClass("hidden");
-
-                });
-            }
         });
 
         $("#block-load-btn").click(function () {
             var type = $("#blocks-search").val();
-            var reqObj = {
-               	depth: $("#block-limit-value").val()
-            };
-            if(type != "all") {
-            	reqObj[type] = $("#search-block-field").val();
-            }
-            $.getJSON("/api/blocks", reqObj, function (data) {
-                processBlocksResult(data);
-            });
+            window.location = "/api/admin?view=blocks&search=" + type+ "&hash=" + $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val();
         });
 
         $("#add-file-btn").click(function () {
@@ -1514,8 +1434,6 @@
                 contentType: 'application/json; charset=utf-8'
             }).done(function(data){  $("#result").html(data); loadData();})
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
-
-            // $.post("/api/auth/process-operation", obj)
         });
         $("#add-edit-op-btn").click(function () {
             var obj = {
@@ -1530,9 +1448,11 @@
                 data: json,
                 contentType: 'application/json; charset=utf-8'
             }).done(function(data){
-                $("#result").html(data); loadData();  editor = null;
-                $("#json-display").hide();$("#stop-edit-objects").hide();
-                $("#add-edited-obj").hide()})
+                    $("#result").html(data); loadData();  editor = null;
+                    $("#json-editor-div").addClass("hidden");
+                    $("#stop-edit-btn").addClass("hidden");
+                    $("#add-edit-op-btn").addClass("hidden");
+                })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
         });
         $("#login-btn").click(function() {
