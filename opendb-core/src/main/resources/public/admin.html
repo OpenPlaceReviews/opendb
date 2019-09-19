@@ -127,7 +127,7 @@
         </div>
         <div class="row">
         	<div class="col-md-2 form-group">
-        		<input type="button" class="btn btn-primary form-control" id="block-load-btn" value="Load">
+        		<input type="submit" class="btn btn-primary form-control" id="block-load-btn" value="Load">
         	</div>
         </div>
         <ul class="list-group" id="blocks-list">
@@ -162,9 +162,8 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <div id="operations" class="tab-pane fade">
         <h3>Operations</h3>
-        <div class="row form-group form-horizontal">
-            <!--<label for="operations-search" class="control-label col-md-1">Select load:&nbsp;</label>-->
-            <div class="col-md-3">
+        <div class="row">
+            <div class="form-group col-md-4">
                 <select id="operations-search" class="form-control">
                     <option selected value="queue">Queue</option>
                     <option value="id">by Id</option>
@@ -172,26 +171,26 @@ Details: <b><span did="block-details"></span></b></pre>
                     <option value="blockHash">by Block Hash</option>
                 </select>
             </div>
-            <div hidden="true" id="operations-search-fields">
-                <label id="input-search-operation-key" for="operations-key" class="control-label col-md-1">Input</label>
-                <div class="col-md-3">
+            <div class="form-group form-inline col-md-8 hidden" id="operations-search-fields">
+                <div class="form-group">
+                    <label id="input-search-operation-key" for="operations-key" class="control-label">Input</label>
                     <input type="text" id="operations-key" class="form-control">
                 </div>
             </div>
         </div>
-        <div class="row form-group">
-            <div class="col-md-2">
-                <input type="button" id="operations-search-btn" value="Load" class="btn btn-primary form-control">
+        <div class="row">
+            <div class="col-md-2 form-group">
+                <input type="submit" id="operations-search-btn" value="Load" class="btn btn-primary form-control">
             </div>
         </div>
-        <label id="amount-operations" class="col-form-label" hidden="true"></label>
+        <label id="amount-operations" class="col-form-label hidden"></label>
         <ul class="list-group" id="operations-list"></ul>
-        <ul class="list-group" hidden="true" id="operation-list-item">
-            <li class="panel panel-default">
-                <div class="panel-heading">
-                    <b><a class="pull-right" did="operation-object-link" href="#" ><span did="op-hash"></span></a></b>
-                    <p>Operation type: <b><span did="op-type"></span></b></p>
-                </div>
+        <ul class="list-group" hidden="true">
+            <li class="panel panel-default" id="operation-list-item">
+                <p class="panel-heading">
+                    <a href="#" class="pull-right" did="op-hash"></a>
+                    <a href="#" did="op-type-link">Operation type: <b><span did="op-type"></span></b></a>
+                </p>
                 <div class="panel-body">
                     <p class="pull-right">Signed by: <b><span did="signed-by"></span></b></p>
                     <p>Objects: <span did="object-info"></span></p>
@@ -204,47 +203,55 @@ Details: <b><span did="block-details"></span></b></pre>
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
 
-        <div class="form-group">
-        <form class="form-inline">
-            <div class="form-group">
-                <label for="type-list">Select type:&nbsp;</label>
-                <select class="form-control" id="type-list"></select>
+        <div class="row">
+            <div class="form-group form-inline col-md-8">
+                <div class="form-group">
+                    <label for="filter-list">Filter:&nbsp;</label>
+                    <select class="form-control" id="filter-list">
+                        <option selected value="type">by type</option>
+                        <option value="operation">by operation</option>
+                        <option value="userid">by user Id</option>
+                    </select>
+                </div>
+                <div class="form-group" id="type-list-select">
+                    <label for="type-list">Select type:&nbsp;</label>
+                    <select class="form-control" id="type-list"></select>
+                </div>
+                <div class="form-group" id="search-type-list-select">
+                    <label for="search-type-list">Search:&nbsp;</label>
+                    <select class="form-control" id="search-type-list">
+                        <option selected value="all">all</option>
+                        <option value="userId">by userId</option>
+                        <option value = "opHash" >by opHash</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="historyCheckbox">Show history</label>
+                    <input type="checkbox" id="historyCheckbox" name="scales">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="search-type-list">Search:&nbsp;</label>
-                <select class="form-control" id="search-type-list">
-                    <option selected value="all">all</option>
-                    <option value="userId">by userId</option>
-                    <option value = "opHash" >by opHash</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="historyCheckbox">Show history</label>
-                <input type="checkbox" id="historyCheckbox" name="scales">
-            </div>
-        </form>
         </div>
 
-        <div class="form-group">
-        <form class="form-inline" id="search-key-input" hidden="true">
-            <div class="form-group">
-                <label for="search-key" id="name-key-field"></label>
-                <input type="text" id="search-key" class="form-control"/>
+        <div class="row">
+            <div class="form-group form-inline col-md-4 hidden" id="search-key-input">
+                <div class="form-group">
+                    <label for="search-key" id="name-key-field"></label>
+                    <input type="text" id="search-key" class="form-control"/>
+                </div>
             </div>
-        </form>
         </div>
 
-        <div class="form-group">
-            <form class="form-inline">
+        <div class="row">
+            <div class="form-group form-inline col-md-4">
                 <div class="form-group">
                     <label for="limit-field">Amount entries (Limit):</label>
                     <input type="text" class="form-control" id="limit-field" value="50"/>
                 </div>
-            </form>
+            </div>
         </div>
 
-        <div class="row form-group">
-            <div class="col-md-2">
+        <div class="row">
+            <div class="col-md-2 form-group">
                 <input type="submit" value="Search" id="load-objects-btn" class="btn btn-primary form-control">
             </div>
         </div>
@@ -264,34 +271,38 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
 
-        <ul class="list-group" id="objects-list"></ul>
-        <ul class="list-group" id="objects-list-item" hidden="true">
-            <li class="panel panel-default">
-                <div class="panel-heading">
-                    <b><span class="pull-right" did="op-hash"></span></b>
-                    <p>Object ID: <b><span did="obj-id"></span></b></p>
-                </div>
+        <ul class="list-group" id="objects-list">
+        </ul>
+
+        <!--search-->
+        <ul class="list-group" hidden="true">
+            <li class="panel panel-default" id="objects-list-item">
+                <p class="panel-heading">
+                    <a href="#" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
+                    <a href="" did="history-object-link">Object Id: <b><span did="obj-id"></span></b></a>
+                </p>
                 <div class="panel-body">
                     <p did="comment">Comment: <b><span did="obj-comment"></span></b></p>
                     <details><summary><b>Raw json</b></summary><pre did="object-json"></pre></details>
                 </div>
             </li>
         </ul>
-        <ul class="list-group" id="objects-history-list-item" hidden="true">
-            <li class="panel panel-default">
+
+        <!--history-->
+        <ul class="list-group" hidden="true">
+            <li class="panel panel-default" id="objects-history-list-item">
                 <div class="panel-heading">
-                    <b><a class="pull-right" did="operation-object-link" href="#" ><span did="op-hash"></span></a></b>
-                    <p>Object ID: <b><span did="obj-id"></span></b></p>
+                    <a href="#" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
+                    <span did="history-object-link">Object Id: <b><span did="obj-id"></span></b></span>
                 </div>
                 <div class="panel-body">
-                    <!--<p class="pull-right">Signed by: <b><span did="signed-by"></span></b></p>-->
-                    <p>Comment: <b><span did="obj-comment"></span></b></p>
-                    <p>Comment: <b><span did="obj-comment"></span></b></p>
-                    <p>Comment: <b><span did="obj-comment"></span></b></p>
-                    <p>Comment: <b><span did="obj-comment"></span></b></p>
-                    <p>Comment: <b><span did="obj-comment"></span></b></p>
-                    <details><summary><b>Raw json</b></summary><pre did="object-json"></pre></details>
-                    <details><summary><b>Raw json</b></summary><pre did="object-json"></pre></details>
+                    <p>Date: <b><span did="obj-date"></span></b></p>
+                    <p>Type: <b><span did="obj-type"></span></b></p>
+                    <p did="comment-hidden">Comment: <b><span did="obj-comment"></span></b></p>
+                    <p did="user-hidden" class="pull-right">User: <b><span did="obj-user"></span></b></p>
+                    <p>Status: <b><span did="obj-status"></span></b></p>
+                    <details did="object-json-hidden"><summary><b>Obj json</b></summary><pre did="object-json"></pre></details>
+                    <details did="delta-json-hidden"><summary><b>Delta json</b></summary><pre did="delta-json"></pre></details>
                 </div>
             </li>
         </ul>
