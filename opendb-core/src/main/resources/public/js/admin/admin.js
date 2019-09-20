@@ -690,115 +690,108 @@
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
     }
 
-    // TODO refactor method
     function showBotHistory(bot) {
         var obj = {
             "botName" : bot
         };
         $.getJSON("/api/bot/history", obj)
             .done(function (data) {
-                var items = "";
+                var table = $("#main-bot-history-table");
+                table.empty();
+                var template = $("#bot-history-template");
                 for (var i=0; i < data.length; i++) {
                     var obj = data[i];
-                    items += "<tr>";
-                    items += "<td>" + obj.bot + "</td>";
-                    items += "<td>" + new Date(obj.startDate).toLocaleString() + "</td>";
+                    var newTemplate = template.clone()
+                        .appendTo(table)
+                        .show();
+                    newTemplate.find("[did='bot-id']").html(obj.bot);
+                    newTemplate.find("[did='start-date']").html(new Date(obj.startDate).toLocaleString());
                     if (obj.endDate !== undefined) {
-                        items += "<td>" + new Date(obj.endDate).toLocaleString() + "</td>";
-                    } else {
-                        items += "<td></td>"
+                        newTemplate.find("[did='end-date']").html(new Date(obj.endDate).toLocaleString());
                     }
-                    items += "<td>" + obj.total + "</td>";
-                    items += "<td>" + obj.processed + "</td>";
-                    items += "<td>" + obj.status + "</td>";
-                    items += "</tr>";
+                    newTemplate.find("[did='total']").html(obj.total);
+                    newTemplate.find("[did='processed']").html(obj.processed);
+                    newTemplate.find("[did='status']").html(obj.status);
                 }
-                $(".modal-body #bots-history-table  > tbody").html(items);
-                $(".modal-header #history-bot-name").val(bot);
-                $(".modal-header #bot-history-header").html("History of the launches for bot: " + bot);
+                $("#history-bot-name").val(bot);
+                $("#bot-history-header").html("History of the launches for bot: " + bot);
             })
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
     }
 
-    // TODO refactor method
     function loadBotData() {
         $.getJSON("/api/bot/stats", function (data) {
-            var items = "";
+            var table = $("#main-bot-table");
+            table.empty();
+            var template = $("#bot-template");
             for (var key in data) {
                 var obj = data[key];
-                items += "<tr>";
-                items += "<td>" + obj.id + "</td>";
+
+                var newTemplate = template.clone()
+                    .appendTo(table)
+                    .show();
+                newTemplate.find("[did='id']").html(obj.id);
+                var action = "";
                 if ('botStats' in obj) {
-                    items += "<td>" + obj.botStats.taskName + "</td>";
-                    items += "<td>" + obj.botStats.taskDescription + "</td>";
-                } else {
-                    items += "<td></td>";
-                    items += "<td></td>";
-                }
-                items += "<td>" + new Date(obj.started).toLocaleString() + "</td>";
-                items += "<td>" + obj.interval + "</td>";
-                if ('botStats' in obj) {
+                    newTemplate.find("[did='task-name']").html(obj.botStats.taskName);
+                    newTemplate.find("[did='task-description']").html(obj.botStats.taskDescription);
                     if (!obj.botStats.isRunning) {
-                        items += "<td>NOT RUNNING</td>"
+                        newTemplate.find("[did='progress']").html("NOT RUNNING");
                     } else {
                         var progressBarValue = parseInt((obj.botStats.progress / obj.botStats.total) * 100);
-                        items += "<td><div class=\"progress\">\n" +
-                            "  <div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\"\n" +
-                            "  aria-valuenow=\"" + progressBarValue + "\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width:" + progressBarValue + "%\">\n" +
-                            progressBarValue + "%" +
-                            "  </div>\n" +
-                            "</div></td>";
+                        newTemplate.find("[did='progress']").html("<div class=\"progress\">\n" +
+                        "  <div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\"\n" +
+                        "  aria-valuenow=\"" + progressBarValue + "\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width:" + progressBarValue + "%\">\n" + progressBarValue + "%" +
+                        "  </div>\n" +
+                        "</div>");
                     }
-                } else {
-                    items += "<td></td>";
+                    if (obj.botStats.isRunning === false) {
+                        action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
+                    } else {
+                        action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
+                    }
                 }
-                items += "<td>";
-                if ('botStats' in obj && obj.botStats.isRunning === false) {
-                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
-                } else {
-                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
+                if (obj.started !== null && obj.started !== undefined) {
+                    newTemplate.find("[did='last-launch']").html(new Date(obj.started).toLocaleString());
                 }
-                items += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>";
-                items += "</td>";
-                items += "</tr>";
+                newTemplate.find("[did='interval']").html(obj.interval);
 
+                action += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>"
+                newTemplate.find("[did='actions']").html(action);
             }
-
-            $("#bots-table > tbody").html(items);
         });
     }
 
-    // TODO refactor method
     function loadDBIndexData() {
         $.getJSON("/api/index", function (data) {
-            // var table = $("#index-table");
-            // items.clear();
-            // console.log(items);
-            // var mytablebody = document.createElement("tbody");
-            var items = "";
+            var table = $("#main-index-table");
+            table.empty();
+            var infoTemplate = $("#db-info-template");
+            var fullTemplate = $("#db-full-template");
             for (var key in data) {
                 var obj = data[key];
-                items += "<tr><td class='info' colspan='9'>" + key + "</td></tr>";
+                var newInfoTemplate = infoTemplate.clone()
+                    .appendTo(table)
+                    .show();
+                newInfoTemplate.find("[did='info-key']").html(key);
                 for (var keyObj in obj) {
                     var index = obj[keyObj];
-                    items += "<tr>";
-                    items += "<td>" + index.indexId + "</td>";
-                    items += "<td>" + index.opType + "</td>";
-                    items += "<td>" + index.columnDef.tableName + "</td>";
-                    items += "<td>" + index.columnDef.colName + "</td>";
-                    items += "<td>" + index.columnDef.colType + "</td>";
-                    items += "<td>" + index.columnDef.index + "</td>";
+                    var newFullTemplate = fullTemplate.clone()
+                        .appendTo(table)
+                        .show();
+                    newFullTemplate.find("[did='index-id']").html(index.indexId);
+                    newFullTemplate.find("[did='op-type']").html(index.opType);
+                    newFullTemplate.find("[did='table-name']").html(index.columnDef.tableName);
+                    newFullTemplate.find("[did='col-name']").html(index.columnDef.colName);
+                    newFullTemplate.find("[did='col-type']").html(index.columnDef.colType);
+                    newFullTemplate.find("[did='index']").html(index.columnDef.index);
                     if (index.fieldsExpression.length >= 1) {
-                        items += "<td>" + index.fieldsExpression[0].expression + "</td>";
-                    } else {
-                        items += "<td></td>";
+                        newFullTemplate.find("[did='expression']").html(index.fieldsExpression[0].expression.toString());
                     }
-                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
-                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
-                    items += "</tr>";
+                    newFullTemplate.find("[did='cache-runtime']").html(index.cacheRuntimeBlocks);
+                    newFullTemplate.find("[did='cache-db']").html(index.cacheDBBlocks);
                 }
             }
-            $("#index-table > tbody").html(items);
         })
     }
 

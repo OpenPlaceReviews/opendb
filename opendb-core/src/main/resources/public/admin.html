@@ -364,7 +364,18 @@ Details: <b><span did="block-details"></span></b></pre>
                         </tr>
                         </thead>
 
-                        <tbody></tbody>
+                        <tbody id="main-bot-table"></tbody>
+                        <tbody>
+                            <tr id="bot-template" style="display: none">
+                                <td did="id"></td>
+                                <td did="task-name"></td>
+                                <td did="task-description"></td>
+                                <td did="last-launch"></td>
+                                <td did="interval"></td>
+                                <td did="progress"></td>
+                                <td did="actions"></td>
+                            </tr>
+                        </tbody>
                     </table>
 
                 </div>
@@ -409,28 +420,26 @@ Details: <b><span did="block-details"></span></b></pre>
                         </tr>
                         </thead>
 
-                        <tbody></tbody>
+                        <tbody id="main-index-table"></tbody>
+                        <tbody>
+                            <tr id="db-info-template" style="display: none">
+                                <td class="info" colspan="9" did="info-key"></td>
+                            </tr>
+                            <tr id="db-full-template" style="display: none">
+                                <td did="index-id"></td>
+                                <td did="op-type"></td>
+                                <td did="table-name"></td>
+                                <td did="col-name"></td>
+                                <td did="col-type"></td>
+                                <td did="index"></td>
+                                <td did="expression"></td>
+                                <td did="cache-runtime"></td>
+                                <td did="cache-db"></td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
-
-            <!--<tr did="full-db-table-row">-->
-                <!--<td did="index-id"></td>-->
-                <!--<td did="op-type"></td>-->
-                <!--<td did="table-name"></td>-->
-                <!--<td did="col-name"></td>-->
-                <!--<td did="col-type"></td>-->
-                <!--<td did="index"></td>-->
-                <!--<td did="expression"></td>-->
-                <!--<td did="cache-runtime"></td>-->
-                <!--<td did="cache-db"></td>-->
-                <!--<td></td>-->
-            <!--</tr>-->
-
-            <!--<tr did="info-db-table-row" >-->
-               <!--<td class="info" colspan="9" did="key"></td>-->
-            <!--</tr>-->
-
         </div>
         <!--DB Index-->
 
@@ -496,7 +505,17 @@ Details: <b><span did="block-details"></span></b></pre>
                             </tr>
                             </thead>
 
-                            <tbody></tbody>
+                            <tbody id="main-bot-history-table"></tbody>
+                            <tbody>
+                                <tr id="bot-history-template" style="display: none">
+                                    <td did="bot-id"></td>
+                                    <td did="start-date"></td>
+                                    <td did="end-date"></td>
+                                    <td did="total"></td>
+                                    <td did="processed"></td>
+                                    <td did="status"></td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
