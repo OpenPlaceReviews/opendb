@@ -301,7 +301,7 @@
             it.find("[did='block-id']").html(op.block_id);
             it.find("[did='signed-by']").html(op.signed_by);
             it.find("[did='block-hash']").attr('data-content', op.hash).html(smallHash(op.hash)).popover();
-            it.find("[did='op-count']").html(op.eval.operations_size);
+            it.find("[did='op-count']").html(op.operations_size);
             it.find("[did='block-date']").html(op.date.replace("T", " ").replace("+0000", " UTC"));
 
             if (op.eval) {
@@ -309,14 +309,13 @@
                     superblockHash = op.eval.superblock_hash;
                     superblockId = superblockId + 1;
                 }
-
                 it.find("[did='superblock']").html(superblockId + ". " + op.eval.superblock_hash);
-                it.find("[did='block-size']").html((op.eval.block_size/1024).toFixed(3) + " KB");
-                it.find("[did='block-objects']").html(op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted);
-                it.find("[did='block-objects-info']").html("<b>" +
-                		op.eval.operations_size + "</b> operations ( <b>" +
-                		op.eval.obj_added + "</b> added, <b>" + op.eval.obj_edited + "</b> edited, <b>" + op.eval.obj_deleted + "</b> removed objects )");
             }
+            it.find("[did='block-size']").html((op.block_size/1024).toFixed(3) + " KB");
+            it.find("[did='block-objects']").html(op.obj_added + "/" + op.obj_edited + "/" + op.obj_deleted);
+            it.find("[did='block-objects-info']").html("<b>" +
+            		op.operations_size + "</b> operations ( <b>" +
+            		op.obj_added + "</b> added, <b>" + op.obj_edited + "</b> edited, <b>" + op.obj_deleted + "</b> removed objects )");
 
             it.find("[did='prev-block-hash']").html(op.previous_block_hash);
             it.find("[did='merkle-tree']").html(op.merkle_tree_hash);
@@ -782,7 +781,6 @@
             })
             .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
     }
-
 
     function closeBotHistory() {
         $("#bots-history-table").hide();

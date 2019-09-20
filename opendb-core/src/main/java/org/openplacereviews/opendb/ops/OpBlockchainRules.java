@@ -29,8 +29,12 @@ public class OpBlockchainRules {
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 4096;
+	public static final int MAX_BLOCK_SIZE_MB = 1 << 20; // 1 048 576
+	public static final int MAX_BLOCKHEADER_SIZE = 1 << 16; // 65 536
+	public static final int MAX_ALL_OP_SIZE_MB = MAX_BLOCK_SIZE_MB - MAX_BLOCKHEADER_SIZE; // 983 040 
+	
+	// Blockchain validation 
 	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
-	public static final int MAX_BLOCK_SIZE_MB = 1 << 20;
 	public static final int MAX_OP_SIZE_MB = MAX_BLOCK_SIZE_MB / 4;
 	
 	public static final int BLOCK_VERSION = 1;
@@ -91,6 +95,7 @@ public class OpBlockchainRules {
 	private static final String WILDCARD_RULE = "*";
 	
 	private JsonFormatter formatter;
+	
 	private ValidationListener logValidation;
 	
 	
@@ -99,31 +104,6 @@ public class OpBlockchainRules {
 		this.logValidation = logValidation;
 	}
 	
-	
-	public String getSignupDescription() {
-		return "This operation signs up new user in DB."
-				+ "<br>This operation must be signed by signup key itself and the login key of the server that can signup users."
-				+ "<br>Supported fields:" + "<br>'name' : unique nickname"
-				+ "<br>'auth_method' : authorization method (oauth, pwd, provided)"
-				+ "<br>'pub_key' : public key for assymetric crypthograph"
-				+ "<br>'algo' : algorithm for assymetric crypthograph"
-				+ "<br>'keygen_method' : keygen is specified when pwd is used"
-				+ "<br>'oauthid_hash' : hash for oauth id which is calculated with 'salt'"
-				+ "<br>'oauth_provider' : oauth provider such as osm, fb, google"
-				+ "<br>'details' : json with details for spoken languages, avatar, country"
-				+ "<br>list of other fields";
-	}
-
-	public String getLoginDescription() {
-		return "This operation logins an existing user to a specific 'site' (named login). "
-				+ "In case user was logged in under such name the previous login key pair will become invalid."
-				+ "<br>This operation must be signed by signup key of the user." + "<br>Supported fields:"
-				+ "<br>'name' : unique name for a user of the site or purpose of login"
-				+ "<br>'pub_key' : public key for assymetric crypthograph"
-				+ "<br>'algo' : algorithm for assymetric crypthograph"
-				+ "<br>'keygen_method' : later could be used to explain how the key was calculated"
-				+ "<br>'details' : json with details" + "<br>list of other fields";
-	}
 
 	private static boolean isAllowedNicknameSymbol(char c) {
 		return c == ' ' || c == '$' || c == '_' || c == '.' || c == '-';
@@ -142,6 +122,7 @@ public class OpBlockchainRules {
 		return true;
 	}
 
+	
 	public static String getRawHash(String hs) {
 		if(hs != null && hs.length() > 0) {
 			int i = hs.lastIndexOf(':');
@@ -166,6 +147,7 @@ public class OpBlockchainRules {
 	public static String getUserFromNicknameAndSite(String nickname, String site) {
 		return nickname + USER_LOGIN_CHAR + site;
 	}
+	
 
 	public String calculateMerkleTreeHash(OpBlock op) {
 		List<byte[]> hashes = new ArrayList<byte[]>();
@@ -214,6 +196,15 @@ public class OpBlockchainRules {
 			ob.putStringValue(OpOperation.F_HASH, hash);
 		}
 		return hash;
+	}
+	
+	public int calculateBlockSize(OpBlock cp) {
+		String json = formatter.toJson(cp);
+		int l = json.length();
+		if(l > MAX_BLOCK_SIZE_MB) {
+			error(cp, ErrorType.BLOCK_SIZE_IS_EXCEEDED, cp.getRawHash(), l);
+		}
+		return json.length();
 	}
 	
 
@@ -626,7 +617,7 @@ public class OpBlockchainRules {
 		return String.format("%08x", size) + lastBlockHash;
 	}
 	
-	public String calculateHash(OpBlock block) {
+	public static String calculateHash(OpBlock block) {
 		ByteArrayOutputStream bs = new ByteArrayOutputStream();
 		DataOutputStream dous = new DataOutputStream(bs);
 		try {
@@ -674,6 +665,7 @@ public class OpBlockchainRules {
 		BLOCK_SIGNATURE_FAILED("Block '%s': signature of '%s' failed to validate"),
 		BLOCK_HASH_IS_DUPLICATED("Block hash is duplicated '%s' in block '%d' and '%d'"),
 		
+		BLOCK_SIZE_IS_EXCEEDED("Block '%s' size '%d' exceeds the limit '%d'"),
 		OP_SIZE_IS_EXCEEDED("Operation '%s' size '%d' exceeds the limit '%d'"),
 		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
 		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
@@ -731,6 +723,7 @@ public class OpBlockchainRules {
 	
 	private static final PerformanceMetric mValidSig = PerformanceMetrics.i().getMetric("blc.validop.sig");
 	private static final PerformanceMetric mValidTotal = PerformanceMetrics.i().getMetric("blc.validop.total");
+
 
 	
 }

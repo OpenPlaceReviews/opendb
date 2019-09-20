@@ -399,7 +399,8 @@ public class OpBlockChain {
 			blockOperations.put(o.getRawHash(), o);
 		}
 		queueOperations.clear();
-		blocks.addBlock(block, getSuperblocksDepth());
+		OpBlock blockHeader = OpBlock.createHeader(block, rules);
+		blocks.addBlock(block, blockHeader, getSuperblocksDepth());
 
 	}
 

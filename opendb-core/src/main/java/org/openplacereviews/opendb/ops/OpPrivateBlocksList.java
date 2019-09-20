@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static org.openplacereviews.opendb.ops.OpBlock.*;
 
 public class OpPrivateBlocksList {
 
@@ -25,7 +24,7 @@ public class OpPrivateBlocksList {
 	public OpPrivateBlocksList(Collection<OpBlock> headers, int superBlockDepth, BlockDbAccessInterface dbAccess) {
 		if (headers != null) {
 			for (OpBlock b : headers) {
-				OpBlock blockHeader = new OpBlock(b, false, true).makeImmutable();
+				OpBlock blockHeader = OpBlock.copy(b).makeImmutable();
 				blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 				blockHeaders.addLast(blockHeader);
 			}
@@ -93,27 +92,11 @@ public class OpPrivateBlocksList {
 	}
 
 
-	void addBlock(OpBlock block, int superBlockDepth) {
+	void addBlock(OpBlock block, OpBlock blockHeader, int superBlockDepth) {
 		if(dbAccess != null){
 			throw new UnsupportedOperationException();
 		}
 		blocks.push(block);
-		addBlockHeader(block, superBlockDepth);
-	}
-
-	private void addBlockHeader(OpBlock block, int superBlockDepth) {
-		OpBlock blockHeader = new OpBlock(block, false, true);
-		blockHeader.makeImmutable();
-		int added = 0, edited = 0, deleted = 0;
-		for (OpOperation opOperation : block.getOperations()) {
-			added += opOperation.getCreated().size();
-			edited += opOperation.getEdited().size();
-			deleted += opOperation.getDeleted().size();
-		}
-		blockHeader.putCacheObject(F_OBJ_DELETED, deleted);
-		blockHeader.putCacheObject(F_OBJ_ADDED, added);
-		blockHeader.putCacheObject(F_OBJ_EDITED, edited);
-		blockHeader.putCacheObject(F_OPERATIONS_SIZE, block.getOperations().size());
 		blocksInfo.put(blockHeader.getRawHash(), blockHeader);
 		blockHeaders.push(blockHeader);
 		updateHeaders(superBlockDepth);

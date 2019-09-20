@@ -8,12 +8,14 @@ import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
+import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -32,7 +34,7 @@ import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 3;
+	private static final int OPENDB_SCHEMA_VERSION = 4;
 	private static final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
 	
 	// //////////SYSTEM TABLES DDL ////////////
@@ -108,6 +110,11 @@ public class DBSchemaManager {
 		registerColumn(BLOCKS_TABLE, "phash", "bytea", NOT_INDEXED);
 		registerColumn(BLOCKS_TABLE, "blockid", "int", INDEXED);
 		registerColumn(BLOCKS_TABLE, "superblock", "bytea", INDEXED);
+		registerColumn(BLOCKS_TABLE, "opcount", "int", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "objdeleted", "int", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "objedited", "int", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "objadded", "int", NOT_INDEXED);
+		registerColumn(BLOCKS_TABLE, "blocksize", "int", NOT_INDEXED);
 		registerColumn(BLOCKS_TABLE, "header", "jsonb", NOT_INDEXED);
 		registerColumn(BLOCKS_TABLE, "content", "jsonb", NOT_INDEXED);
 
@@ -238,7 +245,7 @@ public class DBSchemaManager {
 				setOperationsType(jdbcTemplate, OPERATIONS_TABLE);
 				setOperationsType(jdbcTemplate, OPERATIONS_TRASH_TABLE);
 			}
-			if (dbVersion <= 2) {
+			if (dbVersion <= 3) {
 				addBlockAdditionalInfo(jdbcTemplate);
 			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
@@ -256,22 +263,30 @@ public class DBSchemaManager {
 
 	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
 		LOGGER.info("Adding new columns : 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
-		jdbcTemplate.update("ALTER TABLE " + BLOCKS_TABLE + " add opcount int, add objdeleted int, add objedited int, add objadded int");
-
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
 		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
 			@Override
 			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
 				int i = 0;
 				while (rs.next()) {
 					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
-					int added = 0, edited = 0, deleted = 0;
-					for (OpOperation opOperation : opBlock.getOperations()) {
-						added += opOperation.getCreated().size();
-						edited += opOperation.getEdited().size();
-						deleted += opOperation.getDeleted().size();
+					OpBlock blockheader = OpBlock.createHeader(opBlock, rules);
+					PGobject blockHeaderObj = new PGobject();
+					blockHeaderObj.setType("jsonb");
+					try {
+						blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
+					} catch (SQLException e) {
+						throw new IllegalArgumentException(e);
 					}
-					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + " set opcount = ?, objdeleted = ?, objedited = ?, objadded = ? " +
-									" WHERE hash = ?", opBlock.getOperations().size(), deleted, edited, added,
+					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + 
+							" set opcount = ?, objdeleted = ?, objedited = ?, objadded = ?, blocksize = ?, header = ? " +
+									" WHERE hash = ?",
+									blockheader.getIntValue(OpBlock.F_OPERATIONS_SIZE, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_DELETED, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_EDITED, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_ADDED, 0),
+									blockheader.getIntValue(OpBlock.F_BLOCK_SIZE, 0),
+									blockHeaderObj, 
 							SecUtils.getHashBytes(opBlock.getRawHash()));
 					i++;
 				}

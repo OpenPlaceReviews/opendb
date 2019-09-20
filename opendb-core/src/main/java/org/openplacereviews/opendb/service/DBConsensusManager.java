@@ -40,7 +40,6 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static org.openplacereviews.opendb.ops.OpBlock.*;
 import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 
 @Service
@@ -75,6 +74,8 @@ public class DBConsensusManager {
 	private Map<String, OpBlock> orphanedBlocks = new ConcurrentHashMap<String, OpBlock>();
 	private Map<String, SuperblockDbAccess> dbSuperBlocks = new ConcurrentHashMap<>();
 	private OpBlockChain dbManagedChain = null;
+	private OpBlockchainRules rules;
+
 
 	public Map<String, OpBlock> getOrphanedBlocks() {
 		return orphanedBlocks;
@@ -99,7 +100,7 @@ public class DBConsensusManager {
 	public OpBlockChain init(MetadataDb metadataDB) {
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
 		backupManager.init();
-		final OpBlockchainRules rules = new OpBlockchainRules(formatter, logSystem);
+		rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");
 		dbManagedChain = loadBlockHeadersAndBuildMainChain(rules);
 
@@ -156,7 +157,6 @@ public class DBConsensusManager {
 		for (OpBlock b : topBlockInfo) {
 			String blockHash = b.getRawHash();
 			OpBlock rawBlock = loadBlock(blockHash);
-			rawBlock.putCacheObject(F_BLOCK_SIZE, b.getCacheObject(F_BLOCK_SIZE));
 			OpBlock replicateBlock = blc.replicateBlock(rawBlock);
 			if (replicateBlock == null) {
 				throw new IllegalStateException("Could not replicate block " + blockHash + " "
@@ -567,11 +567,6 @@ public class DBConsensusManager {
 				OpBlock parentBlockHeader = blocks.get(pblockHash);
 				OpBlock blockHeader = formatter.parseBlock(rs.getString(5));
 				blockHeader.makeImmutable();
-				blockHeader.putCacheObject(F_BLOCK_SIZE, rs.getString(6));
-				blockHeader.putCacheObject(F_OPERATIONS_SIZE, rs.getInt(7));
-				blockHeader.putCacheObject(F_OBJ_DELETED, rs.getInt(8));
-				blockHeader.putCacheObject(F_OBJ_ADDED, rs.getInt(9));
-				blockHeader.putCacheObject(F_OBJ_EDITED, rs.getInt(10));
 				blocks.put(blockHash, blockHeader);
 				if (!OUtils.isEmpty(pblockHash) && parentBlockHeader == null) {
 					LOGGER.error(String.format("Orphaned block '%s' without parent '%s'.", blockHash, pblockHash));
@@ -655,7 +650,7 @@ public class DBConsensusManager {
 	}
 
 	public void insertBlock(OpBlock opBlock) {
-		OpBlock blockheader = new OpBlock(opBlock, false, true);
+		OpBlock blockheader = OpBlock.createHeader(opBlock, rules);
 		PGobject blockObj = new PGobject();
 		blockObj.setType("jsonb");
 		PGobject blockHeaderObj = new PGobject();
@@ -703,19 +698,6 @@ public class DBConsensusManager {
 		blocks.put(rawHash, blockheader);
 		orphanedBlocks.put(rawHash, blockheader);
 	}
-
-	public Long getBlockSize(String hash) {
-		return jdbcTemplate.query("SELECT pg_column_size(content) from " + BLOCKS_TABLE + " where hash = ?", new ResultSetExtractor<Long>() {
-					@Override
-					public Long extractData(ResultSet rs) throws SQLException, DataAccessException {
-						if (rs.next()) {
-							return rs.getLong(1);
-						}
-						return null;
-					}
-				}, new Object[] {SecUtils.getHashBytes(hash)});
-	}
-
 
 	public OpBlockChain saveMainBlockchain(OpBlockChain blc) {
 		// find and saved last not saved part of the chain
