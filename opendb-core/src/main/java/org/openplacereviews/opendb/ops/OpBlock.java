@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.TreeMap;
 
+
 public class OpBlock extends OpObject {
 	
 
@@ -40,15 +41,42 @@ public class OpBlock extends OpObject {
 	
 	public OpBlock() {
 	}
+
 	
-	public OpBlock(OpBlock cp, boolean copyOperations, boolean copyCacheFields) {
+	public static OpBlock copy(OpBlock b) {
+		return new OpBlock(b, true);
+	}
+	
+	public static OpBlock createHeader(OpBlock b, OpBlockchainRules rules) {
+		return new OpBlock(b, true, rules);
+	}
+	
+	private OpBlock(OpBlock cp, boolean copyCacheFields, OpBlockchainRules rules) {
 		super(cp, copyCacheFields);
-		if(copyOperations) {
-			for(OpOperation o : cp.operations) {
-				operations.add(new OpOperation(o, copyCacheFields));
+		if(cp.operations.size() > 0){
+			int added = 0, edited = 0, deleted = 0;
+			int opcount = 0;
+			for (OpOperation opOperation : cp.operations) {
+				added += opOperation.getCreated().size();
+				edited += opOperation.getEdited().size();
+				deleted += opOperation.getDeleted().size();
+				opcount++;
 			}
+			putObjectValue(OpBlock.F_BLOCK_SIZE, rules.calculateBlockSize(cp));
+			putObjectValue(OpBlock.F_OBJ_DELETED, deleted);
+			putObjectValue(OpBlock.F_OBJ_ADDED, added);
+			putObjectValue(OpBlock.F_OBJ_EDITED, edited);
+			putObjectValue(OpBlock.F_OPERATIONS_SIZE, opcount);
 		}
 	}
+	
+	private OpBlock(OpBlock cp, boolean copyCacheFields) {
+		super(cp, copyCacheFields);
+		for (OpOperation o : cp.operations) {
+			operations.add(new OpOperation(o, copyCacheFields));
+		}
+	}
+	
 	
 	public OpBlock makeImmutable() {
 		isImmutable = true;
