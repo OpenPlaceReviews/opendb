@@ -43,7 +43,6 @@
             <p>Admin logged in user: <b><span id="admin-login-user">not logged in</span></b></p>
             <p>Superblocks: <ol class="breadcrumb" id="blockchain-blocks"></ol></p>
             <p id="blockchain-orphaned-blocks-header">Orphaned blocks: <b><span id="blockchain-orphaned-blocks"></span></b></p>
-            
 		</div>
         <div id="admin-login-div">
             <div class="form-inline">
@@ -76,7 +75,6 @@
             		</div>
             	</div>
             </div>
-			
         </div>
         <div id="owner-actions">
         	<div class="panel panel-warning">
@@ -104,6 +102,7 @@
         </div>
     </div>
 
+    <!--BLOCKS TAB-->
     <div id="blocks" class="tab-pane fade">
         <h3>Blocks</h3>
         <div class="row">
@@ -130,8 +129,9 @@
         		<input type="submit" class="btn btn-primary form-control" id="block-load-btn" value="Load">
         	</div>
         </div>
-        <ul class="list-group" id="blocks-list">
-        </ul>
+
+        <ul class="list-group" id="blocks-list"></ul>
+
         <ul class="list-group" hidden="true">
         	<li class="panel panel-default" id="blocks-list-item">
         		<p class="panel-heading">
@@ -156,10 +156,10 @@ Details: <b><span did="block-details"></span></b></pre>
         		</div>
         	</li>
         </ul>
-        
-
     </div>
+    <!--BLOCKS TAB-->
 
+    <!--OPERATION TAB-->
     <div id="operations" class="tab-pane fade">
         <h3>Operations</h3>
         <div class="row">
@@ -184,7 +184,9 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
         <label id="amount-operations" class="col-form-label hidden"></label>
+
         <ul class="list-group" id="operations-list"></ul>
+
         <ul class="list-group" hidden="true">
             <li class="panel panel-default" id="operation-list-item">
                 <p class="panel-heading">
@@ -199,10 +201,11 @@ Details: <b><span did="block-details"></span></b></pre>
             </li>
         </ul>
     </div>
+    <!--OPERATION TAB-->
 
+    <!--OBJECT TAB-->
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
-
         <div class="row">
             <div class="form-group form-inline col-md-8">
                 <div class="form-group">
@@ -275,7 +278,7 @@ Details: <b><span did="block-details"></span></b></pre>
         <ul class="list-group" id="objects-list">
         </ul>
 
-        <!--search-->
+        <!--search info-->
         <ul class="list-group" hidden="true">
             <li class="panel panel-default" id="objects-list-item">
                 <p class="panel-heading">
@@ -290,7 +293,7 @@ Details: <b><span did="block-details"></span></b></pre>
             </li>
         </ul>
 
-        <!--history-->
+        <!--history info-->
         <ul class="list-group" hidden="true">
             <li class="panel panel-default" id="objects-history-list-item">
                 <div class="panel-heading">
@@ -309,29 +312,9 @@ Details: <b><span did="block-details"></span></b></pre>
             </li>
         </ul>
     </div>
-    
-    <div id="metrics" class="tab-pane fade">
-        <h3>Metrics</h3>
-        <p></p>
-        	<div class="btn-group btn-group-toggle" >
-    			<input type="radio" name="metrics-group" id="metrics-all" autocomplete="off" checked/>
-    			<label for="metrics-all">All</label>
-    			<input type="radio" name="metrics-group" id="metrics-a" autocomplete="off"/>
-    			<label for="metrics-a">Group A</label>
-    			<input type="radio" name="metrics-group" id="metrics-b" autocomplete="off"/>
-    			<label for="metrics-b">Group B</label>
-			</div>
-		<p></p>
-			<div class="btn-group">
-				<input type="button" value="Refresh" id="refresh-metrics" />
-				<input type="button" value="Reset Group A" id="reset-metrics-a" />
-        		<input type="button" value="Reset Group B" id="reset-metrics-b" />
-			</div>
-		<p></p>
-        <div id="metrics-list">
-        </div>
-    </div>
+    <!--OBJECT TAB-->
 
+    <!--LOG TAB-->
     <div id="errors" class="tab-pane fade">
         <h3>Log</h3>
         <ul class="list-group" id="errors-list"></ul>
@@ -352,17 +335,18 @@ Details: <b><span did="block-details"></span></b></pre>
                 </div>
             </li>
         </ul>
-
     </div>
+    <!--LOG TAB-->
 
+    <!--API TAB-->
     <div id="api" class="tab-pane fade">
 
         <!--BOT state-->
         <div class="row">
-            <div class="col-md-12">
-                <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-                <br><br>
-                <!--Bot table-->
+            <div class="form-group col-md-2">
+                <h4>Bots</h4><button class="btn btn-primary form-control" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+            </div>
+            <div class="form-group col-md-12">
                 <div class="table-responsive">
                     <table id="bots-table" class="table table-bordered table-striped table-hover">
                         <thead>
@@ -380,61 +364,26 @@ Details: <b><span did="block-details"></span></b></pre>
                         </tr>
                         </thead>
 
-                        <tbody>
-                        </tbody>
-
+                        <tbody></tbody>
                     </table>
 
                 </div>
+            </div>
+        </div>
+        <!--BOT state-->
 
-                <!--modal window for bot history-->
-                <div class="modal fade" id="bot-history-modal" role="dialog">
-                    <div class="modal-dialog modal-lg">
-
-                        <!-- Modal content-->
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                <h4 class="modal-title" id="bot-history-header"></h4>
-                                <p class="modal-title" id="history-bot-name"></p>
-                            </div>
-                            <div class="modal-body">
-                                <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-                                <div class="table-responsive">
-                                    <table id="bots-history-table" class="table table-bordred table-striped table-hover">
-                                        <thead>
-                                        <tr>
-                                            <th>Bot ID</th>
-                                            <th>Start Date</th>
-                                            <th>End Date</th>
-                                            <th>Total</th>
-                                            <th>Processed</th>
-                                            <th>Status</th>
-                                        </tr>
-                                        </thead>
-
-                                        <tbody>
-                                        </tbody>
-
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                            </div>
-                        </div>
-
+        <!--DB Index-->
+        <div class="row">
+            <div class="form-group col-md-4">
+                <h4>DB Index</h4>
+                <div class="form-inline">
+                    <div class="form-group">
+                        <button class="btn btn-primary form-control" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                        <button class="btn btn-primary form-control"  data-toggle="modal" data-target="#new-index-modal" id="add-new-index-table-btn"><span class="glyphicon glyphicon-plus"></span> Add new DB Index</button>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-12">
-                <h4>DB Index</h4>
-                <button class="btn btn-primary" id="refresh-index-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-                <button class="btn btn-primary"  data-toggle="modal" data-target="#new-index-modal" id="add-new-index-table-btn"><span class="glyphicon glyphicon-plus"></span> Add new DB Index</button>
-                <br><br>
+            <div class="form-group col-md-12">
                 <div class="table-responsive">
                     <table id="index-table" class="table table-bordered table-striped table-hover">
                         <thead>
@@ -460,72 +409,37 @@ Details: <b><span did="block-details"></span></b></pre>
                         </tr>
                         </thead>
 
-                        <tbody>
-                        </tbody>
-
+                        <tbody></tbody>
                     </table>
-
                 </div>
             </div>
 
-            <!--modal window for bot history-->
-            <div class="modal fade" id="new-index-modal" role="dialog">
-                <div class="modal-dialog modal-lg">
+            <!--<tr did="full-db-table-row">-->
+                <!--<td did="index-id"></td>-->
+                <!--<td did="op-type"></td>-->
+                <!--<td did="table-name"></td>-->
+                <!--<td did="col-name"></td>-->
+                <!--<td did="col-type"></td>-->
+                <!--<td did="index"></td>-->
+                <!--<td did="expression"></td>-->
+                <!--<td did="cache-runtime"></td>-->
+                <!--<td did="cache-db"></td>-->
+                <!--<td></td>-->
+            <!--</tr>-->
 
-                    <!-- Modal content-->
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h4 class="modal-title" id="new-bot-index-header">Adding new DB index</h4>
-                        </div>
-                        <div class="modal-body">
-                            <h4>Bots</h4>
-                            <label class="col-form-label">Input table name</label>
-                            <input type="text" id="index-table-name" placeholder="table name" class="form-control">
-                            <br>
-                            <label class="col-form-label">Input column name</label>
-                            <input type="text" id="index-col-name" placeholder="new column name" class="form-control">
-                            <br>
-                            <label class="col-form-label">Input column type</label>
-                            <input type="text" id="index-col-type" placeholder="text, bigint[], ..." class="form-control">
-                            <br>
-                            <label class="col-form-label">Input op type</label>
-                            <select class="form-control" multiple id="index-op-types"></select>
-                            <br>
-                            <label class="col-form-label">Input index type</label>
-                            <select class="form-control" id="index-type">
-                                <option selected value="true">true</option>
-                                <option value="GIN">Gin</option>
-                                <option value="GIST">Gist</option>
-                            </select>
-                            <br>
-                            <label class="col-form-label">Input field</label>
-                            <input type="text" id="index-field" placeholder="array -> source.osm.id, source.osm.tags" class="form-control">
-                            <br>
-                            <label class="col-form-label">Input sql mapping</label>
-                            <input type="text" id="index-col-sql-mapping"  placeholder="array, single, ..." class="form-control">
-                            <br>
-                            <label class="col-form-label">Input cache runtime index</label>
-                            <input type="text" id="index-cacheRuntimeMax" placeholder="64, 128, ..." class="form-control">
-                            <br>
-                            <label class="col-form-label">Input cache db index</label>
-                            <input type="text" id="index-cacheDbIndex" placeholder="64, 128, ..." class="form-control">
-                            <br>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-primary" id="add-new-index-btn"><span class="glyphicon glyphicon-plus"></span> Add</button>
-                            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
+            <!--<tr did="info-db-table-row" >-->
+               <!--<td class="info" colspan="9" did="key"></td>-->
+            <!--</tr>-->
 
-                </div>
-            </div>
         </div>
+        <!--DB Index-->
 
+        <!--Download API-->
         <div class="row">
-            <div class="col-md-12">
-                <h4>Downloads</h4> <button class="btn btn-primary" id="refresh-api-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-                <br><br>
+            <div class="form-group col-md-2">
+                <h4>Downloads</h4> <button class="btn btn-primary form-control" id="refresh-api-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+            </div>
+            <div class="form-group col-md-12">
                 <div class="table-responsive">
                     <table id="api-table" class="table table-bordered table-striped table-hover">
                         <thead>
@@ -543,60 +457,127 @@ Details: <b><span did="block-details"></span></b></pre>
                         </tr>
                         </thead>
 
-                        <tbody>
-                        </tbody>
+                        <tbody></tbody>
 
                     </table>
 
                 </div>
             </div>
         </div>
-    </div>
+        <!--Download API-->
 
+    </div>
+    <!--API TAB-->
+
+    <!--API MODALS VIEWS-->
+    <!--BOTS MODALS-->
+    <div class="modal fade" id="bot-history-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title" id="bot-history-header"></h4>
+                    <p class="modal-title" id="history-bot-name"></p>
+                </div>
+                <div class="modal-body">
+                    <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                    <div class="table-responsive">
+                        <table id="bots-history-table" class="table table-bordred table-striped table-hover">
+                            <thead>
+                            <tr>
+                                <th>Bot ID</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Total</th>
+                                <th>Processed</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!--BOTS MODALS-->
+
+    <!--DB MODALS-->
+    <div class="modal fade" id="new-index-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title" id="new-bot-index-header">Adding new DB index</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Bots</h4>
+                    <label class="col-form-label">Input table name</label>
+                    <input type="text" id="index-table-name" placeholder="table name" class="form-control">
+                    <br>
+                    <label class="col-form-label">Input column name</label>
+                    <input type="text" id="index-col-name" placeholder="new column name" class="form-control">
+                    <br>
+                    <label class="col-form-label">Input column type</label>
+                    <input type="text" id="index-col-type" placeholder="text, bigint[], ..." class="form-control">
+                    <br>
+                    <label class="col-form-label">Input op type</label>
+                    <select class="form-control" multiple id="index-op-types"></select>
+                    <br>
+                    <label class="col-form-label">Input index type</label>
+                    <select class="form-control" id="index-type">
+                        <option selected value="true">true</option>
+                        <option value="GIN">Gin</option>
+                        <option value="GIST">Gist</option>
+                    </select>
+                    <br>
+                    <label class="col-form-label">Input field</label>
+                    <input type="text" id="index-field" placeholder="array -> source.osm.id, source.osm.tags" class="form-control">
+                    <br>
+                    <label class="col-form-label">Input sql mapping</label>
+                    <input type="text" id="index-col-sql-mapping"  placeholder="array, single, ..." class="form-control">
+                    <br>
+                    <label class="col-form-label">Input cache runtime index</label>
+                    <input type="text" id="index-cacheRuntimeMax" placeholder="64, 128, ..." class="form-control">
+                    <br>
+                    <label class="col-form-label">Input cache db index</label>
+                    <input type="text" id="index-cacheDbIndex" placeholder="64, 128, ..." class="form-control">
+                    <br>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" id="add-new-index-btn"><span class="glyphicon glyphicon-plus"></span> Add</button>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!--DB MODALS-->
+    <!--API MODALS VIEWS-->
+
+
+    <!--SETTINGS TAB-->
     <div id="settings" class="tab-pane fade">
         <h3>Settings</h3>
-        <div class="col-12">
-            <div class="col-1">
-                <label class="col-form-label">Show editable settings</label>
-                <input type="checkbox" id="settingsCheckbox" name="scales">
-            </div>
-        </div>
-        <div style="display: none;" id="add-new-preference">
-            <div class="col-md-12 container">
-                <div class="col-md-4">
-                    <label for="new-preference-key">Preference key:</label>
-                    <input type="text" class="form-control" id="new-preference-key">
-                </div>
-                <div class="col-md-4">
-                    <label for="new-preference-value">Preference value:</label>
-                    <textarea class="form-control" rows="1" id="new-preference-value"></textarea>
-                </div>
-                <div class="col-md-2">
-                    <label for="new-preference-type">Preference type:</label>
-                    <select class="form-control" id="new-preference-type">
-                        <option value="String" selected>String</option>
-                        <option value="Long">Long</option>
-                        <option value="Integer">Integer</option>
-                        <option value="Float">Float</option>
-                        <option value="Map">Map</option>
-                        <option value="Boolean">Boolean</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="new-preference-restart">Restart is needed:</label>
-                    <select class="form-control" id="new-preference-restart">
-                        <option value="false" selected>false</option>
-                        <option value="true">true</option>
-                    </select>
+        <div class="row">
+            <div class="form-group form-inline col-md-4">
+                <div class="form-group">
+                    <label for="settingsCheckbox" class="col-form-label">Show editable settings</label>
+                    <input type="checkbox" id="settingsCheckbox" name="scales">
                 </div>
             </div>
-            <br>
-            <hr>
-            <button class="btn btn-primary" id="add-new-preference-btn"></span> Add</button>
-            <button class="btn btn-primary" id="cancel-new-preference-btn"></span> Cancel</button>
         </div>
-        <hr>
 
+        <!--MODAL EDIT-->
         <div class="modal fade" id="settings-edit-modal" role="dialog">
             <div class="modal-dialog modal-lg">
 
@@ -625,14 +606,53 @@ Details: <b><span did="block-details"></span></b></pre>
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                     </div>
                 </div>
-
             </div>
         </div>
+        <!--MODAL EDIT-->
 
-        <div id="settings-result-list">
+        <ul class="list-group" id="settings-result-list"></ul>
+
+        <ul class="list-group" hidden="true">
+            <li class="panel panel-default" id="settings-list-item">
+                <p class="panel-heading">
+                    <a type="button" did="edit-settings" class="btn btn-default btn-xs pull-right" data-toggle="modal" data-target="#settings-edit-modal" >Edit</a>
+                    <b><span type="text" did="settings-name"></span></b>
+                </p>
+                <div class="panel-body">
+                    <p>Value: <b><span did="settings-value"></span></b></p>
+                    <pre did="settings-value-json"></pre>
+                    <div did="settings-restart" class="alert alert-warning hidden" role="alert">This parameter will be accepted after server restarting!</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+    <!--SETTINGS TAB-->
+
+    <!--METRICS TAB-->
+    <div id="metrics" class="tab-pane fade">
+        <h3>Metrics</h3>
+        <p></p>
+        <div class="btn-group btn-group-toggle" >
+            <input type="radio" name="metrics-group" id="metrics-all" autocomplete="off" checked/>
+            <label for="metrics-all">All</label>
+            <input type="radio" name="metrics-group" id="metrics-a" autocomplete="off"/>
+            <label for="metrics-a">Group A</label>
+            <input type="radio" name="metrics-group" id="metrics-b" autocomplete="off"/>
+            <label for="metrics-b">Group B</label>
+        </div>
+        <p></p>
+        <div class="btn-group">
+            <input type="button" value="Refresh" id="refresh-metrics" />
+            <input type="button" value="Reset Group A" id="reset-metrics-a" />
+            <input type="button" value="Reset Group B" id="reset-metrics-b" />
+        </div>
+        <p></p>
+        <div id="metrics-list">
         </div>
     </div>
+    <!--METRICS TAB-->
 
+    <!--IPFS TAB-->
     <div id="ipfs" class="tab-pane fade">
         <h3>IPFS info</h3>
         <div>
@@ -700,10 +720,10 @@ Details: <b><span did="block-details"></span></b></pre>
             </a>
             <br>
         </div>
-
     </div>
+    <!--IPFS TAB-->
 
-
+    <!--REG TAB-->
     <div id="reg" class="tab-pane fade">
         <h3>Signup</h3>
         <div>
@@ -762,6 +782,7 @@ Details: <b><span did="block-details"></span></b></pre>
             <input type="submit" value="Sign operation and add to queue" id="sign-add-btn"/>
         </div>
     </div>
+    <!--REG TAB-->
 </div>
 </body>
 </html>

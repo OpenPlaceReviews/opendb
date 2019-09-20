@@ -4,14 +4,32 @@
     var globalConfig = {};
 
 
-    function smallHash(hash) {
-    	var ind = hash.lastIndexOf(':');
-    	if(ind >= 0) {
-    		hash = hash.substring(ind + 1);
-    	}
-    	return hash.substring(0, 16);
+    ////////////////////// UTILITIES /////////////////////
+    async function sha256(message) {
+        // encode as UTF-8
+        const msgBuffer = new TextEncoder('utf-8').encode(message);
+
+        // hash the message
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+
+        // convert ArrayBuffer to Array
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+        // convert bytes to hex string
+        const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('');
+        return hashHex;
     }
-    
+
+    function smallHash(hash) {
+        var ind = hash.lastIndexOf(':');
+        if(ind >= 0) {
+            hash = hash.substring(ind + 1);
+        }
+        return hash.substring(0, 16);
+    }
+    //\\\\\\\\\\\\\\\\\\\\\\\\\\ UTILITIES \\\\\\\\\\\\\\\\\\\\\\
+
+    ///////////////////////////// MAIN /////////////////////////////
     function loadData(checkUrl) {
         refreshUser();
         $.getJSON( "/api/auth/admin-status", function( data ) {
@@ -25,7 +43,7 @@
         loadStatusData();
         loadObjectsData();
         $.getJSON("/api/blocks", function( data ) {
-           processBlocksResult(data);
+            processBlocksResult(data);
         });
         if (loginName != "") {
             loadMetricsData();
@@ -66,178 +84,105 @@
             $("#reg").hide();
             $("#ipfs-tab").hide();
         }
-
     }
-    
-    function setMetricsDataToTable() {
-    	var gid = 0;
-    	if($("#metrics-a").prop("checked")) {
-    		gid = 1;
-    	}
-    	if($("#metrics-b").prop("checked")) {
-    		gid = 2;
-    	}
-    	var items = "";
-        items += "<table border='1'>";
-        items += "<tr>";
-        items += "<th><b>Id</b><th>";
-        items += "<th><b>Count</b><th>";
-        items += "<th><b>Total (s)</b><th>";
-        items += "<th><b>Average (ms)</b><th>";
-        items += "<th><b>Throughput / sec</b><th>";
-        items += "</tr>";
-        
-        for(var i = 0; i < metricsData.length; i++)  {
-            let item = metricsData[i];
-            items += "<tr>";
-            var lid = item.id;
-            if(lid.length > 50) {
-                lid = lid.substring(0, 50);
+
+    function checkUrlParam() {
+        // objects -> http://localhost:6463/api/admin?view=objects&filter=&search=osm.place&type=id&key=12345662&history=true
+        // operations -> http://localhost:6463/api/admin?view=operations&loadBy=blockId&key=0
+        // blocks -> http://localhost:6463/api/admin?view=blocks&search=from&hash=213&limit=123
+        var url = new URL(window.location.href);
+        if (window.location.href.toLowerCase().indexOf('api/admin?view=objects') > 1) {
+            $(".nav-tabs a[href=\"#objects\"]").tab('show');
+            var filter = url.searchParams.get('filter');
+            if (filter !== null) {
+                $("#filter-list").val(filter).change();
+                if (filter === "operation") {
+                    $("#name-key-field").text("Input operation Hash");
+                } else {
+                    $("#name-key-field").text("Input user Id");
+                }
             }
-            items += "<td><b>"+lid+"</b><td>";
-            items += "<td>"+item.count[gid]+"<td>";
-            items += "<td>"+item.totalSec[gid]+"<td>";
-            items += "<td>"+item.avgMs[gid]+"<td>";
-            if(item.avgMs > 0) {
-                items += "<td>"+Number(1000/item.avgMs[gid]).toFixed(2)+"<td>";
+            var searchTypeListValue = url.searchParams.get('search');
+            if (searchTypeListValue !== null) {
+                $("#type-list").val(searchTypeListValue);
+                $("#type-list").change();
+            }
+            var typeSearch = url.searchParams.get('type');
+            if (typeSearch !== null) {
+                $("#search-type-list").val(typeSearch).change();
+            }
+            var checkboxValue = url.searchParams.get('history');
+            if (checkboxValue !== null) {
+                $("#historyCheckbox").prop('checked', checkboxValue === "true");
             } else {
-                items += "<td>-<td>";
-            } 
-            items += "</tr>";
+                $("#search-type-list").change();
+            }
+            var limitValue = url.searchParams.get('limit');
+            if (limitValue !== null) {
+                $("#limit-field").val(limitValue);
+            }
+            var keyValue = url.searchParams.get('key');
+            if (keyValue !== null) {
+                $("#search-key").val(keyValue);
+            }
+
+            loadObjectView(false);
+        } else if (window.location.href.toLowerCase().indexOf('api/admin?view=operations') > 1) {
+            $(".nav-tabs a[href=\"#operations\"]").tab('show');
+            var loadType = url.searchParams.get('loadBy');
+            if (loadType !== null) {
+                $("#operations-search").val(loadType).change();
+            }
+            var key = url.searchParams.get('key');
+            if (key !== null) {
+                $("#operations-key").val(key);
+            }
+
+            loadOperationView();
+        } else if (window.location.href.toLowerCase().indexOf('api/admin?view=blocks') > 1) {
+            $(".nav-tabs a[href=\"#blocks\"]").tab('show');
+            var searchType = url.searchParams.get('search');
+            if (searchType !== null) {
+                $("#blocks-search").val(searchType).change();
+            }
+            var hashValue = url.searchParams.get('hash');
+            if (hashValue !== null) {
+                $("#search-block-field").val(hashValue);
+            }
+            var limit = url.searchParams.get('limit');
+            if (limit !== null) {
+                $("#block-limit-value").val(limit);
+            }
+
+            loadBlockView();
         }
-        items += "</table>";
-        $("#metrics-list").html(items);
     }
-    
-    function loadMetricsData() {
-        $.getJSON( "/api/metrics", function( data ) {
-        	metricsData = data.metrics;
-        	setMetricsDataToTable();
-        });
-    }
-    
-    function loadSearchTypeByOpType(type) {
-        $.ajax({url:"/api/indices-by-type?type=" + type, type:"get", async:false,
-            success: function(data) {
-                var searchTypes = "";
-                searchTypes += "<option value = 'all' selected>all</option>";
-                searchTypes += "<option value = 'id' >by id</option>";
-                searchTypes += "<option value = 'count' >count</option>";
-                for (var i = 0; i < data.length; i++) {
-                    var obj = data[i];
-                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
-                }
+    //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ MAIN \\\\\\\\\\\\\\\\\\\\\\\\\
 
-                $("#search-type-list").html(searchTypes);
-                $("#historyCheckbox").prop("disabled", false);
-                $("#search-key-input").addClass("hidden")
-            },
-            error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
-        });
-
-    }
-
-    function loadErrorsData() {
-        $.getJSON( "/api/logs", function( data ) {
-            var items = "";
-            var errs = 0;
-            var templateItem = $("#errors-list-item");
-            for(var i = 0; i < data.logs.length; i++)  {
-                let op = data.logs[i];
-                var it = templateItem.clone();
-
-                it.find("[did='status']").html(op.status);
-                it.find("[did='log-message']").html(op.message);
-                it.find("[did='log-time']").html(new Date(op.utcTime).toUTCString());
-
-                if(op.status) {
-                    errs++;
-                }
-                if(op.cause) {
-                    it.find("[did='exception-message']").html(op.cause.detailMessage);
-                } else {
-                    it.find("[did='excep-message-hidden']").prop("hidden", true);
-                }
-                if(op.block) {
-                    it.find("[did='block']").html(op.block.block_id + " " + op.block.hash);
-                } else {
-                    it.find("[did='block-hidden']").prop("hidden", true);
-                }
-                if(op.operation) {
-                    it.find("[did='operation']").html(op.operation.type + " " + op.operation.hash);
-                } else {
-                    it.find("[did='operation-hidden']").prop("hidden", true);
-                }
-                if(op.block) {
-                    it.find("[did='block-json']").html(JSON.stringify(op.block, null, 4));
-                } else {
-                    it.find("[did='block-json-hidden']").prop("hidden", true);
-                }
-                if(op.operation) {
-                    it.find("[did='operation-json']").html(JSON.stringify(op.operation, null, 4));
-                } else {
-                    it.find("[did='op-json-hidden']").prop("hidden", true);
-                }
-                if(op.cause) {
-                    it.find("[did='full-exception-json']").html(JSON.stringify(op.cause, null, 4));
-                } else {
-                    it.find("[did='full-json-hidden']").prop("hidden", true);
-                }
-                items += it.html();
-            }
-            $("#errors-tab").html("Logs (" + errs + " Errors)");
-            $("#errors-list").html(items);
-        });
-    }
-
-    function loadObjectsData() {
-        $("#index-list-id").hide();
-        let selectType = $("#type-list").val();
-        $.ajax({
-            url: "/api/objects?type=sys.operation",
-            type: "GET",
-            async: false,
-            success: function(data) {
-                var types = "<option value = '' selected disabled>Select type</option>";
-                types += "<option value = 'none' >none</option>";
-                $("#objects-tab").html("Objects (" + data.objects.length + ")");
-                for(var i = 0; i < data.objects.length; i++)  {
-                    let obj = data.objects[i];
-                    let objType = obj.id[0];
-                    globalObjectTypes[objType] = obj;
-
-                    types += "<option value = '"+objType+"' " +
-                        (selectType === objType ? "selected" : "") + ">"+objType+"</option>";
-                }
-                $("#type-list").html(types);
-                $("#index-op-types").html(types);
-            }
-        });
-    }
-
+    //////////////////////// FUNCTIONS TAB STATUS /////////////////////
     function loadStatusData() {
         $.getJSON( "/api/status", function( data ) {
             var items = "";
             $("#blockchain-status").html(data.status);
             items = "";
             for(var j = 0; j < data.sblocks.length; j++) {
-            	var url = "admin?view=operations&load=queue";
-            	if(j > 0) {
-            		var bldescr = data.sblocks[j];
-            		if(bldescr.startsWith("DB-")) {
-            			bldescr = bldescr.substring(3);
-            		}
-            		var ind = bldescr.indexOf("-");
-            		var hash = bldescr.substring(ind + 1);
-            		var limit = parseInt(bldescr.substring(0, ind), 16);
-            		url = "admin?view=blocks&search=to&hash="+hash+"&limit="+limit;
-            	}
-            	var name =  data.sblocks[j];
-            	if(name.length > 12) {
-            		name = name.substring(0, 12);
-            	}
-            	items += "<li><a href='"+url+"'>" + name + "</a>";
-            	
+                var url = "admin?view=operations&load=queue";
+                if(j > 0) {
+                    var bldescr = data.sblocks[j];
+                    if(bldescr.startsWith("DB-")) {
+                        bldescr = bldescr.substring(3);
+                    }
+                    var ind = bldescr.indexOf("-");
+                    var hash = bldescr.substring(ind + 1);
+                    var limit = parseInt(bldescr.substring(0, ind), 16);
+                    url = "admin?view=blocks&search=to&hash="+hash+"&limit="+limit;
+                }
+                var name =  data.sblocks[j];
+                if(name.length > 12) {
+                    name = name.substring(0, 12);
+                }
+                items += "<li><a href='"+url+"'>" + name + "</a>";
+
             }
             $("#blockchain-blocks").html(items);
             $("#operations-tab").html("Operations (" + data.sblocks[0] + ")");
@@ -256,34 +201,22 @@
 
         });
     }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB STATUS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-    function loadIpfsStatusData() {
-        $.getJSON("/api/ipfs/status?full=false", function ( data ) {
-            $("#ipfs-status").html(data.status);
-            $("#ipfs-peer-id").html(data.peerId);
-            $("#ipfs-version").html(data.version);
-            $("#ipfs-gateway").html(data.gateway);
-            $("#ipfs-api").html(data.api);
-            $("#ipfs-addresses").html(JSON.stringify(data.addresses));
-            $("#ipfs-public-key").html(data.publicKey);
+    ////////////////////// FUNCTIONS TAB BLOCKS //////////////////////////////
+    function loadBlockView() {
+        var type = $("#blocks-search").val();
+        var reqObj = {
+            depth: $("#block-limit-value").val()
+        };
+        if(type !== "all") {
+            reqObj[type] = $("#search-block-field").val();
+        }
 
-            // IPFS STORAGE
-            $("#ipfs-repo-size").html(data.repoSize);
-            $("#ipfs-max-storage-size").html(data.storageMax);
-            $("#ipfs-repo-path").html(data.repoPath);
-
-            // IPFS SYSTEM INFO
-            $("#system-info").html(data.diskInfo);
-            $("#system-memory").html(data.memory);
-            $("#system-runtime").html(data.runtime);
-            $("#system-network").html(data.network);
-
-            // IPFS STATS
-            $("#amount-all-ipfs-objects").html(data.amountIpfsResources);
-            $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
+        $.getJSON("/api/blocks", reqObj, function (data) {
+            processBlocksResult(data);
         });
     }
-    
 
     function processBlocksResult(data) {
         var items = $("#blocks-list");
@@ -314,172 +247,48 @@
                 it.find("[did='block-size']").html((op.eval.block_size/1024).toFixed(3) + " KB");
                 it.find("[did='block-objects']").html(op.eval.obj_added + "/" + op.eval.obj_edited + "/" + op.eval.obj_deleted);
                 it.find("[did='block-objects-info']").html("<b>" +
-                		op.eval.operations_size + "</b> operations ( <b>" +
-                		op.eval.obj_added + "</b> added, <b>" + op.eval.obj_edited + "</b> edited, <b>" + op.eval.obj_deleted + "</b> removed objects )");
+                    op.eval.operations_size + "</b> operations ( <b>" +
+                    op.eval.obj_added + "</b> added, <b>" + op.eval.obj_edited + "</b> edited, <b>" + op.eval.obj_deleted + "</b> removed objects )");
             }
 
             it.find("[did='prev-block-hash']").html(op.previous_block_hash);
             it.find("[did='merkle-tree']").html(op.merkle_tree_hash);
             it.find("[did='block-details']").html(op.details);
             it.find("[did='block-json']").html(JSON.stringify(op, null, 4));
-            items.append(it); 
+            items.append(it);
         }
         return items;
     }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB BLOCKS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-    function loadFullIpfsStatus() {
-            $.getJSON("/api/ipfs/status?full=true", function (data) {
-                $("#result").html("SUCCESS: " + data);
-                $("#amount-missing-ipfs-objects").html(data.missingResources.length);
-                $("#amount-db-objects").html(data.amountDBResources);
-                $("#amount-unactivated-objects").html(data.deprecatedResources.length);
-
-                console.log("tsts");
-                for(var i = 0; i < data.missingResources.length; i++)  {
-                    $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
-                };
-                for(var i = 0; i < data.deprecatedResources.length; i++)  {
-                    $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
-                };
+    ////////////////////// FUNCTIONS TAB OPERATIONS /////////////////////////////////
+    function loadOperationView() {
+        var typeSearch = $("#operations-search").val();
+        var key = $("#operations-key").val();
+        if (typeSearch === "queue") {
+            $.getJSON( "/api/queue", function( data ) {
+                generateOperationResponse(data);
+                $("#amount-operations").addClass("hidden");
             });
-    }
+        } else if (typeSearch === "id") {
+            $.getJSON("/api/ops-by-id?id=" + key, function (data) {
+                generateOperationResponse(data);
+                $("#amount-operations").removeClass("hidden");
 
-    function editPreferenceObject(i) {
-        console.log(globalConfig[i]);
-        if (globalConfig[i].type === "Map") {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value, null, 4));
-        } else {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(globalConfig[i].value);
+            })
+        } else if (typeSearch === "blockId") {
+            $.getJSON( "/api/ops-by-block-id?blockId=" + key, function( data ) {
+                generateOperationResponse(data);
+                $("#amount-operations").removeClass("hidden");
 
+            });
+        } else { //blockHash
+            $.getJSON( "/api/ops-by-block-hash?hash=" + key, function( data ) {
+                generateOperationResponse(data);
+                $("#amount-operations").removeClass("hidden");
+
+            });
         }
-        $("#settings-edit-modal .modal-body #settings-type-edit-header").html("Preference type: " + globalConfig[i].type);
-        $("#settings-edit-modal .modal-body #settings-type").html(globalConfig[i].type);
-        $("#settings-edit-modal .modal-body #edit-preference-restart").val(globalConfig[i].restartIsNeeded.toString());
-        $("#settings-edit-modal .modal-header #settings-name").val(globalConfig[i].id);
-        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + globalConfig[i].id);
-    }
-
-    function loadConfiguration() {
-        $.getJSON("/api/mgmt/config", function (data) {
-            // var items = "";
-            var items = "";
-            globalConfig = data;
-
-            function showSettings() {
-                items += "<div class=\"panel panel-default col-7\">";
-                items += "<div class=\"panel-heading\">";
-                if (obj.canEdit === true) {
-                    items += "<button type=\"button\" class=\"btn btn-default btn-sm pull-right\" data-toggle=\"modal\" data-target=\"#settings-edit-modal\" onclick=\"editPreferenceObject(" + i + ")\">Edit</button></a>";
-                }
-                items += "<h4>" + obj.id + " - " + obj.description + "</h4></div><div class=\"panel-body\">";
-
-                if (obj.type === "Map") {
-                    items += "<h5><b>Value: </b></h5>";
-                    items += "<pre>" + JSON.stringify(obj.value, null, 4) + "</pre>"
-                } else {
-                    items += "<h5><b>Value: </b>" + obj.value + "</h5>";
-                }
-                items += "<div class=\"row\">";
-                if (obj.restartIsNeeded === true) {
-                    items += "<div class=\"alert alert-warning\" role=\"alert\">This parameter will be accepted after server restarting!</div>";
-                }
-                items += "</div>";
-                items += "</div>";
-                items += "</div>";
-            }
-
-            for (var i = 0; i < data.length; i++) {
-                obj = data[i];
-                if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
-                    showSettings();
-                } else if (!($("#settingsCheckbox").is(":checked"))) {
-                    showSettings();
-                }
-
-            }
-
-            $("#settings-result-list").html(items);
-        });
-    }
-
-    function loadBotData() {
-        $.getJSON("/api/bot/stats", function (data) {
-            var items = "";
-            for (var key in data) {
-                var obj = data[key];
-                items += "<tr>";
-                items += "<td>" + obj.id + "</td>";
-                if ('botStats' in obj) {
-                items += "<td>" + obj.botStats.taskName + "</td>";
-                items += "<td>" + obj.botStats.taskDescription + "</td>";
-                } else {
-                    items += "<td></td>";
-                    items += "<td></td>";
-                }
-                items += "<td>" + new Date(obj.started).toLocaleString() + "</td>";
-                items += "<td>" + obj.interval + "</td>";
-                if ('botStats' in obj) {
-                    if (!obj.botStats.isRunning) {
-                        items += "<td>NOT RUNNING</td>"
-                    } else {
-                        var progressBarValue = parseInt((obj.botStats.progress / obj.botStats.total) * 100);
-                        items += "<td><div class=\"progress\">\n" +
-                            "  <div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\"\n" +
-                            "  aria-valuenow=\"" + progressBarValue + "\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width:" + progressBarValue + "%\">\n" +
-                            progressBarValue + "%" +
-                            "  </div>\n" +
-                            "</div></td>";
-                    }
-                } else {
-                    items += "<td></td>";
-                }
-                items += "<td>";
-                if ('botStats' in obj && obj.botStats.isRunning === false) {
-                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
-                } else {
-                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
-                }
-                items += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>";
-                items += "</td>";
-                items += "</tr>";
-
-            }
-
-            $("#bots-table > tbody").html(items);
-        });
-    }
-
-    function loadReportFiles() {
-    	// TODO
-    }
-
-    function loadDBIndexData() {
-        $.getJSON("/api/index", function (data) {
-            var items = "";
-            for (var key in data) {
-                var obj = data[key];
-                items += "<tr><td class='info' colspan='9'>" + key + "</td></tr>";
-                for (var keyObj in obj) {
-                    var index = obj[keyObj];
-                    items += "<tr>";
-                    items += "<td>" + index.indexId + "</td>";
-                    items += "<td>" + index.opType + "</td>";
-                    items += "<td>" + index.columnDef.tableName + "</td>";
-                    items += "<td>" + index.columnDef.colName + "</td>";
-                    items += "<td>" + index.columnDef.colType + "</td>";
-                    items += "<td>" + index.columnDef.index + "</td>";
-                    if (index.fieldsExpression.length >= 1) {
-                        items += "<td>" + index.fieldsExpression[0].expression + "</td>";
-                    } else {
-                        items += "<td></td>";
-                    }
-                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
-                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
-                    items += "</tr>";
-                }
-            }
-            $("#index-table > tbody").html(items);
-        })
     }
 
     function generateOperationResponse(data) {
@@ -572,7 +381,7 @@
                     objectInfo +=  "<b>" + deleted + "</b> removed ";
                 }
 
-                it.find("[did='op-hash']").html(smallHash(op.hash)).attr("href", "/api/admin?view=objects&filter=operation&search=null&type=opHash&key=" + op.hash + "&history=true&limit=50");
+                it.find("[did='op-hash']").html(smallHash(op.hash)).attr("href", "/api/admin?view=objects&filter=operation&key=" + op.hash + "&history=true&limit=50");
                 it.find("[did='op-type']").html(op.type);
                 it.find("[did='op-type-link']").attr("href", "/api/admin?view=objects&filter=type&search=" + op.type + "&type=all&history=false&limit=50");
                 it.find("[did='object-info']").html(objectInfo);
@@ -585,10 +394,55 @@
             $("#amount-operations").html("Amount operations: " + 0);
         }
     }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB OPERATIONS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-    var editor = {};
-    var originObject;
-    var globalObjects = {};
+    ///////////////////// FUNCTIONS TAB OBJECTS ///////////////////////////////////
+    function loadSearchTypeByOpType(type) {
+        $.ajax({url:"/api/indices-by-type?type=" + type, type:"get", async:false,
+            success: function(data) {
+                var searchTypes = "";
+                searchTypes += "<option value = 'all' selected>all</option>";
+                searchTypes += "<option value = 'id' >by id</option>";
+                searchTypes += "<option value = 'count' >count</option>";
+                for (var i = 0; i < data.length; i++) {
+                    var obj = data[i];
+                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
+                }
+
+                $("#search-type-list").html(searchTypes);
+                $("#historyCheckbox").prop("disabled", false);
+                $("#search-key-input").addClass("hidden")
+            },
+            error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }
+        });
+
+    }
+
+    function loadObjectsData() {
+        $("#index-list-id").hide();
+        let selectType = $("#type-list").val();
+        $.ajax({
+            url: "/api/objects?type=sys.operation",
+            type: "GET",
+            async: false,
+            success: function(data) {
+                var types = "<option value = '' disabled>Select type</option>";
+                types += "<option value = 'none' selected>none</option>";
+                $("#objects-tab").html("Objects (" + data.objects.length + ")");
+                for(var i = 0; i < data.objects.length; i++)  {
+                    let obj = data.objects[i];
+                    let objType = obj.id[0];
+                    globalObjectTypes[objType] = obj;
+
+                    types += "<option value = '"+objType+"' " +
+                        (selectType === objType ? "selected" : "") + ">"+objType+"</option>";
+                }
+                $("#type-list").html(types);
+                $("#index-op-types").html(types);
+            }
+        });
+    }
+
     function generateJsonFromObject(obj) {
         $("#json-editor-div").removeClass("hidden");
 
@@ -666,126 +520,6 @@
             },
             error: function(xhr, status, error) { $("#result").html("ERROR: " + error); }});
         return amount;
-    }
-
-    function checkUrlParam() {
-        // objects -> http://localhost:6463/api/admin?view=objects&filter=&search=osm.place&type=id&key=12345662&history=true
-        // operations -> http://localhost:6463/api/admin?view=operations&loadBy=blockId&key=0
-        // blocks -> http://localhost:6463/api/admin?view=blocks&search=from&hash=213&limit=123
-        var url = new URL(window.location.href);
-        if (window.location.href.toLowerCase().indexOf('api/admin?view=objects') > 1) {
-            $(".nav-tabs a[href=\"#objects\"]").tab('show');
-                var filter = url.searchParams.get('filter');
-                if (filter !== null) {
-                    $("#filter-list").val(filter);
-                    $("#filter-list").change();
-                }
-                var searchTypeListValue = url.searchParams.get('search');
-                if (searchTypeListValue !== null) {
-                    $("#type-list").val(searchTypeListValue);
-                    $("#type-list").change();
-                }
-                var typeSearch = url.searchParams.get('type');
-                if (typeSearch !== null) {
-                    $("#search-type-list").val(typeSearch).change();
-                }
-                var checkboxValue = url.searchParams.get('history');
-                if (checkboxValue !== null) {
-                    $("#historyCheckbox").prop('checked', checkboxValue === "true");
-                } else {
-                    $("#search-type-list").change();
-                }
-                var limitValue = url.searchParams.get('limit');
-                if (limitValue !== null) {
-                    $("#limit-field").val(limitValue);
-                }
-                var keyValue = url.searchParams.get('key');
-                if (keyValue !== null) {
-                    $("#search-key").val(keyValue);
-                }
-
-                loadObjectView(false);
-        } else if (window.location.href.toLowerCase().indexOf('api/admin?view=operations') > 1) {
-            $(".nav-tabs a[href=\"#operations\"]").tab('show');
-            var loadType = url.searchParams.get('loadBy');
-            if (loadType !== null) {
-                $("#operations-search").val(loadType).change();
-            }
-            var key = url.searchParams.get('key');
-            if (key !== null) {
-                $("#operations-key").val(key);
-            }
-
-            loadOperationView();
-        } else if (window.location.href.toLowerCase().indexOf('api/admin?view=blocks') > 1) {
-            $(".nav-tabs a[href=\"#blocks\"]").tab('show');
-            var searchType = url.searchParams.get('search');
-            if (searchType !== null) {
-                $("#blocks-search").val(searchType).change();
-            }
-            var hashValue = url.searchParams.get('hash');
-            if (hashValue !== null) {
-                $("#search-block-field").val(hashValue);
-            }
-            var limit = url.searchParams.get('limit');
-            if (limit !== null) {
-                $("#block-limit-value").val(limit);
-            }
-
-            loadBlockView();
-        }
-    }
-
-    function startBot(bot) {
-        var obj = {
-            "botName":bot
-        };
-        $.post("/api/bot/start", obj)
-            .done(function (data) {$("#result").html(data)})
-            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
-    }
-
-    function stopBot(bot) {
-        var obj = {
-            "botName":bot
-        };
-        $.post("/api/bot/stop", obj)
-            .done(function (data) {$("#result").html(data)})
-            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
-    }
-
-    function showBotHistory(bot) {
-        var obj = {
-            "botName" : bot
-        };
-        $.getJSON("/api/bot/history", obj)
-            .done(function (data) {
-                var items = "";
-                for (var i=0; i < data.length; i++) {
-                    var obj = data[i];
-                    items += "<tr>";
-                    items += "<td>" + obj.bot + "</td>";
-                    items += "<td>" + new Date(obj.startDate).toLocaleString() + "</td>";
-                    if (obj.endDate !== undefined) {
-                        items += "<td>" + new Date(obj.endDate).toLocaleString() + "</td>";
-                    } else {
-                        items += "<td></td>"
-                    }
-                    items += "<td>" + obj.total + "</td>";
-                    items += "<td>" + obj.processed + "</td>";
-                    items += "<td>" + obj.status + "</td>";
-                    items += "</tr>";
-                }
-                $(".modal-body #bots-history-table  > tbody").html(items);
-                $(".modal-header #history-bot-name").val(bot);
-                $(".modal-header #bot-history-header").html("History of the launches for bot: " + bot);
-            })
-            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
-    }
-
-
-    function closeBotHistory() {
-        $("#bots-history-table").hide();
     }
 
     function loadObjectView() {
@@ -881,52 +615,366 @@
             }
         }
     }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB OBJECTS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-    function loadOperationView() {
-        var typeSearch = $("#operations-search").val();
-        var key = $("#operations-key").val();
-        if (typeSearch === "queue") {
-            $.getJSON( "/api/queue", function( data ) {
-                generateOperationResponse(data);
-                $("#amount-operations").addClass("hidden");
-            });
-        } else if (typeSearch === "id") {
-            $.getJSON("/api/ops-by-id?id=" + key, function (data) {
-                generateOperationResponse(data);
-                $("#amount-operations").removeClass("hidden");
+    ///////////////////// FUNCTIONS TAB LOGS ////////////////////////
+    function loadErrorsData() {
+        $.getJSON( "/api/logs", function( data ) {
+            var items = "";
+            var errs = 0;
+            var templateItem = $("#errors-list-item");
+            for(var i = 0; i < data.logs.length; i++)  {
+                let op = data.logs[i];
+                var it = templateItem.clone();
 
-            })
-        } else if (typeSearch === "blockId") {
-            $.getJSON( "/api/ops-by-block-id?blockId=" + key, function( data ) {
-                generateOperationResponse(data);
-                $("#amount-operations").removeClass("hidden");
+                it.find("[did='status']").html(op.status);
+                it.find("[did='log-message']").html(op.message);
+                it.find("[did='log-time']").html(new Date(op.utcTime).toUTCString());
 
-            });
-        } else { //blockHash
-            $.getJSON( "/api/ops-by-block-hash?hash=" + key, function( data ) {
-                generateOperationResponse(data);
-                $("#amount-operations").removeClass("hidden");
+                if(op.status) {
+                    errs++;
+                }
+                if(op.cause) {
+                    it.find("[did='exception-message']").html(op.cause.detailMessage);
+                } else {
+                    it.find("[did='excep-message-hidden']").prop("hidden", true);
+                }
+                if(op.block) {
+                    it.find("[did='block']").html(op.block.block_id + " " + op.block.hash);
+                } else {
+                    it.find("[did='block-hidden']").prop("hidden", true);
+                }
+                if(op.operation) {
+                    it.find("[did='operation']").html(op.operation.type + " " + op.operation.hash);
+                } else {
+                    it.find("[did='operation-hidden']").prop("hidden", true);
+                }
+                if(op.block) {
+                    it.find("[did='block-json']").html(JSON.stringify(op.block, null, 4));
+                } else {
+                    it.find("[did='block-json-hidden']").prop("hidden", true);
+                }
+                if(op.operation) {
+                    it.find("[did='operation-json']").html(JSON.stringify(op.operation, null, 4));
+                } else {
+                    it.find("[did='op-json-hidden']").prop("hidden", true);
+                }
+                if(op.cause) {
+                    it.find("[did='full-exception-json']").html(JSON.stringify(op.cause, null, 4));
+                } else {
+                    it.find("[did='full-json-hidden']").prop("hidden", true);
+                }
+                items += it.html();
+            }
+            $("#errors-tab").html("Logs (" + errs + " Errors)");
+            $("#errors-list").html(items);
+        });
+    }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB LOGS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-            });
-        }
+    //////////////////// FUNCTIONS TAB API /////////////////////////////
+    function startBot(bot) {
+        var obj = {
+            "botName":bot
+        };
+        $.post("/api/bot/start", obj)
+            .done(function (data) {$("#result").html(data)})
+            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
     }
 
-    function loadBlockView() {
-        var type = $("#blocks-search").val();
-        var reqObj = {
-            depth: $("#block-limit-value").val()
+    function stopBot(bot) {
+        var obj = {
+            "botName":bot
         };
-        if(type !== "all") {
-            reqObj[type] = $("#search-block-field").val();
-        }
+        $.post("/api/bot/stop", obj)
+            .done(function (data) {$("#result").html(data)})
+            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+    }
 
-        $.getJSON("/api/blocks", reqObj, function (data) {
-            processBlocksResult(data);
+    // TODO refactor method
+    function showBotHistory(bot) {
+        var obj = {
+            "botName" : bot
+        };
+        $.getJSON("/api/bot/history", obj)
+            .done(function (data) {
+                var items = "";
+                for (var i=0; i < data.length; i++) {
+                    var obj = data[i];
+                    items += "<tr>";
+                    items += "<td>" + obj.bot + "</td>";
+                    items += "<td>" + new Date(obj.startDate).toLocaleString() + "</td>";
+                    if (obj.endDate !== undefined) {
+                        items += "<td>" + new Date(obj.endDate).toLocaleString() + "</td>";
+                    } else {
+                        items += "<td></td>"
+                    }
+                    items += "<td>" + obj.total + "</td>";
+                    items += "<td>" + obj.processed + "</td>";
+                    items += "<td>" + obj.status + "</td>";
+                    items += "</tr>";
+                }
+                $(".modal-body #bots-history-table  > tbody").html(items);
+                $(".modal-header #history-bot-name").val(bot);
+                $(".modal-header #bot-history-header").html("History of the launches for bot: " + bot);
+            })
+            .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+    }
+
+    // TODO refactor method
+    function loadBotData() {
+        $.getJSON("/api/bot/stats", function (data) {
+            var items = "";
+            for (var key in data) {
+                var obj = data[key];
+                items += "<tr>";
+                items += "<td>" + obj.id + "</td>";
+                if ('botStats' in obj) {
+                    items += "<td>" + obj.botStats.taskName + "</td>";
+                    items += "<td>" + obj.botStats.taskDescription + "</td>";
+                } else {
+                    items += "<td></td>";
+                    items += "<td></td>";
+                }
+                items += "<td>" + new Date(obj.started).toLocaleString() + "</td>";
+                items += "<td>" + obj.interval + "</td>";
+                if ('botStats' in obj) {
+                    if (!obj.botStats.isRunning) {
+                        items += "<td>NOT RUNNING</td>"
+                    } else {
+                        var progressBarValue = parseInt((obj.botStats.progress / obj.botStats.total) * 100);
+                        items += "<td><div class=\"progress\">\n" +
+                            "  <div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\"\n" +
+                            "  aria-valuenow=\"" + progressBarValue + "\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width:" + progressBarValue + "%\">\n" +
+                            progressBarValue + "%" +
+                            "  </div>\n" +
+                            "</div></td>";
+                    }
+                } else {
+                    items += "<td></td>";
+                }
+                items += "<td>";
+                if ('botStats' in obj && obj.botStats.isRunning === false) {
+                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
+                } else {
+                    items += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
+                }
+                items += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>";
+                items += "</td>";
+                items += "</tr>";
+
+            }
+
+            $("#bots-table > tbody").html(items);
         });
     }
 
+    // TODO refactor method
+    function loadDBIndexData() {
+        $.getJSON("/api/index", function (data) {
+            // var table = $("#index-table");
+            // items.clear();
+            // console.log(items);
+            // var mytablebody = document.createElement("tbody");
+            var items = "";
+            for (var key in data) {
+                var obj = data[key];
+                items += "<tr><td class='info' colspan='9'>" + key + "</td></tr>";
+                for (var keyObj in obj) {
+                    var index = obj[keyObj];
+                    items += "<tr>";
+                    items += "<td>" + index.indexId + "</td>";
+                    items += "<td>" + index.opType + "</td>";
+                    items += "<td>" + index.columnDef.tableName + "</td>";
+                    items += "<td>" + index.columnDef.colName + "</td>";
+                    items += "<td>" + index.columnDef.colType + "</td>";
+                    items += "<td>" + index.columnDef.index + "</td>";
+                    if (index.fieldsExpression.length >= 1) {
+                        items += "<td>" + index.fieldsExpression[0].expression + "</td>";
+                    } else {
+                        items += "<td></td>";
+                    }
+                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
+                    items += "<td>" + index.cacheRuntimeBlocks + "</td>";
+                    items += "</tr>";
+                }
+            }
+            $("#index-table > tbody").html(items);
+        })
+    }
+
+    function loadReportFiles() {
+        // TODO
+    }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB API \\\\\\\\\\\\\\\\\\\\\\\\\
+
+    /////////////////////// FUNCTIONS TAB SETTINGS ///////////////////////////
+    function editPreferenceObject(i) {
+        console.log(globalConfig[i]);
+        if (globalConfig[i].type === "Map") {
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value, null, 4));
+        } else {
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(globalConfig[i].value);
+
+        }
+        $("#settings-edit-modal .modal-body #settings-type-edit-header").html("Preference type: " + globalConfig[i].type);
+        $("#settings-edit-modal .modal-body #settings-type").html(globalConfig[i].type);
+        $("#settings-edit-modal .modal-body #edit-preference-restart").val(globalConfig[i].restartIsNeeded.toString());
+        $("#settings-edit-modal .modal-header #settings-name").val(globalConfig[i].id);
+        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + globalConfig[i].id);
+    }
+
+    function loadConfiguration() {
+        $.getJSON("/api/mgmt/config", function (data) {
+            // var items = "";
+            globalConfig = data;
+            var items = $("#settings-result-list");
+            items.empty();
+            var templateItem = $("#settings-list-item");
+
+            for (var i = 0; i < data.length; i++) {
+                obj = data[i];
+                if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
+                    showSettings(i);
+                } else if (!($("#settingsCheckbox").is(":checked"))) {
+                    showSettings(i);
+                }
+
+            }
+
+            function showSettings(i) {
+                var it = templateItem.clone();
+                if (obj.canEdit === true) {
+                    it.find("[did='edit-settings']").click(function() {
+                        editPreferenceObject(i);
+                    });
+                } else {
+                    it.find("[did='edit-settings']").addClass("hidden");
+                }
+                it.find("[did='settings-name']").html(obj.id + " - " + obj.description);
+                if (obj.type === "Map") {
+                    it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
+                    it.find("[did='settings-value']").addClass("hidden");
+                } else {
+                    it.find("[did='settings-value-json']").addClass("hidden");
+                    it.find("[did='settings-value']").html(obj.value );
+                }
+                if (obj.restartIsNeeded === true) {
+                    it.find("[did='settings-restart']").removeClass("hidden");
+                }
+                items.append(it);
+            }
+
+        });
+    }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB SETTINGS \\\\\\\\\\\\\\\\\\\\\\\\\
+
+    /////////////////////// FUNCTIONS TAB METRICS /////////////////////////////
+    // TODO refactor method
+    function setMetricsDataToTable() {
+        var gid = 0;
+        if($("#metrics-a").prop("checked")) {
+            gid = 1;
+        }
+        if($("#metrics-b").prop("checked")) {
+            gid = 2;
+        }
+        var items = "";
+        items += "<table border='1'>";
+        items += "<tr>";
+        items += "<th><b>Id</b><th>";
+        items += "<th><b>Count</b><th>";
+        items += "<th><b>Total (s)</b><th>";
+        items += "<th><b>Average (ms)</b><th>";
+        items += "<th><b>Throughput / sec</b><th>";
+        items += "</tr>";
+
+        for(var i = 0; i < metricsData.length; i++)  {
+            let item = metricsData[i];
+            items += "<tr>";
+            var lid = item.id;
+            if(lid.length > 50) {
+                lid = lid.substring(0, 50);
+            }
+            items += "<td><b>"+lid+"</b><td>";
+            items += "<td>"+item.count[gid]+"<td>";
+            items += "<td>"+item.totalSec[gid]+"<td>";
+            items += "<td>"+item.avgMs[gid]+"<td>";
+            if(item.avgMs > 0) {
+                items += "<td>"+Number(1000/item.avgMs[gid]).toFixed(2)+"<td>";
+            } else {
+                items += "<td>-<td>";
+            }
+            items += "</tr>";
+        }
+        items += "</table>";
+        $("#metrics-list").html(items);
+    }
+
+    function loadMetricsData() {
+        $.getJSON( "/api/metrics", function( data ) {
+            metricsData = data.metrics;
+            setMetricsDataToTable();
+        });
+    }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB METRICS \\\\\\\\\\\\\\\\\\\\\\\\\
+
+    ///////////////// FUNCTIONS TAB IPFS //////////////////////////
+    function loadIpfsStatusData() {
+        $.getJSON("/api/ipfs/status?full=false", function ( data ) {
+            $("#ipfs-status").html(data.status);
+            $("#ipfs-peer-id").html(data.peerId);
+            $("#ipfs-version").html(data.version);
+            $("#ipfs-gateway").html(data.gateway);
+            $("#ipfs-api").html(data.api);
+            $("#ipfs-addresses").html(JSON.stringify(data.addresses));
+            $("#ipfs-public-key").html(data.publicKey);
+
+            // IPFS STORAGE
+            $("#ipfs-repo-size").html(data.repoSize);
+            $("#ipfs-max-storage-size").html(data.storageMax);
+            $("#ipfs-repo-path").html(data.repoPath);
+
+            // IPFS SYSTEM INFO
+            $("#system-info").html(data.diskInfo);
+            $("#system-memory").html(data.memory);
+            $("#system-runtime").html(data.runtime);
+            $("#system-network").html(data.network);
+
+            // IPFS STATS
+            $("#amount-all-ipfs-objects").html(data.amountIpfsResources);
+            $("#amount-pinned-ipfs-objects").html(data.amountPinnedIpfsResources);
+        });
+    }
+
+    function loadFullIpfsStatus() {
+        $.getJSON("/api/ipfs/status?full=true", function (data) {
+            $("#result").html("SUCCESS: " + data);
+            $("#amount-missing-ipfs-objects").html(data.missingResources.length);
+            $("#amount-db-objects").html(data.amountDBResources);
+            $("#amount-unactivated-objects").html(data.deprecatedResources.length);
+
+            for(var i = 0; i < data.missingResources.length; i++)  {
+                $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
+            };
+            for(var i = 0; i < data.deprecatedResources.length; i++)  {
+                $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
+            };
+        });
+    }
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB IPFS \\\\\\\\\\\\\\\\\\\\\\\\\
+
+    ///////////////// FUNCTIONS TAB REGISTRATION /////////////////////////
+    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB REGISTRATION \\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+    var editor = {};
+    var originObject;
+    var globalObjects = {};
     $( document ).ready(function() {
         loadData(true);
+
+        ////////////////////////// TAB STATUS //////////////////////
         $("#clear-list-btn").click(function(){
             $.post("/api/mgmt/queue-clear", {},  function(data, status){
                 loadData();
@@ -944,173 +992,12 @@
                 loadData();
             });
         });
+
         $("#replicate-btn").click(function(){
             $.post("/api/mgmt/replicate", {},  function(data, status){
                 loadData();
             });
         });
-
-        $("#config-list").change(function () {
-            var selected = $("#config-list").val();
-            if (globalConfig[selected].toString() === "[object Object]") {
-                $("#config-value").val(JSON.stringify(globalConfig[selected], null, 4)).attr("rows", 20);
-            } else {
-                $("#config-value").val(globalConfig[selected]).attr("rows", 1);
-            }
-        });
-
-        $("#filter-list").change(function() {
-           var selected = $("#filter-list").val();
-           if (selected === "type") {
-               $("#type-list-select").removeClass("hidden");
-               $("#search-type-list-select").removeClass("hidden");
-               $("#search-key-input").addClass("hidden");
-               $("#historyCheckbox").prop("disabled", false).prop('checked', false);
-           } else {
-               $("#type-list-select").addClass("hidden");
-               $("#search-type-list-select").addClass("hidden");
-               $("#search-key-input").removeClass("hidden");
-               $("#historyCheckbox").prop("disabled", true).prop('checked', true);
-               if (selected === "operation") {
-                   $("#name-key-field").text("Input operation Hash");
-               } else {
-                   $("#name-key-field").text("Input user Id");
-               }
-           }
-        });
-
-        $("#settingsCheckbox").change(function () {
-           loadConfiguration();
-        });
-
-        $("#search-type-list").change(function() {
-            var selectedSearchType = $("#search-type-list").val();
-            if (selectedSearchType === "all") {
-                if ($("#type-list").val() === "none") {
-                    $("#historyCheckbox").prop('checked', true)
-                } else {
-                    $("#search-key-input").addClass("hidden");
-                    $("#historyCheckbox").prop("disabled", false);
-                }
-            } else if ( selectedSearchType === "count") {
-                $("#search-key-input").addClass("hidden");
-                $("#historyCheckbox").prop("disabled", true).prop('checked', false);
-            } else if (selectedSearchType === "userId") {
-                $("#search-key-input").removeClass("hidden");
-                $("#name-key-field").text("Input User ID");
-                $("#historyCheckbox").prop('checked', true).prop("disabled", true);
-            } else if (selectedSearchType === "opHash") {
-                $("#search-key-input").removeClass("hidden");
-                $("#type-list").val("none");
-                $("#name-key-field").text("Input Op Hash");
-                $("#historyCheckbox").prop('checked', true).prop("disabled", true);
-            } else {
-                $("#search-key-input").removeClass("hidden");
-                if (selectedSearchType === "id") {
-                    $("#name-key-field").text("Input Object ID");
-                } else {
-                    $("#name-key-field").text("Input " + $("#search-type-list").val());
-                }
-                $("#historyCheckbox").prop("disabled", false);
-            }
-        });
-
-
-        $("#type-list").change(function () {
-            var type = $("#type-list").val();
-            loadSearchTypeByOpType(type);
-        });
-
-        $("#operations-search").change(function () {
-           var type = $("#operations-search").val();
-           if (type === "queue") {
-               $("#operations-search-fields").addClass("hidden");
-           } else {
-               $("#operations-search-fields").removeClass("hidden");
-               if (type === "id") {
-                   $("#input-search-operation-key").text("Input object id");
-               } else if (type === "blockId") {
-                   $("#input-search-operation-key").text("Input block Id");
-               } else {
-                   $("#input-search-operation-key").text("Input block hash");
-               }
-           }
-        });
-
-        $("#refresh-index-table-btn").click(function () {
-           loadDBIndexData();
-        });
-
-        $("#add-new-index-btn").click(function () {
-            var myJSObject = {
-                tableName:$("#index-table-name").val(),
-                colName:$("#index-col-name").val(),
-                colType:$("#index-col-type").val(),
-                types:$("#index-op-types").val(),
-                index:$("#index-type").val(),
-                sqlMapping:$("#index-col-sql-mapping").val(),
-                cacheRuntimeMax:$("#index-cacheRuntimeMax").val(),
-                cacheDbIndex:$("#index-cacheDbIndex").val(),
-                field:($("#index-field").val()).split(",")
-            };
-            $.ajax("/api/mgmt/index", {
-                data: JSON.stringify(myJSObject),
-                contentType: 'application/json',
-                type: 'POST',
-                success: function(data) {
-
-                },
-                error: function(xhr, status, error) {
-
-                }
-            });
-            $("#new-index-modal .close").click();
-        });
-
-        $("#refresh-api-table-btn").click(function () {
-            loadReportFiles();
-        });
-
-        $("#refresh-bot-table-btn").click(function () {
-            loadBotData();
-        });
-
-        $("#blocks-search").change(function () {
-           var type = $("#blocks-search").val();
-           if (type === "all") {
-               $("#block-from-fields").addClass("hidden");
-           } else {
-               $("#block-from-fields").removeClass("hidden");
-           }
-        });
-        
-        $("#metrics-all").click(function() {
-        	setMetricsDataToTable();
-        });
-        $("#metrics-a").click(function() {
-        	setMetricsDataToTable();
-        });
-        $("#metrics-b").click(function() {
-        	setMetricsDataToTable();
-        });
-        $("#reset-metrics-b").click(function(){
-        	$.post("/api/metrics-reset?cnt=2", {})
-            .done(function(data){  metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
-            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-        
-        $("#refresh-metrics").click(function(){
-        	$.get("/api/metrics", {})
-            .done(function(data){  metricsData = data.metrics; setMetricsDataToTable(); })
-            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-
-        $("#reset-metrics-a").click(function(){
-        	$.post("/api/metrics-reset?cnt=1", {})
-            .done(function(data){  metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
-            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-        
 
         $("#block-create-btn").click(function(){
             $.post("/api/mgmt/create", {})
@@ -1177,6 +1064,70 @@
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
         });
 
+        ////////////////////////// TAB BLOCKS /////////////////////////
+        $("#blocks-search").change(function () {
+            var type = $("#blocks-search").val();
+            if (type === "all") {
+                $("#block-from-fields").addClass("hidden");
+            } else {
+                $("#block-from-fields").removeClass("hidden");
+            }
+        });
+
+        $("#block-load-btn").click(function () {
+            var type = $("#blocks-search").val();
+
+            loadBlockView();
+            //window.location = "/api/admin?view=blocks&search=" + type+ "&hash=" + $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val();
+        });
+
+        ////////////////////////// TAB OPERATIONS /////////////////////
+        $("#operations-search").change(function () {
+            var type = $("#operations-search").val();
+            if (type === "queue") {
+                $("#operations-search-fields").addClass("hidden");
+            } else {
+                $("#operations-search-fields").removeClass("hidden");
+                if (type === "id") {
+                    $("#input-search-operation-key").text("Input object id");
+                } else if (type === "blockId") {
+                    $("#input-search-operation-key").text("Input block Id");
+                } else {
+                    $("#input-search-operation-key").text("Input block hash");
+                }
+            }
+        });
+
+        $("#operations-search-btn").click(function () {
+            var typeSearch = $("#operations-search").val();
+            var key = $("#operations-key").val();
+
+            loadOperationView();
+            //window.location = '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key;
+
+        });
+
+        /////////////////// TAB OBJECTS ////////////////////////////
+        $("#filter-list").change(function() {
+            var selected = $("#filter-list").val();
+            if (selected === "type") {
+                $("#type-list-select").removeClass("hidden");
+                $("#search-type-list-select").removeClass("hidden");
+                $("#search-key-input").addClass("hidden");
+                $("#historyCheckbox").prop("disabled", false).prop('checked', false);
+            } else {
+                $("#type-list-select").addClass("hidden");
+                $("#search-type-list-select").addClass("hidden");
+                $("#search-key-input").removeClass("hidden");
+                $("#historyCheckbox").prop("disabled", true).prop('checked', true);
+                if (selected === "operation") {
+                    $("#name-key-field").text("Input operation Hash");
+                } else {
+                    $("#name-key-field").text("Input user Id");
+                }
+            }
+        });
+
         $("#load-objects-btn").click(function () {
             var filter = $("#filter-list").val();
             var searchType = $("#search-type-list").val();
@@ -1187,7 +1138,8 @@
             $("#finish-edit-btn").addClass("hidden");
             $("#add-edit-op-btn").addClass("hidden");
 
-            window.location = '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val();
+            loadObjectView();
+            //window.location = '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val();
         });
 
         $("#finish-edit-btn").click(function () {
@@ -1218,125 +1170,165 @@
             $("#add-edit-op-btn").addClass("hidden");
         });
 
-       
-        $("#load-bot-stats-btn").click(function () {
-            $.getJSON("/api/bot/stats")
-                .done(function (data) {
-                    var items = "";
-                    for (var key in data) {
-                        var obj = data[key];
-                        items += "<br><li><b>Id</b>: " + obj.id;
-                        items += "<br><b>API</b>: " + obj.api;
-                        items += "<br><b>Version</b>: " + obj.version;
-                        items += "<br><b>Started</b>: " + obj.started;
-                        if ('botStats' in obj) {
-                            items += "<br><b>Task description</b>: " + obj.botStats.taskDescription;
-                            items += "<br><b>Task name</b>: " + obj.botStats.taskName;
-                            items += "<br><b>Task count</b>: " + obj.botStats.taskCount;
-                            items += "<br><b>Total tasks</b>: " + obj.botStats.total;
-                            if (obj.botStats.taskCount === obj.botStats.total) {
-                                items += "<span class=\"label label-primary\">Not enabled</span>";
-                            } else {
-                                items += "<div class=\"progress\">\n" +
-                                    "<div class=\"progress-bar progress-bar-striped progress-bar-animated\" role=\"progressbar\" aria-valuenow=\"" + obj.botStats.progress + "\" aria-valuemin=\"0\" aria-valuemax=\"" + obj.botStats.total + "\" style=\"width: " + obj.botStats.progress + "%\"></div>\n" +
-                                    "</div>";
-                            }
-                        }
-                        items += "<br></li>";
-                    }
-                    $("#bot-list-stats").html(items);
+        $("#add-edit-op-btn").click(function () {
+            var obj = {
+                "addToQueue" : "true",
+                "dontSignByServer": false
+            };
+            var params = $.param(obj);
+            var json = JSON.stringify(editor.get());
+            $.ajax({
+                url: '/api/auth/process-operation?' + params,
+                type: 'POST',
+                data: json,
+                contentType: 'application/json; charset=utf-8'
+            })
+                .done(function(data) {
+                    $("#result").html(data); loadData();  editor = null;
+                    $("#json-editor-div").addClass("hidden");
+                    $("#stop-edit-btn").addClass("hidden");
+                    $("#add-edit-op-btn").addClass("hidden");
                 })
-                .fail(function(xhr, status, error) { $("#result").html("ERROR: " + error); });
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
         });
-        
+
+        $("#type-list").change(function () {
+            var type = $("#type-list").val();
+            loadSearchTypeByOpType(type);
+        });
+
+        ///////////////// TAB LOGS ////////////////////////
+
+        ///////////////// TAB API /////////////////////////
+        $("#refresh-index-table-btn").click(function () {
+            loadDBIndexData();
+        });
+
+        $("#add-new-index-btn").click(function () {
+            var myJSObject = {
+                tableName:$("#index-table-name").val(),
+                colName:$("#index-col-name").val(),
+                colType:$("#index-col-type").val(),
+                types:$("#index-op-types").val(),
+                index:$("#index-type").val(),
+                sqlMapping:$("#index-col-sql-mapping").val(),
+                cacheRuntimeMax:$("#index-cacheRuntimeMax").val(),
+                cacheDbIndex:$("#index-cacheDbIndex").val(),
+                field:($("#index-field").val()).split(",")
+            };
+            $.ajax("/api/mgmt/index", {
+                data: JSON.stringify(myJSObject),
+                contentType: 'application/json',
+                type: 'POST',
+                success: function(data) {
+                    $("#result").html("ADDED: " + data); loadDBIndexData();
+                },
+                error: function(xhr, status, error) {
+                    $("#result").html("ERROR: " + error);
+                }
+            });
+            $("#new-index-modal .close").click();
+        });
+
+        $("#refresh-api-table-btn").click(function () {
+            loadReportFiles();
+        });
+
+        $("#refresh-bot-table-btn").click(function () {
+            loadBotData();
+        });
+
         $("#refresh-bot-history-btn").click(function () {
             var botName = $(".modal-header #history-bot-name").val();
             showBotHistory(botName);
         });
 
-        $("#update-settings").click(function () {
-            var keyConfig = $("#config-list").val();
-            if (globalConfig[keyConfig] !== $("#config-value").val() && keyConfig !== null) {
-                var obj = {
-                    key: keyConfig,
-                    value: $("#config-value").val()
-                };
-                $.post("/api/mgmt/config", obj)
-                    .done(function (data) {
-                        $("#result").html("SUCCESS: " + data);
-                        loadConfiguration();
-                        setTimeout(function() {
-                            $("#config-list").val(keyConfig).change();
-                        }, 200);
-                    })
-                    .fail(function (xhr, status, error) {
-                        $("#result").html("ERROR: " + error);
-                    });
-                $("#settings-warn-alert").show();
+        /////////////////// TAB SETTINGS /////////////////////////////
+        $("#settingsCheckbox").change(function () {
+            loadConfiguration();
+        });
+
+        $("#search-type-list").change(function() {
+            var selectedSearchType = $("#search-type-list").val();
+            if (selectedSearchType === "all") {
+                if ($("#type-list").val() === "none") {
+                    $("#historyCheckbox").prop('checked', true)
+                } else {
+                    $("#search-key-input").addClass("hidden");
+                    $("#historyCheckbox").prop("disabled", false);
+                }
+            } else if ( selectedSearchType === "count") {
+                $("#search-key-input").addClass("hidden");
+                $("#historyCheckbox").prop("disabled", true).prop('checked', false);
+            } else if (selectedSearchType === "userId") {
+                $("#search-key-input").removeClass("hidden");
+                $("#name-key-field").text("Input User ID");
+                $("#historyCheckbox").prop('checked', true).prop("disabled", true);
+            } else if (selectedSearchType === "opHash") {
+                $("#search-key-input").removeClass("hidden");
+                $("#type-list").val("none");
+                $("#name-key-field").text("Input Op Hash");
+                $("#historyCheckbox").prop('checked', true).prop("disabled", true);
             } else {
-                $("#result").html("ERROR: " + "Nothing to update");
+                $("#search-key-input").removeClass("hidden");
+                if (selectedSearchType === "id") {
+                    $("#name-key-field").text("Input Object ID");
+                } else {
+                    $("#name-key-field").text("Input " + $("#search-type-list").val());
+                }
+                $("#historyCheckbox").prop("disabled", false);
             }
         });
 
-       $("#show-add-new-preference-btn").click(function () {
-          $("#add-new-preference").show();
-          $("#show-add-new-preference-btn").hide();
-       });
+        $("#save-new-value-for-settings-btn").click(function () {
+            var obj = {
+                key: $("#settings-name").val(),
+                value: $("#edit-preference-value").val(),
+                type: $("#settings-type").text(),
+            };
+            $.post("/api/mgmt/config", obj)
+                .done(function (data) {
+                    $("#result").html("SUCCESS: " + data);
+                    loadConfiguration();
+                })
+                .fail(function (xhr, status, error) {
+                    $("#result").html("ERROR: " + error);
+                });
 
-       $("#add-new-preference-btn").click(function () {
-           var obj = {
-               key: $("#new-preference-key").val(),
-               value: $("#new-preference-value").val(),
-               type: $("#new-preference-type").val(),
-               restartIsNeeded: $("#new-preference-restart").val()
-           };
-           $.post("/api/mgmt/config", obj)
-               .done(function (data) {
-                   $("#result").html("SUCCESS: " + data);
-                   loadConfiguration();
-               })
-               .fail(function (xhr, status, error) {
-                   $("#result").html("ERROR: " + error);
-               });
-       });
-
-       $("#cancel-new-preference-btn").click(function () {
-           $("#add-new-preference").hide();
-           $("#show-add-new-preference-btn").show();
-
-       });
-
-       $("#save-new-value-for-settings-btn").click(function () {
-           var obj = {
-               key: $("#settings-name").val(),
-               value: $("#edit-preference-value").val(),
-               type: $("#settings-type").text(),
-           };
-           $.post("/api/mgmt/config", obj)
-               .done(function (data) {
-                   $("#result").html("SUCCESS: " + data);
-                   loadConfiguration();
-               })
-               .fail(function (xhr, status, error) {
-                   $("#result").html("ERROR: " + error);
-               });
-
-           $("#settings-edit-modal .close").click();
-       });
-
-        $("#operations-search-btn").click(function () {
-            var typeSearch = $("#operations-search").val();
-            var key = $("#operations-key").val();
-
-            window.location = '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key;
-
+            $("#settings-edit-modal .close").click();
         });
 
-        $("#block-load-btn").click(function () {
-            var type = $("#blocks-search").val();
-            window.location = "/api/admin?view=blocks&search=" + type+ "&hash=" + $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val();
+
+        ////////////////////////// TAB METRICS ///////////////////////
+        $("#metrics-all").click(function() {
+            setMetricsDataToTable();
+        });
+        $("#metrics-a").click(function() {
+            setMetricsDataToTable();
+        });
+        $("#metrics-b").click(function() {
+            setMetricsDataToTable();
+        });
+        $("#reset-metrics-b").click(function(){
+            $.post("/api/metrics-reset?cnt=2", {})
+                .done(function(data){  metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
         });
 
+        $("#refresh-metrics").click(function(){
+            $.get("/api/metrics", {})
+                .done(function(data){  metricsData = data.metrics; setMetricsDataToTable(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+        $("#reset-metrics-a").click(function(){
+            $.post("/api/metrics-reset?cnt=1", {})
+                .done(function(data){  metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
+                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        });
+
+
+        /////////////////////// TAB IPFS ////////////////////////////////
         $("#add-file-btn").click(function () {
             var formData = new FormData();
             formData.append("file", $("#image-file")[0].files[0]);
@@ -1384,6 +1376,8 @@
             loadFullIpfsStatus();
         });
 
+
+        /////////////////////////// TAB REGISTRATION ////////////////////
         $("#signup-btn").click(function() {
             var obj = {
                 "pwd":$("#signup-pwd").val(),
@@ -1417,6 +1411,7 @@
                 .done(function(data){  $("#result").html(data); loadData();})
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
+
         $("#sign-add-btn").click(function() {
             var obj = {
                 "name":$("#sign-name").val(),
@@ -1435,26 +1430,7 @@
             }).done(function(data){  $("#result").html(data); loadData();})
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
-        $("#add-edit-op-btn").click(function () {
-            var obj = {
-                "addToQueue" : "true",
-                "dontSignByServer": false
-            };
-            var params = $.param(obj);
-            var json = JSON.stringify(editor.get());
-            $.ajax({
-                url: '/api/auth/process-operation?' + params,
-                type: 'POST',
-                data: json,
-                contentType: 'application/json; charset=utf-8'
-            }).done(function(data){
-                    $("#result").html(data); loadData();  editor = null;
-                    $("#json-editor-div").addClass("hidden");
-                    $("#stop-edit-btn").addClass("hidden");
-                    $("#add-edit-op-btn").addClass("hidden");
-                })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
-        });
+
         $("#login-btn").click(function() {
             var obj = {
                 "name":$("#login-name").val(),
@@ -1471,23 +1447,9 @@
                 .done(function(data){  $("#result").html(data); loadData();})
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
+
     });
 
-    async function sha256(message) {
-        // encode as UTF-8
-        const msgBuffer = new TextEncoder('utf-8').encode(message);
-
-        // hash the message
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-
-        // convert ArrayBuffer to Array
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-
-        // convert bytes to hex string
-        const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('');
-        return hashHex;
-    }
-
-    $('input[type="checkbox"]').on('change', function() {
-        $(this).siblings('input[type="checkbox"]').prop('checked', false);
-    });
+    // $('input[type="checkbox"]').on('change', function() {
+    //     $(this).siblings('input[type="checkbox"]').prop('checked', false);
+    // });
