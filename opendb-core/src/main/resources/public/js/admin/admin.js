@@ -862,7 +862,6 @@
     //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB SETTINGS \\\\\\\\\\\\\\\\\\\\\\\\\
 
     /////////////////////// FUNCTIONS TAB METRICS /////////////////////////////
-    // TODO refactor method
     function setMetricsDataToTable() {
         var gid = 0;
         if($("#metrics-a").prop("checked")) {
@@ -871,36 +870,30 @@
         if($("#metrics-b").prop("checked")) {
             gid = 2;
         }
-        var items = "";
-        items += "<table border='1'>";
-        items += "<tr>";
-        items += "<th><b>Id</b><th>";
-        items += "<th><b>Count</b><th>";
-        items += "<th><b>Total (s)</b><th>";
-        items += "<th><b>Average (ms)</b><th>";
-        items += "<th><b>Throughput / sec</b><th>";
-        items += "</tr>";
+
+        var table = $("#main-metrics-table");
+        table.empty();
+        var template = $("#metrics-template");
 
         for(var i = 0; i < metricsData.length; i++)  {
             let item = metricsData[i];
-            items += "<tr>";
+            var newTemplate = template.clone()
+                .appendTo(table)
+                .show();
             var lid = item.id;
             if(lid.length > 50) {
                 lid = lid.substring(0, 50);
             }
-            items += "<td><b>"+lid+"</b><td>";
-            items += "<td>"+item.count[gid]+"<td>";
-            items += "<td>"+item.totalSec[gid]+"<td>";
-            items += "<td>"+item.avgMs[gid]+"<td>";
+            newTemplate.find("[did='id']").html(lid);
+            newTemplate.find("[did='count']").html(item.count[gid]);
+            newTemplate.find("[did='total']").html(item.totalSec[gid]);
+            newTemplate.find("[did='average']").html(item.avgMs[gid]);
             if(item.avgMs > 0) {
-                items += "<td>"+Number(1000/item.avgMs[gid]).toFixed(2)+"<td>";
+                newTemplate.find("[did='throughput']").html(Number(1000 / item.avgMs[gid]).toFixed(2));
             } else {
-                items += "<td>-<td>";
+                newTemplate.find("[did='throughput']").html("-");
             }
-            items += "</tr>";
         }
-        items += "</table>";
-        $("#metrics-list").html(items);
     }
 
     function loadMetricsData() {

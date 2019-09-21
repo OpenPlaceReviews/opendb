@@ -666,7 +666,29 @@ Details: <b><span did="block-details"></span></b></pre>
             <input type="button" value="Reset Group B" id="reset-metrics-b" />
         </div>
         <p></p>
-        <div id="metrics-list">
+        <div>
+            <table id="metrics-table" border="1">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Count</th>
+                        <th>Total (s)</th>
+                        <th>Average (ms)</th>
+                        <th>Throughput / sec</th>
+                    </tr>
+                </thead>
+
+                <tbody id="main-metrics-table"></tbody>
+                <tbody>
+                    <tr id="metrics-template" style="display: none">
+                        <td did="id"></td>
+                        <td did="count"></td>
+                        <td did="total"></td>
+                        <td did="average"></td>
+                        <td did="throughput"></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
     <!--METRICS TAB-->
