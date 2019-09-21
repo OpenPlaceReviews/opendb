@@ -1440,9 +1440,7 @@
         });
 
         window.onpopstate = function (event) {
-            sessionStorage.setItem("urls",  window.history);
             window.location.href = document.location;
-            window.history = sessionStorage.getItem("urls");
         };
 
     });
