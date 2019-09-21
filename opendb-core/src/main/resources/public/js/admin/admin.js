@@ -41,18 +41,18 @@
 
     function loadAllData(checkUrl) {
         loadStatusData();
-        OBJECT_STAB.loadObjectsData();
+        OBJECTS_VIEW.loadObjectsData();
         $.getJSON("/api/blocks", function( data ) {
-            BLOCK_STAB.processBlocksResult(data);
+            BLOCKS_VIEW.processBlocksResult(data);
         });
         if (loginName != "") {
-            METRIC_STAB.loadMetricsData();
-            API_STAB.loadBotData();
-            API_STAB.loadDBIndexData();
-            API_STAB.loadReportFiles();
-            loadConfiguration();
+            METRIC_VIEW.loadMetricsData();
+            API_VIEW.loadBotData();
+            API_VIEW.loadDBIndexData();
+            API_VIEW.loadReportFiles();
+            SETTINGS_VIEW.loadConfiguration();
             loadErrorsData();
-            IPFS_STAB.loadIpfsStatusData();
+            IPFS_VIEW.loadIpfsStatusData();
         }
         if (window.location.search !== "" && checkUrl) {
             checkUrlParam();
@@ -126,7 +126,7 @@
                 $("#search-key").val(keyValue);
             }
 
-            OBJECT_STAB.loadObjectView(false);
+            OBJECTS_VIEW.loadObjectView(false);
         } else if (window.location.href.toLowerCase().indexOf('api/admin?view=operations') > 1) {
             $(".nav-tabs a[href=\"#operations\"]").tab('show');
             var loadType = url.searchParams.get('loadBy');
@@ -138,7 +138,7 @@
                 $("#operations-key").val(key);
             }
 
-            OPERATION_STAB.loadOperationView();
+            OPERATION_VIEW.loadOperationView();
         } else if (window.location.href.toLowerCase().indexOf('api/admin?view=blocks') > 1) {
             $(".nav-tabs a[href=\"#blocks\"]").tab('show');
             var searchType = url.searchParams.get('search');
@@ -154,7 +154,7 @@
                 $("#block-limit-value").val(limit);
             }
 
-            BLOCK_STAB.loadBlockView();
+            BLOCKS_VIEW.loadBlockView();
         }
     }
     //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ MAIN \\\\\\\\\\\\\\\\\\\\\\\\\
@@ -258,82 +258,6 @@
     }
     //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB LOGS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-    //////////////////// FUNCTIONS TAB API /////////////////////////////
-
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB API \\\\\\\\\\\\\\\\\\\\\\\\\
-
-    /////////////////////// FUNCTIONS TAB SETTINGS ///////////////////////////
-    function editPreferenceObject(i) {
-        console.log(globalConfig[i]);
-        if (globalConfig[i].type === "Map") {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value, null, 4));
-        } else {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(globalConfig[i].value);
-
-        }
-        $("#settings-edit-modal .modal-body #settings-type-edit-header").html("Preference type: " + globalConfig[i].type);
-        $("#settings-edit-modal .modal-body #settings-type").html(globalConfig[i].type);
-        $("#settings-edit-modal .modal-body #edit-preference-restart").val(globalConfig[i].restartIsNeeded.toString());
-        $("#settings-edit-modal .modal-header #settings-name").val(globalConfig[i].id);
-        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + globalConfig[i].id);
-    }
-
-    function loadConfiguration() {
-        $.getJSON("/api/mgmt/config", function (data) {
-            // var items = "";
-            globalConfig = data;
-            var items = $("#settings-result-list");
-            items.empty();
-            var templateItem = $("#settings-list-item");
-
-            for (var i = 0; i < data.length; i++) {
-                obj = data[i];
-                if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
-                    showSettings(i);
-                } else if (!($("#settingsCheckbox").is(":checked"))) {
-                    showSettings(i);
-                }
-
-            }
-
-            function showSettings(i) {
-                var it = templateItem.clone();
-                if (obj.canEdit === true) {
-                    it.find("[did='edit-settings']").click(function() {
-                        editPreferenceObject(i);
-                    });
-                } else {
-                    it.find("[did='edit-settings']").addClass("hidden");
-                }
-                it.find("[did='settings-name']").html(obj.id + " - " + obj.description);
-                if (obj.type === "Map") {
-                    it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
-                    it.find("[did='settings-value']").addClass("hidden");
-                } else {
-                    it.find("[did='settings-value-json']").addClass("hidden");
-                    it.find("[did='settings-value']").html(obj.value );
-                }
-                if (obj.restartIsNeeded === true) {
-                    it.find("[did='settings-restart']").removeClass("hidden");
-                }
-                items.append(it);
-            }
-
-        });
-    }
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB SETTINGS \\\\\\\\\\\\\\\\\\\\\\\\\
-
-    /////////////////////// FUNCTIONS TAB METRICS /////////////////////////////
-
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB METRICS \\\\\\\\\\\\\\\\\\\\\\\\\
-
-    ///////////////// FUNCTIONS TAB IPFS //////////////////////////
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB IPFS \\\\\\\\\\\\\\\\\\\\\\\\\
-
-    ///////////////// FUNCTIONS TAB REGISTRATION /////////////////////////
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB REGISTRATION \\\\\\\\\\\\\\\\\\\\\\\\\
-
-
     var editor = {};
     var originObject;
     var globalObjects = {};
@@ -431,25 +355,27 @@
         });
 
         ////////////////////////// TAB BLOCKS /////////////////////////
-        BLOCK_STAB.onReady();
+        BLOCKS_VIEW.onReady();
 
         ////////////////////////// TAB OPERATIONS /////////////////////
-        OPERATION_STAB.onReady();
+        OPERATION_VIEW.onReady();
 
         /////////////////// TAB OBJECTS ////////////////////////////
-        OBJECT_STAB.onReady();
+        OBJECTS_VIEW.onReady();
 
         ///////////////// TAB LOGS ////////////////////////
 
         ///////////////// TAB API /////////////////////////
-        API_STAB.onReady();
-
+        API_VIEW.onReady();
 
         ////////////////////////// TAB METRICS ///////////////////////
-        METRIC_STAB.onReady();
+        METRIC_VIEW.onReady();
 
         /////////////////////// TAB IPFS ////////////////////////////////
-        IPFS_STAB.onReady();
+        IPFS_VIEW.onReady();
+
+        /////////////////// TAB SETTINGS /////////////////////////////
+        SETTINGS_VIEW.onReady();
 
         /////////////////////////// TAB REGISTRATION ////////////////////
         $("#signup-btn").click(function() {
@@ -522,12 +448,11 @@
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
 
+        /////////////////////////// MAIN /////////////////////////////
         window.onpopstate = function (event) {
-            window.location.href = document.location;
+            if (!document.location.href.toString().includes("#popover")) {
+                window.location.href = document.location;
+            }
         };
 
     });
-
-    // $('input[type="checkbox"]').on('change', function() {
-    //     $(this).siblings('input[type="checkbox"]').prop('checked', false);
-    // });

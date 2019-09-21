@@ -6,12 +6,9 @@
 <script src="/js/admin/jquery.json-editor.min.js"></script>
 <script src="/js/admin/deepdiffmapper.js"></script>
 <script src="/js/admin/admin.js"></script>
-<script src="/js/admin/block.js"></script>
-<script src="/js/admin/operation.js"></script>
-<script src="/js/admin/object.js"></script>
-<script src="/js/admin/metrics.js"></script>
-<script src="/js/admin/ipfs.js"></script>
-<script src="/js/admin/api.js"></script>
+<script src="/js/admin/blocks-ops-objs-view.js"></script>
+<script src="/js/admin/api-view.js"></script>
+<script src="/js/admin/settings-metrics-ipfs-view.js"></script>
 <style>
     body {padding: 40px; }
     li {
@@ -142,7 +139,7 @@
         	<li class="panel panel-default" id="blocks-list-item">
         		<p class="panel-heading">
         			<b><a did="block-operation-link" href="#" onclick="">Block #<span did="block-id"></span></a></b>
-        			<a href="#" class="pull-right" did="block-hash" data-placement="left" data-toggle="popover"></a>
+        			<a href="#popover" class="pull-right" did="block-hash" data-placement="left" data-toggle="popover"></a>
         		</p>
         		<div class="panel-body">
                     <p>Date: <b><span did="block-date"></span></b></p>
@@ -288,7 +285,7 @@ Details: <b><span did="block-details"></span></b></pre>
         <ul class="list-group" hidden="true">
             <li class="panel panel-default" id="objects-list-item">
                 <p class="panel-heading">
-                    <a href="#" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
+                    <a href="#popover" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
                     <a href="" did="history-object-link">Object Id: <b><span did="obj-id"></span></b></a>
                     <a type="button" did="edit-object" class="btn btn-default btn-xs">Edit</a>
                 </p>
@@ -303,7 +300,7 @@ Details: <b><span did="block-details"></span></b></pre>
         <ul class="list-group" hidden="true">
             <li class="panel panel-default" id="objects-history-list-item">
                 <div class="panel-heading">
-                    <a href="#" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
+                    <a href="#popover" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
                     <span did="history-object-link">Object Id: <b><span did="obj-id"></span></b></span>
                 </div>
                 <div class="panel-body">

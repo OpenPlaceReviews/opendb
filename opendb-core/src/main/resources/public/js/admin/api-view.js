@@ -1,4 +1,4 @@
-var API_STAB = function () {
+var API_VIEW = function () {
     return {
         startBot: function(bot) {
             var obj = {
@@ -81,9 +81,9 @@ var API_STAB = function () {
                                 "</div>");
                         }
                         if (obj.botStats.isRunning === false) {
-                            action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
+                            action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"API_VIEW.startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
                         } else {
-                            action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
+                            action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"API_VIEW.stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
                         }
                     }
                     if (obj.started !== null && obj.started !== undefined) {
@@ -91,7 +91,7 @@ var API_STAB = function () {
                     }
                     newTemplate.find("[did='interval']").html(obj.interval);
 
-                    action += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>"
+                    action += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"API_VIEW.showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>"
                     newTemplate.find("[did='actions']").html(action);
                 }
             });
@@ -133,29 +133,30 @@ var API_STAB = function () {
         },
         onReady: function () {
             $("#refresh-index-table-btn").click(function () {
-                API_STAB.loadDBIndexData();
+                API_VIEW.loadDBIndexData();
             });
 
             $("#add-new-index-btn").click(function () {
                 var myJSObject = {
-                    tableName:$("#index-table-name").val(),
-                    colName:$("#index-col-name").val(),
-                    colType:$("#index-col-type").val(),
-                    types:$("#index-op-types").val(),
-                    index:$("#index-type").val(),
-                    sqlMapping:$("#index-col-sql-mapping").val(),
-                    cacheRuntimeMax:$("#index-cacheRuntimeMax").val(),
-                    cacheDbIndex:$("#index-cacheDbIndex").val(),
-                    field:($("#index-field").val()).split(",")
+                    tableName: $("#index-table-name").val(),
+                    colName: $("#index-col-name").val(),
+                    colType: $("#index-col-type").val(),
+                    types: $("#index-op-types").val(),
+                    index: $("#index-type").val(),
+                    sqlMapping: $("#index-col-sql-mapping").val(),
+                    cacheRuntimeMax: $("#index-cacheRuntimeMax").val(),
+                    cacheDbIndex: $("#index-cacheDbIndex").val(),
+                    field: ($("#index-field").val()).split(",")
                 };
                 $.ajax("/api/mgmt/index", {
                     data: JSON.stringify(myJSObject),
                     contentType: 'application/json',
                     type: 'POST',
-                    success: function(data) {
-                        $("#result").html("ADDED: " + data); loadDBIndexData();
+                    success: function (data) {
+                        $("#result").html("ADDED: " + data);
+                        API_VIEW.loadDBIndexData();
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         $("#result").html("ERROR: " + error);
                     }
                 });
@@ -163,71 +164,16 @@ var API_STAB = function () {
             });
 
             $("#refresh-api-table-btn").click(function () {
-                loadReportFiles();
+                API_VIEW.loadReportFiles();
             });
 
             $("#refresh-bot-table-btn").click(function () {
-                API_STAB.loadBotData();
+                API_VIEW.loadBotData();
             });
 
             $("#refresh-bot-history-btn").click(function () {
                 var botName = $(".modal-header #history-bot-name").val();
-                API_STAB.showBotHistory(botName);
-            });
-
-            /////////////////// TAB SETTINGS /////////////////////////////
-            $("#settingsCheckbox").change(function () {
-                loadConfiguration();
-            });
-
-            $("#search-type-list").change(function() {
-                var selectedSearchType = $("#search-type-list").val();
-                if (selectedSearchType === "all") {
-                    if ($("#type-list").val() === "none") {
-                        $("#historyCheckbox").prop('checked', true)
-                    } else {
-                        $("#search-key-input").addClass("hidden");
-                        $("#historyCheckbox").prop("disabled", false);
-                    }
-                } else if ( selectedSearchType === "count") {
-                    $("#search-key-input").addClass("hidden");
-                    $("#historyCheckbox").prop("disabled", true).prop('checked', false);
-                } else if (selectedSearchType === "userId") {
-                    $("#search-key-input").removeClass("hidden");
-                    $("#name-key-field").text("Input User ID");
-                    $("#historyCheckbox").prop('checked', true).prop("disabled", true);
-                } else if (selectedSearchType === "opHash") {
-                    $("#search-key-input").removeClass("hidden");
-                    $("#type-list").val("none");
-                    $("#name-key-field").text("Input Op Hash");
-                    $("#historyCheckbox").prop('checked', true).prop("disabled", true);
-                } else {
-                    $("#search-key-input").removeClass("hidden");
-                    if (selectedSearchType === "id") {
-                        $("#name-key-field").text("Input Object ID");
-                    } else {
-                        $("#name-key-field").text("Input " + $("#search-type-list").val());
-                    }
-                    $("#historyCheckbox").prop("disabled", false);
-                }
-            });
-
-            $("#save-new-value-for-settings-btn").click(function () {
-                var obj = {
-                    key: $("#settings-name").val(),
-                    value: $("#edit-preference-value").val(),
-                    type: $("#settings-type").text(),
-                };
-                $.post("/api/mgmt/config", obj)
-                    .done(function (data) {
-                        $("#result").html("SUCCESS: " + data);
-                        loadConfiguration();
-                    })
-                    .fail(function (xhr, status, error) {
-                        $("#result").html("ERROR: " + error);
-                    });
-
-                $("#settings-edit-modal .close").click();
+                API_VIEW.showBotHistory(botName);
             });
         }
     };
