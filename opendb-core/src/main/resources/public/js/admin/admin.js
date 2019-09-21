@@ -1070,7 +1070,7 @@
             var type = $("#blocks-search").val();
 
             loadBlockView();
-            //window.location = "/api/admin?view=blocks&search=" + type+ "&hash=" + $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val();
+            window.history.pushState(null, "State Blocks", "/api/admin?view=blocks&search=" + type+ "&hash=" + $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
         });
 
         ////////////////////////// TAB OPERATIONS /////////////////////
@@ -1095,8 +1095,7 @@
             var key = $("#operations-key").val();
 
             loadOperationView();
-            //window.location = '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key;
-
+            window.history.pushState(null, "State Operations", '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key);
         });
 
         /////////////////// TAB OBJECTS ////////////////////////////
@@ -1131,7 +1130,7 @@
             $("#add-edit-op-btn").addClass("hidden");
 
             loadObjectView();
-            //window.location = '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val();
+            window.history.pushState(null, "State Objects", '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
         });
 
         $("#finish-edit-btn").click(function () {
@@ -1439,6 +1438,12 @@
                 .done(function(data){  $("#result").html(data); loadData();})
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
+
+        window.onpopstate = function (event) {
+            sessionStorage.setItem("urls",  window.history);
+            window.location.href = document.location;
+            window.history = sessionStorage.getItem("urls");
+        };
 
     });
 
