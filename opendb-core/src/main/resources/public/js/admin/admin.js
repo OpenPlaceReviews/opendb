@@ -1,4 +1,5 @@
     var loginName = "";
+    // TODO move vars into objects i.e. METRICS_VIEW.metricsData etc...
     var metricsData = [];
     var globalObjectTypes = {};
     var globalConfig = {};
@@ -47,6 +48,7 @@
         });
         if (loginName != "") {
             METRIC_VIEW.loadMetricsData();
+            // TODO make functions with same names i.e. loadData
             API_VIEW.loadBotData();
             API_VIEW.loadDBIndexData();
             API_VIEW.loadReportFiles();
@@ -59,6 +61,7 @@
         }
     }
 
+    // TODO move into status VIEW
     function refreshUser() {
         if(loginName != "") {
             $("#admin-login-user").html(loginName);
@@ -91,6 +94,7 @@
         // operations -> http://localhost:6463/api/admin?view=operations&loadBy=blockId&key=0
         // blocks -> http://localhost:6463/api/admin?view=blocks&search=from&hash=213&limit=123
         var url = new URL(window.location.href);
+        // TODO move code into separate tabs to process
         if (window.location.href.toLowerCase().indexOf('api/admin?view=objects') > 1) {
             $(".nav-tabs a[href=\"#objects\"]").tab('show');
             var filter = url.searchParams.get('filter');
@@ -204,6 +208,7 @@
     //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB STATUS \\\\\\\\\\\\\\\\\\\\\\\\\
 
     ///////////////////// FUNCTIONS TAB LOGS ////////////////////////
+    // TODO MOVE to ERRORS_VIEW
     function loadErrorsData() {
         $.getJSON( "/api/logs", function( data ) {
             var items = "";
@@ -264,6 +269,7 @@
     $( document ).ready(function() {
         loadData(true);
 
+        // TODO create method
         ////////////////////////// TAB STATUS //////////////////////
         $("#clear-list-btn").click(function(){
             $.post("/api/mgmt/queue-clear", {},  function(data, status){
@@ -353,31 +359,17 @@
                 .done(function(data){  $("#result").html(data); loadData(); })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error);  });
         });
-
-        ////////////////////////// TAB BLOCKS /////////////////////////
+        // view registrations
         BLOCKS_VIEW.onReady();
-
-        ////////////////////////// TAB OPERATIONS /////////////////////
         OPERATION_VIEW.onReady();
-
-        /////////////////// TAB OBJECTS ////////////////////////////
         OBJECTS_VIEW.onReady();
-
-        ///////////////// TAB LOGS ////////////////////////
-
-        ///////////////// TAB API /////////////////////////
         API_VIEW.onReady();
-
-        ////////////////////////// TAB METRICS ///////////////////////
         METRIC_VIEW.onReady();
-
-        /////////////////////// TAB IPFS ////////////////////////////////
         IPFS_VIEW.onReady();
-
-        /////////////////// TAB SETTINGS /////////////////////////////
         SETTINGS_VIEW.onReady();
 
         /////////////////////////// TAB REGISTRATION ////////////////////
+        // TODO create method or file
         $("#signup-btn").click(function() {
             var obj = {
                 "pwd":$("#signup-pwd").val(),
