@@ -236,6 +236,148 @@ var OPERATION_VIEW = function () {
 }();
 
 var OBJECTS_VIEW = function () {
+    function objIdFormat(ar) {
+        var it = ar[0] + ": <b>";
+        for(var k = 1; k < ar.length; k++) {
+            if(k > 1) {
+                it +=", ";       
+            }
+            it += ar[k];
+        }
+        it += "</b>";
+        return it;
+    }
+
+    function generateJsonFromObject(obj) {
+        $("#json-editor-div").removeClass("hidden");
+
+        var target = $("#json-display");
+        if (target.length) {
+            event.preventDefault();
+            $('html, body').stop().animate({
+                scrollTop: target.offset().top
+            }, 1000);
+        }
+        $("#finish-edit-btn").removeClass("hidden");
+        $("#stop-edit-btn").removeClass("hidden");
+        console.log(obj);
+        delete obj.eval;
+        originObject = obj;
+        editor = new JsonEditor('#json-display', obj);
+        editor.load(obj);
+    }
+
+    function setObjectsHistoryItem(obj, templateItem) {
+        var it = templateItem.clone();
+
+        it.find("[did='object-op-hash']").attr('data-content', obj.opHash).html(smallHash(obj.opHash)).popover();
+        it.find("[did='obj-id']").html(objIdFormat(obj.id));
+        it.find("[did='obj-date']").html(obj.date);
+        // if (obj.objEdit.eval !== undefined) {
+        //     it.find("[did='obj-type']").html(obj.objType);
+        // }
+        if (obj.objEdit.comment !== undefined) {
+            it.find("[did='obj-comment']").html(obj.objEdit.comment);
+        } else {
+            it.find("[did='comment-hidden']").addClass("hidden");
+        }
+        if (obj.userId.length !== 0) {
+            it.find("[did='obj-user']").html(obj.userId);
+        } else {
+            it.find("[did='user-hidden']").addClass("hidden")
+        }
+        it.find("[did='obj-status']").html(obj.status);
+        if ('objEdit' in obj) {
+            delete obj.objEdit.eval;
+            it.find("[did='object-json']").html(JSON.stringify(obj.objEdit, null, 4));
+        } else {
+            it.find("[did='object-json-hidden']").addClass("hidden");
+        }
+        if ('deltaChanges' in obj) {
+            it.find("[did='delta-json']").html(JSON.stringify(obj.deltaChanges, null, 4));
+        } else {
+            it.find("[did='delta-json-hidden']").addClass("hidden");
+        }
+
+        return it;
+    }
+
+    function setObjectsHistoryItems(searchType, key) {
+        var obj = {
+            "type": searchType,
+            "key": key,
+            "limit": $("#limit-field").val(),
+            "sort": "DESC"
+        };
+        $.ajax({
+            url: "/api/history", type: "get", data: obj,
+            success: function (data) {
+                var items = $("#objects-list");
+                items.empty();
+                var templateItem = $("#objects-history-list-item");
+                for (var i = 0; i < data.length; i++) {
+                    var object = data[i];
+                    items.append(setObjectsHistoryItem(object, templateItem));
+                }
+                setAmountResults(data.length);
+            },
+            error: function (xhr, status, error) {
+                $("#result").html("ERROR: " + error);
+            }
+        });
+        
+    }
+    
+    function loadSearchTypeByOpType(type) {
+        $.ajax({
+            url: "/api/indices-by-type?type=" + type, type: "get", 
+            success: function (data) {
+                var searchTypes = "";
+                searchTypes += "<option value = 'all' selected>all</option>";
+                searchTypes += "<option value = 'id' >by id</option>";
+                searchTypes += "<option value = 'count' >count</option>";
+                for (var i = 0; i < data.length; i++) {
+                    var obj = data[i];
+                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
+                }
+
+                $("#search-type-list").html(searchTypes);
+                $("#search-key-input").addClass("hidden")
+            },
+            error: function (xhr, status, error) {
+                $("#result").html("ERROR: " + error);
+            }
+        });
+    }
+
+    function setAmountResults (data) {
+        $("#amount-objects").html("Count results: " + data);
+    }
+
+    function setObjectsItems (data) {
+        var items = $("#objects-list");
+        items.empty();
+        let templateItem = $("#objects-list-item");
+        let type = $("#type-list").val();
+        for (var i = 0; i < data.objects.length; i++) {
+            let obj = data.objects[i];
+            var it = templateItem.clone();
+            it.find("[did='edit-object']").click(function () {
+                generateJsonFromObject(obj);
+            });
+            it.find("[did='object-op-hash']").attr('data-content', obj.eval.parentHash).html(smallHash(obj.eval.parentHash)).popover();
+            it.find("[did='obj-id']").html(type+": <b>"+obj.id.toString()+"</b>");
+            if (obj.comment) {
+                it.find("[did='obj-comment']").html(obj.comment);
+            } else {
+                it.find("[did='comment']").prop("hidden", true);
+            }
+            it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
+            items.append(it);
+        }
+        setAmountResults(data.objects.length);
+    }
+
     return {
         loadObjectTypes: function() {
             $("#index-list-id").hide();
@@ -257,36 +399,6 @@ var OBJECTS_VIEW = function () {
                     $("#index-op-types").html(types);
                 }
             });
-        },
-
-        setAmountResults: function (data) {
-            $("#amount-objects").html("Count results: " + data);
-        },
-
-        setObjectsItems: function (data) {
-            var items = $("#objects-list");
-            items.empty();
-            let templateItem = $("#objects-list-item");
-            for (var i = 0; i < data.objects.length; i++) {
-                let obj = data.objects[i];
-                var it = templateItem.clone();
-                it.find("[did='edit-object']").click(function () {
-                    generateJsonFromObject(obj);
-                });
-                it.find("[did='object-op-hash']").attr('data-content', obj.eval.parentHash).html(smallHash(obj.eval.parentHash)).popover();
-                it.find("[did='obj-id']").html(obj.id.toString());
-                // TODO
-                it.find("[did='history-object-link']").attr("href",
-                    "/api/admin?view=objects&filter=history&search=id&key=" + obj.id.toString() + "&history=true&limit=50")
-                if (obj.comment) {
-                    it.find("[did='obj-comment']").html(obj.comment);
-                } else {
-                    it.find("[did='comment']").prop("hidden", true);
-                }
-                it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
-                items.append(it);
-            }
-            OBJECTS_VIEW.setAmountResults(data.objects.length);
         },
 
         loadURLParams: function(url) {
@@ -343,7 +455,7 @@ var OBJECTS_VIEW = function () {
                 if (searchType === "count") {
                     $.getJSON("/api/objects-count?type=" + type, function (data) {
                         $("#objects-list").empty();
-                        OBJECTS_VIEW.setAmountResults(data.count);
+                        setAmountResults(data.count);
                     });
                 } else if (searchType === "all") {
                     var req = {
@@ -351,7 +463,7 @@ var OBJECTS_VIEW = function () {
                         "limit": $("#limit-field").val()
                     };
                     $.getJSON("/api/objects", req, function (data) {
-                        OBJECTS_VIEW.setObjectsItems(data);
+                        setObjectsItems(data);
                     });
                 } else if (searchType === "id") {
                     var req = {
@@ -359,7 +471,7 @@ var OBJECTS_VIEW = function () {
                         "key": key
                     };
                     $.getJSON("/api/objects-by-id", req, function (data) {
-                        OBJECTS_VIEW.setObjectsItems(data);
+                        setObjectsItems(data);
                     });
                 } else {
                     var req = {
@@ -369,7 +481,7 @@ var OBJECTS_VIEW = function () {
                         "key": key
                     };
                     $.getJSON("/api/objects-by-index", req, function (data) {
-                        OBJECTS_VIEW.setObjectsItems(data);
+                        setObjectsItems(data);
                     });
                 }
             }
@@ -382,12 +494,14 @@ var OBJECTS_VIEW = function () {
                     $("#type-list-select").removeClass("hidden");
                     $("#search-type-list").removeClass("hidden");
                     $("#search-key-input").addClass("hidden");
-                    $("#type-list [value='all']").attr("disabled", "").removeAttr("selected");
+                    $("#search-key").val("");
+                    $("#type-list [value='all']").attr("disabled", "").removeAttr("selected").val("select");
                 } else if (selected === "history") {
-                    $("#type-list [value='all']").removeAttr("disabled");
+                    $("#type-list [value='all']").removeAttr("disabled").val("all");
                     $("#type-list-select").removeClass("hidden");
                     $("#search-type-list").addClass("hidden");
                     $("#search-key-input").addClass("hidden");
+                    $("#search-key").val("");
                 } else {
                     $("#type-list-select").addClass("hidden");
                     $("#search-key-input").removeClass("hidden");
@@ -497,105 +611,5 @@ var OBJECTS_VIEW = function () {
         }
     };
 
-    function generateJsonFromObject(obj) {
-        $("#json-editor-div").removeClass("hidden");
 
-        var target = $("#json-display");
-        if (target.length) {
-            event.preventDefault();
-            $('html, body').stop().animate({
-                scrollTop: target.offset().top
-            }, 1000);
-        }
-        $("#finish-edit-btn").removeClass("hidden");
-        $("#stop-edit-btn").removeClass("hidden");
-        console.log(obj);
-        delete obj.eval;
-        originObject = obj;
-        editor = new JsonEditor('#json-display', obj);
-        editor.load(obj);
-    }
-
-    function setObjectsHistoryItem(obj, templateItem) {
-        var it = templateItem.clone();
-
-        it.find("[did='object-op-hash']").attr('data-content', obj.opHash).html(smallHash(obj.opHash)).popover();
-        it.find("[did='obj-id']").html(obj.id.toString());
-        it.find("[did='obj-date']").html(obj.date);
-        if (obj.objEdit.eval !== undefined) {
-            it.find("[did='obj-type']").html(obj.objType);
-        }
-        if (obj.objEdit.comment !== undefined) {
-            it.find("[did='obj-comment']").html(obj.objEdit.comment);
-        } else {
-            it.find("[did='comment-hidden']").addClass("hidden");
-        }
-        if (obj.userId.length !== 0) {
-            it.find("[did='obj-user']").html(obj.userId);
-        } else {
-            it.find("[did='user-hidden']").addClass("hidden")
-        }
-        it.find("[did='obj-status']").html(obj.status);
-        if ('objEdit' in obj) {
-            delete obj.objEdit.eval;
-            it.find("[did='object-json']").html(JSON.stringify(obj.objEdit, null, 4));
-        } else {
-            it.find("[did='object-json-hidden']").addClass("hidden");
-        }
-        if ('deltaChanges' in obj) {
-            it.find("[did='delta-json']").html(JSON.stringify(obj.deltaChanges, null, 4));
-        } else {
-            it.find("[did='delta-json-hidden']").addClass("hidden");
-        }
-
-        return it;
-    }
-
-    function setObjectsHistoryItems(searchType, key) {
-        var obj = {
-            "type": searchType,
-            "key": key,
-            "limit": $("#limit-field").val(),
-            "sort": "DESC"
-        };
-        $.ajax({
-            url: "/api/history", type: "get", data: obj,
-            success: function (data) {
-                var items = $("#objects-list");
-                items.empty();
-                var templateItem = $("#objects-history-list-item");
-                for (var i = 0; i < data.length; i++) {
-                    var object = data[i];
-                    items.append(setObjectsHistoryItem(object, templateItem));
-                }
-                OBJECTS_VIEW.setAmountResults(data.length);
-            },
-            error: function (xhr, status, error) {
-                $("#result").html("ERROR: " + error);
-            }
-        });
-        
-    }
-    
-    function loadSearchTypeByOpType(type) {
-        $.ajax({
-            url: "/api/indices-by-type?type=" + type, type: "get", 
-            success: function (data) {
-                var searchTypes = "";
-                searchTypes += "<option value = 'all' selected>all</option>";
-                searchTypes += "<option value = 'id' >by id</option>";
-                searchTypes += "<option value = 'count' >count</option>";
-                for (var i = 0; i < data.length; i++) {
-                    var obj = data[i];
-                    searchTypes += "<option value = " + obj.indexId + ">by " + obj.indexId + "</option>";
-                }
-
-                $("#search-type-list").html(searchTypes);
-                $("#search-key-input").addClass("hidden")
-            },
-            error: function (xhr, status, error) {
-                $("#result").html("ERROR: " + error);
-            }
-        });
-    }
 }();
