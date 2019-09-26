@@ -237,21 +237,19 @@ var OPERATION_VIEW = function () {
 
 var OBJECTS_VIEW = function () {
     return {
-        loadObjectsData: function() {
+        loadObjectTypes: function() {
             $("#index-list-id").hide();
-            let selectType = $("#type-list").val();
             $.ajax({
                 url: "/api/objects?type=sys.operation",
                 type: "GET",
                 success: function (data) {
-                    var types = "<option value = '' disabled>Select type</option>";
-                    types += "<option value = 'none' selected>none</option>";
+                    let selectType = $("#type-list").val();
+                    var types = "" ;
+                    types += "<option value = 'all' disabled>Select type</option>";
                     $("#objects-tab").html("Objects (" + data.objects.length + ")");
                     for (var i = 0; i < data.objects.length; i++) {
                         let obj = data.objects[i];
                         let objType = obj.id[0];
-                        globalObjectTypes[objType] = obj;
-
                         types += "<option value = '" + objType + "' " +
                             (selectType === objType ? "selected" : "") + ">" + objType + "</option>";
                     }
@@ -291,6 +289,36 @@ var OBJECTS_VIEW = function () {
             OBJECTS_VIEW.setAmountResults(data.objects.length);
         },
 
+        loadURLParams: function(url) {
+            var filter = url.searchParams.get('browse');
+            if (filter !== null) {
+                $("#filter-list").val(filter);
+                if (filter === "operation") {
+                    $("#name-key-field").text("Operation hash:");
+                } else {
+                    $("#name-key-field").text("User id:");
+                }
+            }
+            var typeSearch = url.searchParams.get('type');
+            if (typeSearch !== null) {
+                $("#search-type-list").val(typeSearch);
+;
+            }
+            var searchTypeListValue = url.searchParams.get('search');
+            if (searchTypeListValue !== null) {
+                $("#type-list").val(searchTypeListValue);
+            }
+
+            var limitValue = url.searchParams.get('limit');
+            if (limitValue !== null) {
+                $("#limit-field").val(limitValue);
+            }
+            var keyValue = url.searchParams.get('key');
+            if (keyValue !== null) {
+                $("#search-key").val(keyValue);
+            }
+
+        },
 
         loadObjectView: function() {
             let filter = $("#filter-list").val();
@@ -306,7 +334,7 @@ var OBJECTS_VIEW = function () {
             } else if (filter === "userid") {
                 setObjectsHistoryItems("user", key);
             } else if (filter === "history") {
-                if(type == "none") {
+                if(type == "all") {
                     setObjectsHistoryItems("all", null);
                 } else {
                     setObjectsHistoryItems("type", type);
@@ -350,13 +378,18 @@ var OBJECTS_VIEW = function () {
         onReady: function() {
             $("#filter-list").change(function() {
                 var selected = $("#filter-list").val();
-                if (selected === "type" || selected === "history") {
+                if (selected === "type") {
                     $("#type-list-select").removeClass("hidden");
-                    $("#search-type-list-select").removeClass("hidden");
+                    $("#search-type-list").removeClass("hidden");
+                    $("#search-key-input").addClass("hidden");
+                    $("#type-list [value='all']").attr("disabled", "").removeAttr("selected");
+                } else if (selected === "history") {
+                    $("#type-list [value='all']").removeAttr("disabled");
+                    $("#type-list-select").removeClass("hidden");
+                    $("#search-type-list").addClass("hidden");
                     $("#search-key-input").addClass("hidden");
                 } else {
                     $("#type-list-select").addClass("hidden");
-                    $("#search-type-list-select").addClass("hidden");
                     $("#search-key-input").removeClass("hidden");
                     if (selected === "operation") {
                         $("#name-key-field").text("Operation hash:");
@@ -367,7 +400,7 @@ var OBJECTS_VIEW = function () {
             });
 
             $("#load-objects-btn").click(function () {
-                var filter = $("#filter-list").val();
+                var browse = $("#filter-list").val();
                 var searchType = $("#search-type-list").val();
                 var type = $("#type-list").val();
                 var key = $("#search-key").val();
@@ -377,7 +410,17 @@ var OBJECTS_VIEW = function () {
                 $("#add-edit-op-btn").addClass("hidden");
 
                 OBJECTS_VIEW.loadObjectView();
-                window.history.pushState(null, "State Objects", '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + '&limit=' + $("#limit-field").val());
+                var url = '/api/admin?view=objects&browse=' + browse + '&limit=' + $("#limit-field").val();
+                if(type && type != "") {
+                    url += '&type=' + type;
+                }
+                if(searchType && searchType != "") {
+                    url += '&search=' + searchType;
+                }
+                if(key && key != "") {
+                    url += '&key=' + key;
+                }
+                window.history.pushState(null, "State Objects",  url);
             });
 
             $("#finish-edit-btn").click(function () {

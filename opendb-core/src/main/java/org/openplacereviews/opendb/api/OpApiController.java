@@ -85,7 +85,7 @@ public class OpApiController {
     	return keyPairs.get(session.getAttribute(ADMIN_LOGIN_NAME));
 	}
     
-    private String getServerUser(HttpSession session) {
+    public static String getServerUser(HttpSession session) {
 		return (String) session.getAttribute(ADMIN_LOGIN_NAME);
 	}
     

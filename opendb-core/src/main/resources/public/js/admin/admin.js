@@ -1,12 +1,9 @@
     var loginName = "";
     // TODO move vars into objects i.e. METRICS_VIEW.metricsData etc...
     var metricsData = [];
-    var globalObjectTypes = {};
     var globalConfig = {};
     var editor = {};
     var originObject;
-    var globalObjects = {};
-
 
     ////////////////////// UTILITIES /////////////////////
     async function sha256(message) {
@@ -31,41 +28,30 @@
         }
         return hash.substring(0, 16);
     }
+    
     //\\\\\\\\\\\\\\\\\\\\\\\\\\ UTILITIES \\\\\\\\\\\\\\\\\\\\\\
 
     ///////////////////////////// MAIN /////////////////////////////
-    function loadData(checkUrl) {
-        refreshUser();
+    function loadData() {
+        updateTabVisibility();
         $.getJSON( "/api/auth/admin-status", function( data ) {
             loginName = data.admin;
-            refreshUser();
-            loadAllData(checkUrl);
+            updateTabVisibility();
+            loadStatusData();
+            OBJECTS_VIEW.loadObjectTypes();
+            if (loginName != "") {
+                METRIC_VIEW.loadMetricsData();
+                API_VIEW.loadBotData();
+                API_VIEW.loadDBIndexData();
+                API_VIEW.loadReportFiles();
+                SETTINGS_VIEW.loadConfiguration();
+                // TODO Errors view
+                loadErrorsData();
+                IPFS_VIEW.loadIpfsStatusData();
+            }
         });
     }
-
-    function loadAllData(checkUrl) {
-        loadStatusData();
-        OBJECTS_VIEW.loadObjectsData();
-        $.getJSON("/api/blocks", function( data ) {
-            BLOCKS_VIEW.processBlocksResult(data);
-        });
-        if (loginName != "") {
-            METRIC_VIEW.loadMetricsData();
-            // TODO make functions with same names i.e. loadData
-            API_VIEW.loadBotData();
-            API_VIEW.loadDBIndexData();
-            API_VIEW.loadReportFiles();
-            SETTINGS_VIEW.loadConfiguration();
-            loadErrorsData();
-            IPFS_VIEW.loadIpfsStatusData();
-        }
-        if (window.location.search !== "" && checkUrl) {
-            checkUrlParam();
-        }
-    }
-
-    // TODO move into status VIEW
-    function refreshUser() {
+    function updateTabVisibility() {
         if(loginName != "") {
             $("#admin-login-user").html(loginName);
             $("#admin-actions").show();
@@ -92,7 +78,7 @@
         }
     }
 
-    function checkUrlParam() {
+    function loadURLParams() {
         // objects -> http://localhost:6463/api/admin?view=objects&filter=&search=osm.place&type=id&key=12345662&history=true
         // operations -> http://localhost:6463/api/admin?view=operations&loadBy=blockId&key=0
         // blocks -> http://localhost:6463/api/admin?view=blocks&search=from&hash=213&limit=123
@@ -100,36 +86,10 @@
         // TODO move code into separate tabs to process
         if (window.location.href.toLowerCase().indexOf('api/admin?view=objects') > 1) {
             $(".nav-tabs a[href=\"#objects\"]").tab('show');
-            var filter = url.searchParams.get('filter');
-            if (filter !== null) {
-                $("#filter-list").val(filter).change();
-                if (filter === "operation") {
-                    $("#name-key-field").text("Operation hash:");
-                } else {
-                    $("#name-key-field").text("User id:");
-                }
-            }
-            var searchTypeListValue = url.searchParams.get('search');
-            if (searchTypeListValue !== null) {
-                $("#type-list").val(searchTypeListValue);
-                $("#type-list").change();
-            }
-            var typeSearch = url.searchParams.get('type');
-            if (typeSearch !== null) {
-                $("#search-type-list").val(typeSearch).change();
-            }
-            var limitValue = url.searchParams.get('limit');
-            if (limitValue !== null) {
-                $("#limit-field").val(limitValue);
-            }
-            var keyValue = url.searchParams.get('key');
-            if (keyValue !== null) {
-                $("#search-key").val(keyValue);
-            }
-
-            OBJECTS_VIEW.loadObjectView(false);
+            OBJECTS_VIEW.loadURLParams(url);
         } else if (window.location.href.toLowerCase().indexOf('api/admin?view=operations') > 1) {
             $(".nav-tabs a[href=\"#operations\"]").tab('show');
+            // TODO move code into separate tabs to process
             var loadType = url.searchParams.get('loadBy');
             if (loadType !== null) {
                 $("#operations-search").val(loadType).change();
@@ -138,10 +98,10 @@
             if (key !== null) {
                 $("#operations-key").val(key);
             }
-
             OPERATION_VIEW.loadOperationView();
         } else if (window.location.href.toLowerCase().indexOf('api/admin?view=blocks') > 1) {
             $(".nav-tabs a[href=\"#blocks\"]").tab('show');
+            // TODO move code into separate tabs to process
             var searchType = url.searchParams.get('search');
             if (searchType !== null) {
                 $("#blocks-search").val(searchType).change();
@@ -158,9 +118,9 @@
             BLOCKS_VIEW.loadBlockView();
         }
     }
-    //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ MAIN \\\\\\\\\\\\\\\\\\\\\\\\\
 
     //////////////////////// FUNCTIONS TAB STATUS /////////////////////
+    // TODO move to status tab
     function loadStatusData() {
         $.getJSON( "/api/status", function( data ) {
             var items = "";
@@ -202,8 +162,6 @@
 
         });
     }
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB STATUS \\\\\\\\\\\\\\\\\\\\\\\\\
-
     ///////////////////// FUNCTIONS TAB LOGS ////////////////////////
     // TODO MOVE to ERRORS_VIEW
     function loadErrorsData() {
@@ -258,69 +216,35 @@
             $("#errors-list").html(items);
         });
     }
-    //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB LOGS \\\\\\\\\\\\\\\\\\\\\\\\\
 
+    function postAction(url) {
+        return function() {
+            $.post(url, {})
+            .done(function(data){  $("#result").html(data); loadData(); })
+            .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+        }
+    }
+    
     $( document ).ready(function() {
-        loadData(true);
+        if (window.location.search !== "") {
+            loadURLParams();
+        }
+        loadData();
 
         // TODO create methods in status object
         ////////////////////////// TAB STATUS //////////////////////
-        $("#clear-list-btn").click(function(){
-            $.post("/api/mgmt/queue-clear", {},  function(data, status){
-                loadData();
-            });
-        });
-
-        $("#clear-log-btn").click(function(){
-            $.post("/api/mgmt/logs-clear", {},  function(data, status){
-                loadData();
-            });
-        });
-
-        $("#compact-btn").click(function(){
-            $.post("/api/mgmt/compact", {},  function(data, status){
-                loadData();
-            });
-        });
-
-        $("#replicate-btn").click(function(){
-            $.post("/api/mgmt/replicate", {},  function(data, status){
-                loadData();
-            });
-        });
-
-        $("#block-create-btn").click(function(){
-            $.post("/api/mgmt/create", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-
-        $("#block-revert-btn").click(function(){
-            $.post("/api/mgmt/revert-superblock", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-        $("#block-1revert-btn").click(function(){
-            $.post("/api/mgmt/revert-1-block", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-        $("#ops-pause-btn").click(function(){
-            $.post("/api/mgmt/toggle-blockchain-pause", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-        $("#blocks-pause-btn").click(function(){
-            $.post("/api/mgmt/toggle-blocks-pause", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-        $("#replicate-pause-btn").click(function(){
-            $.post("/api/mgmt/toggle-replicate-pause", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-
+        $("#clear-list-btn").click(postAction("/api/mgmt/queue-clear"));
+        $("#clear-log-btn").click(postAction("/api/mgmt/logs-clear"));
+        $("#compact-btn").click(postAction("/api/mgmt/compact"));
+        $("#replicate-btn").click(postAction("/api/mgmt/replicate"));
+        $("#block-create-btn").click(postAction("/api/mgmt/create"));
+        $("#block-revert-btn").click(postAction("/api/mgmt/revert-superblock"));
+        $("#block-1revert-btn").click(postAction("/api/mgmt/revert-1-block"));
+        $("#ops-pause-btn").click(postAction("/api/mgmt/toggle-blockchain-pause"));
+        $("#blocks-pause-btn").click(postAction("/api/mgmt/toggle-blocks-pause"));
+        $("#replicate-pause-btn").click(postAction("/api/mgmt/toggle-replicate-pause"));
+        $("#block-bootstrap-btn").click(postAction("/api/mgmt/bootstrap"));
+        // TODO generalize done / fail 
         $("#remove-orphaned-blocks-btn").click(function(){
             $.post("/api/mgmt/delete-orphaned-blocks", {
                 "blockListOrSingleValue" : $("#remove-orphaned-blocks-txt").val()
@@ -328,7 +252,6 @@
                 .done(function(data){  $("#result").html(data); loadData(); })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
         });
-
         $("#remove-queue-ops-btn").click(function(){
             $.post("/api/mgmt/delete-queue-ops", {
                 "opsListOrSingleValue" : $("#remove-queue-ops-txt").val()
@@ -336,14 +259,6 @@
                 .done(function(data){  $("#result").html(data); loadData(); })
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
         });
-
-
-        $("#block-bootstrap-btn").click(function(){
-            $.post("/api/mgmt/bootstrap", {})
-                .done(function(data){  $("#result").html(data); loadData(); })
-                .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
-        });
-
         $("#admin-login-btn").click(function() {
             var obj = {
                 "pwd":$("#admin-login-key").val(),
@@ -434,7 +349,6 @@
                 .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData();  });
         });
 
-        /////////////////////////// MAIN /////////////////////////////
         window.onpopstate = function (event) {
             if (!document.location.href.toString().includes("#popover")) {
                 window.location.href = document.location;

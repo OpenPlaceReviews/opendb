@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+import javax.servlet.http.HttpSession;
+
 @Controller
 @RequestMapping("/api")
 public class ApiController {
@@ -47,7 +49,7 @@ public class ApiController {
 
 	@GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String status() {
+	public String status(HttpSession session) {
 		BlockchainStatus res = new BlockchainStatus();
 		OpBlockChain o = manager.getBlockchain();
 		while (!o.isNullBlock()) {
@@ -70,6 +72,7 @@ public class ApiController {
 		res.orphanedBlocks = manager.getOrphanedBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
+		res.loginUser = OpApiController.getServerUser(session);
 		if (manager.isBlockCreationOn()) {
 			res.status += " (blocks every " + scheduledServices.getMinSecondsInterval() + " seconds)";
 		} else if (manager.isReplicateOn()) {
@@ -110,6 +113,7 @@ public class ApiController {
 	protected static class BlockchainStatus {
 		public String status;
 		public String serverUser;
+		public String loginUser;
 		public Map<String, OpBlock> orphanedBlocks;
 		public List<String> sblocks = new ArrayList<String>();
 	}

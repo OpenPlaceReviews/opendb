@@ -224,16 +224,14 @@ Details: <b><span did="block-details"></span></b></pre>
         </div>
         
           <div class="row">
-            <div class="form-group form-inline col-md-8">
-                <div class="form-group" id="type-list-select">
+            <div class="form-group form-inline col-md-8" id="type-list-select">
+                <div class="form-group" >
                     <label for="type-list">Search:</label>
                     <select class="form-control" id="type-list"></select>
                 </div>
-                <div class="form-group" id="search-type-list-select">
+                <div class="form-group">
                     <select class="form-control" id="search-type-list">
-                        <option selected value="all">all</option>
-                        <option value="userId">by userId</option>
-                        <option value="opHash" >by opHash</option>
+                        <option value="all" disabled>all</option>
                     </select>
                 </div>
             </div>
@@ -273,8 +271,8 @@ Details: <b><span did="block-details"></span></b></pre>
 
         <div class="row">
             <div class="form-group form-inline col-md-4">
-                <input type="button" value="Stop edit" id="stop-edit-btn" class="btn btn-primary hidden">
-                <input type="button" value="Finish edit" id="finish-edit-btn" class="btn btn-primary hidden">
+                <input type="button" value="Cancel edit" id="stop-edit-btn" class="btn btn-primary hidden">
+                <input type="button" value="Commit edit" id="finish-edit-btn" class="btn btn-primary hidden">
                 <input type="button" value="Add edit op" id="add-edit-op-btn" class="btn btn-primary hidden">
             </div>
         </div>
@@ -287,7 +285,7 @@ Details: <b><span did="block-details"></span></b></pre>
             <li class="panel panel-default" id="objects-list-item">
                 <p class="panel-heading">
                     <a href="#popover" class="pull-right" did="object-op-hash" data-placement="left" data-toggle="popover"></a>
-                    <a href="" did="history-object-link">Object Id: <b><span did="obj-id"></span></b></a>
+                    Object Id: <a href="" did="history-object-link"><b><span did="obj-id"></span></b></a>
                     <a type="button" did="edit-object" class="btn btn-default btn-xs">Edit</a>
                 </p>
                 <div class="panel-body">
