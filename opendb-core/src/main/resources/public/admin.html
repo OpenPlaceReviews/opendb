@@ -210,30 +210,31 @@ Details: <b><span did="block-details"></span></b></pre>
     <div id="objects" class="tab-pane fade">
         <h3>Objects</h3>
         <div class="row">
-            <div class="form-group form-inline col-md-8">
+            <div class="form-group form-inline col-md-4">
                 <div class="form-group">
-                    <label for="filter-list">Filter:&nbsp;</label>
+                    <label for="filter-list">Browse:</label>
                     <select class="form-control" id="filter-list">
                         <option selected value="type">by type</option>
+                        <option value="history">history</option>
                         <option value="operation">by operation</option>
-                        <option value="userid">by user Id</option>
+                        <option value="userid">by user id</option>
                     </select>
                 </div>
+            </div>
+        </div>
+        
+          <div class="row">
+            <div class="form-group form-inline col-md-8">
                 <div class="form-group" id="type-list-select">
-                    <label for="type-list">Select type:&nbsp;</label>
+                    <label for="type-list">Search:</label>
                     <select class="form-control" id="type-list"></select>
                 </div>
                 <div class="form-group" id="search-type-list-select">
-                    <label for="search-type-list">Search:&nbsp;</label>
                     <select class="form-control" id="search-type-list">
                         <option selected value="all">all</option>
                         <option value="userId">by userId</option>
-                        <option value = "opHash" >by opHash</option>
+                        <option value="opHash" >by opHash</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="historyCheckbox">Show history</label>
-                    <input type="checkbox" id="historyCheckbox" name="scales">
                 </div>
             </div>
         </div>
@@ -248,9 +249,9 @@ Details: <b><span did="block-details"></span></b></pre>
         </div>
 
         <div class="row">
-            <div class="form-group form-inline col-md-4">
+            <div class="form-group form-inline col-md-8">
                 <div class="form-group">
-                    <label for="limit-field">Amount entries (Limit):</label>
+                    <label for="limit-field">Limit:</label>
                     <input type="text" class="form-control" id="limit-field" value="50"/>
                 </div>
             </div>

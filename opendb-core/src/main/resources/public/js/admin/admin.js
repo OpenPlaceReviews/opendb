@@ -3,6 +3,9 @@
     var metricsData = [];
     var globalObjectTypes = {};
     var globalConfig = {};
+    var editor = {};
+    var originObject;
+    var globalObjects = {};
 
 
     ////////////////////// UTILITIES /////////////////////
@@ -101,9 +104,9 @@
             if (filter !== null) {
                 $("#filter-list").val(filter).change();
                 if (filter === "operation") {
-                    $("#name-key-field").text("Input operation Hash");
+                    $("#name-key-field").text("Operation hash:");
                 } else {
-                    $("#name-key-field").text("Input user Id");
+                    $("#name-key-field").text("User id:");
                 }
             }
             var searchTypeListValue = url.searchParams.get('search');
@@ -114,12 +117,6 @@
             var typeSearch = url.searchParams.get('type');
             if (typeSearch !== null) {
                 $("#search-type-list").val(typeSearch).change();
-            }
-            var checkboxValue = url.searchParams.get('history');
-            if (checkboxValue !== null) {
-                $("#historyCheckbox").prop('checked', checkboxValue === "true");
-            } else {
-                $("#search-type-list").change();
             }
             var limitValue = url.searchParams.get('limit');
             if (limitValue !== null) {
@@ -263,13 +260,10 @@
     }
     //\\\\\\\\\\\\\\\\\ FUNCTIONS TAB LOGS \\\\\\\\\\\\\\\\\\\\\\\\\
 
-    var editor = {};
-    var originObject;
-    var globalObjects = {};
     $( document ).ready(function() {
         loadData(true);
 
-        // TODO create method
+        // TODO create methods in status object
         ////////////////////////// TAB STATUS //////////////////////
         $("#clear-list-btn").click(function(){
             $.post("/api/mgmt/queue-clear", {},  function(data, status){
@@ -369,7 +363,7 @@
         SETTINGS_VIEW.onReady();
 
         /////////////////////////// TAB REGISTRATION ////////////////////
-        // TODO create method or file
+        // TODO create method or file for registration
         $("#signup-btn").click(function() {
             var obj = {
                 "pwd":$("#signup-pwd").val(),

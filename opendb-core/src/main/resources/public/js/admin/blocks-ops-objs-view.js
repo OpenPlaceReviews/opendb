@@ -111,11 +111,11 @@ var OPERATION_VIEW = function () {
                 } else {
                     $("#operations-search-fields").removeClass("hidden");
                     if (type === "id") {
-                        $("#input-search-operation-key").text("Input object id");
+                        $("#input-search-operation-key").text("Object id:");
                     } else if (type === "blockId") {
-                        $("#input-search-operation-key").text("Input block Id");
+                        $("#input-search-operation-key").text("Block id:");
                     } else {
-                        $("#input-search-operation-key").text("Input block hash");
+                        $("#input-search-operation-key").text("Block hash:");
                     }
                 }
             });
@@ -243,7 +243,6 @@ var OBJECTS_VIEW = function () {
             $.ajax({
                 url: "/api/objects?type=sys.operation",
                 type: "GET",
-                async: false,
                 success: function (data) {
                     var types = "<option value = '' disabled>Select type</option>";
                     types += "<option value = 'none' selected>none</option>";
@@ -261,116 +260,108 @@ var OBJECTS_VIEW = function () {
                 }
             });
         },
+
+        setAmountResults: function (data) {
+            $("#amount-objects").html("Count results: " + data);
+        },
+
+        setObjectsItems: function (data) {
+            var items = $("#objects-list");
+            items.empty();
+            let templateItem = $("#objects-list-item");
+            for (var i = 0; i < data.objects.length; i++) {
+                let obj = data.objects[i];
+                var it = templateItem.clone();
+                it.find("[did='edit-object']").click(function () {
+                    generateJsonFromObject(obj);
+                });
+                it.find("[did='object-op-hash']").attr('data-content', obj.eval.parentHash).html(smallHash(obj.eval.parentHash)).popover();
+                it.find("[did='obj-id']").html(obj.id.toString());
+                // TODO
+                it.find("[did='history-object-link']").attr("href",
+                    "/api/admin?view=objects&filter=history&search=id&key=" + obj.id.toString() + "&history=true&limit=50")
+                if (obj.comment) {
+                    it.find("[did='obj-comment']").html(obj.comment);
+                } else {
+                    it.find("[did='comment']").prop("hidden", true);
+                }
+                it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
+                items.append(it);
+            }
+            OBJECTS_VIEW.setAmountResults(data.objects.length);
+        },
+
+
         loadObjectView: function() {
-            var filter = $("#filter-list").val();
-            var searchType = $("#search-type-list").val();
-            var type = $("#type-list").val();
-            var key = $("#search-key").val();
+            let filter = $("#filter-list").val();
+            let searchType = $("#search-type-list").val();
+            let type = $("#type-list").val();
+            let key = $("#search-key").val();
             $("#json-editor-div").addClass("hidden");
             $("#stop-edit-btn").addClass("hidden");
             $("#finish-edit-btn").addClass("hidden");
             $("#add-edit-op-btn").addClass("hidden");
-
             if (filter === "operation") {
-                let amount = getHistoryForObject("operation", key, true);
-                $("#amount-objects").html("Count results: " + amount);
+                setObjectsHistoryItems("operation", key);
             } else if (filter === "userid") {
-                let amount = getHistoryForObject("user", key, true);
-                $("#amount-objects").html("Count results: " + amount);
-            } else {
+                setObjectsHistoryItems("user", key);
+            } else if (filter === "history") {
+                if(type == "none") {
+                    setObjectsHistoryItems("all", null);
+                } else {
+                    setObjectsHistoryItems("type", type);
+                }
+            } else if (filter === "type") {
                 if (searchType === "count") {
                     $.getJSON("/api/objects-count?type=" + type, function (data) {
-                        var items = "";
-                        globalObjects = [];
-                        $("#objects-list").html(items);
-                        $("#amount-objects").html("Count results: " + data.count);
+                        $("#objects-list").empty();
+                        OBJECTS_VIEW.setAmountResults(data.count);
+                    });
+                } else if (searchType === "all") {
+                    var req = {
+                        "type": type,
+                        "limit": $("#limit-field").val()
+                    };
+                    $.getJSON("/api/objects", req, function (data) {
+                        OBJECTS_VIEW.setObjectsItems(data);
+                    });
+                } else if (searchType === "id") {
+                    var req = {
+                        "type": type,
+                        "key": key
+                    };
+                    $.getJSON("/api/objects-by-id", req, function (data) {
+                        OBJECTS_VIEW.setObjectsItems(data);
                     });
                 } else {
-                    let funcProcResults = function (data) {
-                        var items = $("#objects-list");
-                        items.empty();
-                        let templateItem = $("#objects-list-item");
-                        var amountResults = 0;
-                        globalObjects = data.objects;
-                        for (var i = 0; i < data.objects.length; i++) {
-                            let obj = data.objects[i];
-                            const tmp_id = i;
-                            if ($("#historyCheckbox").is(":checked") === true) {
-                                amountResults += getHistoryForObject("object", type + "," + obj.id, false);
-                            } else {
-                                var it = templateItem.clone();
-                                it.find("[did='edit-object']").click(function () {
-                                    generateJsonFromObject(globalObjects[tmp_id]);
-                                });
-                                it.find("[did='object-op-hash']").attr('data-content', obj.eval.parentHash).html(smallHash(obj.eval.parentHash)).popover();
-                                it.find("[did='obj-id']").html(obj.id.toString());
-                                it.find("[did='history-object-link']").attr("href", "/api/admin?view=objects&filter=type&search=" + type + "&type=id&key=" + obj.id.toString() + "&history=true&limit=50")
-                                if (obj.comment) {
-                                    it.find("[did='obj-comment']").html(obj.comment);
-                                } else {
-                                    it.find("[did='comment']").prop("hidden", true);
-                                }
-                                it.find("[did='object-json']").html(JSON.stringify(obj, null, 4));
-
-                                items.append(it)
-                            }
-                        }
-                        $("#amount-objects").html("Count results: " + (amountResults === 0 ? data.objects.length : amountResults));
+                    var req = {
+                        "type": type,
+                        "index": $("#search-type-list").val(),
+                        "limit": $("#limit-field").val(),
+                        "key": key
                     };
-                    if (searchType === "all") {
-                        if (type === "none" && $("#historyCheckbox").is(":checked") === true) {
-                            var amount = getHistoryForObject("all", null, true);
-                            $("#amount-objects").html("Count results: " + amount);
-                        } else {
-                            let obj = {
-                                "type": type,
-                                "limit": $("#limit-field").val()
-                            };
-
-                            $.getJSON("/api/objects", obj, function (data) {
-                                funcProcResults(data);
-                            });
-                        }
-
-                    } else if (searchType === "id") {
-                        let obj = {
-                            "type": type,
-                            "key": key
-                        };
-                        $.getJSON("/api/objects-by-id", obj, function (data) {
-                            funcProcResults(data);
-                        });
-                    } else {
-                        let obj = {
-                            "type": type,
-                            "index": $("#search-type-list").val(),
-                            "limit": $("#limit-field").val(),
-                            "key": key
-                        };
-                        $.getJSON("/api/objects-by-index", obj, function (data) {
-                            funcProcResults(data);
-                        });
-                    }
+                    $.getJSON("/api/objects-by-index", req, function (data) {
+                        OBJECTS_VIEW.setObjectsItems(data);
+                    });
                 }
             }
         },
+
         onReady: function() {
             $("#filter-list").change(function() {
                 var selected = $("#filter-list").val();
-                if (selected === "type") {
+                if (selected === "type" || selected === "history") {
                     $("#type-list-select").removeClass("hidden");
                     $("#search-type-list-select").removeClass("hidden");
                     $("#search-key-input").addClass("hidden");
-                    $("#historyCheckbox").prop("disabled", false).prop('checked', false);
                 } else {
                     $("#type-list-select").addClass("hidden");
                     $("#search-type-list-select").addClass("hidden");
                     $("#search-key-input").removeClass("hidden");
-                    $("#historyCheckbox").prop("disabled", true).prop('checked', true);
                     if (selected === "operation") {
-                        $("#name-key-field").text("Input operation Hash");
+                        $("#name-key-field").text("Operation hash:");
                     } else {
-                        $("#name-key-field").text("Input user Id");
+                        $("#name-key-field").text("User id:");
                     }
                 }
             });
@@ -386,7 +377,7 @@ var OBJECTS_VIEW = function () {
                 $("#add-edit-op-btn").addClass("hidden");
 
                 OBJECTS_VIEW.loadObjectView();
-                window.history.pushState(null, "State Objects", '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + "&history=" + $("#historyCheckbox").is(":checked") + '&limit=' + $("#limit-field").val());
+                window.history.pushState(null, "State Objects", '/api/admin?view=objects&filter=' + filter +'&search=' + type + '&type=' + searchType + '&key=' + key + '&limit=' + $("#limit-field").val());
             });
 
             $("#finish-edit-btn").click(function () {
@@ -443,8 +434,26 @@ var OBJECTS_VIEW = function () {
                 var type = $("#type-list").val();
                 loadSearchTypeByOpType(type);
             });
+
+            $("#search-type-list").change(function() {
+                var selectedSearchType = $("#search-type-list").val();
+                if (selectedSearchType === "all") {
+                    $("#search-key-input").addClass("hidden");
+                } else if ( selectedSearchType === "count") {
+                    $("#search-key-input").addClass("hidden");
+                } else {
+                    $("#search-key-input").removeClass("hidden");
+                    if (selectedSearchType === "id") {
+                        $("#name-key-field").text("Object id:");
+                    } else {
+                        $("#name-key-field").text( $("#search-type-list").val() + ":");
+                    }
+                }
+            });
+
         }
     };
+
     function generateJsonFromObject(obj) {
         $("#json-editor-div").removeClass("hidden");
 
@@ -463,7 +472,8 @@ var OBJECTS_VIEW = function () {
         editor = new JsonEditor('#json-display', obj);
         editor.load(obj);
     }
-    function getHistoryObjects(obj, templateItem) {
+
+    function setObjectsHistoryItem(obj, templateItem) {
         var it = templateItem.clone();
 
         it.find("[did='object-op-hash']").attr('data-content', obj.opHash).html(smallHash(obj.opHash)).popover();
@@ -497,37 +507,36 @@ var OBJECTS_VIEW = function () {
 
         return it;
     }
-    function getHistoryForObject(searchType, key, clear) {
+
+    function setObjectsHistoryItems(searchType, key) {
         var obj = {
             "type": searchType,
             "key": key,
             "limit": $("#limit-field").val(),
             "sort": "DESC"
         };
-        var items = $("#objects-list");
-        if (clear) {
-            items.empty();
-        }
-        var amount = 0;
         $.ajax({
-            url: "/api/history", type: "get", async: false, data: obj,
+            url: "/api/history", type: "get", data: obj,
             success: function (data) {
+                var items = $("#objects-list");
+                items.empty();
                 var templateItem = $("#objects-history-list-item");
                 for (var i = 0; i < data.length; i++) {
                     var object = data[i];
-                    items.append(getHistoryObjects(object, templateItem));
+                    items.append(setObjectsHistoryItem(object, templateItem));
                 }
-                amount += data.length;
+                OBJECTS_VIEW.setAmountResults(data.length);
             },
             error: function (xhr, status, error) {
                 $("#result").html("ERROR: " + error);
             }
         });
-        return amount;
+        
     }
+    
     function loadSearchTypeByOpType(type) {
         $.ajax({
-            url: "/api/indices-by-type?type=" + type, type: "get", async: false,
+            url: "/api/indices-by-type?type=" + type, type: "get", 
             success: function (data) {
                 var searchTypes = "";
                 searchTypes += "<option value = 'all' selected>all</option>";
@@ -539,7 +548,6 @@ var OBJECTS_VIEW = function () {
                 }
 
                 $("#search-type-list").html(searchTypes);
-                $("#historyCheckbox").prop("disabled", false);
                 $("#search-key-input").addClass("hidden")
             },
             error: function (xhr, status, error) {

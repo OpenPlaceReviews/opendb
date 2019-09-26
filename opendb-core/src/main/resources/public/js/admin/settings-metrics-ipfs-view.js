@@ -48,38 +48,7 @@ var SETTINGS_VIEW = function () {
                 SETTINGS_VIEW.loadConfiguration();
             });
 
-            $("#search-type-list").change(function() {
-                var selectedSearchType = $("#search-type-list").val();
-                if (selectedSearchType === "all") {
-                    if ($("#type-list").val() === "none") {
-                        $("#historyCheckbox").prop('checked', true)
-                    } else {
-                        $("#search-key-input").addClass("hidden");
-                        $("#historyCheckbox").prop("disabled", false);
-                    }
-                } else if ( selectedSearchType === "count") {
-                    $("#search-key-input").addClass("hidden");
-                    $("#historyCheckbox").prop("disabled", true).prop('checked', false);
-                } else if (selectedSearchType === "userId") {
-                    $("#search-key-input").removeClass("hidden");
-                    $("#name-key-field").text("Input User ID");
-                    $("#historyCheckbox").prop('checked', true).prop("disabled", true);
-                } else if (selectedSearchType === "opHash") {
-                    $("#search-key-input").removeClass("hidden");
-                    $("#type-list").val("none");
-                    $("#name-key-field").text("Input Op Hash");
-                    $("#historyCheckbox").prop('checked', true).prop("disabled", true);
-                } else {
-                    $("#search-key-input").removeClass("hidden");
-                    if (selectedSearchType === "id") {
-                        $("#name-key-field").text("Input Object ID");
-                    } else {
-                        $("#name-key-field").text("Input " + $("#search-type-list").val());
-                    }
-                    $("#historyCheckbox").prop("disabled", false);
-                }
-            });
-
+           
             $("#save-new-value-for-settings-btn").click(function () {
                 var obj = {
                     key: $("#settings-name").val(),
