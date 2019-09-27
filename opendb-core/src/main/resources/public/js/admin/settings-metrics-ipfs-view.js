@@ -1,60 +1,66 @@
 var SETTINGS_VIEW = function () {
+    function editPreferenceObject(obj) {
+        if (obj === "Map") {
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(obj.value, null, 4));
+        } else {
+            $("#settings-edit-modal .modal-body #edit-preference-value").val(obj.value);
+        }
+        $("#settings-edit-modal .modal-body #settings-type-edit-header").html("Preference type: " + obj.type);
+        $("#settings-edit-modal .modal-body #settings-type").html(obj.type);
+        $("#settings-edit-modal .modal-body #edit-preference-restart").val(obj.restartIsNeeded.toString());
+        $("#settings-edit-modal .modal-header #settings-name").val(obj.id);
+        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + obj.id);
+    }
+    function showSettings(obj, templateItem) {
+        var it = templateItem.clone();
+        if (obj.canEdit === true) {
+            it.find("[did='edit-settings']").click(function () {
+                editPreferenceObject(obj);
+            });
+        } else {
+            it.find("[did='edit-settings']").addClass("hidden");
+        }
+        it.find("[did='settings-name']").html(obj.id + " - " + obj.description);
+        if (obj.type === "Map") {
+            it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
+            it.find("[did='settings-value']").addClass("hidden");
+        } else {
+            it.find("[did='settings-value-json']").addClass("hidden");
+            it.find("[did='settings-value']").html(obj.value);
+        }
+        if (obj.restartIsNeeded === true) {
+            it.find("[did='settings-restart']").removeClass("hidden");
+        }
+        items.append(it);
+    }
+
     return {
         loadConfiguration: function() {
             $.getJSON("/api/mgmt/config", function (data) {
-                // var items = "";
-                globalConfig = data;
                 var items = $("#settings-result-list");
                 items.empty();
                 var templateItem = $("#settings-list-item");
-
                 for (var i = 0; i < data.length; i++) {
                     obj = data[i];
                     if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
-                        showSettings(i);
+                        showSettings(obj, templateItem);
                     } else if (!($("#settingsCheckbox").is(":checked"))) {
-                        showSettings(i);
+                        showSettings(obj, templateItem);
                     }
-
                 }
-
-                function showSettings(i) {
-                    var it = templateItem.clone();
-                    if (obj.canEdit === true) {
-                        it.find("[did='edit-settings']").click(function () {
-                            editPreferenceObject(i);
-                        });
-                    } else {
-                        it.find("[did='edit-settings']").addClass("hidden");
-                    }
-                    it.find("[did='settings-name']").html(obj.id + " - " + obj.description);
-                    if (obj.type === "Map") {
-                        it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
-                        it.find("[did='settings-value']").addClass("hidden");
-                    } else {
-                        it.find("[did='settings-value-json']").addClass("hidden");
-                        it.find("[did='settings-value']").html(obj.value);
-                    }
-                    if (obj.restartIsNeeded === true) {
-                        it.find("[did='settings-restart']").removeClass("hidden");
-                    }
-                    items.append(it);
-                }
-
             });
         },
         onReady: function() {
             $("#settingsCheckbox").change(function () {
                 SETTINGS_VIEW.loadConfiguration();
             });
-
-           
             $("#save-new-value-for-settings-btn").click(function () {
                 var obj = {
                     key: $("#settings-name").val(),
                     value: $("#edit-preference-value").val(),
                     type: $("#settings-type").text(),
                 };
+                // TODO use generic error handling
                 $.post("/api/mgmt/config", obj)
                     .done(function (data) {
                         $("#result").html("SUCCESS: " + data);
@@ -69,20 +75,7 @@ var SETTINGS_VIEW = function () {
         }
     };
 
-    function editPreferenceObject(i) {
-        console.log(globalConfig[i]);
-        if (globalConfig[i].type === "Map") {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(globalConfig[i].value, null, 4));
-        } else {
-            $("#settings-edit-modal .modal-body #edit-preference-value").val(globalConfig[i].value);
-
-        }
-        $("#settings-edit-modal .modal-body #settings-type-edit-header").html("Preference type: " + globalConfig[i].type);
-        $("#settings-edit-modal .modal-body #settings-type").html(globalConfig[i].type);
-        $("#settings-edit-modal .modal-body #edit-preference-restart").val(globalConfig[i].restartIsNeeded.toString());
-        $("#settings-edit-modal .modal-header #settings-name").val(globalConfig[i].id);
-        $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + globalConfig[i].id);
-    }
+    
 } ();
 
 var METRIC_VIEW = function () {
