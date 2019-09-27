@@ -128,6 +128,7 @@ public class SettingsManager {
 		public String descriptionFormat;
 		public String[] descProperties;
 		public String[] idProperties;
+		public boolean restartNeeded = true;
 		
 		public PreferenceFamily(String prefix, String[] idProperties, String descriptionFormat, String... property) {
 			this.idProperties = idProperties;
@@ -342,7 +343,11 @@ public class SettingsManager {
 	}
 	
 	public CommonPreference<Map<String, Object>> registerMapPreferenceForFamily(PreferenceFamily pf, Map<String, Object> o) {
-		return registerMapPreference(pf.getId(o), o, pf.getDescription(o)).restartNeeded();
+		CommonPreference<Map<String, Object>> cp = registerMapPreference(pf.getId(o), o, pf.getDescription(o));
+		if(pf.restartNeeded) {
+			cp = cp.restartNeeded();
+		}
+		return cp;
 	}
 	
 	@SuppressWarnings("unchecked")
