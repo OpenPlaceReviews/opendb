@@ -212,8 +212,8 @@ Details: <b><span did="block-details"></span></b></pre>
         <div class="row">
             <div class="form-group form-inline col-md-4">
                 <div class="form-group">
-                    <label for="filter-list">Browse:</label>
-                    <select class="form-control" id="filter-list">
+                    <label for="browse-list">Browse:</label>
+                    <select class="form-control" id="browse-list">
                         <option selected value="type">by type</option>
                         <option value="history">history</option>
                         <option value="operation">by operation</option>
@@ -227,11 +227,13 @@ Details: <b><span did="block-details"></span></b></pre>
             <div class="form-group form-inline col-md-8" id="type-list-select">
                 <div class="form-group" >
                     <label for="type-list">Search:</label>
-                    <select class="form-control" id="type-list"></select>
+                    <select class="form-control" id="type-list">
+                    	<option value="all">all</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <select class="form-control" id="search-type-list">
-                        <option value="all" disabled>all</option>
+                    <select class="form-control hidden" id="search-type-list">
+                        <option value="all">all</option>
                     </select>
                 </div>
             </div>

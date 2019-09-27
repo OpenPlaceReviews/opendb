@@ -31,7 +31,7 @@ var SETTINGS_VIEW = function () {
         if (obj.restartIsNeeded === true) {
             it.find("[did='settings-restart']").removeClass("hidden");
         }
-        items.append(it);
+        return it;
     }
 
     return {
@@ -43,9 +43,9 @@ var SETTINGS_VIEW = function () {
                 for (var i = 0; i < data.length; i++) {
                     obj = data[i];
                     if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
-                        showSettings(obj, templateItem);
+                        items.append(showSettings(obj, templateItem));
                     } else if (!($("#settingsCheckbox").is(":checked"))) {
-                        showSettings(obj, templateItem);
+                        items.append(showSettings(obj, templateItem));
                     }
                 }
             });

@@ -324,7 +324,6 @@ function loadURLParams() {
     }
 }
 
-
 $(document).ready(function () {
     updateTabVisibility();
     if (window.location.search !== "") {
