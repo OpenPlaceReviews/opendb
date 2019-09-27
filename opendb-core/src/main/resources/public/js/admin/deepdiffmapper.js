@@ -1,4 +1,5 @@
- var DEEP_DIFF_MAPPER = function() {
+// TODO comment source code link
+var DEEP_DIFF_MAPPER = function() {
             return {
                 VALUE_CREATED: 'created',
                 VALUE_UPDATED: 'updated',
@@ -137,4 +138,4 @@
                     return !this.isObject(obj) && !this.isArray(obj);
                 }
             }
-        }();
+}();

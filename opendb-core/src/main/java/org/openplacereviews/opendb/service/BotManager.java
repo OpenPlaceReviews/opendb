@@ -35,7 +35,6 @@ public class BotManager {
 	public static class BotInfo {
 		String api;
 		String id;
-		int version;
 		long started;
 		IOpenDBBot<?> instance;
 		String interval;
@@ -86,7 +85,6 @@ public class BotManager {
 		for (OpObject cfg : req.result) {
 			BotInfo bi = new BotInfo();
 			bi.id = cfg.getId().get(0);
-			bi.version = cfg.getIntValue("version", 0);
 			bi.api = cfg.getStringValue("api");
 			// TODO 
 			long timeInMilis = 30000;
@@ -103,8 +101,7 @@ public class BotManager {
 					bi.instance = (IOpenDBBot<?>) constructor.newInstance(cfg);
 					beanFactory.autowireBean(bi.getInstance());
 				} catch (Exception e) {
-					LOGGER.error(String.format("Error while creating bot %s instance version %d, api %s", bi.id,
-							bi.version, bi.api), e);
+					LOGGER.error(String.format("Error while creating bot %s instance api %s", bi.id, bi.api), e);
 				}
 			} else {
 				bi = exBot;

@@ -262,14 +262,5 @@ public class MgmtController {
 		}
 	}
 
-	@PostMapping(path = "/index",  produces = "text/html;charset=UTF-8")
-	@ResponseBody
-	public ResponseEntity<String> addNewDbIndex(HttpSession session) {
-    	if (!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-		}
-		// TODO return json
-		return ResponseEntity.badRequest().body("{\"error\":\"Unsupported operation\"}");
-	}
 
 }

@@ -273,8 +273,6 @@ function loadData() {
         if (STATUS_VIEW.loginName != "") {
             METRIC_VIEW.loadMetricsData();
             API_VIEW.loadBotData();
-            API_VIEW.loadDBIndexData();
-            API_VIEW.loadReportFiles();
             SETTINGS_VIEW.loadConfiguration();
             ERRORS_VIEW.loadErrorsData();
             IPFS_VIEW.loadIpfsStatusData();
