@@ -2,7 +2,6 @@ package org.openplacereviews.opendb.api ;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
@@ -257,7 +256,6 @@ public class MgmtController {
 			return ResponseEntity.badRequest().body("{\"error\":\"Key is not defined\"}");
 		}
 		if (pref.setString(value)) {
-			settingsManager.savePreferences();
 			return ResponseEntity.ok("{\"status\":\"ok\"}");
 		} else {
 			return ResponseEntity.badRequest().body("{\"error\":\"Preference was not updated\"}");
@@ -266,17 +264,12 @@ public class MgmtController {
 
 	@PostMapping(path = "/index",  produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public ResponseEntity<String> addNewDbIndex(HttpSession session,
-												@RequestBody RequestIndexBody requestIndexBody) {
-		// TODO
+	public ResponseEntity<String> addNewDbIndex(HttpSession session) {
     	if (!validateServerLogin(session)) {
     		return unauthorizedByServer();
 		}
-
-		boolean state = manager.addNewDbIndex(requestIndexBody);
-
-		// TODO return josn
-		return ResponseEntity.ok(Boolean.toString(state));
+		// TODO return json
+		return ResponseEntity.badRequest().body("{\"error\":\"Unsupported operation\"}");
 	}
 
 }

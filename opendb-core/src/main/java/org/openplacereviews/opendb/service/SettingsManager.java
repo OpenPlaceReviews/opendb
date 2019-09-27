@@ -11,10 +11,23 @@ import java.util.*;
 @Service
 public class SettingsManager {
 	
-	public static final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
 	public static final String OBJTABLE_TYPES = "types";
 	public static final String OBJTABLE_KEYSIZE = "keysize";
 	public static final String OBJTABLE_TABLENAME = "tablename";
+	public static final String TABLE_ID = "id";
+	
+	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily(
+			"opendb.db-schema.objtables", "DB config to store %s objects", OBJTABLE_TYPES);
+	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily(
+			"opendb.db-schema.indexes", "DB config to desribe index %s objects", TABLE_ID);
+	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily(
+			"opendb.db-schema.indexes",  "Bot %s configuration", TABLE_ID);
+	
+	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
+			DB_SCHEMA_OBJTABLES,
+			DB_SCHEMA_INDEXES,
+			OPENDB_BOTS_CONFIG
+	};
 	
 	@Autowired
 	private DBSchemaManager dbSchemaManager;
@@ -32,11 +45,13 @@ public class SettingsManager {
 	public void initPreferences() {
 		// load extra properties from DB
 		Map<String, String> dbPrefs = dbSchemaManager.getSettings(jdbcTemplate);
-		for (String k : dbPrefs.keySet()) {
-			if (k.startsWith(OBJTABLE_PROPERTY_NAME + ".") && !preferences.containsKey(k)) {
-				TreeMap<String, Object> mp = jsonFormatter.fromJsonToTreeMap(dbPrefs.get(k));
-				String d = "DB table to store " + mp.get(OBJTABLE_TYPES) + " objects";
-				registerMapPreference(k, mp, d).restartNeeded();
+		for (PreferenceFamily family : SETTINGS_FAMILIES) {
+			for (String k : dbPrefs.keySet()) {
+				if (k.startsWith(family.prefix + ".") && !preferences.containsKey(k)) {
+					TreeMap<String, Object> mp = jsonFormatter.fromJsonToTreeMap(dbPrefs.get(k));
+					String d = "DB table to store " + mp.get(OBJTABLE_TYPES) + " objects";
+					registerMapPreference(k, mp, d).restartNeeded();
+				}
 			}
 		}
 		dbValueLoaded = true;
@@ -62,6 +77,9 @@ public class SettingsManager {
 		return preferences.values();
 	}
 	
+	public <T> List<CommonPreference<T>> getPreferencesByPrefix(PreferenceFamily f) {
+		return getPreferencesByPrefix(f.prefix);
+	}
 	
 	@SuppressWarnings("unchecked")
 	public <T> List<CommonPreference<T>> getPreferencesByPrefix(String keyPrefix) {
@@ -90,6 +108,25 @@ public class SettingsManager {
 	}
 
 	/////////////// PREFERENCES classes ////////////////
+	
+	public static class PreferenceFamily {
+		public String prefix;
+		public String descriptionFormat;
+		public String[] property;
+		public PreferenceFamily(String prefix, String descriptionFormat, String... property) {
+			this.descriptionFormat = descriptionFormat;
+			this.property = property;
+		}
+		
+		public String getDescription(Map<String, Object> o) {
+			Object[] vls = new Object[property.length];
+			for(int i = 0; i < property.length; i++) {
+				vls[i] = o.get(property[i]);
+			}
+			return String.format(descriptionFormat, vls);
+		}
+	}
+	
 	public class CommonPreference<T> {
 		private final String id;
 		protected T value;
@@ -162,6 +199,10 @@ public class SettingsManager {
 			} else {
 				throw new UnsupportedOperationException("Conversion is unsupported for class: " + clz);
 			}
+		}
+		
+		public boolean set(T obj) {
+			return set(obj, true);
 		}
 		
 		protected String convertToDBValue(T obj) {
@@ -261,8 +302,8 @@ public class SettingsManager {
 		mp.put(OBJTABLE_TYPES, Arrays.asList(types));
 		mp.put(OBJTABLE_KEYSIZE, keysize);
 		mp.put(OBJTABLE_TABLENAME, tableName);
-		String id =  OBJTABLE_PROPERTY_NAME + "."+tableName;
-		String description = "DB table to store " + Arrays.asList(types) + " objects";
+		String id =  DB_SCHEMA_OBJTABLES.prefix + "." + tableName;
+		String description = DB_SCHEMA_OBJTABLES.getDescription(mp);
 		return registerMapPreference(id, mp, description).restartNeeded();
 	}
 	

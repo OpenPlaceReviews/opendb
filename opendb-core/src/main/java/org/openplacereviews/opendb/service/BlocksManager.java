@@ -589,10 +589,6 @@ public class BlocksManager {
 		return dataManager.getIndices();
 	}
 
-	public boolean addNewDbIndex(RequestIndexBody requestIndexBody) {
-		return dataManager.addNewDbIndex(requestIndexBody);
-	}
-
 	public static class BlocksListResult {
 		public LinkedList<OpBlock> blocks = new LinkedList<OpBlock>();
 		public int blockDepth;

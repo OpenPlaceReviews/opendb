@@ -6,7 +6,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
@@ -189,8 +188,7 @@ public class DBSchemaManager {
 			return objtables;
 		} else {
 			Map<String, Map<String, Object>> objtable = new TreeMap<>();
-			List<CommonPreference<Map<String, Object>>> preferences = 
-					settingsManager.getPreferencesByPrefix(SettingsManager.OBJTABLE_PROPERTY_NAME);
+			List<CommonPreference<Map<String, Object>>> preferences = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_OBJTABLES);
 			for (CommonPreference<Map<String, Object>> opendbPreference : preferences) {
 				Map<String, Object> mp = opendbPreference.getValue();
 				String tableName = (String) mp.get(SettingsManager.OBJTABLE_TABLENAME);
@@ -319,7 +317,6 @@ public class DBSchemaManager {
 
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
 		createTable(metadataDB, jdbcTemplate, SETTINGS_TABLE, schema.get(SETTINGS_TABLE));
-		
 		prepareObjTableMapping();
 		prepareCustomIndices(jdbcTemplate);
 		for (String tableName : schema.keySet()) {
@@ -398,46 +395,49 @@ public class DBSchemaManager {
 	}
 
 	private void prepareCustomIndices(JdbcTemplate jdbcTemplate) {
-		String customIndices = getSetting(jdbcTemplate, "opendb.indices");
-		if (customIndices != null) {
-			RequestIndexBody[] objects = formatter.fromJsonToListIndices(customIndices);
-
-			for(RequestIndexBody requestIndexBody : objects) {
-				IndexType indexType;
-				if(requestIndexBody.index.equals("true")) {
-					indexType = INDEXED;
-				} else {
-					indexType = IndexType.valueOf(requestIndexBody.index);
-				}
-
-				ColumnDef columnDef = new ColumnDef(requestIndexBody.tableName, requestIndexBody.colName, requestIndexBody.colType, indexType);
-
-				List<String> types = Arrays.asList(requestIndexBody.types);
-				if (requestIndexBody.field != null) {
-					generateIndexColumn(requestIndexBody, columnDef, types);
-				} else {
-					for (String type : types) {
-						addIndexCol(new OpIndexColumn(type, requestIndexBody.colName, -1, columnDef));
-					}
-				}
-
-				registerColumn(requestIndexBody.tableName, columnDef);
-			}
+		List<CommonPreference<Map<String, Object>>> indexes = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+		for(CommonPreference<Map<String, Object>> pind : indexes) {
+			Map<String, Object> indexDef = pind.get();
+			generateIndexColumn(indexDef);
 		}
 	}
 
-	private void generateIndexColumn(RequestIndexBody requestIndexBody, ColumnDef columnDef, List<String> types) {
-		for (String typ : types) {
-			OpIndexColumn indexColumn = new OpIndexColumn(typ, requestIndexBody.colName, -1, columnDef);
-			if (requestIndexBody.cacheRuntimeMax != null) {
-				indexColumn.setCacheRuntimeBlocks(requestIndexBody.cacheRuntimeMax);
+	private void generateIndexColumn(Map<String, Object> entry) {
+		String name = (String) entry.get("name");
+		String tableName = (String) entry.get("tablename");
+		String colType = (String) entry.get("sqltype");
+		String index = (String) entry.get("index");
+		Integer cacheRuntime = entry.get("cache-runtime-max") == null ? null
+				: ((Number) entry.get("cache-runtime-max")).intValue();
+		Integer cacheDB = entry.get("cache-db-max") == null ? null : ((Number) entry.get("cache-db-max")).intValue();
+		List<String> fld = (List<String>) entry.get("field");
+		IndexType di = null;
+		if (index != null) {
+			if (index.equalsIgnoreCase("true")) {
+				di = INDEXED;
+			} else {
+				di = IndexType.valueOf(index);
 			}
-			if (requestIndexBody.cacheDbIndex != null) {
-				indexColumn.setCacheDBBlocks(requestIndexBody.cacheDbIndex);
-			}
-			indexColumn.setFieldsExpression(requestIndexBody.field);
-			addIndexCol(indexColumn);
 		}
+
+		ColumnDef cd = new ColumnDef(tableName, name, colType, di);
+		// to be used array
+		// String sqlmapping = (String) entry.get("sqlmapping");
+		ObjectTypeTable objectTypeTable = objTableDefs.get(tableName);
+		if (fld != null) {
+			for (String type : objectTypeTable.types) {
+				OpIndexColumn indexColumn = new OpIndexColumn(type, name, -1, cd);
+				if (cacheRuntime != null) {
+					indexColumn.setCacheRuntimeBlocks(cacheRuntime);
+				}
+				if (cacheDB != null) {
+					indexColumn.setCacheDBBlocks(cacheDB);
+				}
+				indexColumn.setFieldsExpression(fld);
+				addIndexCol(indexColumn);
+			}
+		}
+		registerColumn(tableName, cd);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -450,8 +450,6 @@ public class DBSchemaManager {
 			registerObjTable(tableName, i.intValue());
 			ObjectTypeTable ott = new ObjectTypeTable(tableName, i.intValue());
 			objTableDefs.put(tableName, ott);
-			
-			
 			List<String> tps = (List<String>) getObjtables().get(tableName).get("types");
 			if(tps != null) {
 				for(String type : tps) {
@@ -466,45 +464,6 @@ public class DBSchemaManager {
 					}
 				}
 			}
-			List<Map<String, Object>> cii = (List<Map<String, Object>>) getObjtables().get(tableName).get("columns");
-			if (cii != null) {
-				for (Map<String, Object> entry : cii) {
-					String name = (String) entry.get("name");
-					String colType = (String) entry.get("sqltype");
-					String index = (String) entry.get("index");
-					Integer cacheRuntime = entry.get("cache-runtime-max") == null ? null : ((Number) entry.get("cache-runtime-max")) .intValue();
-					Integer cacheDB = entry.get("cache-db-max") ==  null ? null : ((Number) entry.get("cache-db-max")).intValue();
-					IndexType di = null;
-					if(index != null) {
-						if(index.equalsIgnoreCase("true")) {
-							di = INDEXED;
-						} else {
-							di = IndexType.valueOf(index);
-						}
-					}
-					
-					ColumnDef cd = new ColumnDef(tableName, name, colType, di);
-					// to be used array
-					// String sqlmapping = (String) entry.get("sqlmapping");
-					
-					List<String> fld = (List<String>) entry.get("field");
-					if (fld != null) {
-						for (String type : ott.types) {
-							OpIndexColumn indexColumn = new OpIndexColumn(type, name, -1,  cd);
-							if(cacheRuntime != null) {
-								indexColumn.setCacheRuntimeBlocks(cacheRuntime);
-							}
-							if(cacheDB != null) {
-								indexColumn.setCacheDBBlocks(cacheDB);
-							}
-							indexColumn.setFieldsExpression(fld);
-							addIndexCol(indexColumn);
-						}
-					}
-					registerColumn(tableName, cd);
-				}
-			}
-			
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
 	}
@@ -516,59 +475,6 @@ public class DBSchemaManager {
 		indexes.get(indexColumn.getOpType()).put(indexColumn.getIndexId(), indexColumn);
 	}
 
-	public boolean addNewDbIndex(RequestIndexBody requestIndexBody, JdbcTemplate jdbcTemplate) {
-		List<ColumnDef> tableDefs = schema.get(requestIndexBody.tableName);
-		if (tableDefs == null) {
-			return false;
-		}
-
-		boolean found = false;
-		for (ColumnDef columnDef : tableDefs) {
-			if (columnDef.getColName().equals(requestIndexBody.colName)) {
-				found = true;
-				break;
-			}
-		}
-
-		if (found) {
-			return false;
-		}
-
-		IndexType indexType;
-		List<String> type = Arrays.asList(requestIndexBody.types);
-		if(requestIndexBody.index.equalsIgnoreCase("true")) {
-			indexType = INDEXED;
-		} else {
-			indexType = IndexType.valueOf(requestIndexBody.index);
-		}
-
-		ColumnDef columnDef = new ColumnDef(requestIndexBody.tableName, requestIndexBody.colName, requestIndexBody.colType, indexType);
-		if (requestIndexBody.field != null) {
-			generateIndexColumn(requestIndexBody, columnDef, type);
-		} else {
-			addIndexCol(new OpIndexColumn(type.get(0), requestIndexBody.colName, -1, columnDef));
-		}
-		registerColumn(requestIndexBody.tableName, columnDef);
-
-		String alterTable = String.format("alter table %s add column %s %s", requestIndexBody.tableName,
-				columnDef.getColName(), columnDef.getColType());
-		jdbcTemplate.execute(alterTable);
-		if(columnDef.getIndex() != NOT_INDEXED) {
-			jdbcTemplate.execute(generateIndexQuery(columnDef));
-		}
-
-		String customIndices = getSetting(jdbcTemplate, "opendb.indices");
-		List<RequestIndexBody> objects;
-		if (customIndices != null) {
-			objects = new ArrayList<>(Arrays.asList(formatter.fromJsonToListIndices(customIndices)));
-		} else {
-			objects = new ArrayList<>();
-		}
-		objects.add(requestIndexBody);
-		setSetting(jdbcTemplate, "opendb.indices", formatter.listIndicesToJson(objects));
-
-		return true;
-	}
 
 	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
 		List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);

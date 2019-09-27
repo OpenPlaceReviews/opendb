@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
-import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
