@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.dto.RequestIndexBody;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
@@ -35,6 +34,7 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
+import org.openplacereviews.opendb.service.SettingsManager.BlockSource;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -48,7 +48,6 @@ public class BlocksManager {
 	public static final String BOOT_STD_OPS_DEFINTIONS = "std-ops-defintions";
 	public static final String BOOT_STD_ROLES = "std-roles";
 	public static final String BOOT_STD_VALIDATION = "std-validations";
-	public static final String BLOCKCHAIN_SETTINGS = "opendb.blockchain-status";
 
 	protected static final Log LOGGER = LogFactory.getLog(BlocksManager.class);
 	
@@ -98,11 +97,11 @@ public class BlocksManager {
 	}
 	
 	public boolean isBlockCreationOn() {
-		return this.mgmtStatus == BlockchainMgmtStatus.BLOCK_CREATION;
+		return settingsManager.OPENDB_BLOCKCHAIN_STATUS.get() == BlockSource.CREATE;
 	}
 	
 	public boolean isReplicateOn() {
-		return this.mgmtStatus == BlockchainMgmtStatus.REPLICATION && !OUtils.isEmpty(getReplicateUrl());
+		return settingsManager.OPENDB_BLOCKCHAIN_STATUS.get() == BlockSource.REPLICATION && !OUtils.isEmpty(getReplicateUrl());
 	}
 	
 	public String getReplicateUrl() {
@@ -110,21 +109,21 @@ public class BlocksManager {
 	}
 	
 	public synchronized void setReplicateOn(boolean on) {
-		if(on && this.mgmtStatus == BlockchainMgmtStatus.NONE) {
-			this.mgmtStatus = BlockchainMgmtStatus.REPLICATION;
-		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.REPLICATION) {
-			this.mgmtStatus = BlockchainMgmtStatus.NONE;
+		BlockSource bs = settingsManager.OPENDB_BLOCKCHAIN_STATUS.get();
+		if (on && bs == BlockSource.NONE) {
+			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(BlockSource.REPLICATION);
+		} else if (!on && bs == BlockSource.REPLICATION) {
+			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(BlockSource.NONE);
 		}
-		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
 	}
 	
 	public synchronized void setBlockCreationOn(boolean on) {
-		if(on && this.mgmtStatus == BlockchainMgmtStatus.NONE) {
-			this.mgmtStatus = BlockchainMgmtStatus.BLOCK_CREATION;
-		} else if(!on && this.mgmtStatus == BlockchainMgmtStatus.BLOCK_CREATION) {
-			this.mgmtStatus = BlockchainMgmtStatus.NONE;
+		BlockSource bs = settingsManager.OPENDB_BLOCKCHAIN_STATUS.get();
+		if(on && bs == BlockSource.NONE) {
+			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(BlockSource.CREATE);
+		} else if(!on && bs == BlockSource.CREATE) {
+			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(BlockSource.NONE);
 		}
-		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
 	}
 
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
@@ -501,10 +500,14 @@ public class BlocksManager {
 			return "READY";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_STATE) {
 			return "LOCKED";
+		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
+			return "LOCKED_BY_USER";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_OP_IN_PROGRESS) {
 			return "OP_IN_PROGRESS";
+		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_ERROR) {
+			return "ERROR (restart required)";
 		}
-		return "ERROR";
+		return "UNKNOWN";
 	}
 	
 	public boolean isBlockchainPaused() {

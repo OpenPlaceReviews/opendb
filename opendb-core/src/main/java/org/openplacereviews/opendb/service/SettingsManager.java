@@ -5,14 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 
-import static org.openplacereviews.opendb.service.BlocksManager.BLOCKCHAIN_SETTINGS;
 
 @Service
 public class SettingsManager {
-
 	
 	public static final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
 	public static final String OBJTABLE_TYPES = "types";
@@ -33,36 +30,32 @@ public class SettingsManager {
 	private boolean dbValueLoaded;
 	
 	public void initPreferences() {
-		// TODO get from env variable
-		// TODO support OBJTABLE_PROPERTY_NAME list
+		// load extra properties from DB
+		Map<String, String> dbPrefs = dbSchemaManager.getSettings(jdbcTemplate);
+		for (String k : dbPrefs.keySet()) {
+			if (k.startsWith(OBJTABLE_PROPERTY_NAME + ".") && !preferences.containsKey(k)) {
+				TreeMap<String, Object> mp = jsonFormatter.fromJsonToTreeMap(dbPrefs.get(k));
+				String d = "DB table to store " + mp.get(OBJTABLE_TYPES) + " objects";
+				registerMapPreference(k, mp, d).restartNeeded();
+			}
+		}
 		dbValueLoaded = true;
-		Map<String, String> ms = dbSchemaManager.getSettings(jdbcTemplate);
-		for(String k : ms) {
+		for(String k : preferences.keySet()) {
+			CommonPreference<?> c = preferences.get(k);
+			String envVar = System.getenv(k);
+			try {
+				if(envVar != null) {
+					c.setString(envVar, false);
+					c.setSource(CommonPreferenceSource.ENV);
+				} else if(dbPrefs.containsKey(k)) {
+					c.setString(dbPrefs.get(k), false);
+				}
+			} catch (Exception e) {
+				throw new IllegalStateException(
+						String.format("Error setting setting '%s'", k) , e);
+			}
 			
 		}
-		if (settings != null) {
-			for(Map.Entry<String, Map<?, ?>> opendbPreferenceEntry : jsonFormatter.fromJsonToOpendbPreferenceMap(settings).entrySet()) {
-				CommonPreference<?> preference = preferences.get(opendbPreferenceEntry.getKey());
-				if (preference != null) {
-					Object value = opendbPreferenceEntry.getValue().get("value");
-					value = generateObjectByType(value, (String) opendbPreferenceEntry.getValue().get("type"));
-					boolean updated = updatePreference(opendbPreferenceEntry.getKey(), value);
-					if (!updated) {
-						throw new IllegalArgumentException("Settings was not loaded");
-					}
-				}
-			}
-		}
-	}
-
-	public boolean savePreferences(String s, Object o) {
-		Map<String, CommonPreference<?>> mapForStoring = new HashMap<>();
-		for (Map.Entry<String, CommonPreference<?>> entry : preferences.entrySet()) {
-			if (entry.getValue().isCanEdit() || entry.getValue() == OPENDB_BLOCKCHAIN_STATUS) {
-				mapForStoring.put(entry.getKey(), entry.getValue());
-			}
-		}
-		return dbSchemaManager.setSetting(jdbcTemplate, PREFERENCES_NAME, jsonFormatter.fullObjectToJson(mapForStoring));
 	}
 
 	public Collection<CommonPreference<?>> getPreferences() {
@@ -89,6 +82,12 @@ public class SettingsManager {
 	public <T> CommonPreference<T> getPreferenceByKey(String keyPreference) {
 		return (CommonPreference<T>) preferences.get(keyPreference);
 	}
+	
+	public enum CommonPreferenceSource {
+		DEFAULT,
+		DB,
+		ENV
+	}
 
 	/////////////// PREFERENCES classes ////////////////
 	public class CommonPreference<T> {
@@ -98,6 +97,7 @@ public class SettingsManager {
 		private boolean restartIsNeeded;
 		private boolean canEdit;
 		protected Class<T> clz;
+		protected CommonPreferenceSource source = CommonPreferenceSource.DEFAULT;
 
 		public CommonPreference(Class<T> cl, String id, T value, String description) {
 			this.id = id;
@@ -114,6 +114,14 @@ public class SettingsManager {
 		public CommonPreference<T> restartNeeded() {
 			this.restartIsNeeded = true;
 			return this;
+		}
+		
+		public void setSource(CommonPreferenceSource source) {
+			this.source = source;
+		}
+		
+		public CommonPreferenceSource getSource() {
+			return source;
 		}
 
 		public String getDescription() {
@@ -137,28 +145,34 @@ public class SettingsManager {
 		}
 		
 		public boolean setString(String o) {
+			return setString(o, true);
+		}
+		
+		public boolean setString(String o, boolean saveDb) {
 			if(clz == Integer.class) {
-				return set(clz.cast(Integer.parseInt(o)));
+				return set(clz.cast(Integer.parseInt(o)), saveDb);
 			} else if(clz == Long.class) {
-				return set(clz.cast(Long.parseLong(o)));
+				return set(clz.cast(Long.parseLong(o)), saveDb);
 			} else if(clz == Boolean.class) {
-				return set(clz.cast(Boolean.parseBoolean(o)));
+				return set(clz.cast(Boolean.parseBoolean(o)), saveDb);
 			} else if(clz == Double.class) {
-				return set(clz.cast(Double.parseDouble(o)));
+				return set(clz.cast(Double.parseDouble(o)), saveDb);
 			} else if(clz == String.class) {
-				return set(clz.cast(o));
+				return set(clz.cast(o), saveDb);
 			} else {
 				throw new UnsupportedOperationException("Conversion is unsupported for class: " + clz);
 			}
 		}
 		
-		protected Object convertToDBValue(T obj) {
+		protected String convertToDBValue(T obj) {
 			return obj.toString();
 		}
 
-		protected boolean set(T obj) {
+		protected boolean set(T obj, boolean saveDB) {
 			if (value.getClass() == obj.getClass()) {
-				savePreferences(id, convertToDBValue(obj));
+				if(saveDB) {
+					dbSchemaManager.setSetting(jdbcTemplate, id, convertToDBValue(obj));
+				}
 				value = obj;
 				return true;
 			}
@@ -173,6 +187,19 @@ public class SettingsManager {
 
 	}
 
+	public class EnumPreference<T extends Enum<T>> extends CommonPreference<T> {
+
+		public EnumPreference(Class<T> cl, String id, T value, String description) {
+			super(cl, id, value, description);
+		}
+		
+		@Override
+		public boolean setString(String o, boolean saveDB) {
+			return set(Enum.valueOf(clz, o), saveDB);
+		}
+		
+	}
+	
 	public class MapStringObjectPreference extends CommonPreference<Map<String, Object>> {
 
 		@SuppressWarnings("unchecked")
@@ -181,12 +208,12 @@ public class SettingsManager {
 		}
 		
 		@Override
-		public boolean setString(String o) {
-			return set(jsonFormatter.fromJsonToTreeMap(o));
+		public boolean setString(String o, boolean saveDB) {
+			return set(jsonFormatter.fromJsonToTreeMap(o), saveDB);
 		}
 		
 		@Override
-		protected Object convertToDBValue(Map<String, Object> obj) {
+		protected String convertToDBValue(Map<String, Object> obj) {
 			return jsonFormatter.fullObjectToJson(obj);
 		}
 	}
@@ -200,6 +227,11 @@ public class SettingsManager {
 		}
 		return p;
 	}
+	
+	public <T extends Enum<T>> CommonPreference<T> registerEnumPreference(Class<T> cl, String id, T value, String description) {
+		EnumPreference<T> et = new EnumPreference<T>(cl, id, value, description);
+		return regPreference(et);
+	}
 
 	public CommonPreference<Boolean> registerBooleanPreference(String id, boolean defValue, String description) {
 		return regPreference(new CommonPreference<>(Boolean.class, id, defValue, description));
@@ -208,7 +240,8 @@ public class SettingsManager {
 	public CommonPreference<String> registerStringPreference(String id, String defValue, String description) {
 		return regPreference(new CommonPreference<>(String.class, id, defValue, description));
 	}
-
+	
+	
 	public CommonPreference<Integer> registerIntPreference(String id, int defValue, String description) {
 		return regPreference(new CommonPreference<>(Integer.class, id, defValue, description));
 	}
@@ -217,7 +250,6 @@ public class SettingsManager {
 		return regPreference(new CommonPreference<>(Long.class, id, defValue, description));
 	}
 
-	@SuppressWarnings("unchecked")
 	public CommonPreference<Double> registerDoublePreference(String id, double defValue, String description) {
 		return regPreference(new CommonPreference<>(Double.class, id, defValue, description));
 	}
@@ -281,6 +313,11 @@ public class SettingsManager {
 	public final CommonPreference<Map<String, Object>> OBJTABLES_SYSTEM = registerTableMapping("obj_system", 1, "sys.validate", "sys.operation", "sys.role");
 
 	// BLOCKCHAIN STATUS
-	public final CommonPreference<String> OPENDB_BLOCKCHAIN_STATUS = registerStringPreference(BLOCKCHAIN_SETTINGS, "none", "Blockchain status (none, createblocks, replicate)");
+	public enum BlockSource {
+		NONE,
+		REPLICATION,
+		CREATE
+	}
+	public final CommonPreference<BlockSource> OPENDB_BLOCKCHAIN_STATUS = registerEnumPreference(BlockSource.class, "opendb.blockchain-status", BlockSource.NONE, "Block source (none, replicate, create)");
 
 }
