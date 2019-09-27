@@ -403,14 +403,15 @@ public class DBSchemaManager {
 	}
 
 	private void generateIndexColumn(Map<String, Object> entry) {
-		String name = (String) entry.get("name");
-		String tableName = (String) entry.get("tablename");
-		String colType = (String) entry.get("sqltype");
-		String index = (String) entry.get("index");
-		Integer cacheRuntime = entry.get("cache-runtime-max") == null ? null
-				: ((Number) entry.get("cache-runtime-max")).intValue();
-		Integer cacheDB = entry.get("cache-db-max") == null ? null : ((Number) entry.get("cache-db-max")).intValue();
-		List<String> fld = (List<String>) entry.get("field");
+		String name = (String) entry.get(SettingsManager.INDEX_NAME);
+		String tableName = (String) entry.get(SettingsManager.INDEX_TABLENAME);
+		String colType = (String) entry.get(SettingsManager.INDEX_SQL_TYPE);
+		String index = (String) entry.get(SettingsManager.INDEX_INDEX_TYPE);
+		Integer cacheRuntime = entry.get(SettingsManager.INDEX_CACHE_RUNTIME_MAX) == null ? null
+				: ((Number) entry.get(SettingsManager.INDEX_CACHE_RUNTIME_MAX)).intValue();
+		Integer cacheDB = entry.get(SettingsManager.INDEX_CACHE_DB_MAX) == null ? null : ((Number) entry.get(SettingsManager.INDEX_CACHE_DB_MAX)).intValue();
+		@SuppressWarnings("unchecked")
+		List<String> fld = (List<String>) entry.get(SettingsManager.INDEX_FIELD);
 		IndexType di = null;
 		if (index != null) {
 			if (index.equalsIgnoreCase("true")) {

@@ -14,14 +14,27 @@ public class SettingsManager {
 	public static final String OBJTABLE_TYPES = "types";
 	public static final String OBJTABLE_KEYSIZE = "keysize";
 	public static final String OBJTABLE_TABLENAME = "tablename";
+	
+	
+	public static final String INDEX_TABLENAME = "tablename";
+	public static final String INDEX_NAME = "name";
+	public static final String INDEX_SQL_TYPE = "sqltype";
+	public static final String INDEX_INDEX_TYPE = "index";
+	public static final String INDEX_CACHE_RUNTIME_MAX = "cache-runtime-max";
+	public static final String INDEX_CACHE_DB_MAX = "cache-db-max";
+	public static final String INDEX_FIELD = "field";
+	
+	public static final String BOT_ID = "bot_id";
+
+	
 	public static final String TABLE_ID = "id";
 	
 	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily(
-			"opendb.db-schema.objtables", "DB config to store %s objects", OBJTABLE_TYPES);
+			"opendb.db-schema.objtables", OBJTABLE_TABLENAME, "DB config to store %s objects", OBJTABLE_TYPES);
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily(
-			"opendb.db-schema.indexes", "DB config to desribe index %s objects", TABLE_ID);
+			"opendb.db-schema.indexes", new String[] {INDEX_TABLENAME, INDEX_NAME}, "DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily(
-			"opendb.db-schema.indexes",  "Bot %s configuration", TABLE_ID);
+			"opendb.db-schema.indexes",  BOT_ID, "Bot %s configuration", BOT_ID);
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			DB_SCHEMA_OBJTABLES,
@@ -112,18 +125,35 @@ public class SettingsManager {
 	public static class PreferenceFamily {
 		public String prefix;
 		public String descriptionFormat;
-		public String[] property;
-		public PreferenceFamily(String prefix, String descriptionFormat, String... property) {
+		public String[] descProperties;
+		public String[] idProperties;
+		
+		public PreferenceFamily(String prefix, String[] idProperties, String descriptionFormat, String... property) {
+			this.idProperties = idProperties;
 			this.descriptionFormat = descriptionFormat;
-			this.property = property;
+			this.descProperties = property;
+		}
+		
+		public PreferenceFamily(String prefix, String idProperty, String descriptionFormat, String... property) {
+			this.descriptionFormat = descriptionFormat;
+			this.idProperties = new String[] { idProperty };
+			this.descProperties = property;
 		}
 		
 		public String getDescription(Map<String, Object> o) {
-			Object[] vls = new Object[property.length];
-			for(int i = 0; i < property.length; i++) {
-				vls[i] = o.get(property[i]);
+			Object[] vls = new Object[descProperties.length];
+			for(int i = 0; i < descProperties.length; i++) {
+				vls[i] = o.get(descProperties[i]);
 			}
 			return String.format(descriptionFormat, vls);
+		}
+		
+		public String getId(Map<String, Object> o) {
+			String v = prefix;
+			for(int i = 0; i < idProperties.length; i++) {
+				v += "." + o.get(idProperties[i]); 
+			}
+			return v;
 		}
 	}
 	
@@ -302,9 +332,11 @@ public class SettingsManager {
 		mp.put(OBJTABLE_TYPES, Arrays.asList(types));
 		mp.put(OBJTABLE_KEYSIZE, keysize);
 		mp.put(OBJTABLE_TABLENAME, tableName);
-		String id =  DB_SCHEMA_OBJTABLES.prefix + "." + tableName;
-		String description = DB_SCHEMA_OBJTABLES.getDescription(mp);
-		return registerMapPreference(id, mp, description).restartNeeded();
+		return registerMapPreferenceForFamily(DB_SCHEMA_OBJTABLES, mp).restartNeeded();
+	}
+	
+	public CommonPreference<Map<String, Object>> registerMapPreferenceForFamily(PreferenceFamily pf, Map<String, Object> o) {
+		return registerMapPreference(pf.getId(o), o, pf.getDescription(o)).restartNeeded();
 	}
 	
 	@SuppressWarnings("unchecked")
