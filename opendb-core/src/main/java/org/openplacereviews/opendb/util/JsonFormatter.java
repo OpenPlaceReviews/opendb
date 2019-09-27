@@ -120,19 +120,6 @@ public class JsonFormatter {
 		return gson.fromJson(json, TreeMap.class);
 	}
 
-	public RequestIndexBody[] fromJsonToListIndices(String json) {
-		return new Gson().fromJson(json, (Type) RequestIndexBody[].class);
-	}
-
-	public String listIndicesToJson(List<RequestIndexBody> requestIndexBodyList) {
-		return gson.toJson(requestIndexBodyList);
-	}
-
-	@SuppressWarnings("unchecked")
-	public Map<String, Map<?, ?>> fromJsonToOpendbPreferenceMap(String json) {
-		return gson.fromJson(json, Map.class);
-	}
-
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
 		return gson.fromJson(json, classOfT);
 	}

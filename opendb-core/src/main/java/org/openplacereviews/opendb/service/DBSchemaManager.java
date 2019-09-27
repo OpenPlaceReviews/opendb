@@ -13,6 +13,7 @@ import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
+import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
@@ -35,7 +36,6 @@ public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
 	private static final int OPENDB_SCHEMA_VERSION = 4;
-	private static final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -189,10 +189,12 @@ public class DBSchemaManager {
 			return objtables;
 		} else {
 			Map<String, Map<String, Object>> objtable = new TreeMap<>();
-			List<SettingsManager.OpendbPreference<Map<String, Object>>> preferences = settingsManager.loadContainsPreferencesByKey(OBJTABLE_PROPERTY_NAME);
-			for (SettingsManager.OpendbPreference<Map<String, Object>> opendbPreference : preferences) {
-				String tableName = opendbPreference.getId().substring(opendbPreference.getId().lastIndexOf(".") + 1);
-				objtable.put(tableName, (Map<String, Object>) opendbPreference.get());
+			List<CommonPreference<Map<String, Object>>> preferences = 
+					settingsManager.getPreferencesByPrefix(SettingsManager.OBJTABLE_PROPERTY_NAME);
+			for (CommonPreference<Map<String, Object>> opendbPreference : preferences) {
+				Map<String, Object> mp = opendbPreference.getValue();
+				String tableName = (String) mp.get(SettingsManager.OBJTABLE_TABLENAME);
+				objtable.put(tableName, mp);
 			}
 			objtables = objtable;
 			return objtable;
@@ -654,6 +656,24 @@ public class DBSchemaManager {
 		} catch (DataAccessException e) {
 		}
 		return s;
+	}
+	
+	
+	public Map<String, String> getSettings(JdbcTemplate jdbcTemplate) {
+		Map<String, String> r = new TreeMap<>();
+		try {
+			jdbcTemplate.query("select key, value from " + SETTINGS_TABLE, new ResultSetExtractor<Void>() {
+				@Override
+				public Void extractData(ResultSet rs) throws SQLException, DataAccessException {
+					while(rs.next()) {
+						r.put(rs.getString(1), rs.getString(2));
+					}
+					return null;
+				}
+			});
+		} catch (DataAccessException e) {
+		}
+		return r;
 	}
 
 	public OpIndexColumn getIndex(String type, String columnId) {

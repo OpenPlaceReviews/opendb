@@ -98,6 +98,7 @@ public class DBConsensusManager {
 	
 	// mainchain could change
 	public OpBlockChain init(MetadataDb metadataDB) {
+		settingsManager.initPreferences();
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
 		backupManager.init();
 		rules = new OpBlockchainRules(formatter, logSystem);

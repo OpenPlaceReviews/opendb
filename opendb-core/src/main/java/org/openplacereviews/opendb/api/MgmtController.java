@@ -7,6 +7,7 @@ import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.SettingsManager;
+import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -251,11 +252,15 @@ public class MgmtController {
 			return unauthorizedByServer();
 		}
 
-		if (settingsManager.updatePreference(key, settingsManager.generateObjectByType(value, type))) {
+		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
+		if(pref == null) {
+			return ResponseEntity.badRequest().body("{\"error\":\"Key is not defined\"}");
+		}
+		if (pref.setString(value)) {
 			settingsManager.savePreferences();
-			return ResponseEntity.ok("Preference was update");
+			return ResponseEntity.ok("{\"status\":\"ok\"}");
 		} else {
-			return ResponseEntity.ok("Preference type is not valid");
+			return ResponseEntity.badRequest().body("{\"error\":\"Preference was not updated\"}");
 		}
 	}
 
@@ -263,12 +268,14 @@ public class MgmtController {
 	@ResponseBody
 	public ResponseEntity<String> addNewDbIndex(HttpSession session,
 												@RequestBody RequestIndexBody requestIndexBody) {
+		// TODO
     	if (!validateServerLogin(session)) {
     		return unauthorizedByServer();
 		}
 
 		boolean state = manager.addNewDbIndex(requestIndexBody);
 
+		// TODO return josn
 		return ResponseEntity.ok(Boolean.toString(state));
 	}
 

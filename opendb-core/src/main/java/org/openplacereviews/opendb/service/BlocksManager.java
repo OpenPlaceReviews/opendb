@@ -81,33 +81,9 @@ public class BlocksManager {
 	@Value("${opendb.mgmt.publicKey}")
 	private String serverPublicKey;
 	private KeyPair serverKeyPair;
-	
-	private BlockchainMgmtStatus mgmtStatus = BlockchainMgmtStatus.BLOCK_CREATION; 
-	
 	private OpBlockChain blockchain; 
 	
-	public enum BlockchainMgmtStatus {
-		BLOCK_CREATION,
-		REPLICATION,
-		NONE;
-
-		public static BlockchainMgmtStatus getStatus(String value) {
-			switch (value) {
-				case "BLOCK_CREATION": {
-					return BLOCK_CREATION;
-				}
-				case "REPLICATION": {
-					return REPLICATION;
-				}
-				case "NONE": {
-					return NONE;
-				}
-				default: {
-					return NONE;
-				}
-			}
-		}
-	}
+	
 	
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
@@ -140,7 +116,6 @@ public class BlocksManager {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
 		}
 		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
-		settingsManager.savePreferences();
 	}
 	
 	public synchronized void setBlockCreationOn(boolean on) {
@@ -150,20 +125,8 @@ public class BlocksManager {
 			this.mgmtStatus = BlockchainMgmtStatus.NONE;
 		}
 		settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
-		settingsManager.savePreferences();
 	}
 
-	private synchronized void initBlockStatus() {
-		String loadedStatus = settingsManager.OPENDB_BLOCKCHAIN_STATUS.get();
-		if (loadedStatus != null) {
-			this.mgmtStatus = BlockchainMgmtStatus.getStatus(loadedStatus);
-		} else {
-			this.mgmtStatus = BlockchainMgmtStatus.NONE;
-			settingsManager.OPENDB_BLOCKCHAIN_STATUS.set(this.mgmtStatus.name());
-			settingsManager.savePreferences();
-		}
-	}
-	
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
 		try {
 			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
@@ -172,7 +135,6 @@ public class BlocksManager {
 			throw new RuntimeException(e);
 		}
 		this.blockchain = initBlockchain;
-		initBlockStatus();
 		String msg = "";
 		// db is bootstraped
 		LOGGER.info("+++ Blockchain is inititialized. " + msg);

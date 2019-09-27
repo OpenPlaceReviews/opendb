@@ -13,6 +13,12 @@ import static org.openplacereviews.opendb.service.BlocksManager.BLOCKCHAIN_SETTI
 @Service
 public class SettingsManager {
 
+	
+	public static final String OBJTABLE_PROPERTY_NAME = "opendb.db-schema.objtables";
+	public static final String OBJTABLE_TYPES = "types";
+	public static final String OBJTABLE_KEYSIZE = "keysize";
+	public static final String OBJTABLE_TABLENAME = "tablename";
+	
 	@Autowired
 	private DBSchemaManager dbSchemaManager;
 
@@ -22,59 +28,21 @@ public class SettingsManager {
 	@Autowired
 	private JsonFormatter jsonFormatter;
 
-	public interface OpendbPreference<T> {
-
-		T get();
-
-		boolean isCanEdit();
-
-		boolean set(T obj);
-
-		String getId();
-
-	}
-
-	private static final String PREFERENCES_NAME = "opendb.settings";
-
-	private Map<String, OpendbPreference<?>> preferences = new LinkedHashMap<>();
-
-	public boolean savePreferences() {
-		Map<String, OpendbPreference<?>> mapForStoring = new HashMap<>();
-		for (Map.Entry<String, OpendbPreference<?>> entry : preferences.entrySet()) {
-			if (entry.getValue().isCanEdit() || entry.getValue() == OPENDB_BLOCKCHAIN_STATUS) {
-				mapForStoring.put(entry.getKey(), entry.getValue());
-			}
+	private Map<String, CommonPreference<?>> preferences = new LinkedHashMap<>();
+	
+	private boolean dbValueLoaded;
+	
+	public void initPreferences() {
+		// TODO get from env variable
+		// TODO support OBJTABLE_PROPERTY_NAME list
+		dbValueLoaded = true;
+		Map<String, String> ms = dbSchemaManager.getSettings(jdbcTemplate);
+		for(String k : ms) {
+			
 		}
-		return dbSchemaManager.setSetting(jdbcTemplate, PREFERENCES_NAME, jsonFormatter.fullObjectToJson(mapForStoring));
-	}
-
-	public Collection<OpendbPreference<?>> getPreferences() {
-		return preferences.values();
-	}
-
-	@SuppressWarnings("unchecked")
-	public <T> OpendbPreference<T> loadPreferenceByKey(String keyPreference) {
-		return (OpendbPreference<T>) preferences.get(keyPreference);
-	}
-
-	@SuppressWarnings("unchecked")
-	public <T> List<OpendbPreference<T>> loadContainsPreferencesByKey(String keyPreference) {
-		List<OpendbPreference<T>> opendbPreferences = new ArrayList<>();
-		for (String key : preferences.keySet()) {
-			if (key.contains(keyPreference)) {
-				opendbPreferences.add((OpendbPreference<T>) preferences.get(key));
-			}
-		}
-
-		return opendbPreferences;
-	}
-
-	@PostConstruct
-	protected void initPrefs() {
-		String settings = dbSchemaManager.getSetting(jdbcTemplate, PREFERENCES_NAME);
 		if (settings != null) {
 			for(Map.Entry<String, Map<?, ?>> opendbPreferenceEntry : jsonFormatter.fromJsonToOpendbPreferenceMap(settings).entrySet()) {
-				OpendbPreference<?> preference = preferences.get(opendbPreferenceEntry.getKey());
+				CommonPreference<?> preference = preferences.get(opendbPreferenceEntry.getKey());
 				if (preference != null) {
 					Object value = opendbPreferenceEntry.getValue().get("value");
 					value = generateObjectByType(value, (String) opendbPreferenceEntry.getValue().get("type"));
@@ -87,126 +55,76 @@ public class SettingsManager {
 		}
 	}
 
-	public Object generateObjectByType(String object, String type) {
-		switch (type) {
-			case "Boolean": {
-				return Boolean.parseBoolean(object);
-			}
-			case "Long": {
-				return Long.parseLong(object);
-
-			}
-			case "Integer": {
-				return Integer.parseInt(object);
-
-			}
-			case "Float": {
-				return Float.parseFloat(object);
-
-			}
-			case "Map": {
-				return jsonFormatter.fromJsonToTreeMap(object);
-			}
-			default: {
-				return object;
+	public boolean savePreferences(String s, Object o) {
+		Map<String, CommonPreference<?>> mapForStoring = new HashMap<>();
+		for (Map.Entry<String, CommonPreference<?>> entry : preferences.entrySet()) {
+			if (entry.getValue().isCanEdit() || entry.getValue() == OPENDB_BLOCKCHAIN_STATUS) {
+				mapForStoring.put(entry.getKey(), entry.getValue());
 			}
 		}
+		return dbSchemaManager.setSetting(jdbcTemplate, PREFERENCES_NAME, jsonFormatter.fullObjectToJson(mapForStoring));
 	}
 
-	private Object generateObjectByType(Object object, String type) {
-		switch (type) {
-			case "Boolean": {
-				return (Boolean) object;
-			}
-			case "Long": {
-				return ((Number)object).longValue();
-			}
-			case "Integer": {
-				return ((Number)object).intValue();
-			}
-			case "Float": {
-				return ((Number)object).floatValue();
-			}
-			default: {
-				return object;
+	public Collection<CommonPreference<?>> getPreferences() {
+		return preferences.values();
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public <T> List<CommonPreference<T>> getPreferencesByPrefix(String keyPrefix) {
+		List<CommonPreference<T>> opendbPreferences = new ArrayList<>();
+		if(!keyPrefix.endsWith(".")) {
+			keyPrefix = keyPrefix + ".";
+		}
+		for (String key : preferences.keySet()) {
+			if (key.startsWith(keyPrefix)) {
+				opendbPreferences.add((CommonPreference<T>) preferences.get(key));
 			}
 		}
+
+		return opendbPreferences;
 	}
 
 	@SuppressWarnings("unchecked")
-	public boolean updatePreference(String key, Object value) {
-		OpendbPreference<?> preference = preferences.get(key);
-		if (preference != null && (preference.isCanEdit() || preference == OPENDB_BLOCKCHAIN_STATUS)) {
-			if (preference instanceof BooleanPreference) {
-				if (value instanceof Boolean) {
-					((BooleanPreference) preference).set((Boolean) value);
-					savePreferences();
-					return true;
-				}
-			} else if (preference instanceof StringPreference) {
-				if (value instanceof String) {
-					((StringPreference) preference).set((String) value);
-					savePreferences();
-					return true;
-				}
-			} else if (preference instanceof FloatPreference) {
-				if (value instanceof Number) {
-					((FloatPreference) preference).set(((Number) value).floatValue());
-					savePreferences();
-					return true;
-				}
-			} else if (preference instanceof IntPreference) {
-				if (value instanceof Number) {
-					((IntPreference) preference).set(((Number) value).intValue());
-					savePreferences();
-					return true;
-				}
-			} else if (preference instanceof LongPreference) {
-				if (value instanceof Number) {
-					((LongPreference) preference).set(((Number) value).longValue());
-					savePreferences();
-					return true;
-				}
-			} else if (preference instanceof MapStringObjectPreference) {
-				if (value instanceof Map) {
-					((MapStringObjectPreference) preference).set((Map<String, Object>) value);
-					savePreferences();
-					return true;
-				}
-			}
-		}
-		return false;
+	public <T> CommonPreference<T> getPreferenceByKey(String keyPreference) {
+		return (CommonPreference<T>) preferences.get(keyPreference);
 	}
 
 	/////////////// PREFERENCES classes ////////////////
-
-	public abstract class CommonPreference<T> implements OpendbPreference<T> {
+	public class CommonPreference<T> {
 		private final String id;
 		protected T value;
-		private boolean restartIsNeeded;
 		private String description;
+		private boolean restartIsNeeded;
 		private boolean canEdit;
-		private String type;
+		protected Class<T> clz;
 
-		public CommonPreference(String id, T value, boolean restartIsNeeded, String description, boolean canEdit) {
+		public CommonPreference(Class<T> cl, String id, T value, String description) {
 			this.id = id;
+			this.clz = cl;
 			this.value = value;
-			this.restartIsNeeded = restartIsNeeded;
 			this.description = description;
-			this.canEdit = canEdit;
-			preferences.put(id, this);
+		}
+		
+		public CommonPreference<T> editable() {
+			this.canEdit = true;
+			return this;
+		}
+		
+		public CommonPreference<T> restartNeeded() {
+			this.restartIsNeeded = true;
+			return this;
 		}
 
 		public String getDescription() {
 			return description;
 		}
 
-		@Override
 		public boolean isCanEdit() {
 			return canEdit;
 		}
 
-		public Boolean restartIsNeeded() {
+		public boolean restartIsNeeded() {
 			return restartIsNeeded;
 		}
 
@@ -214,280 +132,155 @@ public class SettingsManager {
 			return value;
 		}
 
-		public String getType() {
-			return type;
-		}
-
-		@Override
 		public String getId() {
 			return id;
 		}
+		
+		public boolean setString(String o) {
+			if(clz == Integer.class) {
+				return set(clz.cast(Integer.parseInt(o)));
+			} else if(clz == Long.class) {
+				return set(clz.cast(Long.parseLong(o)));
+			} else if(clz == Boolean.class) {
+				return set(clz.cast(Boolean.parseBoolean(o)));
+			} else if(clz == Double.class) {
+				return set(clz.cast(Double.parseDouble(o)));
+			} else if(clz == String.class) {
+				return set(clz.cast(o));
+			} else {
+				throw new UnsupportedOperationException("Conversion is unsupported for class: " + clz);
+			}
+		}
+		
+		protected Object convertToDBValue(T obj) {
+			return obj.toString();
+		}
 
-		@Override
-		public boolean set(T obj) {
+		protected boolean set(T obj) {
 			if (value.getClass() == obj.getClass()) {
+				savePreferences(id, convertToDBValue(obj));
 				value = obj;
 				return true;
 			}
-
 			return false;
 		}
 
-		@Override
+		
+
 		public T get() {
 			return value;
-		}
-
-		public void setType(String type) {
-			this.type = type;
-		}
-	}
-
-	private class BooleanPreference extends CommonPreference<Boolean> {
-
-		private BooleanPreference(String id, Boolean defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
-			this.setType("Boolean");
-		}
-	}
-
-	private class IntPreference extends CommonPreference<Integer> {
-
-		private IntPreference(String id, Integer defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
-			this.setType("Integer");
-		}
-	}
-
-	private class LongPreference extends CommonPreference<Long> {
-
-		private LongPreference(String id, Long defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
-			this.setType("Long");
-		}
-
-	}
-
-	private class FloatPreference extends CommonPreference<Float> {
-
-		private FloatPreference(String id, Float defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
-			this.setType("Float");
-		}
-
-	}
-
-	private class StringPreference extends CommonPreference<String> {
-
-		private StringPreference(String id, String defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
-			this.setType("String");
 		}
 
 	}
 
 	public class MapStringObjectPreference extends CommonPreference<Map<String, Object>> {
 
-		private MapStringObjectPreference(String id, Map<String, Object> defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
-			this.setType("Map");
+		@SuppressWarnings("unchecked")
+		private MapStringObjectPreference(String id, Map<String, Object> defaultValue, String description) {
+			super((Class<Map<String, Object>>) defaultValue.getClass(), id, defaultValue, description);
 		}
-
-		public boolean keyExist(String key) {
-			Map<String, Object> map = get();
-			return map.containsKey(key);
-		}
-
+		
 		@Override
-		public boolean set(Map<String, Object> obj) {
-			if (obj != null) {
-				this.value = obj;
-				return false;
-			}
-
-			return false;
+		public boolean setString(String o) {
+			return set(jsonFormatter.fromJsonToTreeMap(o));
 		}
-
-		public void set(String key, Object value) {
-			Map<String, Object> map = get();
-			map.put(key, value);
+		
+		@Override
+		protected Object convertToDBValue(Map<String, Object> obj) {
+			return jsonFormatter.fullObjectToJson(obj);
 		}
-
-		public void removeKey(String key) {
-			Map<String, Object> map = get();
-			map.remove(key);
-		}
-
 	}
-
-	public class ListStringPreference extends StringPreference {
-
-		private String delimiter;
-
-		private ListStringPreference(String id, String defaultValue, boolean neededRestart, String description, boolean canEdit) {
-			super(id, defaultValue, neededRestart, description, canEdit);
+	
+	private <T> CommonPreference<T> regPreference(CommonPreference<T> p) {
+		if(dbValueLoaded) {
+			throw new IllegalStateException("Preferences could be registered only at startup");
 		}
-
-		public boolean addValue(String res) {
-			String vl = get();
-			if (vl == null || vl.isEmpty()) {
-				vl = res + delimiter;
-			} else {
-				vl = vl + res + delimiter;
-			}
-			set(vl);
-			return true;
+		if(preferences.containsKey(p.getId()) ) {
+			throw new IllegalStateException("Duplicate preference was registered");
 		}
-
-		public void clearAll() {
-			set("");
-		}
-
-		public boolean containsValue(String res) {
-			String vl = get();
-			String r = res + delimiter;
-			return vl.startsWith(r) || vl.indexOf(delimiter + r) >= 0;
-		}
-
-		public boolean removeValue(String res) {
-			String vl = get();
-			String r = res + delimiter;
-			if(vl != null) {
-				if(vl.startsWith(r)) {
-					vl = vl.substring(r.length());
-					set(vl);
-					return true;
-				} else {
-					int it = vl.indexOf(delimiter + r);
-					if(it >= 0) {
-						vl = vl.substring(0, it + delimiter.length()) + vl.substring(it + delimiter.length() + r.length());
-					}
-					set(vl);
-					return true;
-				}
-			}
-			return false;
-		}
-
-
-	}
-
-	@SuppressWarnings("unchecked")
-	public CommonPreference<Boolean> registerBooleanPreference(String id, boolean defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (preferences.containsKey(id)) {
-			return (CommonPreference<Boolean>) preferences.get(id);
-		}
-		BooleanPreference p = new BooleanPreference(id, defValue, neededRestart, description, canEdit);
-		preferences.put(id, p);
 		return p;
 	}
 
-	@SuppressWarnings("unchecked")
-	public CommonPreference<String> registerStringPreference(String id, String defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (preferences.containsKey(id)) {
-			return (CommonPreference<String>) preferences.get(id);
-		}
-		StringPreference p = new StringPreference(id, defValue, neededRestart, description, canEdit);
-		preferences.put(id, p);
-		return p;
+	public CommonPreference<Boolean> registerBooleanPreference(String id, boolean defValue, String description) {
+		return regPreference(new CommonPreference<>(Boolean.class, id, defValue, description));
+	}
+
+	public CommonPreference<String> registerStringPreference(String id, String defValue, String description) {
+		return regPreference(new CommonPreference<>(String.class, id, defValue, description));
+	}
+
+	public CommonPreference<Integer> registerIntPreference(String id, int defValue, String description) {
+		return regPreference(new CommonPreference<>(Integer.class, id, defValue, description));
+	}
+
+	public CommonPreference<Long> registerLongPreference(String id, long defValue, String description) {
+		return regPreference(new CommonPreference<>(Long.class, id, defValue, description));
 	}
 
 	@SuppressWarnings("unchecked")
-	public CommonPreference<Integer> registerIntPreference(String id, int defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (preferences.containsKey(id)) {
-			return (CommonPreference<Integer>) preferences.get(id);
-		}
-		IntPreference p = new IntPreference(id, defValue, neededRestart, description, canEdit);
-		preferences.put(id, p);
-		return p;
+	public CommonPreference<Double> registerDoublePreference(String id, double defValue, String description) {
+		return regPreference(new CommonPreference<>(Double.class, id, defValue, description));
 	}
 
-	@SuppressWarnings("unchecked")
-	public CommonPreference<Long> registerLongPreference(String id, long defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (preferences.containsKey(id)) {
-			return (CommonPreference<Long>) preferences.get(id);
-		}
-		LongPreference p = new LongPreference(id, defValue, neededRestart, description, canEdit);
-		preferences.put(id, p);
-		return p;
+	
+	public CommonPreference<Map<String, Object>> registerTableMapping(String tableName,
+			int keysize, String... types) {
+		Map<String, Object> mp = new TreeMap<>();
+		mp.put(OBJTABLE_TYPES, Arrays.asList(types));
+		mp.put(OBJTABLE_KEYSIZE, keysize);
+		mp.put(OBJTABLE_TABLENAME, tableName);
+		String id =  OBJTABLE_PROPERTY_NAME + "."+tableName;
+		String description = "DB table to store " + Arrays.asList(types) + " objects";
+		return registerMapPreference(id, mp, description).restartNeeded();
 	}
-
+	
 	@SuppressWarnings("unchecked")
-	public CommonPreference<Float> registerFloatPreference(String id, float defValue, boolean neededRestart, String description, boolean canEdit) {
-		if (preferences.containsKey(id)) {
-			return (CommonPreference<Float>) preferences.get(id);
-		}
-		FloatPreference p = new FloatPreference(id, defValue, neededRestart, description, canEdit);
-		preferences.put(id, p);
-		return p;
-	}
-
-	@SuppressWarnings("unchecked")
-	public CommonPreference<Map<String, Object>> registerMapPreference(String id, Map<String, Object> defValue, boolean neededRestart, String description, boolean canEdit) {
+	public CommonPreference<Map<String, Object>> registerMapPreference(String id, Map<String, Object> defValue, String description) {
 		if (preferences.containsKey(id)) {
 			return (CommonPreference<Map<String, Object>>) preferences.get(id);
 		}
-		MapStringObjectPreference p = new MapStringObjectPreference(id, defValue, neededRestart, description, canEdit);
+		MapStringObjectPreference p = new MapStringObjectPreference(id, defValue, description);
 		preferences.put(id, p);
 		return p;
 	}
 
 	// REPLICA
-	public final CommonPreference<Integer> OPENDB_REPLICATE_INTERVAL = new IntPreference("opendb.replicate.interval", 15, false, "Determines the replication block interval", true);
-	public final CommonPreference<String> OPENDB_REPLICATE_URL = new StringPreference("opendb.replicate.url", "https://dev.openplacereviews.org/api/", false, "Determines the source from which will be replicated blocks", false);
+	public final CommonPreference<Integer> OPENDB_REPLICATE_INTERVAL = registerIntPreference("opendb.replicate.interval", 15, "Time interval to replicate blocks").editable();
+	public final CommonPreference<String> OPENDB_REPLICATE_URL = registerStringPreference("opendb.replicate.url", "https://dev.openplacereviews.org/api/", "Main source to replicate blocks").editable();
 
 	// BLOCK AND HISTORY
-	public final CommonPreference<Boolean> OPENDB_STORE_HISTORY = new BooleanPreference("opendb.db.store-history", true, true, "Determines to store history or not", true);
-	public final CommonPreference<Float> OPENDB_COMPACT_COEFICIENT = new FloatPreference("opendb.db.compactCoefficient", 1.0F, false, "Determines compact coefficient for compacting", true);
-	public final CommonPreference<Integer> OPENDB_SUPERBLOCK_SIZE = new IntPreference("opendb.db.dbSuperblockSize", 32, false, "Determines the amount of blocks for creating superblock", true);
+	public final CommonPreference<Boolean> OPENDB_STORE_HISTORY = registerBooleanPreference("opendb.db.store-history", true, "Store history of operations").editable().restartNeeded();
+	public final CommonPreference<Double> OPENDB_COMPACT_COEFICIENT = registerDoublePreference("opendb.db.compactCoefficient", 1.0,  "Compact coefficient for compacting blockchain").editable();
+	public final CommonPreference<Integer> OPENDB_SUPERBLOCK_SIZE = registerIntPreference("opendb.db.dbSuperblockSize", 32,  "The amount of blocks to create superblock in a database").editable();
 
 	// LOCAL STORAGE
-	public final CommonPreference<String> OPENDB_STORAGE_LOCAL_STORAGE_PATH = new StringPreference("opendb.storage.local-storage", "", true, "Determines path for storing resource files", true);
-	public final CommonPreference<Integer> OPENDB_STORAGE_TIME_TO_STORE_UNUSED_RESOURCE_SEC = new IntPreference("opendb.storage.timeToStoreUnusedSec", 86400, false, "Determines a max time for storing unused resources", true);
+	public final CommonPreference<String> OPENDB_STORAGE_LOCAL_STORAGE_PATH = registerStringPreference("opendb.storage.local-storage", "", "Path for storing resource files").restartNeeded().editable();
+	public final CommonPreference<Integer> OPENDB_STORAGE_TIME_TO_STORE_UNUSED_RESOURCE_SEC = registerIntPreference("opendb.storage.timeToStoreUnusedSec", 86400, "Maximum time (seconds) to storing unused ipfs resources").editable();
 
 	// IPFS SETTINGS
-	public final CommonPreference<String> OPENDB_STORAGE_IPFS_NODE_HOST = new StringPreference("opendb.storage.ipfs.node.host", "", false, "Determines hostname to ipfs node", true);
-	public final CommonPreference<Integer> OPENDB_STORAGE_IPFS_NODE_PORT = new IntPreference("opendb.storage.ipfs.node.port", 5001, false, "Determines hostname to ipfs port", true);
-	public final CommonPreference<Integer> OPENDB_STORAGE_IPFS_NODE_READ_TIMEOUT_MS = new IntPreference("opendb.storage.ipfs.node.readTimeoutMs", 10000, false, "Determines a max time for reading from node", true);
+	public final CommonPreference<String> OPENDB_STORAGE_IPFS_NODE_HOST = registerStringPreference("opendb.storage.ipfs.node.host", "", "Hostname to ipfs node").editable();
+	public final CommonPreference<Integer> OPENDB_STORAGE_IPFS_NODE_PORT = registerIntPreference("opendb.storage.ipfs.node.port", 5001, "Hostname to ipfs port").editable();
+	public final CommonPreference<Integer> OPENDB_STORAGE_IPFS_NODE_READ_TIMEOUT_MS = registerIntPreference("opendb.storage.ipfs.node.readTimeoutMs", 10000, "IPFS: timeout to read from onde").editable();
 
 	// FILE BACKUP
-	public final CommonPreference<String> OPENDB_FILE_BACKUP_DIRECTORY = new StringPreference("opendb.files-backup.directory", "blocks", true, "Determines path for storing block backup", true);
+	public final CommonPreference<String> OPENDB_FILE_BACKUP_DIRECTORY = registerStringPreference("opendb.files-backup.directory", "blocks", "Path for storing block backup").restartNeeded().editable();
 
 	// SCHEDULED SERVICE SETTINGS
-	public final CommonPreference<Integer> OPENDB_BLOCK_CREATE_MIS_SECONDS_INTERVAL = new IntPreference("opendb.block-create.minSecondsInterval", 120, false, "Determines a min interval between creating blocks", true);
+	public final CommonPreference<Integer> OPENDB_BLOCK_CREATE_MIS_SECONDS_INTERVAL = registerIntPreference("opendb.block-create.minSecondsInterval", 120, "Min interval between creating blocks").editable();
 //	public final CommonPreference<Integer> OPENDB_BLOCK_CREATE_MIN_QUEUE_SIZE = new IntPreference("opendb.block-create.minQueueSize", 10, false, "", true);
-	public final CommonPreference<Integer> OPENDB_BLOCK_CREATE_MAX_SECONDS_INTERVAL = new IntPreference("opendb.block-create.maxSecondsInterval", 3600, false, "Determines a max interval between creating blocks", true);
-	public final CommonPreference<Float> OPENDB_BLOCK_CREATE_MIN_CAPACITY = new FloatPreference("opendb.block-create.minCapacity", 0.7F, false, "Determines min capacity for blocks", true);
+	public final CommonPreference<Integer> OPENDB_BLOCK_CREATE_MAX_SECONDS_INTERVAL = registerIntPreference("opendb.block-create.maxSecondsInterval", 3600, "Max interval between creating blocks").editable();
+	public final CommonPreference<Double> OPENDB_BLOCK_CREATE_MIN_CAPACITY = registerDoublePreference("opendb.block-create.minCapacity", 0.7, "Min capacity for blocks").editable();
 
 	// BOTS
-	public final CommonPreference<Integer> OPENDB_BOTS_MIN_INTERVAL = new IntPreference("opendb.bots.minInterval", 1800, false, "Determines interval for launches bots", true);
+	public final CommonPreference<Integer> OPENDB_BOTS_MIN_INTERVAL = registerIntPreference("opendb.bots.minInterval", 1800, "Min interval to start bots").editable();
 
 	// OBJTABLES SETTINGS
-	public final CommonPreference<Map<String, Object>> OBJTABLES_LOGINS = new MapStringObjectPreference("opendb.db-schema.objtables.obj_logins", getDefaultObjLogins(), true, "Determines table for storing superblock logins objects", false);
-	public final CommonPreference<Map<String, Object>> OBJTABLES_GRANTS = new MapStringObjectPreference("opendb.db-schema.objtables.obj_grants", getDefaultObjGrants(), true, "Determines table for storing superblock grants objects", false);
-	public final CommonPreference<Map<String, Object>> OBJTABLES_SYSTEM = new MapStringObjectPreference("opendb.db-schema.objtables.obj_system", getDefaultObjSystem(), true, "Determines table for storing superblock system objects", false);
+	
+	public final CommonPreference<Map<String, Object>> OBJTABLES_LOGINS = registerTableMapping("obj_logins", 2, "sys.login, sys.signup");
+	public final CommonPreference<Map<String, Object>> OBJTABLES_GRANTS = registerTableMapping("obj_grants", 2, "sys.grant");
+	public final CommonPreference<Map<String, Object>> OBJTABLES_SYSTEM = registerTableMapping("obj_system", 1, "sys.validate", "sys.operation", "sys.role");
 
 	// BLOCKCHAIN STATUS
-	public final CommonPreference<String> OPENDB_BLOCKCHAIN_STATUS = new StringPreference(BLOCKCHAIN_SETTINGS, BlocksManager.BlockchainMgmtStatus.NONE.name(), false, "Determines Blockchain status", false);
+	public final CommonPreference<String> OPENDB_BLOCKCHAIN_STATUS = registerStringPreference(BLOCKCHAIN_SETTINGS, "none", "Blockchain status (none, createblocks, replicate)");
 
-	private Map<String, Object> getDefaultObjLogins() {
-		Map<String, Object> obj_logins = new TreeMap<>();
-		obj_logins.put("types", Arrays.asList("sys.login, sys.signup"));
-		obj_logins.put("keysize", 2);
-		return obj_logins;
-	}
-
-	private Map<String, Object> getDefaultObjGrants() {
-		Map<String, Object> obj_logins = new TreeMap<>();
-		obj_logins.put("types", Arrays.asList("sys.grant"));
-		obj_logins.put("keysize", 2);
-		return obj_logins;
-	}
-
-	private Map<String, Object> getDefaultObjSystem() {
-		Map<String, Object> obj_logins = new TreeMap<>();
-		obj_logins.put("types", Arrays.asList("sys.validate", "sys.operation", "sys.role"));
-		obj_logins.put("keysize", 1);
-		return obj_logins;
-	}
 }
