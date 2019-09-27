@@ -5,7 +5,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.scheduled.OpenDBScheduledServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
@@ -27,12 +26,6 @@ public class BotManager {
 
 	@Autowired 
 	private AutowireCapableBeanFactory beanFactory;
-
-	@Autowired
-	private DBConsensusManager dbConsensusManager;
-
-	@Autowired
-	private OpenDBScheduledServices openDBScheduledServices;
 
 	private Map<String, BotInfo> bots = new TreeMap<String, BotManager.BotInfo>();
 
@@ -95,7 +88,8 @@ public class BotManager {
 			bi.id = cfg.getId().get(0);
 			bi.version = cfg.getIntValue("version", 0);
 			bi.api = cfg.getStringValue("api");
-			Long timeInMilis =  openDBScheduledServices.getBotsMinInterval();
+			// TODO 
+			long timeInMilis = 30000;
 			bi.interval = String.format("%02dh:%02dm:%02ds", TimeUnit.MILLISECONDS.toHours(timeInMilis),
 					TimeUnit.MILLISECONDS.toMinutes(timeInMilis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(timeInMilis)),
 					TimeUnit.MILLISECONDS.toSeconds(timeInMilis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(timeInMilis)));
@@ -168,7 +162,8 @@ public class BotManager {
 	}
 
 	public List<BotHistory> getBotHistory(String botName) {
-		return dbConsensusManager.getBotHistory(botName);
+		// TODO
+		return new ArrayList<BotManager.BotHistory>();
 	}
 
 	

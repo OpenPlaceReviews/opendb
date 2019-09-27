@@ -52,9 +52,4 @@ public class BotController {
 		return jsonFormatter.fullObjectToJson(botManager.getBots());
 	}
 
-	@GetMapping(path = "/history", produces = "text/html;charset=UTF-8")
-	@ResponseBody
-	public String getBotHistory(@RequestParam String botName) {
-		return jsonFormatter.fullObjectToJson(botManager.getBotHistory(botName));
-	}
 }

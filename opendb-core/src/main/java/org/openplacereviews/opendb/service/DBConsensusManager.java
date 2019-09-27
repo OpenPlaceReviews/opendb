@@ -1102,27 +1102,6 @@ public class DBConsensusManager {
 		return dbSchema.getSetting(jdbcTemplate, key);
 	}
 
-	public List<BotManager.BotHistory> getBotHistory(String botName) {
-		return jdbcTemplate.query("SELECT bot, start_date, end_date, total, processed, status FROM " + BOT_STATS_TABLE + " WHERE bot = ? ORDER BY id DESC ", new ResultSetExtractor<List<BotManager.BotHistory>>() {
-			@Override
-			public List<BotManager.BotHistory> extractData(ResultSet rs) throws SQLException {
-				List<BotManager.BotHistory> historyList = new ArrayList<>();
-				while (rs.next()) {
-					BotManager.BotHistory botHistory = new BotManager.BotHistory();
-					botHistory.bot = rs.getString(1);
-					botHistory.startDate = rs.getTimestamp(2);
-					botHistory.endDate = rs.getTimestamp(3);
-					botHistory.total = rs.getInt(4);
-					botHistory.processed = rs.getInt(5);
-					botHistory.status = rs.getString(6);
-					historyList.add(botHistory);
-				}
-
-				return historyList;
-			}
-		}, botName);
-	}
-
 	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
 		return dbSchema.getIndexes();
 	}
