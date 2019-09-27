@@ -77,6 +77,7 @@ public class SettingsManager {
 					c.setSource(CommonPreferenceSource.ENV);
 				} else if(dbPrefs.containsKey(k)) {
 					c.setString(dbPrefs.get(k), false);
+					c.setSource(CommonPreferenceSource.DB);
 				}
 			} catch (Exception e) {
 				throw new IllegalStateException(
@@ -242,6 +243,11 @@ public class SettingsManager {
 		protected boolean set(T obj, boolean saveDB) {
 			if (value.getClass() == obj.getClass()) {
 				if(saveDB) {
+					if(source == CommonPreferenceSource.ENV) {
+						throw new IllegalStateException(
+								String.format("Can't overwrite property '%s' set by environment variable", id));
+					}
+					setSource(CommonPreferenceSource.DB);
 					dbSchemaManager.setSetting(jdbcTemplate, id, convertToDBValue(obj));
 				}
 				value = obj;

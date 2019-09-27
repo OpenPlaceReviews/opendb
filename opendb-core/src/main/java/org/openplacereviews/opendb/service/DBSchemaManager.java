@@ -38,7 +38,6 @@ public class DBSchemaManager {
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
-	public static final String BOT_STATS_TABLE = "bot_stats";
 	protected static final String BLOCKS_TABLE = "blocks";
 	protected static final String OPERATIONS_TABLE = "operations";
 	protected static final String OBJS_TABLE = "objs";
@@ -159,13 +158,6 @@ public class DBSchemaManager {
 		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
 		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
 
-		registerColumn(BOT_STATS_TABLE, "id", "serial not null", NOT_INDEXED);
-		registerColumn(BOT_STATS_TABLE, "bot", "text", NOT_INDEXED);
-		registerColumn(BOT_STATS_TABLE, "start_date", "timestamp", NOT_INDEXED);
-		registerColumn(BOT_STATS_TABLE, "end_date", "timestamp", NOT_INDEXED);
-		registerColumn(BOT_STATS_TABLE, "total", "int", NOT_INDEXED);
-		registerColumn(BOT_STATS_TABLE, "processed", "int", NOT_INDEXED);
-		registerColumn(BOT_STATS_TABLE, "status", "text", NOT_INDEXED);
 
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
 

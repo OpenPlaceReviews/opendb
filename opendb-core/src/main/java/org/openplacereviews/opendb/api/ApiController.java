@@ -380,7 +380,6 @@ public class ApiController {
 	@GetMapping(path = "/index",  produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getIndexInfo() {
-		// TODO
 		return formatter.fullObjectToJson(manager.getIndices());
 	}
 

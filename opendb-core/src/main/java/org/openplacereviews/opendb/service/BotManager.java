@@ -61,47 +61,6 @@ public class BotManager {
 		}
 	}
 
-	public static class BotStats {
-		String taskDescription;
-		String taskName;
-		int taskCount;
-		int total;
-		int progress;
-		boolean isRunning;
-
-		public BotStats(String taskDescription, String taskName, int taskCount, int total, int progress, boolean isRunning) {
-			this.taskDescription = taskDescription;
-			this.taskName = taskName;
-			this.taskCount = taskCount;
-			this.total = total;
-			this.progress = progress;
-			this.isRunning = isRunning;
-		}
-
-		public String getTaskDescription() {
-			return taskDescription;
-		}
-
-		public String getTaskName() {
-			return taskName;
-		}
-
-		public int getTaskCount() {
-			return taskCount;
-		}
-
-		public int getTotal() {
-			return total;
-		}
-
-		public int getProgress() {
-			return progress;
-		}
-
-		public boolean isRunning() {
-			return isRunning;
-		}
-	}
 
 	@SuppressWarnings("unchecked")
 	public Map<String, BotInfo> getBots() {
@@ -111,6 +70,7 @@ public class BotManager {
 		blc.fetchAllObjects(OpBlockchainRules.OP_BOT, req);
 		if (req.cacheObject != null) {
 			Map<String, BotInfo> botInfoMap = (Map<String, BotInfo>) req.cacheObject;
+			// TODO right place to generate bot stats?
 			for (BotInfo botInfo : botInfoMap.values()) {
 				botInfo.botStats = generateBotStats(botInfo);
 			}
@@ -181,6 +141,7 @@ public class BotManager {
 	}
 	
 	public boolean startBot(String botId) {
+		// TODO separate enable / start
 		BotInfo botObj = getBots().get(botId);
 		if (botObj == null) {
 			return false;
@@ -195,6 +156,7 @@ public class BotManager {
 	}
 	
 	public boolean stopBot(String botId) {
+		// TODO separate enable / stop
 		BotInfo botObj = getBots().get(botId);
 		if (botObj == null) {
 			return false;
@@ -205,14 +167,56 @@ public class BotManager {
 		return false;
 	}
 
+	public List<BotHistory> getBotHistory(String botName) {
+		return dbConsensusManager.getBotHistory(botName);
+	}
+
+	
 	public static class BotHistory {
 		public String bot, status;
 		public Date startDate, endDate;
 		public Integer total, processed;
 	}
+	
+	public static class BotStats {
+		String taskDescription;
+		String taskName;
+		int taskCount;
+		int total;
+		int progress;
+		boolean isRunning;
 
-	public List<BotHistory> getBotHistory(String botName) {
-		return dbConsensusManager.getBotHistory(botName);
+		public BotStats(String taskDescription, String taskName, int taskCount, int total, int progress, boolean isRunning) {
+			this.taskDescription = taskDescription;
+			this.taskName = taskName;
+			this.taskCount = taskCount;
+			this.total = total;
+			this.progress = progress;
+			this.isRunning = isRunning;
+		}
+
+		public String getTaskDescription() {
+			return taskDescription;
+		}
+
+		public String getTaskName() {
+			return taskName;
+		}
+
+		public int getTaskCount() {
+			return taskCount;
+		}
+
+		public int getTotal() {
+			return total;
+		}
+
+		public int getProgress() {
+			return progress;
+		}
+
+		public boolean isRunning() {
+			return isRunning;
+		}
 	}
-
 }
