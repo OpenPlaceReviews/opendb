@@ -17,6 +17,13 @@
     .popover {
   		word-break: break-all;
 	}
+	.no-margin {
+    	margin: 0;
+    }
+    .no-border {
+    	border: 0;
+    }
+}
     
 </style>
 </head>
@@ -344,7 +351,6 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <!--API TAB-->
     <div id="api" class="tab-pane fade">
-
         <!--BOT state-->
         <div class="row">
             <div class="form-group col-md-2">
@@ -386,7 +392,7 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
         <!--BOT state-->
-
+    </div>
     <!--API MODALS VIEWS-->
     <!--BOTS MODALS-->
     <div class="modal fade" id="bot-history-modal" role="dialog">
@@ -443,13 +449,13 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--SETTINGS TAB-->
     <div id="settings" class="tab-pane fade">
         <h3>Settings</h3>
-        <div class="row">
-            <div class="form-group form-inline col-md-4">
-                <div class="form-group">
-                    <label for="settingsCheckbox" class="col-form-label">Show editable settings</label>
-                    <input type="checkbox" id="settingsCheckbox" name="scales">
-                </div>
-            </div>
+        <div class="btn-group btn-group-toggle form-group" >
+            <input type="radio" name="settings-group" id="settings-all" autocomplete="off" checked/>
+            <label for="settings-all">All</label>
+            <input type="radio" name="settings-group" id="settings-a" autocomplete="off"/>
+            <label for="settings-edit">Editable</label>
+            <input type="radio" name="settings-group" id="settings-b" autocomplete="off"/>
+            <label for="settings-db">DB</label>
         </div>
 
         <!--MODAL EDIT-->
@@ -491,13 +497,14 @@ Details: <b><span did="block-details"></span></b></pre>
             <li class="panel panel-default" id="settings-list-item">
                 <p class="panel-heading">
                     <a type="button" did="edit-settings" class="btn btn-default btn-xs pull-right" data-toggle="modal" data-target="#settings-edit-modal" >Edit</a>
-                    <b><span type="text" did="settings-name"></span></b>
+                    <b><span type="text" did="settings-name"></span></b>:
+                    <span type="text" did="settings-description"></span>
                 </p>
                 <div class="panel-body">
-                    <p>Value: <b><span did="settings-value"></span></b></p>
+                    <p><b><span did="settings-value"></span></b></p>
                     <pre did="settings-value-json"></pre>
-                    <div did="settings-restart" class="alert alert-warning hidden" role="alert">This parameter will be accepted after server restarting!</div>
                 </div>
+                <div did="settings-restart" class="alert alert-warning no-margin no-border hidden" role="alert">This parameter will be accepted after server restarting!</div>
             </li>
         </ul>
     </div>

@@ -20,7 +20,8 @@ var SETTINGS_VIEW = function () {
         } else {
             it.find("[did='edit-settings']").addClass("hidden");
         }
-        it.find("[did='settings-name']").html(obj.id + " - " + obj.description);
+        it.find("[did='settings-name']").html(obj.id);
+        it.find("[did='settings-description']").html(obj.description);
         if (obj.type === "Map") {
             it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
             it.find("[did='settings-value']").addClass("hidden");
@@ -42,11 +43,8 @@ var SETTINGS_VIEW = function () {
                 var templateItem = $("#settings-list-item");
                 for (var i = 0; i < data.length; i++) {
                     obj = data[i];
-                    if ($("#settingsCheckbox").is(":checked") && obj.canEdit === true) {
-                        items.append(showSettings(obj, templateItem));
-                    } else if (!($("#settingsCheckbox").is(":checked"))) {
-                        items.append(showSettings(obj, templateItem));
-                    }
+                    items.append(showSettings(obj, templateItem));
+                    
                 }
             });
         },

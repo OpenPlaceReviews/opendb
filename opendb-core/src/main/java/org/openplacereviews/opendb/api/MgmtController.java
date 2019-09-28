@@ -58,7 +58,7 @@ public class MgmtController {
     
     private ResponseEntity<String> unauthorizedByServer() {
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.body("{\"status\":\"ERROR\"}");
+    			.body("{\"status\":\"ERROR\", \"msg\":\"Unauthorized access\"}");
 	}
     
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
@@ -237,7 +237,6 @@ public class MgmtController {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
 		}
-
 		return ResponseEntity.ok(formatter.fullObjectToJson(settingsManager.getPreferences()));
 	}
 
@@ -250,7 +249,6 @@ public class MgmtController {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
 		}
-
 		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
 		if(pref == null) {
 			return ResponseEntity.badRequest().body("{\"error\":\"Key is not defined\"}");

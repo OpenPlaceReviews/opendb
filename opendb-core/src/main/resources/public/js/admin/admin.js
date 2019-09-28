@@ -149,7 +149,11 @@ var STATUS_VIEW = function () {
         loginName: "",
         processStatusData: function (data) {
             var items = "";
-            STATUS_VIEW.loginName = data.loginUser;
+            if(data.loginUser) {
+                STATUS_VIEW.loginName = data.loginUser;
+            } else {
+                STATUS_VIEW.loginName = "";
+            }
             $("#blockchain-status").html(data.status);
             items = "";
             for(var j = 0; j < data.sblocks.length; j++) {

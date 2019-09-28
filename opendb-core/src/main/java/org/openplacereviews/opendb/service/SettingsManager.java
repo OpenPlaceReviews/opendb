@@ -131,12 +131,14 @@ public class SettingsManager {
 		public boolean restartNeeded = true;
 		
 		public PreferenceFamily(String prefix, String[] idProperties, String descriptionFormat, String... property) {
+			this.prefix = prefix;
 			this.idProperties = idProperties;
 			this.descriptionFormat = descriptionFormat;
 			this.descProperties = property;
 		}
 		
 		public PreferenceFamily(String prefix, String idProperty, String descriptionFormat, String... property) {
+			this.prefix = prefix;
 			this.descriptionFormat = descriptionFormat;
 			this.idProperties = new String[] { idProperty };
 			this.descProperties = property;
@@ -160,17 +162,19 @@ public class SettingsManager {
 	}
 	
 	public class CommonPreference<T> {
-		private final String id;
+		protected final String id;
 		protected T value;
-		private String description;
-		private boolean restartIsNeeded;
-		private boolean canEdit;
-		protected Class<T> clz;
+		protected String description;
+		protected boolean restartIsNeeded;
+		protected boolean canEdit;
+		protected String type;
 		protected CommonPreferenceSource source = CommonPreferenceSource.DEFAULT;
+		protected transient Class<T> clz;
 
 		public CommonPreference(Class<T> cl, String id, T value, String description) {
 			this.id = id;
 			this.clz = cl;
+			this.type = clz.getSimpleName();
 			this.value = value;
 			this.description = description;
 		}
@@ -303,6 +307,7 @@ public class SettingsManager {
 		if(preferences.containsKey(p.getId()) ) {
 			throw new IllegalStateException("Duplicate preference was registered");
 		}
+		preferences.put(p.getId(), p);
 		return p;
 	}
 	
@@ -350,14 +355,9 @@ public class SettingsManager {
 		return cp;
 	}
 	
-	@SuppressWarnings("unchecked")
 	public CommonPreference<Map<String, Object>> registerMapPreference(String id, Map<String, Object> defValue, String description) {
-		if (preferences.containsKey(id)) {
-			return (CommonPreference<Map<String, Object>>) preferences.get(id);
-		}
 		MapStringObjectPreference p = new MapStringObjectPreference(id, defValue, description);
-		preferences.put(id, p);
-		return p;
+		return regPreference(p);
 	}
 
 	// REPLICA
