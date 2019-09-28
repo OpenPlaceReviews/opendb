@@ -449,14 +449,14 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--SETTINGS TAB-->
     <div id="settings" class="tab-pane fade">
         <h3>Settings</h3>
-        <div class="btn-group btn-group-toggle form-group" >
-            <input type="radio" name="settings-group" id="settings-all" autocomplete="off" checked/>
-            <label for="settings-all">All</label>
-            <input type="radio" name="settings-group" id="settings-a" autocomplete="off"/>
-            <label for="settings-edit">Editable</label>
-            <input type="radio" name="settings-group" id="settings-b" autocomplete="off"/>
-            <label for="settings-db">DB</label>
-        </div>
+        <div class="form-group">
+        	<ul class="nav nav-pills" id="settings-pills">
+  				<li class="active" id="settings-user"><a href="#">User</a></li>
+  				<li id="settings-db-tables"><a href="#">DB Tables</a></li>
+  				<li id="settings-db-indexes"><a href="#">DB Indexes</a></li>
+  				<li id="settings-all"><a href="#">All</a></li>
+			</ul>
+		</div>
 
         <!--MODAL EDIT-->
         <div class="modal fade" id="settings-edit-modal" role="dialog">
@@ -491,7 +491,8 @@ Details: <b><span did="block-details"></span></b></pre>
         </div>
         <!--MODAL EDIT-->
 
-        <ul class="list-group" id="settings-result-list"></ul>
+        <ul class="list-group form-group" id="settings-result-list">
+        </ul>
 
         <ul class="list-group" hidden="true">
             <li class="panel panel-default" id="settings-list-item">

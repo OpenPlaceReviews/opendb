@@ -343,10 +343,10 @@ $(document).ready(function () {
     ERRORS_VIEW.onReady();
     SIGNUP_VIEW.onReady();
 
-    window.onpopstate = function (event) {
-        if (!document.location.href.toString().includes("#popover")) {
-            window.location.href = document.location;
-        }
-    };
+    // window.onpopstate = function (event) {
+    //     if (!document.location.href.toString().includes("#popover")) {
+    //         window.location.href = document.location;
+    //     }
+    // };
 
 });

@@ -34,7 +34,7 @@ public class SettingsManager {
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily(
 			"opendb.db-schema.indexes", new String[] {INDEX_TABLENAME, INDEX_NAME}, "DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily(
-			"opendb.db-schema.indexes",  BOT_ID, "Bot %s configuration", BOT_ID);
+			"opendb.bots",  BOT_ID, "Bot %s configuration", BOT_ID);
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			DB_SCHEMA_OBJTABLES,

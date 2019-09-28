@@ -11,7 +11,8 @@ var SETTINGS_VIEW = function () {
         $("#settings-edit-modal .modal-header #settings-name").val(obj.id);
         $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + obj.id);
     }
-    function showSettings(obj, templateItem) {
+
+    function renderSettingItem(obj, templateItem) {
         var it = templateItem.clone();
         if (obj.canEdit === true) {
             it.find("[did='edit-settings']").click(function () {
@@ -22,7 +23,7 @@ var SETTINGS_VIEW = function () {
         }
         it.find("[did='settings-name']").html(obj.id);
         it.find("[did='settings-description']").html(obj.description);
-        if (obj.type === "Map") {
+        if (obj.type === "Map" || obj.type === "TreeMap") {
             it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
             it.find("[did='settings-value']").addClass("hidden");
         } else {
@@ -35,23 +36,47 @@ var SETTINGS_VIEW = function () {
         return it;
     }
 
+    function displaySettings() {
+        var data = SETTINGS_VIEW.settingsData;
+        var items = $("#settings-result-list");
+        let id = $("#settings-pills").children(".active").first().attr('id');
+        items.empty();
+        var templateItem = $("#settings-list-item");
+        for (var i = 0; i < data.length; i++) {
+            var obj = data[i];
+            if(id == "settings-user") {
+                if(!obj.canEdit) { obj = null; }
+            } else if(id == "settings-db-tables") {
+                if(!obj.id.startsWith("opendb.db-schema.objtables.")) { obj = null; }
+            } else if(id == "settings-db-indexes") {
+                if(!obj.id.startsWith("opendb.db-schema.indexes.")) { obj = null; }
+            }
+            if(obj) {
+                items.append(renderSettingItem(obj, templateItem));
+            }
+        }
+    }
+
     return {
+        settingsData : [],
         loadConfiguration: function() {
             $.getJSON("/api/mgmt/config", function (data) {
-                var items = $("#settings-result-list");
-                items.empty();
-                var templateItem = $("#settings-list-item");
-                for (var i = 0; i < data.length; i++) {
-                    obj = data[i];
-                    items.append(showSettings(obj, templateItem));
-                    
-                }
+                SETTINGS_VIEW.settingsData = data;
+                displaySettings();
             });
         },
         onReady: function() {
-            $("#settingsCheckbox").change(function () {
-                SETTINGS_VIEW.loadConfiguration();
-            });
+            let allpills = $("#settings-pills").children();
+            for(var i = 0; i < allpills.length; i++) {
+                let pill = allpills.eq(i);
+                let link = pill.children().first();
+                link.click(function() {
+                    allpills.removeClass("active");
+                    pill.addClass("active");
+                    displaySettings();
+                });
+            }
+            $("#settings-db-tables").click()
             $("#save-new-value-for-settings-btn").click(function () {
                 var obj = {
                     key: $("#settings-name").val(),
