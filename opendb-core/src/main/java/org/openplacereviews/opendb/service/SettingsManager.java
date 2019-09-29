@@ -29,14 +29,16 @@ public class SettingsManager {
 	
 	public static final String TABLE_ID = "id";
 	
-	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily(
-			"opendb.db-schema.objtables", OBJTABLE_TABLENAME, "DB config to store %s objects", OBJTABLE_TYPES);
-	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily(
-			"opendb.db-schema.indexes", new String[] {INDEX_TABLENAME, INDEX_NAME}, "DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
-	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily(
-			"opendb.bots",  BOT_ID, "Bot %s configuration", BOT_ID);
+	public static final PreferenceFamily USER = new PreferenceFamily(null, "User");
+	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily("opendb.db-schema.objtables", "DB Tables").
+			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded();
+	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
+	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
+			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).setRestartNeeded();
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
+			USER,
 			DB_SCHEMA_OBJTABLES,
 			DB_SCHEMA_INDEXES,
 			OPENDB_BOTS_CONFIG
@@ -51,7 +53,7 @@ public class SettingsManager {
 	@Autowired
 	private JsonFormatter jsonFormatter;
 
-	private Map<String, CommonPreference<?>> preferences = new LinkedHashMap<>();
+	private Map<String, CommonPreference<?>> preferences = new TreeMap<>();
 	
 	private boolean dbValueLoaded;
 	
@@ -59,11 +61,13 @@ public class SettingsManager {
 		// load extra properties from DB
 		Map<String, String> dbPrefs = dbSchemaManager.getSettings(jdbcTemplate);
 		for (PreferenceFamily family : SETTINGS_FAMILIES) {
+			if(family.prefix == null) {
+				continue;
+			}
 			for (String k : dbPrefs.keySet()) {
 				if (k.startsWith(family.prefix + ".") && !preferences.containsKey(k)) {
 					TreeMap<String, Object> mp = jsonFormatter.fromJsonToTreeMap(dbPrefs.get(k));
-					String d = "DB table to store " + mp.get(OBJTABLE_TYPES) + " objects";
-					registerMapPreference(k, mp, d).restartNeeded();
+					registerMapPreferenceForFamily(family, mp).restartNeeded();
 				}
 			}
 		}
@@ -125,26 +129,37 @@ public class SettingsManager {
 	
 	public static class PreferenceFamily {
 		public String prefix;
+		public String name;
 		public String descriptionFormat;
 		public String[] descProperties;
 		public String[] idProperties;
 		public boolean restartNeeded = true;
 		
-		public PreferenceFamily(String prefix, String[] idProperties, String descriptionFormat, String... property) {
+		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
-			this.idProperties = idProperties;
-			this.descriptionFormat = descriptionFormat;
-			this.descProperties = property;
+			this.name = name;
 		}
 		
-		public PreferenceFamily(String prefix, String idProperty, String descriptionFormat, String... property) {
-			this.prefix = prefix;
-			this.descriptionFormat = descriptionFormat;
-			this.idProperties = new String[] { idProperty };
-			this.descProperties = property;
+		public PreferenceFamily setIdProperties(String... idProperties) {
+			this.idProperties = idProperties;
+			return this;
+		}
+		
+		public PreferenceFamily setRestartNeeded() {
+			this.restartNeeded = true;
+			return this;
+		}
+		
+		public PreferenceFamily setDescription(String format, String... properties) {
+			this.descriptionFormat = format;
+			this.descProperties = properties;
+			return this;
 		}
 		
 		public String getDescription(Map<String, Object> o) {
+			if(descProperties == null) {
+				throw new UnsupportedOperationException();
+			}
 			Object[] vls = new Object[descProperties.length];
 			for(int i = 0; i < descProperties.length; i++) {
 				vls[i] = o.get(descProperties[i]);
@@ -153,6 +168,9 @@ public class SettingsManager {
 		}
 		
 		public String getId(Map<String, Object> o) {
+			if(idProperties == null) {
+				throw new UnsupportedOperationException();
+			}
 			String v = prefix;
 			for(int i = 0; i < idProperties.length; i++) {
 				v += "." + o.get(idProperties[i]); 
@@ -163,15 +181,18 @@ public class SettingsManager {
 	
 	public class CommonPreference<T> {
 		protected final String id;
+		protected final PreferenceFamily family;
+		protected final transient Class<T> clz;
+		protected final String type;
 		protected T value;
 		protected String description;
 		protected boolean restartIsNeeded;
 		protected boolean canEdit;
-		protected String type;
 		protected CommonPreferenceSource source = CommonPreferenceSource.DEFAULT;
-		protected transient Class<T> clz;
+		
 
-		public CommonPreference(Class<T> cl, String id, T value, String description) {
+		public CommonPreference(PreferenceFamily family, Class<T> cl, String id, T value, String description) {
+			this.family = family;
 			this.id = id;
 			this.clz = cl;
 			this.type = clz.getSimpleName();
@@ -271,8 +292,8 @@ public class SettingsManager {
 
 	public class EnumPreference<T extends Enum<T>> extends CommonPreference<T> {
 
-		public EnumPreference(Class<T> cl, String id, T value, String description) {
-			super(cl, id, value, description);
+		public EnumPreference(PreferenceFamily family, Class<T> cl, String id, T value, String description) {
+			super(family, cl, id, value, description);
 		}
 		
 		@Override
@@ -285,8 +306,8 @@ public class SettingsManager {
 	public class MapStringObjectPreference extends CommonPreference<Map<String, Object>> {
 
 		@SuppressWarnings("unchecked")
-		private MapStringObjectPreference(String id, Map<String, Object> defaultValue, String description) {
-			super((Class<Map<String, Object>>) defaultValue.getClass(), id, defaultValue, description);
+		private MapStringObjectPreference(PreferenceFamily family, String id, Map<String, Object> defaultValue, String description) {
+			super(family, (Class<Map<String, Object>>) defaultValue.getClass(), id, defaultValue, description);
 		}
 		
 		@Override
@@ -311,30 +332,54 @@ public class SettingsManager {
 		return p;
 	}
 	
-	public <T extends Enum<T>> CommonPreference<T> registerEnumPreference(Class<T> cl, String id, T value, String description) {
-		EnumPreference<T> et = new EnumPreference<T>(cl, id, value, description);
+	public <T extends Enum<T>> CommonPreference<T> registerEnumPreference(PreferenceFamily family, Class<T> cl, String id, T value, String description) {
+		EnumPreference<T> et = new EnumPreference<T>(family, cl, id, value, description);
 		return regPreference(et);
 	}
-
-	public CommonPreference<Boolean> registerBooleanPreference(String id, boolean defValue, String description) {
-		return regPreference(new CommonPreference<>(Boolean.class, id, defValue, description));
+	
+	public <T extends Enum<T>> CommonPreference<T> registerEnumPreference(Class<T> cl, String id, T value, String description) {
+		return registerEnumPreference(USER, cl, id, value, description);
 	}
 
-	public CommonPreference<String> registerStringPreference(String id, String defValue, String description) {
-		return regPreference(new CommonPreference<>(String.class, id, defValue, description));
+	public CommonPreference<Boolean> registerBooleanPreference(PreferenceFamily family, String id, boolean defValue, String description) {
+		return regPreference(new CommonPreference<>(family, Boolean.class, id, defValue, description));
 	}
 	
+	public CommonPreference<Boolean> registerBooleanPreference(String id, boolean defValue, String description) {
+		return registerBooleanPreference(USER, id, defValue, description);
+	}
+
+	public CommonPreference<String> registerStringPreference(PreferenceFamily family, String id, String defValue, String description) {
+		return regPreference(new CommonPreference<>(family, String.class, id, defValue, description));
+	}
+	
+	public CommonPreference<String> registerStringPreference(String id, String defValue, String description) {
+		return registerStringPreference(USER, id, defValue, description);
+	}
+	
+	
+	public CommonPreference<Integer> registerIntPreference(PreferenceFamily family, String id, int defValue, String description) {
+		return regPreference(new CommonPreference<>(family, Integer.class, id, defValue, description));
+	}
 	
 	public CommonPreference<Integer> registerIntPreference(String id, int defValue, String description) {
-		return regPreference(new CommonPreference<>(Integer.class, id, defValue, description));
+		return registerIntPreference(USER, id, defValue, description);
+	}
+
+	public CommonPreference<Long> registerLongPreference(PreferenceFamily family, String id, long defValue, String description) {
+		return regPreference(new CommonPreference<>(family, Long.class, id, defValue, description));
 	}
 
 	public CommonPreference<Long> registerLongPreference(String id, long defValue, String description) {
-		return regPreference(new CommonPreference<>(Long.class, id, defValue, description));
+		return registerLongPreference(USER, id, defValue, description);
 	}
-
+	
+	public CommonPreference<Double> registerDoublePreference(PreferenceFamily family, String id, double defValue, String description) {
+		return regPreference(new CommonPreference<>(family, Double.class, id, defValue, description));
+	}
+	
 	public CommonPreference<Double> registerDoublePreference(String id, double defValue, String description) {
-		return regPreference(new CommonPreference<>(Double.class, id, defValue, description));
+		return registerDoublePreference(USER, id, defValue, description);
 	}
 
 	
@@ -348,21 +393,21 @@ public class SettingsManager {
 	}
 	
 	public CommonPreference<Map<String, Object>> registerMapPreferenceForFamily(PreferenceFamily pf, Map<String, Object> o) {
-		CommonPreference<Map<String, Object>> cp = registerMapPreference(pf.getId(o), o, pf.getDescription(o));
+		CommonPreference<Map<String, Object>> cp = new MapStringObjectPreference(pf, pf.getId(o), o, pf.getDescription(o));
 		if(pf.restartNeeded) {
 			cp = cp.restartNeeded();
 		}
-		return cp;
+		return regPreference(cp);
 	}
 	
 	public CommonPreference<Map<String, Object>> registerMapPreference(String id, Map<String, Object> defValue, String description) {
-		MapStringObjectPreference p = new MapStringObjectPreference(id, defValue, description);
+		MapStringObjectPreference p = new MapStringObjectPreference(USER, id, defValue, description);
 		return regPreference(p);
 	}
 
 	// REPLICA
-	public final CommonPreference<Integer> OPENDB_REPLICATE_INTERVAL = registerIntPreference("opendb.replicate.interval", 15, "Time interval to replicate blocks").editable();
-	public final CommonPreference<String> OPENDB_REPLICATE_URL = registerStringPreference("opendb.replicate.url", "https://dev.openplacereviews.org/api/", "Main source to replicate blocks").editable();
+	public final CommonPreference<Integer> OPENDB_REPLICATE_INTERVAL = registerIntPreference(USER, "opendb.replicate.interval", 15, "Time interval to replicate blocks").editable();
+	public final CommonPreference<String> OPENDB_REPLICATE_URL = registerStringPreference(USER, "opendb.replicate.url", "https://dev.openplacereviews.org/api/", "Main source to replicate blocks").editable();
 
 	// BLOCK AND HISTORY
 	public final CommonPreference<Boolean> OPENDB_STORE_HISTORY = registerBooleanPreference("opendb.db.store-history", true, "Store history of operations").editable().restartNeeded();

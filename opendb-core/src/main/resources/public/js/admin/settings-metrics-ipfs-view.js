@@ -36,22 +36,45 @@ var SETTINGS_VIEW = function () {
         return it;
     }
 
+    function loadSettingsFamily() {
+        var data = SETTINGS_VIEW.settingsData;
+        var dt = {};
+        for (var i = 0; i < data.length; i++) {
+            let name = data[i].family.name;
+            if (!(name in dt)) {
+                dt[name] = data[i].family.prefix;
+            }
+        }
+        dt["All"] = null;
+        let pills = $("#settings-pills");
+        pills.empty();
+        var active = true;
+        for (var nm in dt) {
+            let link = $("<li>");
+            if(active) {
+                link.addClass("active");
+                active = false;
+            }
+            link.append($("<a>").text(nm));
+            pills.append(link);
+            link.click(function () {
+                let allpills = $("#settings-pills").children();
+                allpills.removeClass("active");
+                link.addClass("active");
+                displaySettings();
+            });
+        }
+    }
+
     function displaySettings() {
         var data = SETTINGS_VIEW.settingsData;
         var items = $("#settings-result-list");
-        let id = $("#settings-pills").children(".active").first().attr('id');
+        let familyName = $("#settings-pills").children(".active").first().text();
         items.empty();
         var templateItem = $("#settings-list-item");
         for (var i = 0; i < data.length; i++) {
             var obj = data[i];
-            if(id == "settings-user") {
-                if(!obj.canEdit) { obj = null; }
-            } else if(id == "settings-db-tables") {
-                if(!obj.id.startsWith("opendb.db-schema.objtables.")) { obj = null; }
-            } else if(id == "settings-db-indexes") {
-                if(!obj.id.startsWith("opendb.db-schema.indexes.")) { obj = null; }
-            }
-            if(obj) {
+            if(familyName == "All" || obj.family.name == familyName) {
                 items.append(renderSettingItem(obj, templateItem));
             }
         }
@@ -62,20 +85,11 @@ var SETTINGS_VIEW = function () {
         loadConfiguration: function() {
             $.getJSON("/api/mgmt/config", function (data) {
                 SETTINGS_VIEW.settingsData = data;
+                loadSettingsFamily();
                 displaySettings();
             });
         },
         onReady: function() {
-            let allpills = $("#settings-pills").children();
-            for(var i = 0; i < allpills.length; i++) {
-                let pill = allpills.eq(i);
-                let link = pill.children().first();
-                link.click(function() {
-                    allpills.removeClass("active");
-                    pill.addClass("active");
-                    displaySettings();
-                });
-            }
             $("#settings-db-tables").click()
             $("#save-new-value-for-settings-btn").click(function () {
                 var obj = {
