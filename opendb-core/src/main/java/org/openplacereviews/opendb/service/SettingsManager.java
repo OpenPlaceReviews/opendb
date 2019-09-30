@@ -34,11 +34,11 @@ public class SettingsManager {
 	
 	public static final PreferenceFamily USER = new PreferenceFamily(null, "User");
 	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily("opendb.db-schema.objtables", "DB Tables").
-			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded();
+			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded().setEditable();
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
-			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable();
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
-			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID);
+			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).setEditable();
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			USER,

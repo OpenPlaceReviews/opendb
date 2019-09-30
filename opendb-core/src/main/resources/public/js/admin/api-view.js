@@ -68,7 +68,7 @@ var API_VIEW = function () {
                     let obj = data[key];
 
                     var newTemplate = template.clone()
-                        .appendTo(table)
+                        .appendTo(table).removeClass("hidden")
                         .show();
                     newTemplate.find("[did='id']").html(obj.id);
                     var action = "";
@@ -84,18 +84,21 @@ var API_VIEW = function () {
                                 .html(progressBarValue + "%");
                     }
                     if (obj.isRunning === false) {
-                        newTemplate.find("[did='start-bot-btn']")
+                        newTemplate.find("[did='bot-start-btn']")
                             .removeClass("hidden")
                             .click(function () {
                                 startStopBot(obj.id, "start");
                             });
                     } else {
-                        newTemplate.find("[did='stop-bot-btn']")
+                        newTemplate.find("[did='bot-stop-btn']")
                             .removeClass("hidden")
                             .click(function () {
                                 startStopBot(obj.id, "stop");
                             });
                     }
+                    newTemplate.find("[did='bot-schedule-btn']").click(function () {
+                        //enableDisableBot(obj.id, "stop");
+                    });
 
                     if (obj.settings && obj.settings.last_run) {
                         newTemplate.find("[did='last-launch']").html(new Date(obj.settings.last_run * 1000).toLocaleString());
@@ -104,7 +107,7 @@ var API_VIEW = function () {
                     }
                     if(obj.settings && obj.settings.interval_sec) {
                         var tm = obj.settings.interval_sec + " seconds";
-                        if(obj.interval_sec > 15 * 60) {
+                        if(obj.settings.interval_sec > 15 * 60) {
                             tm = (obj.settings.interval_sec / 60 ) + " minutes";
                         }
                         newTemplate.find("[did='interval']").html("every " + tm);
@@ -112,7 +115,7 @@ var API_VIEW = function () {
                         newTemplate.find("[did='interval']").html("-");
                     }
                     
-                    newTemplate.find("[did='show-bot-history-btn']")
+                    newTemplate.find("[did='bot-show-history-btn']")
                         .click(function () {
                             API_VIEW.showBotHistory(obj.id);
                         });

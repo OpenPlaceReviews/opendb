@@ -79,11 +79,11 @@
     <li><a data-toggle="tab" href="#settings" id="settings-tab">Settings</a></li>
     <li><a data-toggle="tab" href="#metrics" id="metrics-tab">Metrics</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
-    <li><a data-toggle="tab" href="#reg" id="reg-tab">Registration</a></li>
+    <li><a data-toggle="tab" href="#reg" id="reg-tab">Users</a></li>
 </ul>
 <div class="tab-content">
     <div id="home" class="tab-pane fade in active">
-        <h1>Admin harness for OpenDB</h1>
+        <h3>Admin harness for OpenDB</h3>
         <div class="form-group">
             <p>Blockchain status: <b><span id="blockchain-status"></span></b></p>
             <p>Admin server user: <b><span id="admin-user"></span></b></p>
@@ -391,7 +391,8 @@ Details: <b><span did="block-details"></span></b></pre>
         <!--BOT state-->
         <div class="row">
             <div class="form-group col-md-2">
-                <h4>Bots</h4><button class="btn btn-primary form-control" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                <h3>Bots</h3>
+                <button class="btn btn-primary form-control" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
             </div>
             <div class="form-group col-md-12">
                 <div class="table-responsive">
@@ -423,13 +424,17 @@ Details: <b><span did="block-details"></span></b></pre>
                                     <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                 </td>
                                 <td>
-                                    <button did="start-bot-btn" type="button" class="btn btn-primary hidden">
+                                    <button did="bot-start-btn" type="button" class="btn btn-primary hidden">
                                         <span class="glyphicon glyphicon-play"></span>
                                     </button>
-                                    <button did="stop-bot-btn" type="button" class="btn btn-primary hidden">
+                                    <button did="bot-stop-btn" type="button" class="btn btn-primary hidden">
                                         <span class="glyphicon glyphicon-pause"></span>
                                     </button>
-                                    <button did="show-bot-history-btn" type="button" class="btn btn-primary" data-toggle="modal" data-target="#bot-history-modal" >
+                                    <button did="bot-schedule-btn" type="button" class="btn btn-primary">
+                                        <span class="glyphicon glyphicon-time"></span>
+                                    </button>
+                                    
+                                    <button did="bot-show-history-btn" type="button" class="btn btn-primary" data-toggle="modal" data-target="#bot-history-modal" >
                                         <span class="glyphicon glyphicon-eye-open"></span>
                                     </button>
                                 </td>
@@ -598,6 +603,7 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <!--IPFS TAB-->
     <div id="ipfs" class="tab-pane fade">
+        <h3>IPFS</h3>
         <div class="form-group panel panel-info">
             <div class="panel-heading"><b>IPFS info</b></div>
             <div class="panel-body">
@@ -733,6 +739,7 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <!--REG TAB-->
     <div id="reg" class="tab-pane fade">
+        <h3>Users</h3>
         <div class="form-group panel panel-info">
             <div class="panel-heading"><b>Signup</b></div>
             <div class="panel-body">

@@ -15,7 +15,7 @@ var SETTINGS_VIEW = function () {
     function renderSettingItem(obj, templateItem) {
         var it = templateItem.clone();
         if (obj.canEdit === true) {
-            it.find("[did='edit-settings']").click(function () {
+            it.find("[did='edit-settings']").removeClass("hidden").click(function () {
                 editPreferenceObject(obj);
             });
         } else {
