@@ -26,8 +26,6 @@
     span {
         word-break: break-all;
     }
-}
-    
 </style>
 </head>
 <head>
@@ -386,9 +384,7 @@ Details: <b><span did="block-details"></span></b></pre>
                                 <td did="last-launch"></td>
                                 <td did="interval"></td>
                                 <td>
-                                    <!--<div class="progress">-->
-                                        <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
-                                    <!--</div>-->
+                                    <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                 </td>
                                 <td>
                                     <button did="start-bot-btn" type="button" class="btn btn-primary hidden" style="margin-left:5px;">
@@ -626,7 +622,7 @@ Details: <b><span did="block-details"></span></b></pre>
             <div class="panel-heading"><b>IPFS missing resources</b></div>
             <div class="panel-body">
                 <div class="form-group">
-                    <p>List of missing resources &nbsp;&nbsp;<b><span id="ipfs-missing-objects"></span></b></p>
+                    <p>List of missing resources: &nbsp;&nbsp;<b><span id="ipfs-missing-objects"></span></b></p>
                 </div>
                 <div class="row">
                     <div class="col-md-3 form-group">
@@ -643,7 +639,7 @@ Details: <b><span did="block-details"></span></b></pre>
                     <p>List of inactive resources: &nbsp;&nbsp;<b><span id="blockchain-unactivated-images"></span></b></p>
                 </div>
                 <div class="row">
-                    <div class="col-md-2 form-group">
+                    <div class="col-md-3 form-group">
                         <input type="submit" value="Remove inactive resources" id="fix-blc-missing-images-btn" class="btn btn-primary form-control">
                     </div>
                 </div>
@@ -654,18 +650,16 @@ Details: <b><span did="block-details"></span></b></pre>
             <div class="panel-heading"><b>Add Resource</b></div>
             <div class="panel-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <div class="input-group">
-                                <span class="input-group-btn">
-                                    <span class="btn btn-default btn-file">
-                                        Browse… <input type="file" id="image-file">
-                                    </span>
+                    <div class="col-md-6 form-group">
+                        <div class="input-group">
+                            <span class="input-group-btn">
+                                <span class="btn btn-default btn-file">
+                                    Browse… <input type="file" id="image-file">
                                 </span>
-                                <input type="text" class="form-control" readonly>
-                            </div>
-                            <img id='img-upload'/>
+                            </span>
+                            <input type="text" class="form-control" readonly>
                         </div>
+                        <img id='img-upload'/>
                     </div>
                 </div>
                 <div class="row">
@@ -681,7 +675,7 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
 
-        <!--TODO-->
+        <!--TODO separate to admin.CSS file???-->
         <style>
             .btn-file {
                 position: relative;
@@ -738,63 +732,53 @@ Details: <b><span did="block-details"></span></b></pre>
                         <input type="text" id="signup-name" class="form-control" placeholder="Nickname"/>
                     </div>
                     <div class="row">
-                        <div class="form-group">
-                            <div class="col-md-6 form-group">
-                                <label for="signup-pwd" class="control-label">2a. Password: </label>
-                                <input type="password" id="signup-pwd" class="form-control" placeholder="Password"/>
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="signup-pwd-old" class="control-label">Old Password: </label>
-                                <input type="password" id="signup-pwd-old" class="form-control" placeholder="Old password"/>
-                            </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-pwd" class="control-label">2a. Password: </label>
+                            <input type="password" id="signup-pwd" class="form-control" placeholder="Password"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-pwd-old" class="control-label">Old Password: </label>
+                            <input type="password" id="signup-pwd-old" class="form-control" placeholder="Old password"/>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="form-group">
-                            <div class="col-md-6 form-group">
-                                <label for="signup-user-prk" class="control-label">2b. Private key: </label>
-                                <input type="password" id="signup-user-prk" class="form-control" placeholder="Private key"/>
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="signup-user-pbk" class="control-label">Public key: </label>
-                                <input type="password" id="signup-user-pbk" class="form-control" placeholder="Public key"/>
-                            </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-user-prk" class="control-label">2b. Private key: </label>
+                            <input type="password" id="signup-user-prk" class="form-control" placeholder="Private key"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-user-pbk" class="control-label">Public key: </label>
+                            <input type="password" id="signup-user-pbk" class="form-control" placeholder="Public key"/>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="form-group">
-                            <div class="col-md-6 form-group">
-                                <label for="signup-user-prk-old" class="control-label">Old private key: </label>
-                                <input type="password" id="signup-user-prk-old" class="form-control" placeholder="Old private key"/>
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="signup-user-pbk-old" class="control-label">Old public key: </label>
-                                <input type="password" id="signup-user-pbk-old" class="form-control" placeholder="Old public key"/>
-                            </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-user-prk-old" class="control-label">Old private key: </label>
+                            <input type="password" id="signup-user-prk-old" class="form-control" placeholder="Old private key"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-user-pbk-old" class="control-label">Old public key: </label>
+                            <input type="password" id="signup-user-pbk-old" class="form-control" placeholder="Old public key"/>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="form-group">
-                            <div class="col-md-6 form-group">
-                                <label for="signup-oauth-p" class="control-label">2c. OAuth provider: </label>
-                                <input type="text" id="signup-oauth-p" class="form-control" placeholder="Oauth provider"/>
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="signup-oauth-id" class="control-label">OAuth Id: </label>
-                                <input type="text" id="signup-oauth-id" class="form-control" placeholder="Oauth Id"/>
-                            </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-oauth-p" class="control-label">2c. OAuth provider: </label>
+                            <input type="text" id="signup-oauth-p" class="form-control" placeholder="Oauth provider"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-oauth-id" class="control-label">OAuth Id: </label>
+                            <input type="text" id="signup-oauth-id" class="form-control" placeholder="Oauth Id"/>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="form-group">
-                            <div class="col-md-6 form-group">
-                                <label for="signup-oauth-p-old" class="control-label">Old OAuth provider: </label>
-                                <input type="text" id="signup-oauth-p-old" class="form-control" placeholder="Old OAuth provider"/>
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="signup-oauth-id-old" class="control-label">Old OAuth Id: </label>
-                                <input type="text" id="signup-oauth-id-old" class="form-control" placeholder="Old OAuth Id"/>
-                            </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-oauth-p-old" class="control-label">Old OAuth provider: </label>
+                            <input type="text" id="signup-oauth-p-old" class="form-control" placeholder="Old OAuth provider"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="signup-oauth-id-old" class="control-label">Old OAuth Id: </label>
+                            <input type="text" id="signup-oauth-id-old" class="form-control" placeholder="Old OAuth Id"/>
                         </div>
                     </div>
                     <div class="form-group form-horizontal">
