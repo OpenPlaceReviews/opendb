@@ -39,4 +39,7 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	 * @Return current status for bot
 	 */
 	public boolean isRunning();
+	
+	
+	public String getAPI();
 }

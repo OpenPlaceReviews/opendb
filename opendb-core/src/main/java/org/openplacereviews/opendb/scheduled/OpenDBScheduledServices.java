@@ -65,9 +65,7 @@ public class OpenDBScheduledServices {
 		if (blocksManager.getBlockchain().getStatus() == OpBlockChain.UNLOCKED && blocksManager.isBlockCreationOn()
 				&& (now - previousBotsCheck) >= getBotsMinInterval()) {
 			previousBotsCheck = now;
-			for (BotManager.BotInfo bi : botManager.getBots().values()) {
-				botManager.startBot(bi.getId());
-			}
+			botManager.runBotsBySchedule();
 		}
 	}
 	
