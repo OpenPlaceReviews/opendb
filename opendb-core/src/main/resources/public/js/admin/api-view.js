@@ -77,30 +77,34 @@ var API_VIEW = function () {
                             newTemplate.find("[did='progress']").html("NOT RUNNING");
                         } else {
                             var progressBarValue = parseInt((obj.botStats.progress / obj.botStats.total) * 100);
-                            // TODO make template no html !
-                            newTemplate.find("[did='progress']").html("<div class=\"progress\">\n" +
-                                "  <div class=\"progress-bar progress-bar-info progress-bar-striped\" role=\"progressbar\"\n" +
-                                "  aria-valuenow=\"" + progressBarValue + "\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width:" + progressBarValue + "%\">\n" + progressBarValue + "%" +
-                                "  </div>\n" +
-                                "</div>");
+                            newTemplate.find("[did='progress-bar']")
+                                .attr("aria-valuenow", progressBarValue)
+                                .attr("style", "width:" + progressBarValue + "%")
+                                .html(progressBarValue + "%");
                         }
                         
                         if (obj.botStats.isRunning === false) {
-                            // TODO make template no html !
-                            // TODO onclick via jquery
-                            action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"API_VIEW.startBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-play\"></span></button>";
+                            newTemplate.find("[did='start-bot-btn']")
+                                .removeClass("hidden")
+                                .click(function () {
+                                    API_VIEW.startBot(obj.id);
+                                });
                         } else {
-                            // TODO make template no html !
-                            // TODO onclick via jquery
-                            action += "<button type=\"button\" class=\"btn btn-primary\" style=\"margin-left:5px;\" onclick=\"API_VIEW.stopBot('" + obj.id + "')\"><span class=\"glyphicon glyphicon-pause\"></span></button>";
+                            newTemplate.find("[did='stop-bot-btn']")
+                                .removeClass("hidden")
+                                .click(function () {
+                                    API_VIEW.stopBot(obj.id);
+                                });
                         }
                     }
                     if (obj.started !== null && obj.started !== undefined) {
                         newTemplate.find("[did='last-launch']").html(new Date(obj.started).toLocaleString());
                     }
                     newTemplate.find("[did='interval']").html(obj.interval);
-                    // TODO make template no html !
-                    action += "<button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#bot-history-modal\" style=\"margin-left:5px;\" onclick=\"API_VIEW.showBotHistory('" + obj.id + "')\"><span class=\"glyphicon glyphicon-eye-open\"></span></button>"
+                    newTemplate.find("[did='show-bot-history-btn']")
+                        .click(function () {
+                            API_VIEW.showBotHistory(obj.id);
+                        });
                     newTemplate.find("[did='actions']").html(action);
                 }
             });

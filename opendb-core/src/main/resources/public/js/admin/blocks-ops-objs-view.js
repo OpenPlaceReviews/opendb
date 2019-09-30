@@ -261,6 +261,8 @@ var OPERATION_VIEW = function () {
 }();
 
 var OBJECTS_VIEW = function () {
+    var originObject;
+    var editor = {};
     function objIdFormat(ar) {
         var it = ar[0] + ": <b>";
         for(var k = 1; k < ar.length; k++) {
@@ -399,6 +401,9 @@ var OBJECTS_VIEW = function () {
     }
 
     return {
+        generateEditOp: function(op) {
+            editor.load(op);
+        },
         loadObjectTypes: function() {
             $("#index-list-id").hide();
             $.getJSON("/api/objects?type=sys.operation", function (data) {

@@ -5,7 +5,6 @@ var SIGNUP_VIEW = function () {
         },
 
         onReady: function () {
-            // TODO generalize done  / fail
             $("#signup-btn").click(function () {
                 var obj = {
                     "pwd": $("#signup-pwd").val(),
@@ -23,8 +22,8 @@ var SIGNUP_VIEW = function () {
                     "userDetails": $("#signup-details").val()
                 };
                 $.post("/api/auth/signup", obj)
-                    .done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); loadData(); });
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
 
             $("#sign-btn").click(function () {
@@ -36,8 +35,8 @@ var SIGNUP_VIEW = function () {
                     "dontSignByServer": $("#sign-by-server").is(':checked')
                 };
                 $.post("/api/auth/process-operation", obj)
-                    .done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); loadData(); });
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
 
             $("#sign-add-btn").click(function () {
@@ -55,8 +54,9 @@ var SIGNUP_VIEW = function () {
                     type: 'POST',
                     data: json,
                     contentType: 'application/json; charset=utf-8'
-                }).done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); loadData(); });
+                })
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
 
             $("#login-btn").click(function () {
@@ -72,8 +72,8 @@ var SIGNUP_VIEW = function () {
                     "userDetails": $("#login-details").val()
                 };
                 $.post("/api/auth/login", obj)
-                    .done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); loadData(); });
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
         }
     }
@@ -205,20 +205,20 @@ var STATUS_VIEW = function () {
             $("#blocks-pause-btn").click(postAction("/api/mgmt/toggle-blocks-pause"));
             $("#replicate-pause-btn").click(postAction("/api/mgmt/toggle-replicate-pause"));
             $("#block-bootstrap-btn").click(postAction("/api/mgmt/bootstrap"));
-            // TODO generalize done / fail 
+
             $("#remove-orphaned-blocks-btn").click(function () {
                 $.post("/api/mgmt/delete-orphaned-blocks", {
                     "blockListOrSingleValue": $("#remove-orphaned-blocks-txt").val()
                 })
-                    .done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); loadData(); });
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
             $("#remove-queue-ops-btn").click(function () {
                 $.post("/api/mgmt/delete-queue-ops", {
                     "opsListOrSingleValue": $("#remove-queue-ops-txt").val()
                 })
-                    .done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); loadData(); });
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
             $("#admin-login-btn").click(function () {
                 var obj = {
@@ -226,17 +226,12 @@ var STATUS_VIEW = function () {
                     "name": $("#admin-login-name").val()
                 };
                 $.post("/api/auth/admin-login", obj)
-                    .done(function (data) { $("#result").html(data); loadData(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); });
+                    .done(function (data) { done(data); })
+                    .fail(function (xhr, status, error) { fail(error); });
             });
         }
     }
 }();
-
-// TODO remove vars (make private variables in case really necessary)
-var metricsData = [];
-var editor = {};
-var originObject;
 
 async function sha256(message) {
     // encode as UTF-8
@@ -264,9 +259,16 @@ function smallHash(hash) {
 function postAction(url) {
     return function() {
         $.post(url, {})
-        .done(function(data){  $("#result").html(data); loadData(); })
-        .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+            .done(function (data) { done(data); })
+            .fail(function (xhr, status, error) { fail(error); });
     }
+}
+
+function done(data) {
+    $("#result").html(data); loadData();
+}
+function fail(error) {
+    $("#result").html("ERROR: " + error); loadData();
 }
 
 function loadData() {

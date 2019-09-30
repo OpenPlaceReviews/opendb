@@ -116,49 +116,76 @@ var SETTINGS_VIEW = function () {
 } ();
 
 var METRIC_VIEW = function () {
+    var MetricEnum = {
+        ALL : 0,
+        GROUP_A: 1,
+        GROUP_B: 2,
+        properties: {
+            0: "All",
+            1: "Group-A",
+            2: "Group-B"
+        }
+    };
+
     return {
+        metricsData: [],
         loadMetricsData: function() {
             $.getJSON("/api/metrics", function (data) {
-                metricsData = data.metrics;
+                METRIC_VIEW.metricsData = data.metrics;
+                loadMetricsFamily();
                 setMetricsDataToTable();
             });
         },
         onReady: function() {
-            $("#metrics-all").click(function() {
-                setMetricsDataToTable();
-            });
-            $("#metrics-a").click(function() {
-                setMetricsDataToTable();
-            });
-            $("#metrics-b").click(function() {
-                setMetricsDataToTable();
-            });
             $("#reset-metrics-b").click(function(){
                 $.post("/api/metrics-reset?cnt=2", {})
-                    .done(function(data){  metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
+                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
                     .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
             });
 
             $("#refresh-metrics").click(function(){
                 $.get("/api/metrics", {})
-                    .done(function(data){  metricsData = data.metrics; setMetricsDataToTable(); })
+                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; setMetricsDataToTable(); })
                     .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
             });
 
             $("#reset-metrics-a").click(function(){
                 $.post("/api/metrics-reset?cnt=1", {})
-                    .done(function(data){  metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
+                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
                     .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
             });
         }
     };
 
+    function loadMetricsFamily() {
+        var dt = MetricEnum.properties;
+        let pills = $("#metrics-pills");
+        pills.empty();
+        var active = true;
+        for (var nm in dt) {
+            let link = $("<li>");
+            if(active) {
+                link.addClass("active");
+                active = false;
+            }
+            link.append($("<a>").text(dt[nm]));
+            pills.append(link);
+            link.click(function () {
+                let allpills = $("#metrics-pills").children();
+                allpills.removeClass("active");
+                link.addClass("active");
+                setMetricsDataToTable();
+            });
+        }
+    }
+
     function setMetricsDataToTable() {
         var gid = 0;
-        if ($("#metrics-a").prop("checked")) {
+        let name = $("#metrics-pills").children(".active").first().text();
+        if (MetricEnum.properties[MetricEnum.GROUP_A] === name) {
             gid = 1;
         }
-        if ($("#metrics-b").prop("checked")) {
+        if (MetricEnum.properties[MetricEnum.GROUP_B] === name) {
             gid = 2;
         }
 
@@ -166,8 +193,8 @@ var METRIC_VIEW = function () {
         table.empty();
         var template = $("#metrics-template");
 
-        for (var i = 0; i < metricsData.length; i++) {
-            let item = metricsData[i];
+        for (var i = 0; i < METRIC_VIEW.metricsData.length; i++) {
+            let item = METRIC_VIEW.metricsData[i];
             var newTemplate = template.clone()
                 .appendTo(table)
                 .show();
@@ -197,7 +224,7 @@ var IPFS_VIEW = function () {
                 $("#ipfs-version").html(data.version);
                 $("#ipfs-gateway").html(data.gateway);
                 $("#ipfs-api").html(data.api);
-                $("#ipfs-addresses").html(JSON.stringify(data.addresses));
+                $("#ipfs-addresses").html(data.addresses.toString());
                 $("#ipfs-public-key").html(data.publicKey);
 
                 // IPFS STORAGE
@@ -263,6 +290,40 @@ var IPFS_VIEW = function () {
             $("#laod-full-stats-btn").click(function () {
                 loadFullIpfsStatus();
             });
+
+            $(document).on('change', '.btn-file :file', function() {
+                var input = $(this),
+                    label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+                input.trigger('fileselect', [label]);
+            });
+
+            $('.btn-file :file').on('fileselect', function(event, label) {
+
+                var input = $(this).parents('.input-group').find(':text'),
+                    log = label;
+
+                if( input.length ) {
+                    input.val(log);
+                } else {
+                    if( log ) alert(log);
+                }
+
+            });
+            function readURL(input) {
+                if (input.files && input.files[0]) {
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        $('#img-upload').attr('src', e.target.result);
+                    }
+
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+
+            $("#image-file").change(function(){
+                readURL(this);
+            });
         }
     };
 
@@ -280,5 +341,5 @@ var IPFS_VIEW = function () {
                 $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
             }
         });
-    }
+    };
 } ();

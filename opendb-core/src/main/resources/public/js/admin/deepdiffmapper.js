@@ -1,4 +1,4 @@
-// TODO comment source code link
+// source code link: https://www.jqueryscript.net/other/Beautiful-JSON-Viewer-Editor.html
 var DEEP_DIFF_MAPPER = function() {
             return {
                 VALUE_CREATED: 'created',
@@ -120,7 +120,7 @@ var DEEP_DIFF_MAPPER = function() {
                         type: $("#type-list").val(),
                         edit: listEdit
                     };
-                    editor.load(op);
+                    OBJECTS_VIEW.generateEditOp(op);
                 },
                 isFunction: function(obj) {
                     return {}.toString.apply(obj) === '[object Function]';

@@ -23,6 +23,9 @@
     .no-border {
     	border: 0;
     }
+    span {
+        word-break: break-all;
+    }
 }
     
 </style>
@@ -332,7 +335,7 @@ Details: <b><span did="block-details"></span></b></pre>
         <ul class="list-group" id="errors-list-item" hidden="true">
             <li class="panel panel-default">
                 <div class="panel-heading">
-                    <p>Status: <b><span did="status"></span></b></p>
+                    <span>Status: <b><span did="status"></span></b></span>
                 </div>
                 <div class="panel-body">
                     <p>Message: <b><span did="log-message"></span></b></p>
@@ -382,8 +385,22 @@ Details: <b><span did="block-details"></span></b></pre>
                                 <td did="task-description"></td>
                                 <td did="last-launch"></td>
                                 <td did="interval"></td>
-                                <td did="progress"></td>
-                                <td did="actions"></td>
+                                <td>
+                                    <!--<div class="progress">-->
+                                        <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                    <!--</div>-->
+                                </td>
+                                <td>
+                                    <button did="start-bot-btn" type="button" class="btn btn-primary hidden" style="margin-left:5px;">
+                                        <span class="glyphicon glyphicon-play"></span>
+                                    </button>
+                                    <button did="stop-bot-btn" type="button" class="btn btn-primary hidden" style="margin-left:5px;">
+                                        <span class="glyphicon glyphicon-pause"></span>
+                                    </button>
+                                    <button did="show-bot-history-btn" type="button" class="btn btn-primary" data-toggle="modal" data-target="#bot-history-modal" style="margin-left:5px;">
+                                        <span class="glyphicon glyphicon-eye-open"></span>
+                                    </button>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -510,24 +527,18 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--METRICS TAB-->
     <div id="metrics" class="tab-pane fade">
         <h3>Metrics</h3>
-        <p></p>
-        <div class="btn-group btn-group-toggle" >
-            <input type="radio" name="metrics-group" id="metrics-all" autocomplete="off" checked/>
-            <label for="metrics-all">All</label>
-            <input type="radio" name="metrics-group" id="metrics-a" autocomplete="off"/>
-            <label for="metrics-a">Group A</label>
-            <input type="radio" name="metrics-group" id="metrics-b" autocomplete="off"/>
-            <label for="metrics-b">Group B</label>
+        <div class="form-group">
+            <ul class="nav nav-pills" id="metrics-pills">
+            </ul>
+        </div>
+        <div class="form-inline">
+            <input class="btn btn-primary form-control" type="button" value="Refresh" id="refresh-metrics" />
+            <input class="btn btn-primary form-control" type="button" value="Reset Group A" id="reset-metrics-a" />
+            <input class="btn btn-primary form-control" type="button" value="Reset Group B" id="reset-metrics-b" />
         </div>
         <p></p>
-        <div class="btn-group">
-            <input type="button" value="Refresh" id="refresh-metrics" />
-            <input type="button" value="Reset Group A" id="reset-metrics-a" />
-            <input type="button" value="Reset Group B" id="reset-metrics-b" />
-        </div>
-        <p></p>
-        <div>
-            <table id="metrics-table" border="1">
+        <div class="table-responsive">
+            <table id="metrics-table" class="table table-bordered table-striped table-hover">
                 <thead>
                     <tr>
                         <th>Id</th>
@@ -555,133 +566,330 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <!--IPFS TAB-->
     <div id="ipfs" class="tab-pane fade">
-        <h3>IPFS info</h3>
-        <div>
-            <p><b>IPFS status:</b> &nbsp;&nbsp;<span id="ipfs-status"></span></p>
-            <p><b>Peer id:</b> &nbsp;&nbsp;<span id="ipfs-peer-id"></span></p>
-            <p><b>Version:</b> &nbsp;&nbsp;<span id="ipfs-version"></span></p>
-            <p><b>Gateway</b> &nbsp;&nbsp;<span id="ipfs-gateway"></span></p>
-            <p><b>API</b> &nbsp;&nbsp;<span id="ipfs-api"></span></p>
-            <p><b>Addresses</b> &nbsp;&nbsp;<span id="ipfs-addresses"></span></p>
-            <p><b>Public key</b> &nbsp;&nbsp;<span id="ipfs-public-key"></span></p>
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>IPFS info</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <p>IPFS status: &nbsp;&nbsp;<b><span id="ipfs-status"></span></b></p>
+                    <p>Peer id: &nbsp;&nbsp;<b><span id="ipfs-peer-id"></span></b></p>
+                    <p>Version: &nbsp;&nbsp;<b><span id="ipfs-version"></span></b></p>
+                    <p>Gateway: &nbsp;&nbsp;<b><span id="ipfs-gateway"></span></b></p>
+                    <p>API: &nbsp;&nbsp;<b><span id="ipfs-api"></span></b></p>
+                    <p>Addresses: &nbsp;&nbsp;<b><span id="ipfs-addresses"></span></b></p>
+                    <p>Public key: &nbsp;&nbsp;<b><span id="ipfs-public-key"></span></b></p>
+                </div>
+            </div>
         </div>
 
-        <h3>IPFS storage info</h3>
-        <div>
-            <p><b>Repo size:</b> &nbsp;&nbsp;<span id="ipfs-repo-size"></span></p>
-            <p><b>Max storage:</b> &nbsp;&nbsp;<span id="ipfs-max-storage-size"></span></p>
-            <p><b>Repo path</b> &nbsp;&nbsp;<span id="ipfs-repo-path"></span></p>
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>IPFS storage info</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <p>Repo size: &nbsp;&nbsp;<b><span id="ipfs-repo-size"></span></b></p>
+                    <p>Max storage: &nbsp;&nbsp;<b><span id="ipfs-max-storage-size"></span></b></p>
+                    <p>Repo path: &nbsp;&nbsp;<b><span id="ipfs-repo-path"></span></b></p>
+                </div>
+            </div>
         </div>
 
-        <h3>IPFS system info</h3>
-        <div>
-            <p><b>Disk info:</b> &nbsp;&nbsp;<span id="system-info"></span></p>
-            <p><b>Memory:</b> &nbsp;&nbsp;<span id="system-memory"></span></p>
-            <p><b>Runtime:</b> &nbsp;&nbsp;<span id="system-runtime"></span></p>
-            <p><b>Network:</b> &nbsp;&nbsp;<span id="system-network"></span></p>
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>IPFS system info</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <p>Disk info: &nbsp;&nbsp;<b><span id="system-info"></span></b></p>
+                    <p>Memory: &nbsp;&nbsp;<b><span id="system-memory"></span></b></p>
+                    <p>Runtime: &nbsp;&nbsp;<b><span id="system-runtime"></span></b></p>
+                    <p>Network: &nbsp;&nbsp;<b><span id="system-network"></span></b></p>
+                </div>
+            </div>
         </div>
 
-        <h3>Stats</h3>
-        <div>
-            <p><b>All ipfs objects:</b> &nbsp;&nbsp;<span id="amount-all-ipfs-objects"></span></p>
-            <p><b>Pinned ipfs objects:</b> &nbsp;&nbsp;<span id="amount-pinned-ipfs-objects"></span></p>
-            <p><b>Missing ipfs objects:</b> &nbsp;&nbsp;<span id="amount-missing-ipfs-objects"></span></p>
-            <p><b>DB objects:</b> &nbsp;&nbsp;<span id="amount-db-objects"></span></p>
-            <p><b>Inactive objects:</b> &nbsp;&nbsp;<span id="amount-unactivated-objects"></span></p>
-            <input type="submit" value="Load full stats" id="laod-full-stats-btn">
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Stats</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <p>All ipfs objects: &nbsp;&nbsp;<b><span id="amount-all-ipfs-objects"></span></b></p>
+                    <p>Pinned ipfs objects: &nbsp;&nbsp;<b><span id="amount-pinned-ipfs-objects"></span></b></p>
+                    <p>Missing ipfs objects: &nbsp;&nbsp;<b><span id="amount-missing-ipfs-objects"></span></b></p>
+                    <p>DB objects: &nbsp;&nbsp;<b><span id="amount-db-objects"></span></b></p>
+                    <p>Inactive objects: &nbsp;&nbsp;<b><span id="amount-unactivated-objects"></span></b></p>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 form-group">
+                        <input type="submit" value="Load full stats" id="laod-full-stats-btn" class="btn btn-primary form-control">
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h3>IPFS missing resources</h3>
-        <div>
-            <p><b>List of missing resources</b> &nbsp;&nbsp;<span id="ipfs-missing-objects"></span></p>
-            <input type="submit" value="Upload missing resources to IPFS" id="fix-ipfs-missing-images-btn">
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>IPFS missing resources</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <p>List of missing resources &nbsp;&nbsp;<b><span id="ipfs-missing-objects"></span></b></p>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 form-group">
+                        <input type="submit" value="Upload missing resources to IPFS" id="fix-ipfs-missing-images-btn" class="btn btn-primary form-control">
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h3>Inactive resources</h3>
-        <div>
-            <p><b>List of inactive resources: </b> &nbsp;&nbsp;<span id="blockchain-unactivated-images"></span></p>
-            <input type="submit" value="Remove inactive resources" id="fix-blc-missing-images-btn">
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Inactive resources</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <p>List of inactive resources: &nbsp;&nbsp;<b><span id="blockchain-unactivated-images"></span></b></p>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 form-group">
+                        <input type="submit" value="Remove inactive resources" id="fix-blc-missing-images-btn" class="btn btn-primary form-control">
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h3>Add Resource</h3>
-        <div>
-            1. File: <input type="file" id="image-file">
-            <br>
-            <input type="submit" value="Add File" id="add-file-btn">
-            <br>
-            <p><b>Result: </b> &nbsp;&nbsp;<span id="result-add-image"></span></p>
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Add Resource</b></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-btn">
+                                    <span class="btn btn-default btn-file">
+                                        Browse… <input type="file" id="image-file">
+                                    </span>
+                                </span>
+                                <input type="text" class="form-control" readonly>
+                            </div>
+                            <img id='img-upload'/>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label for="result-add-image" class="control-label">Result: <b><span id="result-add-image"></span></b></label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 form-group">
+                        <input type="submit" value="Add File" id="add-file-btn" class="btn btn-primary form-control">
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h3>Get file</h3>
-        <div>
-            1. Cid of resource: <input type="text" id="get-image">
-            <br>
-            <a href="" id="image-link" download>
-                <input type="submit" value="Get image" id="get-image-btn">
-            </a>
-            <br>
+        <!--TODO-->
+        <style>
+            .btn-file {
+                position: relative;
+                overflow: hidden;
+            }
+            .btn-file input[type=file] {
+                position: absolute;
+                top: 0;
+                right: 0;
+                min-width: 100%;
+                min-height: 100%;
+                font-size: 100px;
+                text-align: right;
+                filter: alpha(opacity=0);
+                opacity: 0;
+                outline: none;
+                background: white;
+                cursor: inherit;
+                display: block;
+            }
+
+            #img-upload{
+                width: 100%;
+            }
+        </style>
+
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Get file</b></div>
+            <div class="panel-body">
+                <div class="form-group form-inline">
+                    <label for="get-image" class="control-label">Cid of resource: </label>
+                    <input type="text" id="get-image" class="form-control">
+                </div>
+                <div class="row">
+                    <div class="col-md-2 form-group">
+                        <a href="" id="image-link" download>
+                            <input type="submit" value="Get image" id="get-image-btn" class="btn btn-primary form-control">
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <!--IPFS TAB-->
 
     <!--REG TAB-->
     <div id="reg" class="tab-pane fade">
-        <h3>Signup</h3>
-        <div>
-            1. Nickname: <input type="text" id="signup-name"/>
-            <br>
-            2a. Password: <input type="password" id="signup-pwd"/>
-            Old Password: <input type="password" id="signup-pwd-old"/>
-            <br>
-            2b. Private key: <input type="password" id="signup-user-prk"/>
-            Public key: <input type="password" id="signup-user-pbk"/>
-            <br>
-            Old private key: <input type="password" id="signup-user-prk-old"/>
-            Old public key: <input type="password" id="signup-user-pbk-old"/>
-            <br>
-            2c. OAuth provider: <input type="text" id="signup-oauth-p"/>
-            OAuth Id: <input type="text" id="signup-oauth-id"/>
-            <br>
-            Old OAuth provider: <input type="text" id="signup-oauth-p-old"/>
-            Old OAuth Id: <input type="text" id="signup-oauth-id-old"/>
-            <br>
-            3. User details (raw json): <input type="text" id="signup-details"/>
-            <br>
-            <input type="submit" value="Signup" id="signup-btn"/>
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Signup</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <div class="form-group form-horizontal">
+                        <label for="signup-name" class="control-label">1. Nickname: </label>
+                        <input type="text" id="signup-name" class="form-control" placeholder="Nickname"/>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-pwd" class="control-label">2a. Password: </label>
+                                <input type="password" id="signup-pwd" class="form-control" placeholder="Password"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-pwd-old" class="control-label">Old Password: </label>
+                                <input type="password" id="signup-pwd-old" class="form-control" placeholder="Old password"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-prk" class="control-label">2b. Private key: </label>
+                                <input type="password" id="signup-user-prk" class="form-control" placeholder="Private key"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-pbk" class="control-label">Public key: </label>
+                                <input type="password" id="signup-user-pbk" class="form-control" placeholder="Public key"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-prk-old" class="control-label">Old private key: </label>
+                                <input type="password" id="signup-user-prk-old" class="form-control" placeholder="Old private key"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-pbk-old" class="control-label">Old public key: </label>
+                                <input type="password" id="signup-user-pbk-old" class="form-control" placeholder="Old public key"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-p" class="control-label">2c. OAuth provider: </label>
+                                <input type="text" id="signup-oauth-p" class="form-control" placeholder="Oauth provider"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-id" class="control-label">OAuth Id: </label>
+                                <input type="text" id="signup-oauth-id" class="form-control" placeholder="Oauth Id"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-p-old" class="control-label">Old OAuth provider: </label>
+                                <input type="text" id="signup-oauth-p-old" class="form-control" placeholder="Old OAuth provider"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-id-old" class="control-label">Old OAuth Id: </label>
+                                <input type="text" id="signup-oauth-id-old" class="form-control" placeholder="Old OAuth Id"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group form-horizontal">
+                        <label for="signup-details" class="control-label">3. User details (raw json): </label>
+                        <textarea rows="1" id="signup-details" class="form-control" placeholder="User details" style="resize:vertical"></textarea>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 form-group">
+                        <input type="submit" value="Signup" id="signup-btn" class="btn btn-primary form-control"/>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h3>Login</h3>
-        <div>
-            1. Nickname + purpose (format 'nickname:site') : <input type="text" id="login-name"/>
-            <br>
-            2a. Signup Password: <input type="password" id="login-pwd"/>
-            <br>
-            2b. Signup or login private key: <input type="password" id="login-signup-key"/>
-            <br>
-            2c. Signup OAuth provider: <input type="text" id="login-oauth-p"/>
-            Signup OAuth Id: <input type="text" id="login-oauth-id"/>
-            <br>
-            3. Public key (optional): <input type="text" id="login-public-key"/>
-            <br>
-            4. User details (raw json): <input type="text" id="login-details"/>
-            <br>
-            <input type="submit" value="Login" id="login-btn"/>
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Login</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <div class="form-group form-horizontal">
+                        <label for="login-name" class="control-label">1. Nickname + purpose (format 'nickname:site') : </label>
+                        <input type="text" id="login-name" class="form-control" placeholder="Nickname"/>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label for="login-pwd" class="control-label">2a. Signup Password: </label>
+                            <input type="password" id="login-pwd" class="form-control" placeholder="Signup Password"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="login-signup-key" class="control-label">2b. Signup or login private key: </label>
+                            <input type="password" id="login-signup-key" class="form-control" placeholder="Signup or login private key"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label for="login-oauth-p" class="control-label">2c. Signup OAuth provider: </label>
+                            <input type="text" id="login-oauth-p" class="form-control" placeholder="Signup OAuth provider"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="login-oauth-id" class="control-label">2d. Signup OAuth Id: </label>
+                            <input type="text" id="login-oauth-id" class="form-control" placeholder="Signup OAuth Id"/>
+                        </div>
+                    </div>
+                    <div class="form-group form-horizontal">
+                        <label for="login-public-key" class="control-label">3. Public key (optional): </label>
+                        <input type="text" id="login-public-key" class="form-control" placeholder="Public key"/>
+                    </div>
+                    <div class="form-group form-horizontal">
+                        <label for="login-details" class="control-label">4. User details (raw json): </label>
+                        <textarea rows="1" id="login-details" class="form-control" placeholder="User details" style="resize:vertical"></textarea>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 form-group">
+                        <input type="submit" value="Login" id="login-btn" class="btn btn-primary form-control"/>
+                    </div>
+                </div>
+            </div>
         </div>
-        <h3>Sign message</h3>
-        <div>
-            1. Json: <input type="text" id="sign-json"/>
-            <br>
-            2. Name (empty will be server): <input type="text" id="sign-name"/>
-            <br>
-            3a. Password: <input type="text" id="sign-pwd"/>
-            <br>
-            3b. Signup private key: <input type="text" id="sign-pk"/>
-            <br>
-            4. Don't sign by server: <input type="checkbox" id="sign-by-server"/>
-            <br>
-            <input type="submit" value="Sign message" id="sign-btn"/>
-            <input type="submit" value="Sign operation and add to queue" id="sign-add-btn"/>
+
+        <div class="form-group panel panel-info">
+            <div class="panel-heading"><b>Sign message</b></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <div class="form-group form-horizontal">
+                        <label for="sign-json" class="control-label">1. Json: </label>
+                        <textarea rows="1" id="sign-json" class="form-control" style="resize:vertical" placeholder="Json"></textarea>
+                    </div>
+                    <div class="form-group form-horizontal">
+                        <label for="sign-name" class="control-label">2. Name (empty will be server): </label>
+                        <input type="text" id="sign-name" class="form-control" placeholder="Name"/>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label for="sign-pwd" class="control-label">3a. Password: </label>
+                            <input type="text" id="sign-pwd" class="form-control" placeholder="Password"/>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="sign-pk" class="control-label">3b. Signup private key: </label>
+                            <input type="text" id="sign-pk" class="form-control" placeholder="Signup private key"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group form-inline">
+                        <label for="sign-by-server" class="control-label">4. Don't sign by server: </label>
+                        <input type="checkbox" id="sign-by-server" class="form-control"/>
+                    </div>
+                </div>
+                <div class="form-inline">
+                    <input type="submit" value="Sign message" id="sign-btn" class="btn btn-primary form-control"/>
+                    <input type="submit" value="Sign operation and add to queue" id="sign-add-btn" class="btn btn-primary form-control"/>
+                </div>
+            </div>
         </div>
+
     </div>
     <!--REG TAB-->
 </div>
