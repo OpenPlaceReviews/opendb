@@ -43,6 +43,8 @@ public class OpenDBServer {
 	@Autowired
 	IPFSFileManager externalResourcesService;
 	@Autowired
+	PublicDataManager publicDataManager;
+	@Autowired
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	SettingsManager settingsManager;
@@ -89,6 +91,7 @@ public class OpenDBServer {
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
 				externalResourcesService.init();
+				publicDataManager.updateEndpoints();
 				LOGGER.info("Application has started");
 			} catch (RuntimeException e) {
 				LOGGER.error(e.getMessage(), e);

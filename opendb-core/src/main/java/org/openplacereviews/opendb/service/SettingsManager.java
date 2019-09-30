@@ -29,6 +29,8 @@ public class SettingsManager {
 	public static final String BOT_ENABLED = "enabled";
 	public static final String BOT_LAST_RUN = "last_run";
 
+	public static final String ENDPOINT_ID = "endpoint_id";
+	public static final String ENDPOINT_PATH = "path";
 	
 	public static final String TABLE_ID = "id";
 	
@@ -39,6 +41,8 @@ public class SettingsManager {
 			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable();
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
 			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).setEditable();
+	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
+			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).setEditable();
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			USER,

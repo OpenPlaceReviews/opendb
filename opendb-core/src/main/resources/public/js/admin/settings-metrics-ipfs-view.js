@@ -1,6 +1,6 @@
 var SETTINGS_VIEW = function () {
     function editPreferenceObject(obj) {
-        if (obj === "Map") {
+        if (obj.type === "Map" || obj.type === "TreeMap") {
             $("#settings-edit-modal .modal-body #edit-preference-value").val(JSON.stringify(obj.value, null, 4));
         } else {
             $("#settings-edit-modal .modal-body #edit-preference-value").val(obj.value);
