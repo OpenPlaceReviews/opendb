@@ -25,6 +25,9 @@ public class SettingsManager {
 	public static final String INDEX_FIELD = "field";
 	
 	public static final String BOT_ID = "bot_id";
+	public static final String BOT_INTERVAL_SECONDS = "interval_sec";
+	public static final String BOT_ENABLED = "enabled";
+	public static final String BOT_LAST_RUN = "last_run";
 
 	
 	public static final String TABLE_ID = "id";
@@ -148,6 +151,10 @@ public class SettingsManager {
 		public PreferenceFamily setRestartNeeded() {
 			this.restartNeeded = true;
 			return this;
+		}
+		
+		public String getId(String idSuffix) {
+			return prefix + "." + idSuffix;
 		}
 		
 		public PreferenceFamily setDescription(String format, String... properties) {
@@ -308,6 +315,38 @@ public class SettingsManager {
 		@SuppressWarnings("unchecked")
 		private MapStringObjectPreference(PreferenceFamily family, String id, Map<String, Object> defaultValue, String description) {
 			super(family, (Class<Map<String, Object>>) defaultValue.getClass(), id, defaultValue, description);
+		}
+		
+		public MapStringObjectPreference setValue(String key, Object value, boolean save) {
+			this.value.put(key, value);
+			if(save) {
+				set(this.value, true);
+			}
+			return this;
+		}
+		
+		public boolean getBoolean(String key, boolean def) {
+			Object o = this.value.get(key);
+			if(o != null && (o instanceof Boolean)) {
+				return (boolean) o;
+			}
+			return def;
+		}
+		
+		public String getStringValue(String key, String def) {
+			Object o = this.value.get(key);
+			if(o != null) {
+				return o.toString();
+			}
+			return def;
+		}
+		
+		public long getLong(String key, long def) {
+			Object o = this.value.get(key);
+			if(o != null && (o instanceof Long)) {
+				return (long) o;
+			}
+			return def;
 		}
 		
 		@Override

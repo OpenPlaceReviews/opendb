@@ -5,6 +5,8 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
+import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,9 @@ public class BotManager {
 
 	@Autowired 
 	private AutowireCapableBeanFactory beanFactory;
+	
+	@Autowired 
+	private SettingsManager settings;
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
 
@@ -50,6 +55,13 @@ public class BotManager {
 			String id = cfg.getId().get(0);
 			String api = cfg.getStringValue("api");
 			IOpenDBBot<?> exBot = nbots.get(id);
+			CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
+			if(p == null) {
+				TreeMap<String, Object> mp = new TreeMap<>();
+				mp.put(SettingsManager.BOT_ID, id);
+				mp.put(SettingsManager.BOT_ENABLED, false);
+				p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
+			}
 			if (exBot == null || !exBot.getAPI().equals(api)) {
 				try {
 					Class<?> bot = Class.forName(api);
@@ -70,81 +82,65 @@ public class BotManager {
 
 	
 	public boolean startBot(String botId) {
-		// TODO separate enable / start
 		IOpenDBBot<?> botObj = getBots().get(botId);
-		if (botObj == null) {
+		MapStringObjectPreference p = getBotConfiguration(botId);
+		if (botObj == null || p == null) {
 			return false;
 		}
+		p.setValue(SettingsManager.BOT_LAST_RUN, System.currentTimeMillis() / 1000, true);
 		futures.add(service.submit(botObj));
 		return true;
 	}
 	
 	public boolean stopBot(String botId) {
-		// TODO separate enable / stop
 		IOpenDBBot<?>  botObj = getBots().get(botId);
 		if (botObj == null) {
 			return false;
 		}
 		return botObj.interrupt();
 	}
-
-	public List<BotHistory> getBotHistory(String botName) {
-		// TODO
-		return new ArrayList<BotManager.BotHistory>();
+	
+	
+	public MapStringObjectPreference getBotConfiguration(String botId) {
+		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(botId));
+		return (MapStringObjectPreference) p;
 	}
+	
+	
+	public boolean enableBot(String botId, int intervalSeconds) {
+		MapStringObjectPreference p = getBotConfiguration(botId);
+		if (p == null) {
+			return false;
+		}
+		p.setValue(SettingsManager.BOT_INTERVAL_SECONDS, intervalSeconds, false)
+		 .setValue(SettingsManager.BOT_ENABLED, true, true);
+		return true;
+	}
+	
+	public boolean disableBot(String botId) {
+		MapStringObjectPreference p = getBotConfiguration(botId);
+		if (p == null) {
+			return false;
+		}
+		p.setValue(SettingsManager.BOT_ENABLED, false, true);
+		return true;
+	}
+
 
 	public void runBotsBySchedule() {
-		// TODO Auto-generated method stub
-		
+		Map<String, IOpenDBBot<?>> bs = this.bots;
+		long now = System.currentTimeMillis() / 1000;
+		for(String bid : bs.keySet()) {
+			MapStringObjectPreference p = getBotConfiguration(bid);
+			if(p.getBoolean(SettingsManager.BOT_ENABLED, false)) {
+				long lastRun = p.getLong(SettingsManager.BOT_LAST_RUN, 0);
+				long l = p.getLong(SettingsManager.BOT_INTERVAL_SECONDS, 0);
+				if(now - lastRun > l) {
+					startBot(bid);
+				}
+			}
+		}
 	}
 	
-	public static class BotHistory {
-		public String bot, status;
-		public Date startDate, endDate;
-		public Integer total, processed;
-	}
-	
-	public static class BotStats {
-		String taskDescription;
-		String taskName;
-		int taskCount;
-		int total;
-		int progress;
-		boolean isRunning;
-
-		public BotStats(IOpenDBBot<?> i) {
-			this.taskDescription = i.getTaskDescription();
-			this.taskName = i.getTaskName();
-			this.taskCount = i.taskCount();
-			this.total = i.total();
-			this.progress = i.progress();
-			this.isRunning = i.isRunning();
-		}
-
-		public String getTaskDescription() {
-			return taskDescription;
-		}
-
-		public String getTaskName() {
-			return taskName;
-		}
-
-		public int getTaskCount() {
-			return taskCount;
-		}
-
-		public int getTotal() {
-			return total;
-		}
-
-		public int getProgress() {
-			return progress;
-		}
-
-		public boolean isRunning() {
-			return isRunning;
-		}
-	}
-
 	
 }

@@ -25,12 +25,13 @@ public class BotController {
 	private BotManager botManager;
 	
 	public static class BotStats {
-		String taskDescription;
-		String taskName;
-		int taskCount;
-		int total;
-		int progress;
-		boolean isRunning;
+		public String taskDescription;
+		public String taskName;
+		public int taskCount;
+		public int total;
+		public int progress;
+		public boolean isRunning;
+		public Map<String, Object> settings;
 
 		public BotStats(IOpenDBBot<?> i) {
 			this.taskDescription = i.getTaskDescription();
@@ -41,38 +42,17 @@ public class BotController {
 			this.isRunning = i.isRunning();
 		}
 
-		public String getTaskDescription() {
-			return taskDescription;
-		}
-
-		public String getTaskName() {
-			return taskName;
-		}
-
-		public int getTaskCount() {
-			return taskCount;
-		}
-
-		public int getTotal() {
-			return total;
-		}
-
-		public int getProgress() {
-			return progress;
-		}
-
-		public boolean isRunning() {
-			return isRunning;
-		}
 	}
 
 	@GetMapping(path = "", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public String getBots() {
 		Map<String, BotStats> mp = new TreeMap<>();
-		Map<String, IOpenDBBot<?>> bs = botManager.getBots();
-		for(String k : bs.keySet()) {
-			mp.put(k, new BotStats(bs.get(k)));
+		Map<String, IOpenDBBot<?>> bots = botManager.getBots();
+		for(String k : bots.keySet()) {
+			BotStats bs = new BotStats(bots.get(k));
+			bs.settings = botManager.getBotConfiguration(k).get();
+			mp.put(k, bs);
 		}
 		return jsonFormatter.fullObjectToJson(mp);
 	}
@@ -87,10 +67,31 @@ public class BotController {
 		}
 	}
 	
+	
 	@PostMapping(path = "stop", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public String stopBot(@RequestParam String botName) {
 		if (botManager.stopBot(botName)) {
+			return "{\"status\": \"OK\"}";
+		} else {
+			return "{\"status\": \"ERROR\"}";
+		}
+	}
+	
+	@PostMapping(path = "enable", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public String enableBot(@RequestParam String botName, @RequestParam int interval) {
+		if (botManager.enableBot(botName, interval)) {
+			return "{\"status\": \"OK\"}";
+		} else {
+			return "{\"status\": \"ERROR\"}";
+		}
+	}
+	
+	@PostMapping(path = "disable", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public String disableBot(@RequestParam String botName) {
+		if (botManager.disableBot(botName)) {
 			return "{\"status\": \"OK\"}";
 		} else {
 			return "{\"status\": \"ERROR\"}";
