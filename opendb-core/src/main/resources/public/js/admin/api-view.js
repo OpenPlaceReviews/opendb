@@ -41,6 +41,7 @@ var API_VIEW = function () {
                         var obj = data[i];
                         var newTemplate = template.clone()
                             .appendTo(table)
+                            .removeClass("hidden")
                             .show();
                         newTemplate.find("[did='bot-id']").html(obj.bot);
                         newTemplate.find("[did='start-date']").html(new Date(obj.startDate).toLocaleString());
@@ -68,7 +69,8 @@ var API_VIEW = function () {
                     let obj = data[key];
 
                     var newTemplate = template.clone()
-                        .appendTo(table).removeClass("hidden")
+                        .appendTo(table)
+                        .removeClass("hidden")
                         .show();
                     newTemplate.find("[did='id']").html(obj.id);
                     var action = "";

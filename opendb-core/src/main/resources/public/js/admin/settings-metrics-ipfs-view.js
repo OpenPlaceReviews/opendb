@@ -197,6 +197,7 @@ var METRIC_VIEW = function () {
             let item = METRIC_VIEW.metricsData[i];
             var newTemplate = template.clone()
                 .appendTo(table)
+                .removeClass("hidden")
                 .show();
             var lid = item.id;
             if (lid.length > 50) {
