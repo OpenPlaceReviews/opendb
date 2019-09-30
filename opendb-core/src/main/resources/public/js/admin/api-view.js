@@ -1,31 +1,33 @@
 var API_VIEW = function () {
+    function startStopBot(bot, action="start") {
+        var obj = {
+            "botName": bot
+        };
+        // TODO std post handler
+        $.post("/api/bot/"+action, obj)
+            .done(function (data) {
+                $("#result").html(data)
+            })
+            .fail(function (xhr, status, error) {
+                $("#result").html("ERROR: " + error);
+            });
+    };
+    function enableDisableBot(bot, action="enable") {
+        var obj = {
+            "botName": bot
+        };
+        // TODO std post handler
+        $.post("/api/bot/"+action, obj)
+            .done(function (data) {
+                $("#result").html(data)
+            })
+            .fail(function (xhr, status, error) {
+                $("#result").html("ERROR: " + error);
+            });
+    };
+
+
     return {
-        startBot: function(bot) {
-            var obj = {
-                "botName": bot
-            };
-            // TODO std post handler
-            $.post("/api/bot/start", obj)
-                .done(function (data) {
-                    $("#result").html(data)
-                })
-                .fail(function (xhr, status, error) {
-                    $("#result").html("ERROR: " + error);
-                });
-        },
-        stopBot: function(bot) {
-            var obj = {
-                "botName": bot
-            };
-            // TODO std post handler
-            $.post("/api/bot/stop", obj)
-                .done(function (data) {
-                    $("#result").html(data)
-                })
-                .fail(function (xhr, status, error) {
-                    $("#result").html("ERROR: " + error);
-                });
-        },
         showBotHistory: function(bot) {
             var obj = {
                 "botName": bot
@@ -85,13 +87,13 @@ var API_VIEW = function () {
                         newTemplate.find("[did='start-bot-btn']")
                             .removeClass("hidden")
                             .click(function () {
-                                API_VIEW.startBot(obj.id);
+                                startStopBot(obj.id, "start");
                             });
                     } else {
                         newTemplate.find("[did='stop-bot-btn']")
                             .removeClass("hidden")
                             .click(function () {
-                                API_VIEW.stopBot(obj.id);
+                                startStopBot(obj.id, "stop");
                             });
                     }
 

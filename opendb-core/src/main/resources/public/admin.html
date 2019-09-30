@@ -1,34 +1,70 @@
 <!DOCTYPE html>
 <html>
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
-<script src="/js/admin/jquery.json-editor.min.js"></script>
-<script src="/js/admin/deepdiffmapper.js"></script>
-<script src="/js/admin/admin.js"></script>
-<script src="/js/admin/blocks-ops-objs-view.js"></script>
-<script src="/js/admin/api-view.js"></script>
-<script src="/js/admin/settings-metrics-ipfs-view.js"></script>
-<style>
-    body {padding: 40px; }
-    li {
-        list-style-type: none;
-    }
-    .popover {
-  		word-break: break-all;
-	}
-	.no-margin {
-    	margin: 0;
-    }
-    .no-border {
-    	border: 0;
-    }
-    span {
-        word-break: break-all;
-    }
-</style>
-</head>
 <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <script src="/js/admin/jquery.json-editor.min.js"></script>
+    <script src="/js/admin/deepdiffmapper.js"></script>
+    <script src="/js/admin/admin.js"></script>
+    <script src="/js/admin/blocks-ops-objs-view.js"></script>
+    <script src="/js/admin/api-view.js"></script>
+    <script src="/js/admin/settings-metrics-ipfs-view.js"></script>
+    <style>
+        body {
+            padding: 40px;
+        }
+    
+        li {
+            list-style-type: none;
+        }
+    
+        .popover {
+            word-break: break-all;
+        }
+    
+        .resize-vertical {
+            resize: vertical;
+        }
+    
+        .no-margin {
+            margin: 0;
+        }
+    
+        .no-border {
+            border: 0;
+        }
+    
+        span {
+            word-break: break-all;
+        }
+    
+        /* TODO remove custom classes */
+        .btn-file {
+            position: relative;
+            overflow: hidden;
+        }
+    
+        .btn-file input[type=file] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            font-size: 100px;
+            text-align: right;
+            filter: alpha(opacity=0);
+            opacity: 0;
+            outline: none;
+            background: white;
+            cursor: inherit;
+            display: block;
+        }
+    
+        #img-upload {
+            width: 100%;
+        }
+    </style>
 </head>
 
 <body>
@@ -377,7 +413,7 @@ Details: <b><span did="block-details"></span></b></pre>
 
                         <tbody id="main-bot-table"></tbody>
                         <tbody>
-                            <tr id="bot-template" style="display: none">
+                            <tr id="bot-template" class="hidden">
                                 <td did="id"></td>
                                 <td did="task-name"></td>
                                 <td did="task-description"></td>
@@ -387,13 +423,13 @@ Details: <b><span did="block-details"></span></b></pre>
                                     <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                 </td>
                                 <td>
-                                    <button did="start-bot-btn" type="button" class="btn btn-primary hidden" style="margin-left:5px;">
+                                    <button did="start-bot-btn" type="button" class="btn btn-primary hidden">
                                         <span class="glyphicon glyphicon-play"></span>
                                     </button>
-                                    <button did="stop-bot-btn" type="button" class="btn btn-primary hidden" style="margin-left:5px;">
+                                    <button did="stop-bot-btn" type="button" class="btn btn-primary hidden">
                                         <span class="glyphicon glyphicon-pause"></span>
                                     </button>
-                                    <button did="show-bot-history-btn" type="button" class="btn btn-primary" data-toggle="modal" data-target="#bot-history-modal" style="margin-left:5px;">
+                                    <button did="show-bot-history-btn" type="button" class="btn btn-primary" data-toggle="modal" data-target="#bot-history-modal" >
                                         <span class="glyphicon glyphicon-eye-open"></span>
                                     </button>
                                 </td>
@@ -435,7 +471,7 @@ Details: <b><span did="block-details"></span></b></pre>
 
                             <tbody id="main-bot-history-table"></tbody>
                             <tbody>
-                                <tr id="bot-history-template" style="display: none">
+                                <tr id="bot-history-template" class="hidden">
                                     <td did="bot-id"></td>
                                     <td did="start-date"></td>
                                     <td did="end-date"></td>
@@ -547,7 +583,7 @@ Details: <b><span did="block-details"></span></b></pre>
 
                 <tbody id="main-metrics-table"></tbody>
                 <tbody>
-                    <tr id="metrics-template" style="display: none">
+                    <tr id="metrics-template" class="hidden">
                         <td did="id"></td>
                         <td did="count"></td>
                         <td did="total"></td>
@@ -675,33 +711,7 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
 
-        <!--TODO separate to admin.CSS file???-->
-        <style>
-            .btn-file {
-                position: relative;
-                overflow: hidden;
-            }
-            .btn-file input[type=file] {
-                position: absolute;
-                top: 0;
-                right: 0;
-                min-width: 100%;
-                min-height: 100%;
-                font-size: 100px;
-                text-align: right;
-                filter: alpha(opacity=0);
-                opacity: 0;
-                outline: none;
-                background: white;
-                cursor: inherit;
-                display: block;
-            }
-
-            #img-upload{
-                width: 100%;
-            }
-        </style>
-
+        
         <div class="form-group panel panel-info">
             <div class="panel-heading"><b>Get file</b></div>
             <div class="panel-body">
@@ -783,7 +793,7 @@ Details: <b><span did="block-details"></span></b></pre>
                     </div>
                     <div class="form-group form-horizontal">
                         <label for="signup-details" class="control-label">3. User details (raw json): </label>
-                        <textarea rows="1" id="signup-details" class="form-control" placeholder="User details" style="resize:vertical"></textarea>
+                        <textarea rows="1" id="signup-details" class="form-control resize-vertical" placeholder="User details" ></textarea>
                     </div>
                 </div>
                 <div class="row">
@@ -828,7 +838,7 @@ Details: <b><span did="block-details"></span></b></pre>
                     </div>
                     <div class="form-group form-horizontal">
                         <label for="login-details" class="control-label">4. User details (raw json): </label>
-                        <textarea rows="1" id="login-details" class="form-control" placeholder="User details" style="resize:vertical"></textarea>
+                        <textarea rows="1" id="login-details" class="form-control resize-vertical" placeholder="User details"></textarea>
                     </div>
                 </div>
                 <div class="row">
@@ -845,7 +855,7 @@ Details: <b><span did="block-details"></span></b></pre>
                 <div class="form-group">
                     <div class="form-group form-horizontal">
                         <label for="sign-json" class="control-label">1. Json: </label>
-                        <textarea rows="1" id="sign-json" class="form-control" style="resize:vertical" placeholder="Json"></textarea>
+                        <textarea rows="1" id="sign-json" class="form-control resize-vertical" placeholder="Json"></textarea>
                     </div>
                     <div class="form-group form-horizontal">
                         <label for="sign-name" class="control-label">2. Name (empty will be server): </label>
