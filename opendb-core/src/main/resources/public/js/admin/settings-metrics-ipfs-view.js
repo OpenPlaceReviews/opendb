@@ -224,7 +224,9 @@ var IPFS_VIEW = function () {
                 $("#ipfs-version").html(data.version);
                 $("#ipfs-gateway").html(data.gateway);
                 $("#ipfs-api").html(data.api);
-                $("#ipfs-addresses").html(data.addresses.toString());
+                if(data.addresses) {
+                    $("#ipfs-addresses").html(data.addresses.toString());
+                }
                 $("#ipfs-public-key").html(data.publicKey);
 
                 // IPFS STORAGE

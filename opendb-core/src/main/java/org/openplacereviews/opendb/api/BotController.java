@@ -32,8 +32,12 @@ public class BotController {
 		public int progress;
 		public boolean isRunning;
 		public Map<String, Object> settings;
+		public String id;
+		public String api;
 
-		public BotStats(IOpenDBBot<?> i) {
+		public BotStats(String id, IOpenDBBot<?> i) {
+			this.api = i.getAPI();
+			this.id = id;
 			this.taskDescription = i.getTaskDescription();
 			this.taskName = i.getTaskName();
 			this.taskCount = i.taskCount();
@@ -50,7 +54,7 @@ public class BotController {
 		Map<String, BotStats> mp = new TreeMap<>();
 		Map<String, IOpenDBBot<?>> bots = botManager.getBots();
 		for(String k : bots.keySet()) {
-			BotStats bs = new BotStats(bots.get(k));
+			BotStats bs = new BotStats(k, bots.get(k));
 			bs.settings = botManager.getBotConfiguration(k).get();
 			mp.put(k, bs);
 		}

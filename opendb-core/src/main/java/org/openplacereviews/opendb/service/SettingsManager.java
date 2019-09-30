@@ -38,7 +38,7 @@ public class SettingsManager {
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
 			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
-			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).setRestartNeeded();
+			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID);
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			USER,
@@ -136,7 +136,8 @@ public class SettingsManager {
 		public String descriptionFormat;
 		public String[] descProperties;
 		public String[] idProperties;
-		public boolean restartNeeded = true;
+		public boolean restartNeeded;
+		public boolean editable;
 		
 		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
@@ -150,6 +151,11 @@ public class SettingsManager {
 		
 		public PreferenceFamily setRestartNeeded() {
 			this.restartNeeded = true;
+			return this;
+		}
+		
+		public PreferenceFamily setEditable() {
+			this.editable = true;
 			return this;
 		}
 		
@@ -361,7 +367,7 @@ public class SettingsManager {
 	}
 	
 	private <T> CommonPreference<T> regPreference(CommonPreference<T> p) {
-		if(dbValueLoaded) {
+		if(dbValueLoaded && p.family.prefix == null) {
 			throw new IllegalStateException("Preferences could be registered only at startup");
 		}
 		if(preferences.containsKey(p.getId()) ) {
@@ -428,13 +434,16 @@ public class SettingsManager {
 		mp.put(OBJTABLE_TYPES, Arrays.asList(types));
 		mp.put(OBJTABLE_KEYSIZE, keysize);
 		mp.put(OBJTABLE_TABLENAME, tableName);
-		return registerMapPreferenceForFamily(DB_SCHEMA_OBJTABLES, mp).restartNeeded();
+		return registerMapPreferenceForFamily(DB_SCHEMA_OBJTABLES, mp);
 	}
 	
 	public CommonPreference<Map<String, Object>> registerMapPreferenceForFamily(PreferenceFamily pf, Map<String, Object> o) {
 		CommonPreference<Map<String, Object>> cp = new MapStringObjectPreference(pf, pf.getId(o), o, pf.getDescription(o));
 		if(pf.restartNeeded) {
 			cp = cp.restartNeeded();
+		}
+		if(pf.editable) {
+			cp = cp.editable();
 		}
 		return regPreference(cp);
 	}

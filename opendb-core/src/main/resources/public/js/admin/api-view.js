@@ -58,7 +58,7 @@ var API_VIEW = function () {
                 });
         },
         loadBotData: function () {
-            $.getJSON("/api/bot/stats", function (data) {
+            $.getJSON("/api/bot", function (data) {
                 var table = $("#main-bot-table");
                 table.empty();
                 var template = $("#bot-template");
@@ -70,37 +70,46 @@ var API_VIEW = function () {
                         .show();
                     newTemplate.find("[did='id']").html(obj.id);
                     var action = "";
-                    if ('botStats' in obj) {
-                        newTemplate.find("[did='task-name']").html(obj.botStats.taskName);
-                        newTemplate.find("[did='task-description']").html(obj.botStats.taskDescription);
-                        if (!obj.botStats.isRunning) {
-                            newTemplate.find("[did='progress']").html("NOT RUNNING");
-                        } else {
-                            var progressBarValue = parseInt((obj.botStats.progress / obj.botStats.total) * 100);
-                            newTemplate.find("[did='progress-bar']")
+                    newTemplate.find("[did='task-name']").html(obj.taskName);
+                    newTemplate.find("[did='task-description']").html(obj.taskDescription);
+                    if (obj.isRunning === false) {
+                        newTemplate.find("[did='progress']").html("-");
+                    } else {
+                        var progressBarValue = parseInt((obj.progress / obj.total) * 100);
+                        newTemplate.find("[did='progress-bar']")
                                 .attr("aria-valuenow", progressBarValue)
                                 .attr("style", "width:" + progressBarValue + "%")
                                 .html(progressBarValue + "%");
-                        }
-                        
-                        if (obj.botStats.isRunning === false) {
-                            newTemplate.find("[did='start-bot-btn']")
-                                .removeClass("hidden")
-                                .click(function () {
-                                    API_VIEW.startBot(obj.id);
-                                });
-                        } else {
-                            newTemplate.find("[did='stop-bot-btn']")
-                                .removeClass("hidden")
-                                .click(function () {
-                                    API_VIEW.stopBot(obj.id);
-                                });
-                        }
                     }
-                    if (obj.started !== null && obj.started !== undefined) {
-                        newTemplate.find("[did='last-launch']").html(new Date(obj.started).toLocaleString());
+                    if (obj.isRunning === false) {
+                        newTemplate.find("[did='start-bot-btn']")
+                            .removeClass("hidden")
+                            .click(function () {
+                                API_VIEW.startBot(obj.id);
+                            });
+                    } else {
+                        newTemplate.find("[did='stop-bot-btn']")
+                            .removeClass("hidden")
+                            .click(function () {
+                                API_VIEW.stopBot(obj.id);
+                            });
                     }
-                    newTemplate.find("[did='interval']").html(obj.interval);
+
+                    if (obj.settings && obj.last_run) {
+                        newTemplate.find("[did='last-launch']").html(new Date(obj.last_run).toLocaleString());
+                    } else {
+                        newTemplate.find("[did='last-launch']").html("-");
+                    }
+                    if(obj.settings && obj.interval_sec) {
+                        var tm = obj.interval_sec + " seconds";
+                        if(obj.interval_sec > 15 * 60) {
+                            tm = (obj.interval_sec / 60 ) + " minutes";
+                        }
+                        newTemplate.find("[did='interval']").html("every " + tm);
+                    } else {
+                        newTemplate.find("[did='interval']").html("-");
+                    }
+                    
                     newTemplate.find("[did='show-bot-history-btn']")
                         .click(function () {
                             API_VIEW.showBotHistory(obj.id);
