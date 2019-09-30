@@ -63,7 +63,7 @@ var API_VIEW = function () {
                 table.empty();
                 var template = $("#bot-template");
                 for (var key in data) {
-                    var obj = data[key];
+                    let obj = data[key];
 
                     var newTemplate = template.clone()
                         .appendTo(table)
@@ -95,15 +95,15 @@ var API_VIEW = function () {
                             });
                     }
 
-                    if (obj.settings && obj.last_run) {
-                        newTemplate.find("[did='last-launch']").html(new Date(obj.last_run).toLocaleString());
+                    if (obj.settings && obj.settings.last_run) {
+                        newTemplate.find("[did='last-launch']").html(new Date(obj.settings.last_run * 1000).toLocaleString());
                     } else {
                         newTemplate.find("[did='last-launch']").html("-");
                     }
-                    if(obj.settings && obj.interval_sec) {
-                        var tm = obj.interval_sec + " seconds";
+                    if(obj.settings && obj.settings.interval_sec) {
+                        var tm = obj.settings.interval_sec + " seconds";
                         if(obj.interval_sec > 15 * 60) {
-                            tm = (obj.interval_sec / 60 ) + " minutes";
+                            tm = (obj.settings.interval_sec / 60 ) + " minutes";
                         }
                         newTemplate.find("[did='interval']").html("every " + tm);
                     } else {
