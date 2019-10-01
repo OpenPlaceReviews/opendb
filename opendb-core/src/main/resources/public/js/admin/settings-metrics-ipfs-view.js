@@ -100,11 +100,11 @@ var SETTINGS_VIEW = function () {
                 // TODO use generic error handling
                 $.post("/api/mgmt/config", obj)
                     .done(function (data) {
-                        $("#result").html("SUCCESS: " + data);
+                        done(data, false);
                         SETTINGS_VIEW.loadConfiguration();
                     })
                     .fail(function (xhr, status, error) {
-                        $("#result").html("ERROR: " + error);
+                        fail(error, false);
                     });
 
                 $("#settings-edit-modal .close").click();

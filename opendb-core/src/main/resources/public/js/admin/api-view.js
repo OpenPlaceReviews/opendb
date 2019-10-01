@@ -6,12 +6,12 @@ var API_VIEW = function () {
         // TODO std post handler
         $.post("/api/bot/"+action, obj)
             .done(function (data) {
-                $("#result").html(data)
+                done(data, false);
             })
             .fail(function (xhr, status, error) {
-                $("#result").html("ERROR: " + error);
+                fail(error, false);
             });
-    };
+    }
     function enableDisableBot(bot, action="enable") {
         var obj = {
             "botName": bot
@@ -19,12 +19,12 @@ var API_VIEW = function () {
         // TODO std post handler
         $.post("/api/bot/"+action, obj)
             .done(function (data) {
-                $("#result").html(data)
+                done(data, false);
             })
             .fail(function (xhr, status, error) {
-                $("#result").html("ERROR: " + error);
+                fail(error, false);
             });
-    };
+    }
 
 
     return {
@@ -56,8 +56,7 @@ var API_VIEW = function () {
                     $("#bot-history-header").html("History of the launches for bot: " + bot);
                 })
                 .fail(function (xhr, status, error) {
-                    // TODO std getJson handler
-                    $("#result").html("ERROR: " + error);
+                    fail(error, false);
                 });
         },
         loadBotData: function () {
