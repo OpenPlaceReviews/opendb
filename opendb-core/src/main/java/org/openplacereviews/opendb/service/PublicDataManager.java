@@ -9,7 +9,9 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+@Service
 public class PublicDataManager {
 	
 	public static final String ENDPOINT_PATH = "path";
