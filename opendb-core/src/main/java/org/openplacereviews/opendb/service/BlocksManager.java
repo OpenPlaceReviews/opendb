@@ -79,10 +79,10 @@ public class BlocksManager {
 	
 	@Value("${opendb.mgmt.publicKey}")
 	private String serverPublicKey;
+	
 	private KeyPair serverKeyPair;
+	
 	private OpBlockChain blockchain; 
-	
-	
 	
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
@@ -185,8 +185,8 @@ public class BlocksManager {
 			added = blockchain.addOperation(op);
 		} finally {
 			if (!added && !existing) {
-				// don't remove relations because we can rely that operation hash / content will be the same 
-//				dataManager.removeOperations(Collections.singleton(op.getHash()));
+				// we need to remove operations cause we don't support orphaned ops and ops will break the system 
+				dataManager.removeOperations(Collections.singleton(op.getHash()));
 			}
 			m.capture();
 		}
