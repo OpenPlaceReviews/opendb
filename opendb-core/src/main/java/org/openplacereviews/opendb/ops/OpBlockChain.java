@@ -739,11 +739,14 @@ public class OpBlockChain {
 		// HERE we need to check that newer version doesn't exist in current blockchain
 		prres.putAll(res);
 		if (col != null) {
-			for (CompoundKey c : prres.keySet()) {
+			Iterator<Entry<CompoundKey, OpObject>> it = prres.entrySet().iterator();
+			while(it.hasNext()) {
+				Entry<CompoundKey, OpObject> entry = it.next();
+				CompoundKey c = entry.getKey();
 				OpObject i = o.getByKey(c);
 				if (i != null && !res.containsKey(c)) {
 					// object was overridden
-					prres.remove(c);
+					it.remove();
 				}
 			}
 		}
