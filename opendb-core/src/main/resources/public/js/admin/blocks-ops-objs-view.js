@@ -360,11 +360,11 @@ var OBJECTS_VIEW = function () {
             let selectVal = searchTypes.val();
             searchTypes.empty();
             searchTypes.append(new Option("all", "all"));
-            searchTypes.append(new Option("id", "by id"));
+            searchTypes.append(new Option("by id", "id"));
             searchTypes.append(new Option("count", "count"));
             for (var i = 0; i < data.length; i++) {
                 var obj = data[i];
-                searchTypes.append(new Option(obj.indexId, obj.indexId));
+                searchTypes.append(new Option("by " + obj.indexId, obj.indexId));
             }
             if(selectVal) {
                 searchTypes.val(selectVal);
