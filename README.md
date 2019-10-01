@@ -7,7 +7,7 @@ This is a service that represents blockchain. It provides API to communicate wit
 - Generates login / signup keys
 - Administrative operations: create block, revert block
 
-More technical information is provided at https://github.com/OpenPlaceReviews/opendb/blob/master/java/opendb-api/README.md. 
+More technical information is provided at https://github.com/OpenPlaceReviews/opendb/blob/master/opendb-core/README.md
 
 # Requirements
 1. JDK minimum 8
