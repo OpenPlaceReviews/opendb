@@ -30,7 +30,6 @@ public class SettingsManager {
 	public static final String BOT_LAST_RUN = "last_run";
 
 	public static final String ENDPOINT_ID = "endpoint_id";
-	public static final String ENDPOINT_PATH = "path";
 	
 	public static final String TABLE_ID = "id";
 	
@@ -247,9 +246,6 @@ public class SettingsManager {
 			return restartIsNeeded;
 		}
 
-		protected T getValue() {
-			return value;
-		}
 
 		public String getId() {
 			return id;

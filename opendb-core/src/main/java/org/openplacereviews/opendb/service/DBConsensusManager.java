@@ -1,14 +1,15 @@
 package org.openplacereviews.opendb.service;
 
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.BlockDbAccessInterface;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
+import org.openplacereviews.opendb.service.IPFSService.ResourceDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;

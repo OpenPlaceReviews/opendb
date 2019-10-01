@@ -12,19 +12,23 @@ import io.ipfs.api.NamedStreamable;
 import io.ipfs.multihash.Multihash;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
+
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.dto.IpfsStatusDTO;
+import org.openplacereviews.opendb.service.IPFSFileManager.IpfsStatusDTO;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.TechnicalException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Duration;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -240,5 +244,91 @@ public class IPFSService {
 
 	public int getIpfsReadTimeoutMs() {
 		return settingsManager.OPENDB_STORAGE_IPFS_NODE_READ_TIMEOUT_MS.get();
+	}
+	
+	
+	public static class ResourceDTO {
+
+		private String type = "#image";
+		private String hash;
+		private String extension;
+		private String cid;
+		private transient boolean active = false;
+		private transient Date added;
+
+		private transient MultipartFile multipartFile;
+
+		public static ResourceDTO of(MultipartFile multipartFile) {
+			ResourceDTO imageDTO = new ResourceDTO();
+			imageDTO.extension = FilenameUtils.getExtension(multipartFile.getOriginalFilename());
+			imageDTO.multipartFile = multipartFile;
+
+			return imageDTO;
+		}
+
+		public static ResourceDTO of(String hash, String extension, String cid) {
+			ResourceDTO imageDTO = new ResourceDTO();
+			imageDTO.hash = hash;
+			imageDTO.extension = extension;
+			imageDTO.cid = cid;
+
+			return imageDTO;
+		}
+
+		public String getType() {
+			return type;
+		}
+
+		public String setType() {
+			return type;
+		}
+
+		public String getHash() {
+			return hash;
+		}
+
+		public void setHash(String hash) {
+			this.hash = hash.substring(hash.lastIndexOf(':') + 1);
+		}
+
+		public String getExtension() {
+			return extension;
+		}
+
+		public void setExtension(String extension) {
+			this.extension = extension;
+		}
+
+		public String getCid() {
+			return cid;
+		}
+
+		public void setCid(String cid) {
+			this.cid = cid;
+		}
+
+		public boolean isActive() {
+			return active;
+		}
+
+		public void setActive(boolean active) {
+			this.active = active;
+		}
+
+		public Date getAdded() {
+			return added;
+		}
+
+		public void setAdded(Date added) {
+			this.added = added;
+		}
+
+		public MultipartFile getMultipartFile() {
+			return multipartFile;
+		}
+
+		public void setMultipartFile(MultipartFile multipartFile) {
+			this.multipartFile = multipartFile;
+		}
 	}
 }
