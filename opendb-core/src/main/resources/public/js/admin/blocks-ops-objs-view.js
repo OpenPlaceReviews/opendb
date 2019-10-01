@@ -459,6 +459,8 @@ var OBJECTS_VIEW = function () {
                 }
                 $("#search-type-list").val(subtypeValue);
                 $("#search-type-list").removeClass("hidden");
+            } else {
+                $("#search-type-list").addClass("hidden");
             }
             if(browse == "operation" || browse == "userid") {
                 $("#type-list-select").addClass("hidden");

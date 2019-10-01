@@ -95,20 +95,17 @@ var ERRORS_VIEW = function () {
                     var it = templateItem.clone();
 
                     if (op.status) {
-                        it.find("[did='status']").html(op.status);
+                        it.find("[did='status']").html(op.status === "" ? "Error" : "Error: ");
+                        it.find("[did='status-text']").html(op.status);
+                        it.find("[did='object-name']").html("Failure object");
                     } else {
-                        it.find("[did='status']").html("SUCCESS");
+                        it.find("[did='status']").html("Success");
                     }
                     it.find("[did='log-message']").html(op.message);
                     it.find("[did='log-time']").html(new Date(op.utcTime).toUTCString());
 
                     if (op.status) {
                         errs++;
-                    }
-                    if (op.cause) {
-                        it.find("[did='exception-message']").html(op.cause.detailMessage);
-                    } else {
-                        it.find("[did='excep-message-hidden']").prop("hidden", true);
                     }
                     if (op.block) {
                         it.find("[did='block']").html(op.block.block_id + " " + op.block.hash);
@@ -119,6 +116,11 @@ var ERRORS_VIEW = function () {
                         it.find("[did='operation']").html(op.operation.type + " " + op.operation.hash);
                     } else {
                         it.find("[did='operation-hidden']").prop("hidden", true);
+                    }
+                    if (op.obj) {
+                        it.find("[did='object-json']").html(JSON.stringify(op.obj, null, 4));
+                    } else {
+                        it.find("[did='obj-json-hidden']").prop("hidden", true);
                     }
                     if (op.block) {
                         it.find("[did='block-json']").html(JSON.stringify(op.block, null, 4));
@@ -294,7 +296,7 @@ function postAction(url) {
     return function() {
         $.post(url, {})
             .done(function (data) { done(data, true); })
-            .fail(function (xhr, status, error) { fail(error, true); });
+            .fail(function (xhr, status, error) { fail(xhr.responseText, true); });
     }
 }
 
@@ -308,8 +310,15 @@ function done(data, update) {
     alert.removeClass("alert-warning");
     alert.addClass("alert-success");
 
-    $("#result").html(data);
-    $("#alert-status").html("Success!");
+    if (typeof data !== 'object') {
+        data = JSON.parse(data);
+    }
+    if (data.msg) {
+        $("#result").html(data.status + ": " + data.msg);
+    } else {
+        $("#result").html(data.status);
+    }
+    $("#alert-status").html("Success! ");
 
     if (update) {
         loadData();
@@ -322,8 +331,18 @@ function fail(error, update) {
     alert.removeClass("alert-success");
     alert.addClass("alert-warning");
 
-    $("#result").html(" ERROR: " + error);
-    $("#alert-status").html("Warning!");
+    if (error !== "") {
+        var parseJson = JSON.parse(error);
+        if (parseJson.msg) {
+            $("#result").html(parseJson.status + ": " + parseJson.msg);
+        } else {
+            $("#result").html(parseJson.status);
+        }
+    } else {
+        $("#result").html("Error");
+    }
+
+    $("#alert-status").html("Warning! ");
 
     if (update) {
         loadData();

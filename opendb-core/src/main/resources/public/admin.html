@@ -69,7 +69,7 @@
 <body>
 <div class="alert alert-dismissible fade in" hidden id="alert-template">
     <a href="#" class="close" aria-label="close" onclick="hideAlert()">&times;</a>
-    <strong id="alert-status"></strong><span id="result"> text</span>
+    <strong id="alert-status"></strong><span id="result"></span>
 </div>
 <ul class="nav nav-tabs" id="tabspanel">
     <li class="active"><a data-toggle="tab" href="#home" id="home-tab">Status</a></li>
@@ -278,7 +278,7 @@ Details: <b><span did="block-details"></span></b></pre>
                     </select>
                 </div>
                 <div class="form-group">
-                    <select class="form-control hidden" id="search-type-list">
+                    <select class="form-control" id="search-type-list">
                         <option value="all">all</option>
                     </select>
                 </div>
@@ -371,14 +371,14 @@ Details: <b><span did="block-details"></span></b></pre>
         <ul class="list-group" id="errors-list-item" hidden="true">
             <li class="panel panel-default">
                 <div class="panel-heading">
-                    <span>Status: <b><span did="status"></span></b></span>
+                    <span class="pull-right" did="log-time"></span>
+                    <span did="status"></span><b><span did="status-text"></span></b>
                 </div>
                 <div class="panel-body">
-                    <p>Message: <b><span did="log-message"></span></b></p>
-                    <p>Time: <b><span did="log-time"></span></b></p>
-                    <p did="excep-message-hidden">Exception message: <b><span did="exception-message"></span></b></p>
+                    <span did="log-message"></span>
                     <p did="block-hidden">Block (id, hash): <b><span did="block"></span></b></p>
                     <p did="operation-hidden">Operation: <b><span did="operation"></span></b></p>
+                    <details did="obj-json-hidden"><summary><b did="object-name">Object</b></summary><pre did="object-json"></pre></details>
                     <details did="block-json-hidden"><summary><b>Block json</b></summary><pre did="block-json"></pre></details>
                     <details did="op-json-hidden"><summary><b>Operation json</b></summary><pre did="operation-json"></pre></details>
                     <details did="full-json-hidden"><summary><b>Full Exception</b></summary><pre did="full-exception-json"></pre></details>
