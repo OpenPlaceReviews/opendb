@@ -13,6 +13,7 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
+import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.postgresql.util.PGobject;
@@ -182,9 +183,9 @@ public class DBSchemaManager {
 			Map<String, Map<String, Object>> objtable = new TreeMap<>();
 			List<CommonPreference<Map<String, Object>>> preferences = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_OBJTABLES);
 			for (CommonPreference<Map<String, Object>> opendbPreference : preferences) {
-				Map<String, Object> mp = opendbPreference.getValue();
-				String tableName = (String) mp.get(SettingsManager.OBJTABLE_TABLENAME);
-				objtable.put(tableName, mp);
+				MapStringObjectPreference mp = (MapStringObjectPreference) opendbPreference;
+				String tableName = mp.getStringValue(SettingsManager.OBJTABLE_TABLENAME, "");
+				objtable.put(tableName, mp.get());
 			}
 			objtables = objtable;
 			return objtable;

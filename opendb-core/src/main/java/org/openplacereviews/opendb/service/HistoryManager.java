@@ -261,17 +261,6 @@ public class HistoryManager {
 		return DATE_FORMAT.format(date);
 	}
 
-	private void generateObjMapping(List<List<String>> objIds, List<HistoryEdit> allObjects, Map<List<String>, List<HistoryEdit>> history) {
-		for (List<String> id : objIds) {
-			List<HistoryEdit> objWithSameId = new LinkedList<>();
-			for (HistoryEdit hdto : allObjects) {
-				if (hdto.getId().equals(id)) {
-					objWithSameId.add(hdto);
-				}
-			}
-			history.put(id, objWithSameId);
-		}
-	}
 
 	protected OpObject getPreviousOpObject(OpObject originObject, HistoryEdit previousHistoryEdit, HistoryEdit historyEdit) {
 		if (historyEdit.getStatus().equals(Status.DELETED)) {
@@ -541,6 +530,10 @@ public class HistoryManager {
 
 		public void setStatus(Status status) {
 			this.status = status;
+		}
+		
+		public String getOpHash() {
+			return opHash;
 		}
 	}
 
