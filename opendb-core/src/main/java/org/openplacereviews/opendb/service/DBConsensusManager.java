@@ -436,7 +436,9 @@ public class DBConsensusManager {
 					 cntField = "case when content is null then true else false end";
 				}
 				String sql = "select "+cntField+", type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
-						+ "  from " + objTable + " where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond); 
+						+ "  from " + objTable + " where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond);
+				// so the result can simply override and get latest version
+				sql = sql + " order by sblockid asc";
 				if (limit > 0) {
 					sql = sql + " limit " + limit;
 				}
