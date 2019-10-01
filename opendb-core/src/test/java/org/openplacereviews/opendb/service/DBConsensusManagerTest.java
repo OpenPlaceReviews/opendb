@@ -48,6 +48,9 @@ public class DBConsensusManagerTest {
 	private JsonFormatter formatter;
 
 	@Spy
+	private SettingsManager settingsManager;
+
+	@Spy
 	@InjectMocks
 	private FileBackupManager fileBackupManager;
 	private JdbcTemplate jdbcTemplate;
@@ -68,6 +71,9 @@ public class DBConsensusManagerTest {
 		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "txTemplate", txTemplate);
+		ReflectionTestUtils.setField(settingsManager, "dbSchemaManager", dbSchemaManager);
+		ReflectionTestUtils.setField(settingsManager, "jdbcTemplate", jdbcTemplate);
+		ReflectionTestUtils.setField(dbConsensusManager, "settingsManager", settingsManager);
 
 		Mockito.doCallRealMethod().when(dbSchemaManager).initializeDatabaseSchema(metadataDb, jdbcTemplate);
 		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());

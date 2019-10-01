@@ -56,6 +56,9 @@ public class DBHistoryManagerTest {
 	@Spy
 	private JsonFormatter formatter;
 
+	@Spy
+	private SettingsManager settingsManager;
+
 	private HistoryManager historyManager = new HistoryManager();
 	private BlocksManager blocksManager = new BlocksManager();
 	private JdbcTemplate jdbcTemplate;
@@ -79,7 +82,7 @@ public class DBHistoryManagerTest {
 		txManager.setDataSource(jdbcTemplate.getDataSource());
 		TransactionTemplate txTemplate = new TransactionTemplate();
 		txTemplate.setTransactionManager(txManager);
-		ReflectionTestUtils.setField(historyManager, "isRunning", true);
+		settingsManager.OPENDB_STORE_HISTORY.set(true);
 		ReflectionTestUtils.setField(historyManager, "txTemplate", txTemplate);
 
 		historyManager.saveHistoryForBlockOperations(opBlock, null);
@@ -114,7 +117,11 @@ public class DBHistoryManagerTest {
 		ReflectionTestUtils.setField(dbConsensusManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
+		ReflectionTestUtils.setField(settingsManager, "dbSchemaManager", dbSchemaManager);
+		ReflectionTestUtils.setField(settingsManager, "jdbcTemplate", jdbcTemplate);
+		ReflectionTestUtils.setField(dbConsensusManager, "settingsManager", settingsManager);
 		ReflectionTestUtils.setField(historyManager, "dbSchema", dbSchemaManager);
+		ReflectionTestUtils.setField(historyManager, "settingsManager", settingsManager);
 		ReflectionTestUtils.setField(historyManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(historyManager, "blocksManager", blocksManager);
 		ReflectionTestUtils.setField(historyManager, "formatter", formatter);

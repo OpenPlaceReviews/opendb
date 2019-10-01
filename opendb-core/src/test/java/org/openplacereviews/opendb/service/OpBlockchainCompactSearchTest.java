@@ -21,10 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -63,6 +60,9 @@ public class OpBlockchainCompactSearchTest {
 	private LogOperationService logOperationService;
 
 	@Spy
+	private SettingsManager settingsManager;
+
+	@Spy
 	private HistoryManager historyManager = new HistoryManager();
 	private BlocksManager blocksManager = new BlocksManager();
 	private OpBlockChain blockChain;
@@ -91,15 +91,21 @@ public class OpBlockchainCompactSearchTest {
 		ReflectionTestUtils.setField(historyManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(historyManager, "blocksManager", blocksManager);
 		ReflectionTestUtils.setField(historyManager, "formatter", formatter);
+		ReflectionTestUtils.setField(historyManager, "txTemplate", txTemplate);
 		ReflectionTestUtils.setField(blocksManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blocksManager, "serverUser", serverName);
 		ReflectionTestUtils.setField(blocksManager, "formatter", formatter);
 		ReflectionTestUtils.setField(blocksManager, "historyManager", historyManager);
 		ReflectionTestUtils.setField(blocksManager, "extResourceService", ipfsFileManager);
 		ReflectionTestUtils.setField(blocksManager, "logSystem", logOperationService);
-		ReflectionTestUtils.setField(dbSchemaManager, "objtables", generateObjtables());
+		ReflectionTestUtils.setField(dbSchemaManager, "settingsManager", settingsManager);
+		ReflectionTestUtils.setField(settingsManager, "dbSchemaManager", dbSchemaManager);
+		ReflectionTestUtils.setField(settingsManager, "jdbcTemplate", jdbcTemplate);
+		ReflectionTestUtils.setField(historyManager, "settingsManager", settingsManager);
+		ReflectionTestUtils.setField(dbConsensusManager, "settingsManager", settingsManager);
 		Mockito.doNothing().when(fileBackupManager).init();
 		Mockito.doNothing().when(ipfsFileManager).processOperations(any());
+		addNewPreferences();
 
 		Mockito.doCallRealMethod().when(dbSchemaManager).initializeDatabaseSchema(metadataDb, jdbcTemplate);
 		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
@@ -188,7 +194,8 @@ public class OpBlockchainCompactSearchTest {
 
 	@Test
 	public void testSearchWithoutDuplicatesAfterEditInCompactDB() throws FailedVerificationException {
-		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
+		settingsManager.OPENDB_COMPACT_COEFICIENT.set(2D);
+
 		testSearchWithoutDuplicatesAfterEditInSuperblock();
 	}
 
@@ -208,7 +215,7 @@ public class OpBlockchainCompactSearchTest {
 
 	@Test
 	public void testIndexSearchWithDBBlocks() throws FailedVerificationException {
-		ReflectionTestUtils.setField(dbConsensusManager, "superblockSize", 6);
+		settingsManager.OPENDB_SUPERBLOCK_SIZE.set(6);
 		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
 		for (int i = 0; i < opOperationList.size(); i++) {
 			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
@@ -245,7 +252,7 @@ public class OpBlockchainCompactSearchTest {
 
 	@Test
 	public void testCompactWithCompactCoefficientEq1WithDBBlocks() throws FailedVerificationException {
-		ReflectionTestUtils.setField(dbConsensusManager, "superblockSize", 6);
+		settingsManager.OPENDB_SUPERBLOCK_SIZE.set(6);
 		List<OpOperation> opOperationList = getOperations(formatter, blocksManager, BLOCKCHAIN_LIST);
 		for (int i = 0; i < opOperationList.size(); i++) {
 			assertTrue(blocksManager.addOperation(opOperationList.get(i)));
@@ -259,38 +266,30 @@ public class OpBlockchainCompactSearchTest {
 
 	@Test
 	public void testCompactWithCompactCoefficientEq2WithRuntimeBlocks() throws FailedVerificationException {
-		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
+		settingsManager.OPENDB_COMPACT_COEFICIENT.set(2D);
 		testCompactWithCompactCoefficientEq1RuntimeBlock();
 	}
 
 	@Test
 	public void testCompactWithCompactCoefficientEq2WithDBBlocks() throws FailedVerificationException {
-		ReflectionTestUtils.setField(dbConsensusManager, "compactCoefficient", 2);
+		settingsManager.OPENDB_COMPACT_COEFICIENT.set(2D);
 		testCompactWithCompactCoefficientEq1WithDBBlocks();
 	}
 
-	private TreeMap<String, Map<String, Object>> generateObjtables() {
-		TreeMap<String, Map<String, Object>> objtables = new TreeMap<String, Map<String, Object>>();
-		Map<String, Object> objectMap = new TreeMap<>();
-		TreeMap<String, Object> linkedTypesMap = new TreeMap<>();
-		linkedTypesMap.put("0", opType);
-		objectMap.put("types", linkedTypesMap);
-		objectMap.put("keysize", 2);
-
-		TreeMap<String, Object> columnObject = new TreeMap<>();
-		columnObject.put("name", "osmid");
-		TreeMap<String, Object> fieldLinkedMap = new TreeMap<>();
-		fieldLinkedMap.put("0", "osm.id");
-		columnObject.put("field", fieldLinkedMap);
-		columnObject.put("sqlmapping", "array");
-		columnObject.put("sqltype", "bigint[]");
-		columnObject.put("index", "GIN");
-		TreeMap<String, Object> linkedColumnMap = new TreeMap<>();
-		linkedColumnMap.put("0", columnObject);
-
-		objectMap.put("columns", linkedColumnMap);
-		objtables.put(table, objectMap);
-
-		return objtables;
+	private void addNewPreferences() {
+		OBJTABLE_OPR_PLACE_PREF = settingsManager.registerTableMapping("obj_osm",
+				2, "osm.place");
+		Map<String, Object> osmIdInd = new TreeMap<>();
+		osmIdInd.put(SettingsManager.INDEX_NAME, "osmid");
+		osmIdInd.put(SettingsManager.INDEX_TABLENAME, "obj_osm");
+		osmIdInd.put(SettingsManager.INDEX_FIELD, Arrays.asList("osm.id"));
+		osmIdInd.put("sqlmapping", "array");
+		osmIdInd.put(SettingsManager.INDEX_SQL_TYPE, "bigint[]");
+		osmIdInd.put(SettingsManager.INDEX_CACHE_RUNTIME_MAX, 128);
+		osmIdInd.put(SettingsManager.INDEX_CACHE_DB_MAX, 256);
+		osmIdInd.put(SettingsManager.INDEX_INDEX_TYPE, "GIN");
+		settingsManager.registerMapPreferenceForFamily(SettingsManager.DB_SCHEMA_INDEXES, osmIdInd);
 	}
+
+	public static SettingsManager.CommonPreference<Map<String, Object>> OBJTABLE_OPR_PLACE_PREF;
 }
