@@ -211,6 +211,9 @@ var STATUS_VIEW = function () {
             $("#blocks-pause-btn").click(postAction("/api/mgmt/toggle-blocks-pause"));
             $("#replicate-pause-btn").click(postAction("/api/mgmt/toggle-replicate-pause"));
             $("#block-bootstrap-btn").click(postAction("/api/mgmt/bootstrap"));
+            $("#refresh-admin-btn").click(function() {
+                loadData();
+            });
 
             $("#remove-orphaned-blocks-btn").click(function () {
                 $.post("/api/mgmt/delete-orphaned-blocks", {
