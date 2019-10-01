@@ -371,6 +371,7 @@ var OBJECTS_VIEW = function () {
     function loadSearchTypeByOpType(type) {
         $.getJSON("/api/indices-by-type?type=" + type, function (data) {
             var searchTypes = $("#search-type-list");
+            searchTypes.removeClass("hidden");
             let selectVal = searchTypes.val();
             searchTypes.empty();
             searchTypes.append(new Option("all", "all"));
@@ -637,7 +638,9 @@ var OBJECTS_VIEW = function () {
 
             $("#type-list").change(function () {
                 var type = $("#type-list").val();
-                loadSearchTypeByOpType(type);
+                if( $("#browse-list").val() == "type") {
+                    loadSearchTypeByOpType(type);
+                }
             });
 
             $("#search-type-list").change(function() {
