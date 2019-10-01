@@ -94,7 +94,11 @@ var ERRORS_VIEW = function () {
                     let op = data.logs[i];
                     var it = templateItem.clone();
 
-                    it.find("[did='status']").html(op.status);
+                    if (op.status) {
+                        it.find("[did='status']").html(op.status);
+                    } else {
+                        it.find("[did='status']").html("SUCCESS");
+                    }
                     it.find("[did='log-message']").html(op.message);
                     it.find("[did='log-time']").html(new Date(op.utcTime).toUTCString());
 
@@ -229,6 +233,36 @@ var STATUS_VIEW = function () {
                     .done(function (data) { done(data, true); })
                     .fail(function (xhr, status, error) { fail(error, true); });
             });
+            $("#home-tab").click(function () {
+                window.history.pushState(null, "State Home", '/api/admin?view=home');
+            });
+            $("#blocks-tab").click(function () {
+                window.history.pushState(null, "State Objects", '/api/admin?view=blocks');
+            });
+            $("#operations-tab").click(function () {
+                window.history.pushState(null, "State Operations", '/api/admin?view=operations');
+            });
+            $("#objects-tab").click(function () {
+                window.history.pushState(null, "State Objects", '/api/admin?view=objects');
+            });
+            $("#errors-tab").click(function () {
+                window.history.pushState(null, "State Errors", '/api/admin?view=errors');
+            });
+            $("#api-tab").click(function () {
+                window.history.pushState(null, "State API", '/api/admin?view=api');
+            });
+            $("#settings-tab").click(function () {
+                window.history.pushState(null, "State Settings", '/api/admin?view=settings');
+            });
+            $("#metrics-tab").click(function () {
+                window.history.pushState(null, "State Metrics", '/api/admin?view=metrics');
+            });
+            $("#ipfs-tab").click(function () {
+                window.history.pushState(null, "State IPFS", '/api/admin?view=ipfs');
+            });
+            $("#reg-tab").click(function () {
+                window.history.pushState(null, "State Reg", '/api/admin?view=users');
+            });
         }
     }
 }();
@@ -264,53 +298,36 @@ function postAction(url) {
     }
 }
 
-var alertIsCreated = false;
+function hideAlert() {
+    $("#alert-template").hide();
+}
+
 function done(data, update) {
-    var template = $("#layer-alert-success");
-    var it = template.clone();
+    var alert = $("#alert-template");
+    alert.show();
+    alert.removeClass("alert-warning");
+    alert.addClass("alert-success");
 
-    it.removeClass("hidden");
-    var container = $("#alert-container");
-    console.log("html:" + container.html);
-    console.log("length:" + container.length);
+    $("#result").html(data);
+    $("#alert-status").html("Success!");
 
-    if(!alertIsCreated && container.find(".alert").length === 0) {
-        it.addClass("layer1");
-        alertIsCreated = true;
-    } else {
-        it.addClass("layer2");
-    }
-
-    it.find("[did='result']").html(data);
     if (update) {
         loadData();
     }
-
-    container.append(it);
 }
 
 function fail(error, update) {
-    var template = $("#layer-alert-warn");
-    var it = template.clone();
+    var alert = $("#alert-template");
+    alert.show();
+    alert.removeClass("alert-success");
+    alert.addClass("alert-warning");
 
-    it.removeClass("hidden");
-    var container = $("#alert-container");
-    console.log("html:" + container.html);
-    console.log("length:" + container.length);
+    $("#result").html(" ERROR: " + error);
+    $("#alert-status").html("Warning!");
 
-    if(!alertIsCreated && container.find(".alert").length === 0) {
-        it.addClass("layer1");
-        alertIsCreated = true;
-    } else {
-        it.addClass("layer2");
-    }
-
-    it.find("[did='result']").html(" ERROR: " + error);
     if (update) {
         loadData();
     }
-
-    container.append(it);
 }
 
 function loadData() {
@@ -358,7 +375,9 @@ function updateTabVisibility() {
 function loadURLParams() {
     var url = new URL(window.location.href);
     var lhref = window.location.href.toLowerCase();
-    if (lhref.indexOf('api/admin?view=objects') > 1) {
+    if (lhref.indexOf('api/admin?view=home') > 1) {
+        $(".nav-tabs a[href=\"#home\"]").tab('show');
+    } else if (lhref.indexOf('api/admin?view=objects') > 1) {
         $(".nav-tabs a[href=\"#objects\"]").tab('show');
         OBJECTS_VIEW.loadURLParams(url);
     } else if (lhref.indexOf('api/admin?view=operations') > 1) {
@@ -367,6 +386,19 @@ function loadURLParams() {
     } else if (lhref.indexOf('api/admin?view=blocks') > 1) {
         $(".nav-tabs a[href=\"#blocks\"]").tab('show');
         BLOCKS_VIEW.loadURLParams(url);
+    } else if (lhref.indexOf('api/admin?view=errors') > 1) {
+        $(".nav-tabs a[href=\"#errors\"]").tab('show');
+        ERRORS_VIEW.loadURLParams(url);
+    } else if (lhref.indexOf('api/admin?view=api') > 1) {
+        $(".nav-tabs a[href=\"#api\"]").tab('show');
+    } else if (lhref.indexOf('api/admin?view=settings') > 1) {
+        $(".nav-tabs a[href=\"#settings\"]").tab('show');
+    } else if (lhref.indexOf('api/admin?view=metrics') > 1) {
+        $(".nav-tabs a[href=\"#metrics\"]").tab('show');
+    } else if (lhref.indexOf('api/admin?view=ipfs') > 1) {
+        $(".nav-tabs a[href=\"#ipfs\"]").tab('show');
+    } else if (lhref.indexOf('api/admin?view=users') > 1) {
+        $(".nav-tabs a[href=\"#reg\"]").tab('show');
     }
 }
 

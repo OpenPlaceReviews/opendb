@@ -63,37 +63,16 @@
             width: 100%;
         }
 
-        .container_row{
-            display: flex;
-        }
-        .layer1 {
-            width: 100%;
-        }
-        .layer2{
-            width: 100%;
-            margin-left: -100%;
-        }
     </style>
 </head>
 
 <body>
-<div id="layer-alert-success" class="hidden">
-    <div class="alert alert-success alert-dismissible fade in" id="top-alert-success">
-        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-        <strong>Success! </strong><span did="result"> text</span>
-    </div>
-</div>
-<div id="layer-alert-warn" class="hidden">
-    <div class="alert alert-warning alert-dismissible fade in" id="top-alert-warn">
-        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-        <strong>Warning! </strong><span did="result"> text</span>
-    </div>
-</div>
-
-<div class="container_row" id="alert-container">
+<div class="alert alert-dismissible fade in" hidden id="alert-template">
+    <a href="#" class="close" aria-label="close" onclick="hideAlert()">&times;</a>
+    <strong id="alert-status"></strong><span id="result"> text</span>
 </div>
 <ul class="nav nav-tabs" id="tabspanel">
-    <li class="active"><a data-toggle="tab" href="#home">Status</a></li>
+    <li class="active"><a data-toggle="tab" href="#home" id="home-tab">Status</a></li>
     <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
     <li><a data-toggle="tab" href="#operations" id="operations-tab">Operations</a></li>
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>

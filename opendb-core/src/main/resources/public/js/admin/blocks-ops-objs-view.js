@@ -81,7 +81,14 @@ var BLOCKS_VIEW = function () {
                 var type = $("#blocks-search").val();
 
                 BLOCKS_VIEW.loadBlockView();
-                window.history.pushState(null, "State Blocks", "/api/admin?view=blocks&search=" + type+ "&hash=" + $("#search-block-field").val() + "&limit=" + $("#block-limit-value").val());
+                var url = "/api/admin?view=blocks&search=" + type;
+                if ($("#search-block-field").val() !== "") {
+                    url += "&hash=" + $("#search-block-field").val();
+                }
+                if ($("#block-limit-value").val() !== "") {
+                    url += "&limit=" + $("#block-limit-value").val();
+                }
+                window.history.pushState(null, "State Blocks", url);
             });
         }
     }
@@ -150,7 +157,14 @@ var OPERATION_VIEW = function () {
                 var key = $("#operations-key").val();
 
                 OPERATION_VIEW.loadOperationView();
-                window.history.pushState(null, "State Operations", '/api/admin?view=operations&loadBy=' + typeSearch + '&key=' + key);
+                var url = "/api/admin?view=operations";
+                if (typeSearch !== "") {
+                    url += '&loadBy=' + typeSearch;
+                }
+                if (key !== "") {
+                    url += '&key=' + key;
+                }
+                window.history.pushState(null, "State Operations", url);
             });
         }
     };
@@ -555,14 +569,17 @@ var OBJECTS_VIEW = function () {
                 $("#add-edit-op-btn").addClass("hidden");
 
                 OBJECTS_VIEW.loadObjectView();
-                var url = '/api/admin?view=objects&browse=' + browse + '&limit=' + $("#limit-field").val();
-                if((browse == "type" || browse == "history") && type && type != "") {
+                var url = '/api/admin?view=objects&browse=' + browse;
+                if ($("#limit-field").val() !== "") {
+                    url += '&limit=' + $("#limit-field").val();
+                }
+                if((browse === "type" || browse === "history") && type && type !== "") {
                     url += '&type=' + type;
                 }
-                if(browse == "type" && subtype && subtype != "") {
+                if(browse === "type" && subtype && subtype !== "") {
                     url += '&subtype=' + subtype;
                 }
-                if(key && key != "") {
+                if(key && key !== "") {
                     url += '&key=' + key;
                 }
                 window.history.pushState(null, "State Objects",  url);
