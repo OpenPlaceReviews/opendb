@@ -47,6 +47,9 @@ public class OpBlockchainGettersDbAccessTest {
 	private FileBackupManager fileBackupManager;
 
 	@Spy
+	private SettingsManager settingsManager;
+
+	@Spy
 	private JsonFormatter jsonFormatter;
 	private OpBlockchainGettersTest opBlockchainGettersTest;
 	private JdbcTemplate jdbcTemplate;
@@ -69,6 +72,10 @@ public class OpBlockchainGettersDbAccessTest {
 		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "txTemplate", txTemplate);
+		ReflectionTestUtils.setField(settingsManager, "dbSchemaManager", dbSchemaManager);
+		ReflectionTestUtils.setField(settingsManager, "jdbcTemplate", jdbcTemplate);
+		ReflectionTestUtils.setField(dbConsensusManager, "settingsManager", settingsManager);
+
 
 		Mockito.doCallRealMethod().when(dbConsensusManager).insertBlock(any());
 		Mockito.doNothing().when(fileBackupManager).init();

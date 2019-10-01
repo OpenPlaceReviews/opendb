@@ -67,6 +67,9 @@ public class BlocksManagerTest {
 	private LogOperationService logOperationService;
 
 	@Spy
+	private SettingsManager settingsManager;
+
+	@Spy
 	private HistoryManager historyManager = new HistoryManager();
 	private BlocksManager blocksManager = new BlocksManager();
 	private OpBlockChain blockChain;
@@ -84,6 +87,9 @@ public class BlocksManagerTest {
 		txManager.setDataSource(jdbcTemplate.getDataSource());
 		TransactionTemplate txTemplate = new TransactionTemplate();
 		txTemplate.setTransactionManager(txManager);
+		ReflectionTestUtils.setField(settingsManager, "dbSchemaManager", dbSchemaManager);
+		ReflectionTestUtils.setField(settingsManager, "jdbcTemplate", jdbcTemplate);
+		ReflectionTestUtils.setField(dbConsensusManager, "settingsManager", settingsManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(dbConsensusManager, "dbSchema", dbSchemaManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "backupManager", fileBackupManager);
