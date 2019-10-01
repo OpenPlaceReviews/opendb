@@ -15,34 +15,6 @@ opendb:
     user: ${OPENDB_LOGIN:openplacereviews:test_1}
     privateKey: ${OPENDB_PK:base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCAOpUDyGrTPRPDQRCIRXysxC6gCgSTiNQ5nVEjhvsFITA==}
     publicKey: ${OPENDB_PBK:base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAETxKWXg3jhSxBtYhTxO/zMj6S0jO95ETUehlZ7yR150gFSmxqJcLE4YQDZ6t/Hn13kmaZbhSFMNsAX+kbeUMqbQ==}
-#  replicate:
-#    interval: ${OPENDB_REPLICATE_INTERVAL:15}
-#    url: ${OPENDB_REPLICATE_URL:https://dev.openplacereviews.org/api/}
-#  db:
-#    store-history: ${OPENDB_STORE_HISTORY:true}
-#    compactCoefficient: ${OPENDB_DB_CF:1.0}
-#    dbSuperblockSize: ${OPENDB_DB_BLOCK_SZ:32}
-#  storage:
-#    ipfs.node:
-#      host: ${IPFS_HOST:}
-#      port: ${IPFS_PORT:5001}
-#      readTimeoutMs: ${IPFS_READ_TIMEOUT_MS:10000}
-#    local-storage: ${EXT_RES_DIRECTORY:}
-#    timeToStoreUnusedSec: ${EXT_RES_STORE_UNUSED:86400}
-#  db-schema:
-#    objtables:
-#      obj_logins: { "types": ["sys.login", "sys.signup"], "keysize":2 }
-#      obj_grants: { "types" : ["sys.grant"], "keysize":2 }
-#      obj_system: { "types": ["sys.validate", "sys.operation", "sys.role"], "keysize":1 }
-##      obj_osm: { "types": ["osm.place"], "keysize":1 , "columns": [{"name": "osmid", "field": ["source.osm.id"], "sqlmapping":"array", "sqltype": "bigint[]", "index":"GIN"}] }
-#  files-backup:
-#    directory: ${FILE_BLOCKS_DIR:blocks}
-#  block-create:
-#    minSecondsInterval: 120
-#    minQueueSize: 10
-#    maxSecondsInterval: 3600
-#    minCapacity: 0.7
-
 management:
   endpoints:
     web:
