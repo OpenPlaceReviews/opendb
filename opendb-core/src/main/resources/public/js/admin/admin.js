@@ -90,7 +90,7 @@ var ERRORS_VIEW = function () {
                 var items = "";
                 var errs = 0;
                 var templateItem = $("#errors-list-item");
-                for (var i = 0; i < data.logs.length; i++) {
+                for (var i = data.logs.length - 1; i >= 0; i--) {
                     let op = data.logs[i];
                     var it = templateItem.clone();
 
@@ -265,10 +265,23 @@ function postAction(url) {
 }
 
 function done(data) {
-    $("#result").html(data); loadData();
+    var template = $("#top-alert-success");
+    var it = template.clone();
+    it.removeClass("hidden");
+    it.find("[did='result']").html(data);
+    loadData();
+
+    $("#alerts-result").append(it);
 }
+
 function fail(error) {
-    $("#result").html("ERROR: " + error); loadData();
+    var template = $("#top-alert-danger");
+    var it = template.clone();
+    it.removeClass("hidden");
+    it.find("[did='result']").html("ERROR: " + error);
+    loadData();
+
+    $("#alerts-result").append(it);
 }
 
 function loadData() {
