@@ -68,7 +68,15 @@
 </head>
 
 <body>
-<p id="result"></p>
+<div class="alert alert-success alert-dismissible hidden fade in" id="top-alert-success">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Success!</strong><span did="result"> text</span>
+</div>
+<div class="alert alert-danger alert-dismissible hidden fade in" id="top-alert-danger">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Danger!</strong><span did="result"> text</span>
+</div>
+<ul class="list-group" id="alerts-result"></ul>
 <ul class="nav nav-tabs" id="tabspanel">
     <li class="active"><a data-toggle="tab" href="#home">Status</a></li>
     <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
@@ -704,10 +712,8 @@ Details: <b><span did="block-details"></span></b></pre>
                         <img id='img-upload'/>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-4 form-group">
-                        <label for="result-add-image" class="control-label">Result: <b><span id="result-add-image"></span></b></label>
-                    </div>
+                <div class="form-group hidden" id="result-hash">
+                    <p>Result: <b><span id="result-add-image"></span></b></p>
                 </div>
                 <div class="row">
                     <div class="col-md-2 form-group">
@@ -722,7 +728,7 @@ Details: <b><span did="block-details"></span></b></pre>
             <div class="panel-heading"><b>Get file</b></div>
             <div class="panel-body">
                 <div class="form-group form-inline">
-                    <label for="get-image" class="control-label">Cid of resource: </label>
+                    <label for="get-image" class="control-label">Cid (hash) of resource: </label>
                     <input type="text" id="get-image" class="form-control">
                 </div>
                 <div class="row">

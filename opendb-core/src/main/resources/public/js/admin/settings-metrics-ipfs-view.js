@@ -258,6 +258,7 @@ var IPFS_VIEW = function () {
                     contentType: false,
                     type: 'POST',
                     success: function(data) {
+                        $("#result-hash").removeClass("hidden");
                         $("#result-add-image").html(data.toString());
                         loadData();
                     },
