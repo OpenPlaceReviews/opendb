@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
-import org.openplacereviews.opendb.dto.ResourceDTO;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -123,11 +122,6 @@ public class JsonFormatter {
 		return gson.fromJson(json, classOfT);
 	}
 
-	public String imageObjectToJson(ResourceDTO resourceDTO) {
-		return gson.toJson(resourceDTO, ResourceDTO.class);
-	}
-	
-	
 	public String fullObjectToJson(Object o) {
 		return gsonFullOutput.toJson(o);
 	}
