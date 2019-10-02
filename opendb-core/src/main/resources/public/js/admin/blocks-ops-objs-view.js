@@ -100,24 +100,24 @@ var OPERATION_VIEW = function () {
             var typeSearch = $("#operations-search").val();
             var key = $("#operations-key").val();
             if (typeSearch === "queue") {
-                $.getJSON("/api/queue", function (data) {
+                getJsonAction("/api/queue", function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").addClass("hidden");
                 });
             } else if (typeSearch === "id") {
-                $.getJSON("/api/ops-by-id?id=" + key, function (data) {
+                getJsonAction("/api/ops-by-id?id=" + key, function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
                 })
             } else if (typeSearch === "blockId") {
-                $.getJSON("/api/ops-by-block-id?blockId=" + key, function (data) {
+                getJsonAction("/api/ops-by-block-id?blockId=" + key, function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
                 });
             } else { //blockHash
-                $.getJSON("/api/ops-by-block-hash?hash=" + key, function (data) {
+                getJsonAction("/api/ops-by-block-hash?hash=" + key, function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
@@ -369,7 +369,7 @@ var OBJECTS_VIEW = function () {
     }
     
     function loadSearchTypeByOpType(type) {
-        $.getJSON("/api/indices-by-type?type=" + type, function (data) {
+        getJsonAction("/api/indices-by-type?type=" + type, function (data) {
             var searchTypes = $("#search-type-list");
             searchTypes.removeClass("hidden");
             let selectVal = searchTypes.val();
@@ -421,7 +421,7 @@ var OBJECTS_VIEW = function () {
         },
         loadObjectTypes: function() {
             $("#index-list-id").hide();
-            $.getJSON("/api/objects?type=sys.operation", function (data) {
+            getJsonAction("/api/objects?type=sys.operation", function (data) {
                 $("#objects-tab").html("Objects (" + data.objects.length + ")");
                 for (var i = 0; i < data.objects.length; i++) {
                     let obj = data.objects[i];
@@ -499,7 +499,7 @@ var OBJECTS_VIEW = function () {
                 }
             } else if (browse === "type") {
                 if (searchType === "count") {
-                    $.getJSON("/api/objects-count?type=" + type, function (data) {
+                    getJsonAction("/api/objects-count?type=" + type, function (data) {
                         $("#objects-list").empty();
                         setAmountResults(data.count);
                     });

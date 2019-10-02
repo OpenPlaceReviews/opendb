@@ -21,9 +21,7 @@ var SIGNUP_VIEW = function () {
                     "publicKeyOld": $("#signup-user-pbk-old").val(),
                     "userDetails": $("#signup-details").val()
                 };
-                $.post("/api/auth/signup", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postAction("/api/auth/signup", obj);
             });
 
             $("#sign-btn").click(function () {
@@ -34,9 +32,7 @@ var SIGNUP_VIEW = function () {
                     "privateKey": $("#sign-pk").val(),
                     "dontSignByServer": $("#sign-by-server").is(':checked')
                 };
-                $.post("/api/auth/process-operation", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postAction("/api/auth/process-operation", obj);
             });
 
             $("#sign-add-btn").click(function () {
@@ -71,9 +67,7 @@ var SIGNUP_VIEW = function () {
                     "loginAlgo": "EC",
                     "userDetails": $("#login-details").val()
                 };
-                $.post("/api/auth/login", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postAction("/api/auth/login", obj);
             });
         }
     }
@@ -86,7 +80,7 @@ var ERRORS_VIEW = function () {
         },
 
         loadErrorsData: function () {
-            $.getJSON("/api/logs", function (data) {
+            getJsonAction("/api/logs", function (data) {
                 var items = "";
                 var errs = 0;
                 var templateItem = $("#errors-list-item");
@@ -213,27 +207,21 @@ var STATUS_VIEW = function () {
             $("#block-bootstrap-btn").click(postAction("/api/mgmt/bootstrap"));
 
             $("#remove-orphaned-blocks-btn").click(function () {
-                $.post("/api/mgmt/delete-orphaned-blocks", {
+                postActionWithDefaultHandler("/api/mgmt/delete-orphaned-blocks", {
                     "blockListOrSingleValue": $("#remove-orphaned-blocks-txt").val()
-                })
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                });
             });
             $("#remove-queue-ops-btn").click(function () {
-                $.post("/api/mgmt/delete-queue-ops", {
+                postActionWithDefaultHandler("/api/mgmt/delete-queue-ops", {
                     "opsListOrSingleValue": $("#remove-queue-ops-txt").val()
-                })
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                });
             });
             $("#admin-login-btn").click(function () {
                 var obj = {
                     "pwd": $("#admin-login-key").val(),
                     "name": $("#admin-login-name").val()
                 };
-                $.post("/api/auth/admin-login", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postActionWithDefaultHandler("/api/auth/admin-login", obj);
             });
             $("#home-tab").click(function () {
                 window.history.pushState(null, "State Home", '/api/admin?view=home');
@@ -292,12 +280,44 @@ function smallHash(hash) {
     return hash.substring(0, 16);
 }
 
-function postAction(url) {
+function postAction(url, obj, update) {
     return function() {
-        $.post(url, {})
-            .done(function (data) { done(data, true); })
-            .fail(function (xhr, status, error) { fail(xhr.responseText, true); });
+        postHandler($.post(url, obj === undefined ? {} : obj, update))
     }
+}
+
+function postHandler(method, update) {
+    return method
+        .done(function (data) { done(data, update); })
+        .fail(function (xhr, status, error) { fail(xhr.responseText, update); });
+}
+
+function genericHandler(method, functionDone, functionFail) {
+    method
+        .done(function (data) {
+            functionDone(data);
+        })
+        .fail(function (xhr, status, error) {
+            functionFail(xhr.responseText);
+        })
+}
+
+function postActionWithParam(url, obj, functionDone, functionFail) {
+    return genericHandler($.post(url, obj), functionDone, functionFail);
+}
+
+function postActionWithDefaultHandler(url, obj) {
+    return postHandler($.post(url, obj), true);
+}
+
+function getAction(url, obj, functionDone, functionFail) {
+    return genericHandler($.get(url, obj), functionDone, functionFail);
+}
+
+function getJsonAction(url, functionDone) {
+    return $.getJSON(url, function (data) {
+        functionDone(data);
+    });
 }
 
 function hideAlert() {
@@ -315,12 +335,14 @@ function done(data, update) {
     }
     if (data.msg) {
         $("#result").html(data.status + ": " + data.msg);
-    } else {
+    } else if (data.status) {
         $("#result").html(data.status);
+    } else {
+        $("#result").html(JSON.stringify(data));
     }
     $("#alert-status").html("Success! ");
 
-    if (update) {
+    if (update === undefined || update) {
         loadData();
     }
 }
@@ -344,13 +366,13 @@ function fail(error, update) {
 
     $("#alert-status").html("Warning! ");
 
-    if (update) {
+    if (update === undefined || update) {
         loadData();
     }
 }
 
 function loadData() {
-    $.getJSON("/api/status", function (data) {
+    getJsonAction("/api/status", function (data) {
         STATUS_VIEW.processStatusData(data);
         updateTabVisibility();
         OBJECTS_VIEW.loadObjectTypes();

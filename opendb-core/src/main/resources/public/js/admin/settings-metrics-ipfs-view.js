@@ -83,7 +83,7 @@ var SETTINGS_VIEW = function () {
     return {
         settingsData : [],
         loadConfiguration: function() {
-            $.getJSON("/api/mgmt/config", function (data) {
+            getJsonAction("/api/mgmt/config", function (data) {
                 SETTINGS_VIEW.settingsData = data;
                 loadSettingsFamily();
                 displaySettings();
@@ -95,17 +95,18 @@ var SETTINGS_VIEW = function () {
                 var obj = {
                     key: $("#settings-name").val(),
                     value: $("#edit-preference-value").val(),
-                    type: $("#settings-type").text(),
+                    type: $("#settings-type").text()
                 };
-                // TODO use generic error handling
-                $.post("/api/mgmt/config", obj)
-                    .done(function (data) {
+
+                postActionWithParam("/api/mgmt/config", obj,
+                    function(data) {
                         done(data, false);
                         SETTINGS_VIEW.loadConfiguration();
-                    })
-                    .fail(function (xhr, status, error) {
+                    },
+                    function(error) {
                         fail(error, false);
-                    });
+                    }
+                );
 
                 $("#settings-edit-modal .close").click();
             });
@@ -130,7 +131,7 @@ var METRIC_VIEW = function () {
     return {
         metricsData: [],
         loadMetricsData: function() {
-            $.getJSON("/api/metrics", function (data) {
+            getJsonAction("/api/metrics", function (data) {
                 METRIC_VIEW.metricsData = data.metrics;
                 loadMetricsFamily();
                 setMetricsDataToTable();
@@ -138,21 +139,38 @@ var METRIC_VIEW = function () {
         },
         onReady: function() {
             $("#reset-metrics-b").click(function(){
-                $.post("/api/metrics-reset?cnt=2", {})
-                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; $("#metrics-b").prop("checked", true); setMetricsDataToTable(); })
-                    .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+                postActionWithParam("/api/metrics-reset?cnt=2", {},
+                    function(data) {
+                        METRIC_VIEW.metricsData = data.metrics;
+                        $("#metrics-b").prop("checked", true);
+                        setMetricsDataToTable();
+                    },
+                    function(error) {
+                        fail(error, true);
+                    });
             });
 
             $("#refresh-metrics").click(function(){
-                $.get("/api/metrics", {})
-                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; setMetricsDataToTable(); })
-                    .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+               getAction("/api/metrics", {},
+                   function(data){
+                       METRIC_VIEW.metricsData = data.metrics;
+                       setMetricsDataToTable();
+               },
+                   function(error) {
+                       fail(error, true);
+               });
             });
 
             $("#reset-metrics-a").click(function(){
-                $.post("/api/metrics-reset?cnt=1", {})
-                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; $("#metrics-a").prop("checked", true); setMetricsDataToTable(); })
-                    .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+                postActionWithParam("/api/metrics-reset?cnt=1", {},
+                    function(data) {
+                        METRIC_VIEW.metricsData = data.metrics;
+                        $("#metrics-a").prop("checked", true);
+                        setMetricsDataToTable();
+                },
+                    function(error) {
+                        fail(error, true);
+                });
             });
         }
     };
@@ -219,7 +237,7 @@ var METRIC_VIEW = function () {
 var IPFS_VIEW = function () {
     return {
         loadIpfsStatusData: function() {
-            $.getJSON("/api/ipfs/status?full=false", function (data) {
+            getJsonAction("/api/ipfs/status?full=false", function (data) {
                 $("#ipfs-status").html(data.status);
                 $("#ipfs-peer-id").html(data.peerId);
                 $("#ipfs-version").html(data.version);
@@ -274,20 +292,23 @@ var IPFS_VIEW = function () {
             });
 
             $("#fix-ipfs-missing-images-btn").click(function () {
-                $.post("/api/ipfs/mgmt/ipfs-maintenance")
-                    .done(function (data) {$("#result").html("SUCCESS: " + data); loadData(); loadFullIpfsStatus(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
-            });
-
-            $("#fix-blc-missing-images-btn").click(function () {
-                $.post("/api/ipfs/mgmt/clean-deprecated-ipfs")
-                    .done(function (data) {
+                postActionWithParam("/api/ipfs/mgmt/ipfs-maintenance", {},
+                    function (data) {
                         $("#result").html("SUCCESS: " + data);
                         loadData();
                         loadFullIpfsStatus();
-                    })
-                    .fail(function (xhr, status, error) {
-                        $("#result").html("ERROR: " + error);
+                },
+                    function (error) { $("#result").html("ERROR: " + error); })
+            });
+
+            $("#fix-blc-missing-images-btn").click(function () {
+                postActionWithParam("/api/ipfs/mgmt/clean-deprecated-ipfs", {},
+                    function (data) {
+                        done(data, true);
+                        loadFullIpfsStatus();
+                    },
+                    function (error) {
+                        fail(error, false);
                     });
             });
 
@@ -332,7 +353,7 @@ var IPFS_VIEW = function () {
     };
 
     function loadFullIpfsStatus() {
-        $.getJSON("/api/ipfs/status?full=true", function (data) {
+        getJsonAction("/api/ipfs/status?full=true", function (data) {
             $("#result").html("SUCCESS: " + data);
             $("#amount-missing-ipfs-objects").html(data.missingResources.length);
             $("#amount-db-objects").html(data.amountDBResources);

@@ -3,27 +3,13 @@ var API_VIEW = function () {
         var obj = {
             "botName": bot
         };
-        // TODO std post handler
-        $.post("/api/bot/"+action, obj)
-            .done(function (data) {
-                done(data, false);
-            })
-            .fail(function (xhr, status, error) {
-                fail(error, false);
-            });
+        postAction("/api/bot/"+action, obj, false);
     }
     function enableDisableBot(bot, action="enable") {
         var obj = {
             "botName": bot
         };
-        // TODO std post handler
-        $.post("/api/bot/"+action, obj)
-            .done(function (data) {
-                done(data, false);
-            })
-            .fail(function (xhr, status, error) {
-                fail(error, false);
-            });
+        postAction("/api/bot/"+action, obj, false);
     }
 
 
@@ -60,7 +46,7 @@ var API_VIEW = function () {
                 });
         },
         loadBotData: function () {
-            $.getJSON("/api/bot", function (data) {
+            getJsonAction("/api/bot", function (data) {
                 var table = $("#main-bot-table");
                 table.empty();
                 var template = $("#bot-template");
