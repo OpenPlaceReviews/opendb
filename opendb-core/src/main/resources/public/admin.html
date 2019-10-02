@@ -86,6 +86,12 @@
 <div class="tab-content">
     <div id="home" class="tab-pane fade in active">
         <h3>Admin harness for OpenDB</h3>
+        <div class="form-group form-inline">
+        
+            <button class="btn btn-primary form-control" id="refresh-admin-btn"><span
+                    class="glyphicon glyphicon-refresh"></span> Refresh</button>
+        </div>
+        
         <div class="form-group">
             <p>Blockchain status: <b><span id="blockchain-status"></span></b></p>
             <p>Admin server user: <b><span id="admin-user"></span></b></p>
@@ -367,6 +373,10 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--LOG TAB-->
     <div id="errors" class="tab-pane fade">
         <h3>Log</h3>
+        <div class="form-group form-inline">
+            <button class="btn btn-primary form-control" id="refresh-logs-btn"><span class="glyphicon glyphicon-refresh"></span>
+                Refresh</button>
+        </div>
         <ul class="list-group" id="errors-list"></ul>
         <ul class="list-group" id="errors-list-item" hidden="true">
             <li class="panel panel-default">
@@ -391,61 +401,60 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--API TAB-->
     <div id="api" class="tab-pane fade">
         <!--BOT state-->
-        <div class="row">
-            <div class="form-group col-md-2">
-                <h3>Bots</h3>
-                <button class="btn btn-primary form-control" id="refresh-bot-table-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-            </div>
-            <div class="form-group col-md-12">
-                <div class="table-responsive">
-                    <table id="bots-table" class="table table-bordered table-striped table-hover">
-                        <thead>
-                        <tr>
-                            <th colspan="7">Bot Info</th>
-                        </tr>
-                        <tr>
-                            <th>Id</th>
-                            <th>Task name</th>
-                            <th>Task description</th>
-                            <th>Last launch</th>
-                            <th>Interval</th>
-                            <th>Progress</th>
-                            <th>Actions</th>
-                        </tr>
-                        </thead>
-
-                        <tbody id="main-bot-table"></tbody>
-                        <tbody>
-                            <tr id="bot-template" class="hidden">
-                                <td did="id"></td>
-                                <td did="task-name"></td>
-                                <td did="task-description"></td>
-                                <td did="last-launch"></td>
-                                <td did="interval"></td>
-                                <td>
-                                    <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
-                                </td>
-                                <td>
-                                    <button did="bot-start-btn" type="button" class="btn btn-primary hidden">
-                                        <span class="glyphicon glyphicon-play"></span>
-                                    </button>
-                                    <button did="bot-stop-btn" type="button" class="btn btn-primary hidden">
-                                        <span class="glyphicon glyphicon-pause"></span>
-                                    </button>
-                                    <button did="bot-schedule-btn" type="button" class="btn btn-primary">
-                                        <span class="glyphicon glyphicon-time"></span>
-                                    </button>
-                                    
-                                    <button did="bot-show-history-btn" type="button" class="btn btn-primary" data-toggle="modal" data-target="#bot-history-modal" >
-                                        <span class="glyphicon glyphicon-eye-open"></span>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                </div>
-            </div>
+        <h3>Bots</h3>
+        <div class="form-group form-inline">
+            <button class="btn btn-primary form-control" id="refresh-bot-table-btn"><span
+                    class="glyphicon glyphicon-refresh"></span> Refresh</button>
+        </div>
+        
+        <div class="table-responsive">
+            <table id="bots-table" class="table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th colspan="7">Bot Info</th>
+                    </tr>
+                    <tr>
+                        <th>Id</th>
+                        <th>Task name</th>
+                        <th>Task description</th>
+                        <th>Last launch</th>
+                        <th>Interval</th>
+                        <th>Progress</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+        
+                <tbody id="main-bot-table"></tbody>
+                <tbody>
+                    <tr id="bot-template" class="hidden">
+                        <td did="id"></td>
+                        <td did="task-name"></td>
+                        <td did="task-description"></td>
+                        <td did="last-launch"></td>
+                        <td did="interval"></td>
+                        <td>
+                            <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
+                                role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                        </td>
+                        <td>
+                            <button did="bot-start-btn" type="button" class="btn btn-primary hidden">
+                                <span class="glyphicon glyphicon-play"></span>
+                            </button>
+                            <button did="bot-stop-btn" type="button" class="btn btn-primary hidden">
+                                <span class="glyphicon glyphicon-pause"></span>
+                            </button>
+                            <button did="bot-schedule-btn" type="button" class="btn btn-primary">
+                                <span class="glyphicon glyphicon-time"></span>
+                            </button>
+        
+                            <button did="bot-show-history-btn" type="button" class="btn btn-primary" data-toggle="modal"
+                                data-target="#bot-history-modal">
+                                <span class="glyphicon glyphicon-eye-open"></span>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <!--BOT state-->
     </div>
@@ -505,12 +514,17 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--SETTINGS TAB-->
     <div id="settings" class="tab-pane fade">
         <h3>Settings</h3>
+        <div class="form-group form-inline">
+        
+            <button class="btn btn-primary form-control" id="refresh-settings-btn"><span
+                    class="glyphicon glyphicon-refresh"></span> Refresh</button>
+        </div>
         <div class="form-group">
-        	<ul class="nav nav-pills" id="settings-pills">
-			</ul>
-		</div>
+            <ul class="nav nav-pills" id="settings-pills">
+            </ul>
+        </div>
 
-        <!--MODAL EDIT-->
+		<!--MODAL EDIT-->
         <div class="modal fade" id="settings-edit-modal" role="dialog">
             <div class="modal-dialog modal-lg">
 
@@ -566,16 +580,17 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--METRICS TAB-->
     <div id="metrics" class="tab-pane fade">
         <h3>Metrics</h3>
+        
+        <div class="form-inline form-group">
+            <button class="btn btn-primary form-control" id="refresh-metrics-btn"><span
+                    class="glyphicon glyphicon-refresh"></span> Refresh</button>
+            <button class="btn btn-primary form-control" id="reset-metrics-btn" disabled><span
+                    class="glyphicon glyphicon-ban-circle"></span> Reset</button>
+        </div>
         <div class="form-group">
             <ul class="nav nav-pills" id="metrics-pills">
             </ul>
         </div>
-        <div class="form-inline">
-            <input class="btn btn-primary form-control" type="button" value="Refresh" id="refresh-metrics" />
-            <input class="btn btn-primary form-control" type="button" value="Reset Group A" id="reset-metrics-a" />
-            <input class="btn btn-primary form-control" type="button" value="Reset Group B" id="reset-metrics-b" />
-        </div>
-        <p></p>
         <div class="table-responsive">
             <table id="metrics-table" class="table table-bordered table-striped table-hover">
                 <thead>
@@ -606,6 +621,9 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--IPFS TAB-->
     <div id="ipfs" class="tab-pane fade">
         <h3>IPFS</h3>
+        <div class="form-group form-inline">
+            <button class="btn btn-primary form-control" id="refresh-ipfs-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+        </div>
         <div class="form-group panel panel-info">
             <div class="panel-heading"><b>IPFS info</b></div>
             <div class="panel-body">
@@ -656,7 +674,7 @@ Details: <b><span did="block-details"></span></b></pre>
                 </div>
                 <div class="row">
                     <div class="col-md-2 form-group">
-                        <input type="submit" value="Load full stats" id="laod-full-stats-btn" class="btn btn-primary form-control">
+                        <input type="submit" value="Load full stats" id="load-full-stats-btn" class="btn btn-primary form-control">
                     </div>
                 </div>
             </div>

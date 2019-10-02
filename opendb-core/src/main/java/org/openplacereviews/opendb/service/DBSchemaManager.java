@@ -284,7 +284,7 @@ public class DBSchemaManager {
 					i++;
 				}
 				LOGGER.info("Updated " + i + " blocks");
-				return null;
+				return i;
 			}
 		});
 	}

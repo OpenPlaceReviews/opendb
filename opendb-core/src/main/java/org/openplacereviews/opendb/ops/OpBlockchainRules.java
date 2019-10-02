@@ -29,9 +29,9 @@ public class OpBlockchainRules {
 	
 	// it is questionable whether size validation should be part of blockchain or not
 	public static final int MAX_BLOCK_SIZE_OPS = 4096;
-	public static final int MAX_BLOCK_SIZE_MB = 1 << 20; // 1 048 576
 	public static final int MAX_BLOCKHEADER_SIZE = 1 << 16; // 65 536
-	public static final int MAX_ALL_OP_SIZE_MB = MAX_BLOCK_SIZE_MB - MAX_BLOCKHEADER_SIZE; // 983 040 
+	public static final int MAX_ALL_OP_SIZE_MB = 1 << 20 ; // 1 048 576 
+	public static final int MAX_BLOCK_SIZE_MB = MAX_ALL_OP_SIZE_MB + MAX_BLOCKHEADER_SIZE; 
 	
 	// Blockchain validation 
 	public static final int MAX_AMOUNT_CREATED_OBJ_FOR_OP = 256;
@@ -202,7 +202,7 @@ public class OpBlockchainRules {
 		String json = formatter.toJson(cp);
 		int l = json.length();
 		if(l > MAX_BLOCK_SIZE_MB) {
-			error(cp, ErrorType.BLOCK_SIZE_IS_EXCEEDED, cp.getRawHash(), l);
+			error(cp, ErrorType.BLOCK_SIZE_IS_EXCEEDED, cp.getRawHash(), l, MAX_BLOCK_SIZE_MB);
 		}
 		return json.length();
 	}

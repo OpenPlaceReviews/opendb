@@ -90,7 +90,9 @@ var SETTINGS_VIEW = function () {
             });
         },
         onReady: function() {
-            $("#settings-db-tables").click()
+            $("#refresh-settings-btn").click(function() {
+                SETTINGS_VIEW.loadConfiguration();
+            });
             $("#save-new-value-for-settings-btn").click(function () {
                 var obj = {
                     key: $("#settings-name").val(),
@@ -128,59 +130,12 @@ var METRIC_VIEW = function () {
         }
     };
 
-    return {
-        metricsData: [],
-        loadMetricsData: function() {
-            getJsonAction("/api/metrics", function (data) {
-                METRIC_VIEW.metricsData = data.metrics;
-                loadMetricsFamily();
-                setMetricsDataToTable();
-            });
-        },
-        onReady: function() {
-            $("#reset-metrics-b").click(function(){
-                postActionWithParam("/api/metrics-reset?cnt=2", {},
-                    function(data) {
-                        METRIC_VIEW.metricsData = data.metrics;
-                        $("#metrics-b").prop("checked", true);
-                        setMetricsDataToTable();
-                    },
-                    function(error) {
-                        fail(error, true);
-                    });
-            });
-
-            $("#refresh-metrics").click(function(){
-               getAction("/api/metrics", {},
-                   function(data){
-                       METRIC_VIEW.metricsData = data.metrics;
-                       setMetricsDataToTable();
-               },
-                   function(error) {
-                       fail(error, true);
-               });
-            });
-
-            $("#reset-metrics-a").click(function(){
-                postActionWithParam("/api/metrics-reset?cnt=1", {},
-                    function(data) {
-                        METRIC_VIEW.metricsData = data.metrics;
-                        $("#metrics-a").prop("checked", true);
-                        setMetricsDataToTable();
-                },
-                    function(error) {
-                        fail(error, true);
-                });
-            });
-        }
-    };
-
     function loadMetricsFamily() {
-        var dt = MetricEnum.properties;
+        let dt = MetricEnum.properties;
         let pills = $("#metrics-pills");
         pills.empty();
         var active = true;
-        for (var nm in dt) {
+        for (let nm in dt) {
             let link = $("<li>");
             if(active) {
                 link.addClass("active");
@@ -197,7 +152,7 @@ var METRIC_VIEW = function () {
         }
     }
 
-    function setMetricsDataToTable() {
+    function getActiveId() {
         var gid = 0;
         let name = $("#metrics-pills").children(".active").first().text();
         if (MetricEnum.properties[MetricEnum.GROUP_A] === name) {
@@ -206,7 +161,16 @@ var METRIC_VIEW = function () {
         if (MetricEnum.properties[MetricEnum.GROUP_B] === name) {
             gid = 2;
         }
+        return gid;
+    }
 
+    function setMetricsDataToTable() {
+        var gid = getActiveId();
+        if(gid == 0) {
+            $("#reset-metrics-btn").attr('disabled', 'disabled');
+        } else {
+            $("#reset-metrics-btn").removeAttr('disabled');
+        }
         var table = $("#main-metrics-table");
         table.empty();
         var template = $("#metrics-template");
@@ -232,9 +196,62 @@ var METRIC_VIEW = function () {
             }
         }
     }
+
+    return {
+        metricsData: [],
+        loadMetricsData: function() {
+            getJsonAction("/api/metrics", function (data) {
+                METRIC_VIEW.metricsData = data.metrics;
+                loadMetricsFamily();
+                setMetricsDataToTable();
+            });
+        },
+        onReady: function() {
+            $("#reset-metrics-btn").click(function(){
+                postActionWithParam("/api/metrics-reset?cnt="+ getActiveId(), {},
+                    function(data) {
+                        METRIC_VIEW.metricsData = data.metrics;
+                        setMetricsDataToTable();
+                },
+                    function(xhr, status, error){
+                        fail(error, true);
+                });
+            });
+
+            $("#refresh-metrics-btn").click(function(){
+                getAction("/api/metrics", {},
+                    function(data){
+                        METRIC_VIEW.metricsData = data.metrics;
+                        setMetricsDataToTable();
+                    },
+                    function(error) {
+                        fail(error, true);
+                    });
+            });
+
+        }
+    };
+
 } ();
 
 var IPFS_VIEW = function () {
+
+    function loadFullIpfsStatus() {
+        $.getJSON("/api/ipfs/status?full=true", function (data) {
+            $("#result").html("SUCCESS: " + data);
+            $("#amount-missing-ipfs-objects").html(data.missingResources.length);
+            $("#amount-db-objects").html(data.amountDBResources);
+            $("#amount-unactivated-objects").html(data.deprecatedResources.length);
+
+            for (var i = 0; i < data.missingResources.length; i++) {
+                $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
+            }
+            for (var i = 0; i < data.deprecatedResources.length; i++) {
+                $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
+            }
+        });
+    };
+
     return {
         loadIpfsStatusData: function() {
             getJsonAction("/api/ipfs/status?full=false", function (data) {
@@ -286,6 +303,10 @@ var IPFS_VIEW = function () {
                 });
             });
 
+            $("#refresh-ipfs-btn").click(function() {
+                IPFS_VIEW.loadIpfsStatusData();
+            });
+
             $("#get-image-btn").click(function () {
                 $("#image-link").attr("href", "/api/ipfs/image?hash=" + $("#get-image").val());
                 $("#image-link").click();
@@ -312,7 +333,7 @@ var IPFS_VIEW = function () {
                     });
             });
 
-            $("#laod-full-stats-btn").click(function () {
+            $("#load-full-stats-btn").click(function () {
                 loadFullIpfsStatus();
             });
 
@@ -352,19 +373,4 @@ var IPFS_VIEW = function () {
         }
     };
 
-    function loadFullIpfsStatus() {
-        getJsonAction("/api/ipfs/status?full=true", function (data) {
-            $("#result").html("SUCCESS: " + data);
-            $("#amount-missing-ipfs-objects").html(data.missingResources.length);
-            $("#amount-db-objects").html(data.amountDBResources);
-            $("#amount-unactivated-objects").html(data.deprecatedResources.length);
-
-            for (var i = 0; i < data.missingResources.length; i++) {
-                $("#ipfs-missing-objects").html(data.missingResources[i].hash + " , ");
-            }
-            for (var i = 0; i < data.deprecatedResources.length; i++) {
-                $("#blockchain-unactivated-images").append(data.deprecatedResources[i].hash + " , ");
-            }
-        });
-    };
 } ();
