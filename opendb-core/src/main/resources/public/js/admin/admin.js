@@ -210,21 +210,21 @@ var STATUS_VIEW = function () {
             });
 
             $("#remove-orphaned-blocks-btn").click(function () {
-                postActionWithDefaultHandler("/api/mgmt/delete-orphaned-blocks", {
+                postActionWithPageUpdate("/api/mgmt/delete-orphaned-blocks", {
                     "blockListOrSingleValue": $("#remove-orphaned-blocks-txt").val()
-                });
+                }, true);
             });
             $("#remove-queue-ops-btn").click(function () {
-                postActionWithDefaultHandler("/api/mgmt/delete-queue-ops", {
+                postActionWithPageUpdate("/api/mgmt/delete-queue-ops", {
                     "opsListOrSingleValue": $("#remove-queue-ops-txt").val()
-                });
+                }, true);
             });
             $("#admin-login-btn").click(function () {
                 var obj = {
                     "pwd": $("#admin-login-key").val(),
                     "name": $("#admin-login-name").val()
                 };
-                postActionWithDefaultHandler("/api/auth/admin-login", obj);
+                postActionWithPageUpdate("/api/auth/admin-login", obj, true);
             });
             $("#home-tab").click(function () {
                 window.history.pushState(null, "State Home", '/api/admin?view=home');
@@ -309,8 +309,8 @@ function postActionWithParam(url, obj, functionDone, functionFail) {
     return genericHandler($.post(url, obj), functionDone, functionFail);
 }
 
-function postActionWithDefaultHandler(url, obj) {
-    return postHandler($.post(url, obj), true);
+function postActionWithPageUpdate(url, obj, update) {
+    return postHandler($.post(url, obj), update);
 }
 
 function getAction(url, obj, functionDone, functionFail) {
