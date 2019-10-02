@@ -9,9 +9,9 @@ import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.ResponseEntityUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -43,24 +43,8 @@ public class MgmtController {
     @Autowired
     private JsonFormatter formatter;
 
-    public enum ResponseStatus {
-    	OK, FAILED, ERROR
-	}
-
-    public static class ResponseUserBody {
-    	public ResponseStatus status;
-    	public String msg;
-    	public String error;
-
-		public ResponseUserBody(ResponseStatus status, String msg) {
-			this.status = status;
-			this.msg = msg;
-		}
-
-		public ResponseUserBody(ResponseStatus status) {
-			this.status = status;
-		}
-	}
+    @Autowired
+	private ResponseEntityUtils response;
     
     public boolean validateServerLogin(HttpSession session) {
     	String loginName = (String) session.getAttribute(OpApiController.ADMIN_LOGIN_NAME);
@@ -76,8 +60,7 @@ public class MgmtController {
 	}
     
     private ResponseEntity<String> unauthorizedByServer() {
-    	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.body(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.ERROR, "Unauthorized access")));
+    	return response.unauthorized("Unauthorized access");
 	}
     
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
@@ -88,8 +71,7 @@ public class MgmtController {
     	}
     	OpBlock block = manager.createBlock();
     	if(block == null) {
-    		return ResponseEntity.status(HttpStatus.BAD_REQUEST).
-    				body(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.FAILED, "Block creation failed")));
+    		return response.badRequest("Block creation failed");
     	}
     	return ResponseEntity.ok(formatter.fullObjectToJson(block));
     }
@@ -101,7 +83,7 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	manager.clearQueue();
-        return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK, "Queue was cleared")));
+        return response.ok("Queue was cleared");
     }
     
     @PostMapping(path = "/logs-clear")
@@ -111,7 +93,7 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	logService.clearLogs();
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK, "Logs was cleared")));
+    	return response.ok("Logs was cleared");
     }
     
     
@@ -122,9 +104,9 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	if(!manager.revertSuperblock()) {
-    		return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.FAILED, "Revert super block failed")));
+    		return response.failed("Revert super block failed");
     	}
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK, "Blocks are reverted and operations added to the queue.")));
+    	return response.ok("Blocks are reverted and operations added to the queue.");
     }
     
     @PostMapping(path = "/revert-1-block", produces = "text/json;charset=UTF-8")
@@ -134,9 +116,9 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	if(!manager.revertOneBlock()) {
-    		return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.FAILED, "Revert block failed")));
+    		return response.failed("Revert block failed");
     	}
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK, "Block is reverted and operations added to the queue.")));
+    	return response.ok("Block is reverted and operations added to the queue.");
     }
     
     @PostMapping(path = "/compact", produces = "text/json;charset=UTF-8")
@@ -146,9 +128,9 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	if(!manager.compact()) {
-    		return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.FAILED, "Compacting blocks failed")));
+    		return response.failed("Compacting blocks failed");
     	}
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK, "Blocks are compacted.")));
+    	return response.ok("Blocks are compacted.");
     }
     
     @PostMapping(path = "/toggle-blockchain-pause", produces = "text/json;charset=UTF-8")
@@ -162,7 +144,7 @@ public class MgmtController {
     	} else {
     		manager.lockBlockchain();
     	}
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK)));
+    	return response.ok();
     }
     
     @PostMapping(path = "/toggle-blocks-pause", produces = "text/json;charset=UTF-8")
@@ -172,7 +154,7 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	manager.setBlockCreationOn(!manager.isBlockCreationOn());
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK)));
+		return response.ok();
     }
     
     @PostMapping(path = "/toggle-replicate-pause", produces = "text/json;charset=UTF-8")
@@ -182,7 +164,7 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	manager.setReplicateOn(!manager.isReplicateOn());
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK)));
+		return response.ok();
     }
     
     @PostMapping(path = "/replicate", produces = "text/json;charset=UTF-8")
@@ -192,7 +174,7 @@ public class MgmtController {
     		return unauthorizedByServer();
     	}
     	manager.replicate();
-    	return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK)));
+		return response.ok();
     }
     
     @PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
@@ -204,7 +186,7 @@ public class MgmtController {
     	String serverName = getServerUser(session);
     	KeyPair serverLoginKeyPair = getServerLoginKeyPair(session);
     	manager.bootstrap(serverName, serverLoginKeyPair);
-		return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK)));
+		return response.ok();
     }
     
     
@@ -270,12 +252,12 @@ public class MgmtController {
 		}
 		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
 		if(pref == null) {
-			return ResponseEntity.badRequest().body(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.ERROR, "Key is not defined")));
+			return response.badRequest("Key is not defined");
 		}
 		if (pref.setString(value)) {
-			return ResponseEntity.ok(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.OK, "Preference was updated")));
+			return response.ok("Preference was updated");
 		} else {
-			return ResponseEntity.badRequest().body(formatter.fullObjectToJson(new ResponseUserBody(ResponseStatus.ERROR, "Preference was not updated")));
+			return response.badRequest("Preference was not updated");
 		}
 	}
 

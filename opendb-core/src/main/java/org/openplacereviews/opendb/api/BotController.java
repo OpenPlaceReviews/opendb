@@ -3,7 +3,9 @@ package org.openplacereviews.opendb.api;
 import org.openplacereviews.opendb.service.BotManager;
 import org.openplacereviews.opendb.service.IOpenDBBot;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.ResponseEntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +23,7 @@ public class BotController {
 	private BotManager botManager;
 
 	@Autowired
-	private JsonFormatter formatter;
+	private ResponseEntityUtils response;
 	
 	public static class BotStats {
 		public String taskDescription;
@@ -62,42 +64,42 @@ public class BotController {
 
 	@PostMapping(path = "start", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String startBot(@RequestParam String botName) {
+	public ResponseEntity<String> startBot(@RequestParam String botName) {
 		if (botManager.startBot(botName)) {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.OK));
+			return response.ok();
 		} else {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.ERROR));
+			return response.error();
 		}
 	}
 	
 	
 	@PostMapping(path = "stop", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String stopBot(@RequestParam String botName) {
+	public ResponseEntity<String> stopBot(@RequestParam String botName) {
 		if (botManager.stopBot(botName)) {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.OK));
+			return response.ok();
 		} else {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.ERROR));
+			return response.error();
 		}
 	}
 	
 	@PostMapping(path = "enable", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String enableBot(@RequestParam String botName, @RequestParam int interval) {
+	public ResponseEntity<String> enableBot(@RequestParam String botName, @RequestParam int interval) {
 		if (botManager.enableBot(botName, interval)) {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.OK));
+			return response.ok();
 		} else {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.ERROR));
+			return response.error();
 		}
 	}
 	
 	@PostMapping(path = "disable", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String disableBot(@RequestParam String botName) {
+	public ResponseEntity<String> disableBot(@RequestParam String botName) {
 		if (botManager.disableBot(botName)) {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.OK));
+			return response.ok();
 		} else {
-			return formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.ERROR));
+			return response.error();
 		}
 	}
 
