@@ -304,13 +304,12 @@ var IPFS_VIEW = function () {
             });
 
             $("#fix-ipfs-missing-images-btn").click(function () {
-                postActionWithParams("/api/ipfs/mgmt/ipfs-maintenance", {},
+                postActionWithoutFailParam("/api/ipfs/mgmt/ipfs-maintenance", {},
                     function (data) {
                         $("#result").html("SUCCESS: " + data);
                         loadData();
                         loadFullIpfsStatus();
-                },
-                    function (error) { $("#result").html("ERROR: " + error); })
+                }, false)
             });
 
             $("#fix-blc-missing-images-btn").click(function () {

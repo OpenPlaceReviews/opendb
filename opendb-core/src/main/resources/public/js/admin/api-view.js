@@ -15,6 +15,7 @@ var API_VIEW = function () {
 
 
     return {
+        botStats: {},
         showBotHistory: function(bot) {
             var obj = {
                 "botName": bot
@@ -47,24 +48,23 @@ var API_VIEW = function () {
                 });
         },
         showBotScheduleSettings: function(bot) {
-            getJsonAction("/api/bot", function (data) {
-                var botState = data[bot];
-                $("#bot-timeout-header").html("Setting schedule for bot: " + bot);
-                $("#timeout-bot-name").val(bot);
-                if (botState.settings.enabled) {
-                    $("#enable-bot-btn").addClass("hidden");
-                    $("#disable-bot-btn").removeClass("hidden");
-                } else {
-                    $("#disable-bot-btn").addClass("hidden");
-                    $("#enable-bot-btn").removeClass("hidden");
-                }
-                if (botState.settings.hasOwnProperty("interval_sec")) {
-                    $("#bot-interval").val(botState.settings.interval_sec);
-                }
-            });
+            var botState = API_VIEW.botStats[bot];
+            if (botState.settings.enabled) {
+                $("#enable-bot-btn").addClass("hidden");
+                $("#disable-bot-btn").removeClass("hidden");
+            } else {
+                $("#disable-bot-btn").addClass("hidden");
+                $("#enable-bot-btn").removeClass("hidden");
+            }
+            $("#bot-timeout-header").html("Setting schedule for bot: " + bot);
+            $("#timeout-bot-name").val(bot);
+            if (botState.settings.hasOwnProperty("interval_sec")) {
+                $("#bot-interval").val(botState.settings.interval_sec);
+            }
         },
         loadBotData: function () {
             getJsonAction("/api/bot", function (data) {
+                API_VIEW.botStats = data;
                 var table = $("#main-bot-table");
                 table.empty();
                 var template = $("#bot-template");

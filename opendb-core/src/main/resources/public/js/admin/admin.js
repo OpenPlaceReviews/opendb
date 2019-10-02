@@ -299,14 +299,10 @@ function handlerWithParams(method, functionDone, functionFail) {
         })
 }
 
-
 function postAction(url, obj, update) {
     return function() {
-        postHandler($.post(url, obj === undefined ? {} : obj, update))
+        postHandler($.post(url, obj ? obj : {}, update))
     }
-}
-function postActionWithParams(url, obj, functionDone, functionFail) {
-    return handlerWithParams($.post(url, obj), functionDone, functionFail);
 }
 function postActionWithoutFailParam(url, obj, functionDone, update) {
     return handlerWithParams($.post(url, obj), functionDone,  function (error) {
@@ -322,7 +318,7 @@ function getAction(url, obj, functionDone, update) {
     });
 }
 function getJsonAction(url, functionDone, obj) {
-    return $.getJSON(url, obj === undefined ? {} : obj, function (data) {
+    return $.getJSON(url, obj ? obj : {}, function (data) {
         functionDone(data);
     });
 }
@@ -341,13 +337,15 @@ function done(data, update) {
         data = JSON.parse(data);
     }
     if (data.msg) {
-        $("#result").html(data.status + ": " + data.msg);
+        $("#alert-status").html(data.status + ": ");
+        $("#result").html(data.msg);
     } else if (data.status) {
-        $("#result").html(data.status);
+        $("#alert-status").html(data.status);
+        $("#result").html("");
     } else {
-        $("#result").html(JSON.stringify(data));
+        $("#alert-status").html("OK");
+        $("#result").html("");
     }
-    $("#alert-status").html("Success! ");
 
     if (update === undefined || update) {
         loadData();
@@ -363,15 +361,17 @@ function fail(error, update) {
     if (error !== "") {
         var parseJson = JSON.parse(error);
         if (parseJson.msg) {
-            $("#result").html(parseJson.status + ": " + parseJson.msg);
+            $("#alert-status").html(parseJson.status + ": ");
+            $("#result").html(parseJson.msg);
         } else {
-            $("#result").html(parseJson.status);
+            $("#alert-status").html(parseJson.status);
+            $("#result").html("");
         }
     } else {
-        $("#result").html("Error");
+        $("#alert-status").html("Error");
+        $("#result").html("");
     }
 
-    $("#alert-status").html("Warning! ");
 
     if (update === undefined || update) {
         loadData();
