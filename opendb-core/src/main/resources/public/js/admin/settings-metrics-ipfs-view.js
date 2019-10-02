@@ -229,7 +229,7 @@ var IPFS_VIEW = function () {
 
     function loadFullIpfsStatus() {
         getJsonAction("/api/ipfs/status?full=true", function (data) {
-            $("#result").html("SUCCESS: " + data);
+            done(data, false);
             $("#amount-missing-ipfs-objects").html(data.missingResources.length);
             $("#amount-db-objects").html(data.amountDBResources);
             $("#amount-unactivated-objects").html(data.deprecatedResources.length);
@@ -304,13 +304,11 @@ var IPFS_VIEW = function () {
             });
 
             $("#fix-ipfs-missing-images-btn").click(function () {
-                postActionWithParams("/api/ipfs/mgmt/ipfs-maintenance", {},
+                postActionWithoutFailParam("/api/ipfs/mgmt/ipfs-maintenance", {},
                     function (data) {
-                        $("#result").html("SUCCESS: " + data);
-                        loadData();
+                        done(data, true);
                         loadFullIpfsStatus();
-                },
-                    function (error) { $("#result").html("ERROR: " + error); })
+                }, false)
             });
 
             $("#fix-blc-missing-images-btn").click(function () {
