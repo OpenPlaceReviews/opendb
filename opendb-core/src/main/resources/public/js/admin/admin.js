@@ -295,7 +295,7 @@ function postHandler(method, update) {
         .fail(function (xhr, status, error) { fail(xhr.responseText, update); });
 }
 
-function genericHandler(method, functionDone, functionFail) {
+function handlerWithParams(method, functionDone, functionFail) {
     method
         .done(function (data) {
             functionDone(data);
@@ -306,7 +306,7 @@ function genericHandler(method, functionDone, functionFail) {
 }
 
 function postActionWithParam(url, obj, functionDone, functionFail) {
-    return genericHandler($.post(url, obj), functionDone, functionFail);
+    return handlerWithParams($.post(url, obj), functionDone, functionFail);
 }
 
 function postActionWithPageUpdate(url, obj, update) {
@@ -314,7 +314,7 @@ function postActionWithPageUpdate(url, obj, update) {
 }
 
 function getAction(url, obj, functionDone, functionFail) {
-    return genericHandler($.get(url, obj), functionDone, functionFail);
+    return handlerWithParams($.get(url, obj), functionDone, functionFail);
 }
 
 function getJsonAction(url, functionDone) {
