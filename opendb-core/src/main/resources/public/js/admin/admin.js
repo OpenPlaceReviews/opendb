@@ -210,12 +210,12 @@ var STATUS_VIEW = function () {
             });
 
             $("#remove-orphaned-blocks-btn").click(function () {
-                postActionWithPageUpdate("/api/mgmt/delete-orphaned-blocks", {
+                postActionWithDataUpdating("/api/mgmt/delete-orphaned-blocks", {
                     "blockListOrSingleValue": $("#remove-orphaned-blocks-txt").val()
                 }, true);
             });
             $("#remove-queue-ops-btn").click(function () {
-                postActionWithPageUpdate("/api/mgmt/delete-queue-ops", {
+                postActionWithDataUpdating("/api/mgmt/delete-queue-ops", {
                     "opsListOrSingleValue": $("#remove-queue-ops-txt").val()
                 }, true);
             });
@@ -224,7 +224,7 @@ var STATUS_VIEW = function () {
                     "pwd": $("#admin-login-key").val(),
                     "name": $("#admin-login-name").val()
                 };
-                postActionWithPageUpdate("/api/auth/admin-login", obj, true);
+                postActionWithDataUpdating("/api/auth/admin-login", obj, true);
             });
             $("#home-tab").click(function () {
                 window.history.pushState(null, "State Home", '/api/admin?view=home');
@@ -283,12 +283,6 @@ function smallHash(hash) {
     return hash.substring(0, 16);
 }
 
-function postAction(url, obj, update) {
-    return function() {
-        postHandler($.post(url, obj === undefined ? {} : obj, update))
-    }
-}
-
 function postHandler(method, update) {
     return method
         .done(function (data) { done(data, update); })
@@ -305,18 +299,28 @@ function handlerWithParams(method, functionDone, functionFail) {
         })
 }
 
-function postActionWithParam(url, obj, functionDone, functionFail) {
+
+function postAction(url, obj, update) {
+    return function() {
+        postHandler($.post(url, obj === undefined ? {} : obj, update))
+    }
+}
+function postActionWithParams(url, obj, functionDone, functionFail) {
     return handlerWithParams($.post(url, obj), functionDone, functionFail);
 }
-
-function postActionWithPageUpdate(url, obj, update) {
+function postActionWithoutFailParam(url, obj, functionDone, update) {
+    return handlerWithParams($.post(url, obj), functionDone,  function (error) {
+        fail(error, update);
+    });
+}
+function postActionWithDataUpdating(url, obj, update) {
     return postHandler($.post(url, obj), update);
 }
-
-function getAction(url, obj, functionDone, functionFail) {
-    return handlerWithParams($.get(url, obj), functionDone, functionFail);
+function getAction(url, obj, functionDone, update) {
+    return handlerWithParams($.get(url, obj), functionDone, function (error) {
+        fail(error, update);
+    });
 }
-
 function getJsonAction(url, functionDone, obj) {
     return $.getJSON(url, obj === undefined ? {} : obj, function (data) {
         functionDone(data);

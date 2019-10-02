@@ -3,14 +3,14 @@ var API_VIEW = function () {
         var obj = {
             "botName": bot
         };
-        postActionWithPageUpdate("/api/bot/"+action, obj, false);
+        postActionWithDataUpdating("/api/bot/"+action, obj, false);
     }
     function enableDisableBot(bot, action="enable") {
         var obj = {
             "botName": bot,
             "interval": $("#bot-interval").val()
         };
-        postActionWithPageUpdate("/api/bot/"+action, obj, false);
+        postActionWithDataUpdating("/api/bot/"+action, obj, false);
     }
 
 

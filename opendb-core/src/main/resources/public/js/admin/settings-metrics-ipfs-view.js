@@ -100,14 +100,11 @@ var SETTINGS_VIEW = function () {
                     type: $("#settings-type").text()
                 };
 
-                postActionWithParam("/api/mgmt/config", obj,
+                postActionWithoutFailParam("/api/mgmt/config", obj,
                     function(data) {
                         done(data, false);
                         SETTINGS_VIEW.loadConfiguration();
-                    },
-                    function(error) {
-                        fail(error, false);
-                    }
+                    }, false
                 );
 
                 $("#settings-edit-modal .close").click();
@@ -208,14 +205,11 @@ var METRIC_VIEW = function () {
         },
         onReady: function() {
             $("#reset-metrics-btn").click(function(){
-                postActionWithParam("/api/metrics-reset?cnt="+ getActiveId(), {},
+                postActionWithoutFailParam("/api/metrics-reset?cnt="+ getActiveId(), {},
                     function(data) {
                         METRIC_VIEW.metricsData = data.metrics;
                         setMetricsDataToTable();
-                },
-                    function(xhr, status, error){
-                        fail(error, true);
-                });
+                }, true);
             });
 
             $("#refresh-metrics-btn").click(function(){
@@ -223,10 +217,7 @@ var METRIC_VIEW = function () {
                     function(data){
                         METRIC_VIEW.metricsData = data.metrics;
                         setMetricsDataToTable();
-                    },
-                    function(error) {
-                        fail(error, true);
-                    });
+                    }, true);
             });
 
         }
@@ -313,7 +304,7 @@ var IPFS_VIEW = function () {
             });
 
             $("#fix-ipfs-missing-images-btn").click(function () {
-                postActionWithParam("/api/ipfs/mgmt/ipfs-maintenance", {},
+                postActionWithParams("/api/ipfs/mgmt/ipfs-maintenance", {},
                     function (data) {
                         $("#result").html("SUCCESS: " + data);
                         loadData();
@@ -323,13 +314,10 @@ var IPFS_VIEW = function () {
             });
 
             $("#fix-blc-missing-images-btn").click(function () {
-                postActionWithParam("/api/ipfs/mgmt/clean-deprecated-ipfs", {},
+                postActionWithoutFailParam("/api/ipfs/mgmt/clean-deprecated-ipfs", {},
                     function (data) {
                         done(data, true);
                         loadFullIpfsStatus();
-                    },
-                    function (error) {
-                        fail(error, false);
                     });
             });
 
