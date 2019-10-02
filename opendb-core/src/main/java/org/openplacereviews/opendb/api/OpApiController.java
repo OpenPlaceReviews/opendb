@@ -55,17 +55,17 @@ public class OpApiController {
 		if(OUtils.equals(manager.getServerUser(), name) &&
 				OUtils.equals(manager.getServerPrivateKey(), pwd)) {
 			updateSessionObject(session, name, pwd);
-			return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+			return ResponseEntity.ok().body(formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.OK)));
 		} else {
 			OpObject userGrantObject = manager.getBlockchain().getObjectByName(OP_GRANT, name);
 			if (userGrantObject != null) {
 				if (userGrantObject.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
 					updateSessionObject(session, name, pwd);
-					return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+					return ResponseEntity.ok().body(formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.OK)));
 				}
 			}
 		}
-		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("{\"status\":\"ERROR\"}");
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.ERROR)));
 	}
 
 	private void updateSessionObject(HttpSession session, String name, String pwd) {
@@ -91,7 +91,7 @@ public class OpApiController {
     
     private ResponseEntity<String> unauthorizedByServer() {
     	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.body("{\"status\":\"ERROR\"}");
+    			.body(formatter.fullObjectToJson(new MgmtController.ResponseUserBody(MgmtController.ResponseStatus.ERROR)));
 	}
 
 	@PostMapping(path = "/process-operation")
