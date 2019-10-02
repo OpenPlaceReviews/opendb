@@ -49,7 +49,7 @@ var API_VIEW = function () {
         showBotScheduleSettings: function(bot) {
             getJsonAction("/api/bot", function (data) {
                 var botState = data[bot];
-                $("#bot-timeout-header").html("Setting schedule interval for bot: " + bot);
+                $("#bot-timeout-header").html("Setting schedule for bot: " + bot);
                 $("#timeout-bot-name").val(bot);
                 if (botState.settings.enabled) {
                     $("#enable-bot-btn").addClass("hidden");
