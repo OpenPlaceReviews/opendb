@@ -48,9 +48,9 @@ var BLOCKS_VIEW = function () {
             if (type !== "all") {
                 reqObj[type] = $("#search-block-field").val();
             }
-            $.getJSON("/api/blocks", reqObj, function (data) {
+            getJsonAction("/api/blocks", function (data) {
                 processBlocksResult(data);
-            });
+            }, reqObj);
         },
         loadURLParams: function (url) {
             var searchType = url.searchParams.get('search');
@@ -508,17 +508,17 @@ var OBJECTS_VIEW = function () {
                         "type": type,
                         "limit": $("#limit-field").val()
                     };
-                    $.getJSON("/api/objects", req, function (data) {
+                    getJsonAction("/api/objects", function (data) {
                         setObjectsItems(data);
-                    });
+                    }, req);
                 } else if (searchType === "id") {
                     var req = {
                         "type": type,
                         "key": key
                     };
-                    $.getJSON("/api/objects-by-id", req, function (data) {
+                    getJsonAction("/api/objects-by-id", function (data) {
                         setObjectsItems(data);
-                    });
+                    }, req);
                 } else {
                     var req = {
                         "type": type,
@@ -526,9 +526,9 @@ var OBJECTS_VIEW = function () {
                         "limit": $("#limit-field").val(),
                         "key": key
                     };
-                    $.getJSON("/api/objects-by-index", req, function (data) {
+                    getJsonAction("/api/objects-by-index", function (data) {
                         setObjectsItems(data);
-                    });
+                    }, req);
                 }
             }
         },

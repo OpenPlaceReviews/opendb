@@ -317,8 +317,8 @@ function getAction(url, obj, functionDone, functionFail) {
     return handlerWithParams($.get(url, obj), functionDone, functionFail);
 }
 
-function getJsonAction(url, functionDone) {
-    return $.getJSON(url, function (data) {
+function getJsonAction(url, functionDone, obj) {
+    return $.getJSON(url, obj === undefined ? {} : obj, function (data) {
         functionDone(data);
     });
 }

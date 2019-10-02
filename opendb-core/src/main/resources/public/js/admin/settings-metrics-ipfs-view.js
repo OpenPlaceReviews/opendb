@@ -237,7 +237,7 @@ var METRIC_VIEW = function () {
 var IPFS_VIEW = function () {
 
     function loadFullIpfsStatus() {
-        $.getJSON("/api/ipfs/status?full=true", function (data) {
+        getJsonAction("/api/ipfs/status?full=true", function (data) {
             $("#result").html("SUCCESS: " + data);
             $("#amount-missing-ipfs-objects").html(data.missingResources.length);
             $("#amount-db-objects").html(data.amountDBResources);
