@@ -290,7 +290,7 @@ function postHandler(method, update) {
 }
 
 function handlerWithParams(method, functionDone, functionFail) {
-    method
+    return method
         .done(function (data) {
             functionDone(data);
         })

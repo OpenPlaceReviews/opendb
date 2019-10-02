@@ -362,7 +362,7 @@ var OBJECTS_VIEW = function () {
                 setAmountResults(data.length);
             },
             error: function (xhr, status, error) {
-                $("#result").html("ERROR: " + error);
+                fail(xhr.responseText, false);
             }
         });
         
@@ -630,17 +630,19 @@ var OBJECTS_VIEW = function () {
                     contentType: 'application/json; charset=utf-8'
                 })
                     .done(function(data) {
-                        $("#result").html(data); loadData();  editor = null;
+                        done(data, true); editor = null;
                         $("#json-editor-div").addClass("hidden");
                         $("#stop-edit-btn").addClass("hidden");
                         $("#add-edit-op-btn").addClass("hidden");
                     })
-                    .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); });
+                    .fail(function(xhr, status, error){
+                        fail(xhr.responseText, false);
+                    });
             });
 
             $("#type-list").change(function () {
                 var type = $("#type-list").val();
-                if( $("#browse-list").val() == "type") {
+                if( $("#browse-list").val() === "type") {
                     loadSearchTypeByOpType(type);
                 }
             });
