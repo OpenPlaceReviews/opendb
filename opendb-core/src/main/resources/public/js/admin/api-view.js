@@ -7,7 +7,8 @@ var API_VIEW = function () {
     }
     function enableDisableBot(bot, action="enable") {
         var obj = {
-            "botName": bot
+            "botName": bot,
+            "interval": $("#bot-interval").val()
         };
         postActionWithPageUpdate("/api/bot/"+action, obj, false);
     }
@@ -44,6 +45,23 @@ var API_VIEW = function () {
                 .fail(function (xhr, status, error) {
                     fail(error, false);
                 });
+        },
+        showBotScheduleSettings: function(bot) {
+            getJsonAction("/api/bot", function (data) {
+                var botState = data[bot];
+                $("#bot-timeout-header").html("Setting schedule interval for bot: " + bot);
+                $("#timeout-bot-name").val(bot);
+                if (botState.settings.enabled) {
+                    $("#enable-bot-btn").addClass("hidden");
+                    $("#disable-bot-btn").removeClass("hidden");
+                } else {
+                    $("#disable-bot-btn").addClass("hidden");
+                    $("#enable-bot-btn").removeClass("hidden");
+                }
+                if (botState.settings.hasOwnProperty("interval_sec")) {
+                    $("#bot-interval").val(botState.settings.interval_sec);
+                }
+            });
         },
         loadBotData: function () {
             getJsonAction("/api/bot", function (data) {
@@ -83,16 +101,13 @@ var API_VIEW = function () {
                                 startStopBot(obj.id, "stop");
                             });
                     }
-                    newTemplate.find("[did='bot-schedule-btn']").click(function () {
-                        //enableDisableBot(obj.id, "stop");
-                    });
 
                     if (obj.settings && obj.settings.last_run) {
                         newTemplate.find("[did='last-launch']").html(new Date(obj.settings.last_run * 1000).toLocaleString());
                     } else {
                         newTemplate.find("[did='last-launch']").html("-");
                     }
-                    if(obj.settings && obj.settings.interval_sec) {
+                    if(obj.settings && obj.settings.interval_sec && obj.settings.enabled) {
                         var tm = obj.settings.interval_sec + " seconds";
                         if(obj.settings.interval_sec > 15 * 60) {
                             tm = (obj.settings.interval_sec / 60 ) + " minutes";
@@ -106,6 +121,10 @@ var API_VIEW = function () {
                         .click(function () {
                             API_VIEW.showBotHistory(obj.id);
                         });
+                    newTemplate.find("[did='bot-schedule-btn']")
+                        .click(function () {
+                            API_VIEW.showBotScheduleSettings(obj.id);
+                        });
                     newTemplate.find("[did='actions']").html(action);
                 }
             });
@@ -118,6 +137,18 @@ var API_VIEW = function () {
             $("#refresh-bot-history-btn").click(function () {
                 var botName = $(".modal-header #history-bot-name").val();
                 API_VIEW.showBotHistory(botName);
+            });
+
+            $("#enable-bot-btn").click(function () {
+                enableDisableBot($("#timeout-bot-name").val(), "enable");
+                $("#bot-timeout-modal .close").click();
+                API_VIEW.loadBotData();
+            });
+
+            $("#disable-bot-btn").click(function () {
+                enableDisableBot($("#timeout-bot-name").val(), "disable");
+                $("#bot-timeout-modal .close").click();
+                API_VIEW.loadBotData();
             });
         }
     };

@@ -411,9 +411,6 @@ Details: <b><span did="block-details"></span></b></pre>
             <table id="bots-table" class="table table-bordered table-striped table-hover">
                 <thead>
                     <tr>
-                        <th colspan="7">Bot Info</th>
-                    </tr>
-                    <tr>
                         <th>Id</th>
                         <th>Task name</th>
                         <th>Task description</th>
@@ -443,7 +440,8 @@ Details: <b><span did="block-details"></span></b></pre>
                             <button did="bot-stop-btn" type="button" class="btn btn-primary hidden">
                                 <span class="glyphicon glyphicon-pause"></span>
                             </button>
-                            <button did="bot-schedule-btn" type="button" class="btn btn-primary">
+                            <button did="bot-schedule-btn" type="button" class="btn btn-primary" data-toggle="modal"
+                                data-target="#bot-timeout-modal">
                                 <span class="glyphicon glyphicon-time"></span>
                             </button>
         
@@ -460,6 +458,36 @@ Details: <b><span did="block-details"></span></b></pre>
     </div>
     <!--API MODALS VIEWS-->
     <!--BOTS MODALS-->
+    <div class="modal fade" id="bot-timeout-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title" id="bot-timeout-header"></h4>
+                    <p class="modal-title" id="timeout-bot-name"></p>
+                </div>
+                <div class="modal-body">
+                    <!--<h4>Bot</h4>-->
+                    <div class="form-group form-inline">
+                        <label for="bot-interval" class="control-label">Interval in sec: </label>
+                        <input type="text" class="form-control" id="bot-interval"/>
+                        <button class="btn btn-primary form-control" id="enable-bot-btn"><span
+                                class=""></span> Enable bot</button>
+                        <button class="btn btn-primary form-control" id="disable-bot-btn"><span
+                                class=""></span> Disable bot</button>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <div class="modal fade" id="bot-history-modal" role="dialog">
         <div class="modal-dialog modal-lg">
 
