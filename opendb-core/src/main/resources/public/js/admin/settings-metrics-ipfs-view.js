@@ -83,8 +83,7 @@ var SETTINGS_VIEW = function () {
     return {
         settingsData : [],
         loadConfiguration: function() {
-            // TODO add error handling
-            $.getJSON("/api/mgmt/config", function (data) {
+            getJsonAction("/api/mgmt/config", function (data) {
                 SETTINGS_VIEW.settingsData = data;
                 loadSettingsFamily();
                 displaySettings();
@@ -98,17 +97,15 @@ var SETTINGS_VIEW = function () {
                 var obj = {
                     key: $("#settings-name").val(),
                     value: $("#edit-preference-value").val(),
-                    type: $("#settings-type").text(),
+                    type: $("#settings-type").text()
                 };
-                // TODO use generic error handling
-                $.post("/api/mgmt/config", obj)
-                    .done(function (data) {
+
+                postActionWithoutFailParam("/api/mgmt/config", obj,
+                    function(data) {
                         done(data, false);
                         SETTINGS_VIEW.loadConfiguration();
-                    })
-                    .fail(function (xhr, status, error) {
-                        fail(error, false);
-                    });
+                    }, false
+                );
 
                 $("#settings-edit-modal .close").click();
             });
@@ -200,7 +197,7 @@ var METRIC_VIEW = function () {
     return {
         metricsData: [],
         loadMetricsData: function() {
-            $.getJSON("/api/metrics", function (data) {
+            getJsonAction("/api/metrics", function (data) {
                 METRIC_VIEW.metricsData = data.metrics;
                 loadMetricsFamily();
                 setMetricsDataToTable();
@@ -208,15 +205,19 @@ var METRIC_VIEW = function () {
         },
         onReady: function() {
             $("#reset-metrics-btn").click(function(){
-                $.post("/api/metrics-reset?cnt="+ getActiveId(), {})
-                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; setMetricsDataToTable(); })
-                    .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+                postActionWithoutFailParam("/api/metrics-reset?cnt="+ getActiveId(), {},
+                    function(data) {
+                        METRIC_VIEW.metricsData = data.metrics;
+                        setMetricsDataToTable();
+                }, true);
             });
 
             $("#refresh-metrics-btn").click(function(){
-                $.get("/api/metrics", {})
-                    .done(function(data){  METRIC_VIEW.metricsData = data.metrics; setMetricsDataToTable(); })
-                    .fail(function(xhr, status, error){  $("#result").html("ERROR: " + error); loadData(); });
+                getAction("/api/metrics", {},
+                    function(data){
+                        METRIC_VIEW.metricsData = data.metrics;
+                        setMetricsDataToTable();
+                    }, true);
             });
 
         }
@@ -227,7 +228,7 @@ var METRIC_VIEW = function () {
 var IPFS_VIEW = function () {
 
     function loadFullIpfsStatus() {
-        $.getJSON("/api/ipfs/status?full=true", function (data) {
+        getJsonAction("/api/ipfs/status?full=true", function (data) {
             $("#result").html("SUCCESS: " + data);
             $("#amount-missing-ipfs-objects").html(data.missingResources.length);
             $("#amount-db-objects").html(data.amountDBResources);
@@ -244,7 +245,7 @@ var IPFS_VIEW = function () {
 
     return {
         loadIpfsStatusData: function() {
-            $.getJSON("/api/ipfs/status?full=false", function (data) {
+            getJsonAction("/api/ipfs/status?full=false", function (data) {
                 $("#ipfs-status").html(data.status);
                 $("#ipfs-peer-id").html(data.peerId);
                 $("#ipfs-version").html(data.version);
@@ -303,20 +304,20 @@ var IPFS_VIEW = function () {
             });
 
             $("#fix-ipfs-missing-images-btn").click(function () {
-                $.post("/api/ipfs/mgmt/ipfs-maintenance")
-                    .done(function (data) {$("#result").html("SUCCESS: " + data); loadData(); loadFullIpfsStatus(); })
-                    .fail(function (xhr, status, error) { $("#result").html("ERROR: " + error); })
-            });
-
-            $("#fix-blc-missing-images-btn").click(function () {
-                $.post("/api/ipfs/mgmt/clean-deprecated-ipfs")
-                    .done(function (data) {
+                postActionWithParams("/api/ipfs/mgmt/ipfs-maintenance", {},
+                    function (data) {
                         $("#result").html("SUCCESS: " + data);
                         loadData();
                         loadFullIpfsStatus();
-                    })
-                    .fail(function (xhr, status, error) {
-                        $("#result").html("ERROR: " + error);
+                },
+                    function (error) { $("#result").html("ERROR: " + error); })
+            });
+
+            $("#fix-blc-missing-images-btn").click(function () {
+                postActionWithoutFailParam("/api/ipfs/mgmt/clean-deprecated-ipfs", {},
+                    function (data) {
+                        done(data, true);
+                        loadFullIpfsStatus();
                     });
             });
 

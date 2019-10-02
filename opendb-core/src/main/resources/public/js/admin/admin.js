@@ -21,9 +21,7 @@ var SIGNUP_VIEW = function () {
                     "publicKeyOld": $("#signup-user-pbk-old").val(),
                     "userDetails": $("#signup-details").val()
                 };
-                $.post("/api/auth/signup", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postAction("/api/auth/signup", obj);
             });
 
             $("#sign-btn").click(function () {
@@ -34,9 +32,7 @@ var SIGNUP_VIEW = function () {
                     "privateKey": $("#sign-pk").val(),
                     "dontSignByServer": $("#sign-by-server").is(':checked')
                 };
-                $.post("/api/auth/process-operation", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postAction("/api/auth/process-operation", obj);
             });
 
             $("#sign-add-btn").click(function () {
@@ -71,9 +67,7 @@ var SIGNUP_VIEW = function () {
                     "loginAlgo": "EC",
                     "userDetails": $("#login-details").val()
                 };
-                $.post("/api/auth/login", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postAction("/api/auth/login", obj);
             });
         }
     }
@@ -86,7 +80,7 @@ var ERRORS_VIEW = function () {
         },
 
         loadErrorsData: function () {
-            $.getJSON("/api/logs", function (data) {
+            getJsonAction("/api/logs", function (data) {
                 var items = "";
                 var errs = 0;
                 var templateItem = $("#errors-list-item");
@@ -95,20 +89,17 @@ var ERRORS_VIEW = function () {
                     var it = templateItem.clone();
 
                     if (op.status) {
-                        it.find("[did='status']").html(op.status);
+                        it.find("[did='status']").html(op.status === "" ? "Error" : "Error: ");
+                        it.find("[did='status-text']").html(op.status);
+                        it.find("[did='object-name']").html("Failure object");
                     } else {
-                        it.find("[did='status']").html("SUCCESS");
+                        it.find("[did='status']").html("Success");
                     }
                     it.find("[did='log-message']").html(op.message);
                     it.find("[did='log-time']").html(new Date(op.utcTime).toUTCString());
 
                     if (op.status) {
                         errs++;
-                    }
-                    if (op.cause) {
-                        it.find("[did='exception-message']").html(op.cause.detailMessage);
-                    } else {
-                        it.find("[did='excep-message-hidden']").prop("hidden", true);
                     }
                     if (op.block) {
                         it.find("[did='block']").html(op.block.block_id + " " + op.block.hash);
@@ -119,6 +110,11 @@ var ERRORS_VIEW = function () {
                         it.find("[did='operation']").html(op.operation.type + " " + op.operation.hash);
                     } else {
                         it.find("[did='operation-hidden']").prop("hidden", true);
+                    }
+                    if (op.obj) {
+                        it.find("[did='object-json']").html(JSON.stringify(op.obj, null, 4));
+                    } else {
+                        it.find("[did='obj-json-hidden']").prop("hidden", true);
                     }
                     if (op.block) {
                         it.find("[did='block-json']").html(JSON.stringify(op.block, null, 4));
@@ -214,27 +210,21 @@ var STATUS_VIEW = function () {
             });
 
             $("#remove-orphaned-blocks-btn").click(function () {
-                $.post("/api/mgmt/delete-orphaned-blocks", {
+                postActionWithDataUpdating("/api/mgmt/delete-orphaned-blocks", {
                     "blockListOrSingleValue": $("#remove-orphaned-blocks-txt").val()
-                })
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                }, true);
             });
             $("#remove-queue-ops-btn").click(function () {
-                $.post("/api/mgmt/delete-queue-ops", {
+                postActionWithDataUpdating("/api/mgmt/delete-queue-ops", {
                     "opsListOrSingleValue": $("#remove-queue-ops-txt").val()
-                })
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                }, true);
             });
             $("#admin-login-btn").click(function () {
                 var obj = {
                     "pwd": $("#admin-login-key").val(),
                     "name": $("#admin-login-name").val()
                 };
-                $.post("/api/auth/admin-login", obj)
-                    .done(function (data) { done(data, true); })
-                    .fail(function (xhr, status, error) { fail(error, true); });
+                postActionWithDataUpdating("/api/auth/admin-login", obj, true);
             });
             $("#home-tab").click(function () {
                 window.history.pushState(null, "State Home", '/api/admin?view=home');
@@ -293,12 +283,48 @@ function smallHash(hash) {
     return hash.substring(0, 16);
 }
 
-function postAction(url) {
+function postHandler(method, update) {
+    return method
+        .done(function (data) { done(data, update); })
+        .fail(function (xhr, status, error) { fail(xhr.responseText, update); });
+}
+
+function handlerWithParams(method, functionDone, functionFail) {
+    method
+        .done(function (data) {
+            functionDone(data);
+        })
+        .fail(function (xhr, status, error) {
+            functionFail(xhr.responseText);
+        })
+}
+
+
+function postAction(url, obj, update) {
     return function() {
-        $.post(url, {})
-            .done(function (data) { done(data, true); })
-            .fail(function (xhr, status, error) { fail(error, true); });
+        postHandler($.post(url, obj === undefined ? {} : obj, update))
     }
+}
+function postActionWithParams(url, obj, functionDone, functionFail) {
+    return handlerWithParams($.post(url, obj), functionDone, functionFail);
+}
+function postActionWithoutFailParam(url, obj, functionDone, update) {
+    return handlerWithParams($.post(url, obj), functionDone,  function (error) {
+        fail(error, update);
+    });
+}
+function postActionWithDataUpdating(url, obj, update) {
+    return postHandler($.post(url, obj), update);
+}
+function getAction(url, obj, functionDone, update) {
+    return handlerWithParams($.get(url, obj), functionDone, function (error) {
+        fail(error, update);
+    });
+}
+function getJsonAction(url, functionDone, obj) {
+    return $.getJSON(url, obj === undefined ? {} : obj, function (data) {
+        functionDone(data);
+    });
 }
 
 function hideAlert() {
@@ -311,10 +337,19 @@ function done(data, update) {
     alert.removeClass("alert-warning");
     alert.addClass("alert-success");
 
-    $("#result").html(data);
-    $("#alert-status").html("Success!");
+    if (typeof data !== 'object') {
+        data = JSON.parse(data);
+    }
+    if (data.msg) {
+        $("#result").html(data.status + ": " + data.msg);
+    } else if (data.status) {
+        $("#result").html(data.status);
+    } else {
+        $("#result").html(JSON.stringify(data));
+    }
+    $("#alert-status").html("Success! ");
 
-    if (update) {
+    if (update === undefined || update) {
         loadData();
     }
 }
@@ -325,16 +360,26 @@ function fail(error, update) {
     alert.removeClass("alert-success");
     alert.addClass("alert-warning");
 
-    $("#result").html(" ERROR: " + error);
-    $("#alert-status").html("Warning!");
+    if (error !== "") {
+        var parseJson = JSON.parse(error);
+        if (parseJson.msg) {
+            $("#result").html(parseJson.status + ": " + parseJson.msg);
+        } else {
+            $("#result").html(parseJson.status);
+        }
+    } else {
+        $("#result").html("Error");
+    }
 
-    if (update) {
+    $("#alert-status").html("Warning! ");
+
+    if (update === undefined || update) {
         loadData();
     }
 }
 
 function loadData() {
-    $.getJSON("/api/status", function (data) {
+    getJsonAction("/api/status", function (data) {
         STATUS_VIEW.processStatusData(data);
         updateTabVisibility();
         OBJECTS_VIEW.loadObjectTypes();

@@ -48,9 +48,9 @@ var BLOCKS_VIEW = function () {
             if (type !== "all") {
                 reqObj[type] = $("#search-block-field").val();
             }
-            $.getJSON("/api/blocks", reqObj, function (data) {
+            getJsonAction("/api/blocks", function (data) {
                 processBlocksResult(data);
-            });
+            }, reqObj);
         },
         loadURLParams: function (url) {
             var searchType = url.searchParams.get('search');
@@ -100,24 +100,24 @@ var OPERATION_VIEW = function () {
             var typeSearch = $("#operations-search").val();
             var key = $("#operations-key").val();
             if (typeSearch === "queue") {
-                $.getJSON("/api/queue", function (data) {
+                getJsonAction("/api/queue", function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").addClass("hidden");
                 });
             } else if (typeSearch === "id") {
-                $.getJSON("/api/ops-by-id?id=" + key, function (data) {
+                getJsonAction("/api/ops-by-id?id=" + key, function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
                 })
             } else if (typeSearch === "blockId") {
-                $.getJSON("/api/ops-by-block-id?blockId=" + key, function (data) {
+                getJsonAction("/api/ops-by-block-id?blockId=" + key, function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
                 });
             } else { //blockHash
-                $.getJSON("/api/ops-by-block-hash?hash=" + key, function (data) {
+                getJsonAction("/api/ops-by-block-hash?hash=" + key, function (data) {
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
@@ -369,7 +369,7 @@ var OBJECTS_VIEW = function () {
     }
     
     function loadSearchTypeByOpType(type) {
-        $.getJSON("/api/indices-by-type?type=" + type, function (data) {
+        getJsonAction("/api/indices-by-type?type=" + type, function (data) {
             var searchTypes = $("#search-type-list");
             searchTypes.removeClass("hidden");
             let selectVal = searchTypes.val();
@@ -421,7 +421,7 @@ var OBJECTS_VIEW = function () {
         },
         loadObjectTypes: function() {
             $("#index-list-id").hide();
-            $.getJSON("/api/objects?type=sys.operation", function (data) {
+            getJsonAction("/api/objects?type=sys.operation", function (data) {
                 $("#objects-tab").html("Objects (" + data.objects.length + ")");
                 for (var i = 0; i < data.objects.length; i++) {
                     let obj = data.objects[i];
@@ -459,6 +459,8 @@ var OBJECTS_VIEW = function () {
                 }
                 $("#search-type-list").val(subtypeValue);
                 $("#search-type-list").removeClass("hidden");
+            } else {
+                $("#search-type-list").addClass("hidden");
             }
             if(browse == "operation" || browse == "userid") {
                 $("#type-list-select").addClass("hidden");
@@ -497,7 +499,7 @@ var OBJECTS_VIEW = function () {
                 }
             } else if (browse === "type") {
                 if (searchType === "count") {
-                    $.getJSON("/api/objects-count?type=" + type, function (data) {
+                    getJsonAction("/api/objects-count?type=" + type, function (data) {
                         $("#objects-list").empty();
                         setAmountResults(data.count);
                     });
@@ -506,17 +508,17 @@ var OBJECTS_VIEW = function () {
                         "type": type,
                         "limit": $("#limit-field").val()
                     };
-                    $.getJSON("/api/objects", req, function (data) {
+                    getJsonAction("/api/objects", function (data) {
                         setObjectsItems(data);
-                    });
+                    }, req);
                 } else if (searchType === "id") {
                     var req = {
                         "type": type,
                         "key": key
                     };
-                    $.getJSON("/api/objects-by-id", req, function (data) {
+                    getJsonAction("/api/objects-by-id", function (data) {
                         setObjectsItems(data);
-                    });
+                    }, req);
                 } else {
                     var req = {
                         "type": type,
@@ -524,9 +526,9 @@ var OBJECTS_VIEW = function () {
                         "limit": $("#limit-field").val(),
                         "key": key
                     };
-                    $.getJSON("/api/objects-by-index", req, function (data) {
+                    getJsonAction("/api/objects-by-index", function (data) {
                         setObjectsItems(data);
-                    });
+                    }, req);
                 }
             }
         },

@@ -7,6 +7,7 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.ResponseEntityUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,6 +42,9 @@ public class OpApiController {
     @Autowired
     private JsonFormatter formatter;
 
+    @Autowired
+	private ResponseEntityUtils responseUtils;
+
 	@GetMapping(path = "/admin-status")
 	public ResponseEntity<String> serverLogin(HttpSession session) {
 		String serverUser = getServerUser(session);
@@ -55,17 +59,17 @@ public class OpApiController {
 		if(OUtils.equals(manager.getServerUser(), name) &&
 				OUtils.equals(manager.getServerPrivateKey(), pwd)) {
 			updateSessionObject(session, name, pwd);
-			return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+			return responseUtils.ok();
 		} else {
 			OpObject userGrantObject = manager.getBlockchain().getObjectByName(OP_GRANT, name);
 			if (userGrantObject != null) {
 				if (userGrantObject.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
 					updateSessionObject(session, name, pwd);
-					return ResponseEntity.ok().body("{\"status\":\"OK\"}");
+					return responseUtils.ok();
 				}
 			}
 		}
-		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("{\"status\":\"ERROR\"}");
+		return responseUtils.error();
 	}
 
 	private void updateSessionObject(HttpSession session, String name, String pwd) {
@@ -90,8 +94,7 @@ public class OpApiController {
 	}
     
     private ResponseEntity<String> unauthorizedByServer() {
-    	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    			.body("{\"status\":\"ERROR\"}");
+    	return responseUtils.error();
 	}
 
 	@PostMapping(path = "/process-operation")

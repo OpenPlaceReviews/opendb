@@ -1,18 +1,16 @@
 package org.openplacereviews.opendb.api;
 
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.openplacereviews.opendb.service.BotManager;
 import org.openplacereviews.opendb.service.IOpenDBBot;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.ResponseEntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.TreeMap;
 
 @Controller
 @RequestMapping("/api/bot")
@@ -23,6 +21,9 @@ public class BotController {
 
 	@Autowired
 	private BotManager botManager;
+
+	@Autowired
+	private ResponseEntityUtils response;
 	
 	public static class BotStats {
 		public String taskDescription;
@@ -63,42 +64,42 @@ public class BotController {
 
 	@PostMapping(path = "start", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String startBot(@RequestParam String botName) {
+	public ResponseEntity<String> startBot(@RequestParam String botName) {
 		if (botManager.startBot(botName)) {
-			return "{\"status\": \"OK\"}";
+			return response.ok();
 		} else {
-			return "{\"status\": \"ERROR\"}";
+			return response.error();
 		}
 	}
 	
 	
 	@PostMapping(path = "stop", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String stopBot(@RequestParam String botName) {
+	public ResponseEntity<String> stopBot(@RequestParam String botName) {
 		if (botManager.stopBot(botName)) {
-			return "{\"status\": \"OK\"}";
+			return response.ok();
 		} else {
-			return "{\"status\": \"ERROR\"}";
+			return response.error();
 		}
 	}
 	
 	@PostMapping(path = "enable", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String enableBot(@RequestParam String botName, @RequestParam int interval) {
+	public ResponseEntity<String> enableBot(@RequestParam String botName, @RequestParam int interval) {
 		if (botManager.enableBot(botName, interval)) {
-			return "{\"status\": \"OK\"}";
+			return response.ok();
 		} else {
-			return "{\"status\": \"ERROR\"}";
+			return response.error();
 		}
 	}
 	
 	@PostMapping(path = "disable", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public String disableBot(@RequestParam String botName) {
+	public ResponseEntity<String> disableBot(@RequestParam String botName) {
 		if (botManager.disableBot(botName)) {
-			return "{\"status\": \"OK\"}";
+			return response.ok();
 		} else {
-			return "{\"status\": \"ERROR\"}";
+			return response.error();
 		}
 	}
 
