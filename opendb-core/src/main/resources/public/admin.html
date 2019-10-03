@@ -487,7 +487,7 @@ Details: <b><span did="block-details"></span></b></pre>
     </div>
 
     <div class="modal fade" id="bot-history-modal" role="dialog">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg" style="width:90%">
 
             <!-- Modal content-->
             <div class="modal-content">
@@ -500,12 +500,11 @@ Details: <b><span did="block-details"></span></b></pre>
                     <h4 class="control-label">Bot API: <span id="bot-api"></span> </h4>
                     <button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
                     <div class="table-responsive">
-                        <table id="bots-history-table" class="table table-bordred table-striped table-hover">
+                        <table id="bots-history-table" class="table table-bordered table-striped table-hover">
                             <thead>
                             <tr>
                                 <th>Time started</th>
                                 <th>Time finished</th>
-                                <!--<th>Running</th>-->
                                 <th>Amount of tasks</th>
                                 <th>Finish status</th>
                                 <th>Added operations</th>
@@ -520,8 +519,12 @@ Details: <b><span did="block-details"></span></b></pre>
                                     <td did="time-finish"></td>
                                     <td did="amount-tasks"></td>
                                     <td did="finish-status"></td>
-                                    <td did="added-ops"></td>
-                                    <td did="logs"></td>
+                                    <td did="added-ops">
+                                        <details><summary><b>OPS</b></summary><pre did="ops-json"></pre></details>
+                                    </td>
+                                    <td did="logs">
+                                        <details><summary><b>Logs</b></summary><pre did="logs-json"></pre></details>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -534,7 +537,21 @@ Details: <b><span did="block-details"></span></b></pre>
 
         </div>
     </div>
-    <!--BOTS MODALS-->
+
+    <div class="modal fade" id="log-ops-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title" id="log-ops-header"></h4>
+                </div>
+                <div class="modal-body">
+
+                </div>
+            </div>
+        </div>
+    </div>
+        <!--BOTS MODALS-->
 
     <!--API MODALS VIEWS-->
 

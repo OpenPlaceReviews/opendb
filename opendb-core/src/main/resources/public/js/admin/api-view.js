@@ -28,9 +28,9 @@ var API_VIEW = function () {
                     .appendTo(table)
                     .removeClass("hidden")
                     .show();
-                newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toLocaleString());
+                newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toISOString());
                 if (obj.timeFinished) {
-                    newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toLocaleString());
+                    newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toISOString());
                 }
                 newTemplate.find("[did='amount-tasks']").html(obj.amountOfTasks);
                 if (obj.finishStatus) {
@@ -39,7 +39,26 @@ var API_VIEW = function () {
                     newTemplate.find("[did='finish-status']").html("RUNNING");
                 }
                 newTemplate.find("[did='added-ops']").html();
-                newTemplate.find("[did='logs']").html();
+                if (obj.addedOperations) {
+                    var ops = "";
+                    for (var l = 0; l < obj.addedOperations.length; l++) {
+                        ops += obj.addedOperations[l] + "\n";
+                    }
+
+                    newTemplate.find("[did='ops-json']").html(ops);
+                }
+                if (obj.logEntries) {
+                    var logs = "";
+                    for (var k = 0; k < obj.logEntries.length; k++) {
+                        var logObj = obj.logEntries[k];
+                        logs += new Date(logObj.date).toISOString() + ": " + logObj.msg + "\n";
+                        if (logObj.exception) {
+                            logs += logObj.exception + "\n";
+                        }
+                    }
+                    newTemplate.find("[did='logs-json']").html(logs);
+
+                }
             }
             $("#history-bot-name").val(bot);
             $("#bot-history-header").html("Bot stats for: " + bot);
