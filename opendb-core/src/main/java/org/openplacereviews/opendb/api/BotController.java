@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -35,6 +36,7 @@ public class BotController {
 		public Map<String, Object> settings;
 		public String id;
 		public String api;
+		public Collection botRunStats;
 
 		public BotStats(String id, IOpenDBBot<?> i) {
 			this.api = i.getAPI();
@@ -45,6 +47,7 @@ public class BotController {
 			this.total = i.total();
 			this.progress = i.progress();
 			this.isRunning = i.isRunning();
+			this.botRunStats = i.getHistoryRuns();
 		}
 
 	}

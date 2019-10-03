@@ -43,8 +43,6 @@ public class OpenDBServer {
 	@Autowired
 	IPFSFileManager externalResourcesService;
 	@Autowired
-	PublicDataManager publicDataManager;
-	@Autowired
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	SettingsManager settingsManager;
@@ -87,11 +85,11 @@ public class OpenDBServer {
 			try {
 				LOGGER.info("Application starting...");
 				preStartApplication();
+				addNewPreferences();
 				MetadataDb metadataDB = loadMetadata();
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
 				externalResourcesService.init();
-				publicDataManager.updateEndpoints();
 				LOGGER.info("Application has started");
 			} catch (RuntimeException e) {
 				LOGGER.error(e.getMessage(), e);
@@ -125,6 +123,13 @@ public class OpenDBServer {
 					+ ", dataType=" + dataType + ", columnSize=" + columnSize + "]";
 		}
 	}
+
+	private void addNewPreferences() {
+//		OBJTABLE_OPR_PLACE_PREF = settingsManager.registerTableMapping("obj_opr_places",
+//				2, "opr.place");
+	}
+
+	public static SettingsManager.CommonPreference<Map<String, Object>> OBJTABLE_OPR_PLACE_PREF;
 
 
 }
