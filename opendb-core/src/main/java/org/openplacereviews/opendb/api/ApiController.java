@@ -20,9 +20,8 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-
 import javax.servlet.http.HttpSession;
+import java.util.*;
 
 @Controller
 @RequestMapping("/api")
@@ -69,6 +68,7 @@ public class ApiController {
 			}
 			o = o.getParent();
 		}
+		res.amountBlocks = manager.getBlockchain().getDepth();
 		res.orphanedBlocks = manager.getOrphanedBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
@@ -116,6 +116,7 @@ public class ApiController {
 		public String status;
 		public String serverUser;
 		public String loginUser;
+		public Integer amountBlocks;
 		public Map<String, OpBlock> orphanedBlocks;
 		public List<String> sblocks = new ArrayList<String>();
 	}

@@ -148,10 +148,12 @@ public interface IOpenDBBot<T> extends Callable<T> {
 			final class LogEntry<K, V> implements Map.Entry<K, V> {
 				private final K msg;
 				private V exception;
+				private Long date;
 
 				public LogEntry(K key, V value) {
 					this.msg = key;
 					this.exception = value;
+					this.date = getCurrentTime();
 				}
 
 				@Override
@@ -162,6 +164,10 @@ public interface IOpenDBBot<T> extends Callable<T> {
 				@Override
 				public V getValue() {
 					return exception;
+				}
+
+				public Long getDate() {
+					return date;
 				}
 
 				@Override
