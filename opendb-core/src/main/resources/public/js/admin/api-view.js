@@ -17,35 +17,32 @@ var API_VIEW = function () {
     return {
         botStats: {},
         showBotHistory: function(bot) {
-            var obj = {
-                "botName": bot
-            };
-            $.getJSON("/api/bot/history", obj)
-                .done(function (data) {
-                    var table = $("#main-bot-history-table");
-                    table.empty();
-                    var template = $("#bot-history-template");
-                    for (var i = 0; i < data.length; i++) {
-                        var obj = data[i];
-                        var newTemplate = template.clone()
-                            .appendTo(table)
-                            .removeClass("hidden")
-                            .show();
-                        newTemplate.find("[did='bot-id']").html(obj.bot);
-                        newTemplate.find("[did='start-date']").html(new Date(obj.startDate).toLocaleString());
-                        if (obj.endDate !== undefined) {
-                            newTemplate.find("[did='end-date']").html(new Date(obj.endDate).toLocaleString());
-                        }
-                        newTemplate.find("[did='total']").html(obj.total);
-                        newTemplate.find("[did='processed']").html(obj.processed);
-                        newTemplate.find("[did='status']").html(obj.status);
-                    }
-                    $("#history-bot-name").val(bot);
-                    $("#bot-history-header").html("History of the launches for bot: " + bot);
-                })
-                .fail(function (xhr, status, error) {
-                    fail(error, false);
-                });
+            var botStat = API_VIEW.botStats[bot];
+            var table = $("#main-bot-history-table");
+            table.empty();
+            var template = $("#bot-history-template");
+            $("#bot-api").html(botStat.api);
+            for (var i = 0; i < botStat.botRunStats.length; i++) {
+                var obj = botStat.botRunStats[i];
+                var newTemplate = template.clone()
+                    .appendTo(table)
+                    .removeClass("hidden")
+                    .show();
+                newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toLocaleString());
+                if (obj.timeFinished) {
+                    newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toLocaleString());
+                }
+                newTemplate.find("[did='amount-tasks']").html(obj.amountOfTasks);
+                if (obj.finishStatus) {
+                    newTemplate.find("[did='finish-status']").html(obj.finishStatus);
+                } else if (obj.running) {
+                    newTemplate.find("[did='finish-status']").html("RUNNING");
+                }
+                newTemplate.find("[did='added-ops']").html();
+                newTemplate.find("[did='logs']").html();
+            }
+            $("#history-bot-name").val(bot);
+            $("#bot-history-header").html("Bot stats for: " + bot);
         },
         showBotScheduleSettings: function(bot) {
             var botState = API_VIEW.botStats[bot];
@@ -136,6 +133,7 @@ var API_VIEW = function () {
 
             $("#refresh-bot-history-btn").click(function () {
                 var botName = $(".modal-header #history-bot-name").val();
+                API_VIEW.loadBotData();
                 API_VIEW.showBotHistory(botName);
             });
 

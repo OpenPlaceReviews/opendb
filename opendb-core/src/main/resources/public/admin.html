@@ -497,29 +497,31 @@ Details: <b><span did="block-details"></span></b></pre>
                     <p class="modal-title" id="history-bot-name"></p>
                 </div>
                 <div class="modal-body">
-                    <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                    <h4 class="control-label">Bot API: <span id="bot-api"></span> </h4>
+                    <button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
                     <div class="table-responsive">
                         <table id="bots-history-table" class="table table-bordred table-striped table-hover">
                             <thead>
                             <tr>
-                                <th>Bot ID</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Total</th>
-                                <th>Processed</th>
-                                <th>Status</th>
+                                <th>Time started</th>
+                                <th>Time finished</th>
+                                <!--<th>Running</th>-->
+                                <th>Amount of tasks</th>
+                                <th>Finish status</th>
+                                <th>Added operations</th>
+                                <th>Logs</th>
                             </tr>
                             </thead>
 
                             <tbody id="main-bot-history-table"></tbody>
                             <tbody>
                                 <tr id="bot-history-template" class="hidden">
-                                    <td did="bot-id"></td>
-                                    <td did="start-date"></td>
-                                    <td did="end-date"></td>
-                                    <td did="total"></td>
-                                    <td did="processed"></td>
-                                    <td did="status"></td>
+                                    <td did="time-start"></td>
+                                    <td did="time-finish"></td>
+                                    <td did="amount-tasks"></td>
+                                    <td did="finish-status"></td>
+                                    <td did="added-ops"></td>
+                                    <td did="logs"></td>
                                 </tr>
                             </tbody>
                         </table>

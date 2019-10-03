@@ -60,7 +60,7 @@ public interface IOpenDBBot<T> extends Callable<T> {
 		Deque<BotRunStats.BotStats> botStats = new ArrayDeque<>();
 
 		public void createNewState() {
-			if (botStats.size() > logSize) {
+			if (botStats.size() >= logSize) {
 				botStats.removeFirst();
 			}
 			botStats.addLast(new BotRunStats.BotStats());
@@ -105,6 +105,7 @@ public interface IOpenDBBot<T> extends Callable<T> {
 			public void setInterrupted() {
 				interrupted = true;
 				running = false;
+				timeFinished = getCurrentTime();
 				finishStatus = FinishStatus.INTERRUPTED;
 			}
 
