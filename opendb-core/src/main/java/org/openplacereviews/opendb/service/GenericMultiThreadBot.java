@@ -93,7 +93,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 			return 0;
 		}
 		if(msg != null) {
-			LOGGER.info(addInfoLogEntry(msg));
+			info(msg);
 		}
 		Future<TaskResult> f = service.submit(task);
 		int cnt = 0;
@@ -122,11 +122,11 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		int tot = id + futures.size();
 		String msg = String.format("%d / %d (%d + %d): %s", id, tot, overall, r.counter, r.msg);
 		if(r.e != null) {
-			LOGGER.error(addErrorLogEntry(msg, r.e));
+			error(msg, r.e);
 			throw r.e;
 		} else {
 			successfulResults.add(r);
-			LOGGER.info(addInfoLogEntry(msg));
+			info(msg);
 		}
 		while (blockCreateNeeded(1)) {
 			Metric m = mBlock.start();
@@ -179,37 +179,6 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	public List<TaskResult> getSuccessfulResults() {
 		return successfulResults;
 	}
-	
-	@Override
-	public abstract String getTaskDescription();
-
-	@Override
-	public abstract String getTaskName();
-	
-	@Override
-	public int taskCount() {
-		return 1;
-	}
-
-	@Override
-	public int total() {
-		return 1 + (service  == null ? 1 : (int) service.getTaskCount());
-	}
-
-	@Override
-	public int progress() {
-		return 1 + (service == null ? 1 : (int) service.getCompletedTaskCount());
-	}
-
-	@Override
-	public boolean isRunning() {
-		return botRunStats.botStats.isEmpty() ? false : botRunStats.getCurrentBotState().running;
-	}
-
-	@Override
-	public Deque<BotRunStats.BotStats> getHistoryRuns() {
-		return botRunStats.botStats;
-	}
 
 	public void setSuccessState() {
 		botRunStats.getCurrentBotState().setSuccess(progress());
@@ -223,21 +192,34 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		botRunStats.createNewState();
 	}
 
-	public synchronized String addInfoLogEntry(String log) {
-		return addErrorLogEntry(log, null);
+	private void addLogEntry(String log, Exception e) {
+		botRunStats.getCurrentBotState().addLogEntry(log, e);
 	}
 
-	public synchronized String addErrorLogEntry(String log, Throwable e) {
-		return botRunStats.getCurrentBotState().addLogEntry(log, e);
+	public void info(String msg) {
+		LOGGER.info(msg);
+		addLogEntry(msg, null);
+	}
+
+	public void info(String msg, Exception e) {
+		LOGGER.info(msg, e);
+		addLogEntry(msg, e);
+	}
+
+	public void error(String msg, Exception e) {
+		LOGGER.error(msg, e);
+		addLogEntry(msg, e);
 	}
 	
 	public TaskResult errorResult(String msg, Exception e) {
-		logSystem.logError(botObject, ErrorType.BOT_PROCESSING_ERROR, addErrorLogEntry(getTaskName() + " failed: " + e.getMessage(), e), e);
+		logSystem.logError(botObject, ErrorType.BOT_PROCESSING_ERROR, getTaskName() + " failed: " + e.getMessage(), e);
+		addLogEntry(getTaskName() + " failed: " + e.getMessage(), e);
 		return new TaskResult(e.getMessage(), e);
 	}
 	
 	public void logError(String msg) {
-		logSystem.logError(botObject, ErrorType.BOT_PROCESSING_ERROR, addErrorLogEntry(msg, null), null);
+		logSystem.logError(botObject, ErrorType.BOT_PROCESSING_ERROR, msg, null);
+		addLogEntry(msg, null);
 	}
 	
 	protected void initVars() {
@@ -267,6 +249,36 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		}
 	}
 
+	@Override
+	public abstract String getTaskDescription();
+
+	@Override
+	public abstract String getTaskName();
+
+	@Override
+	public int taskCount() {
+		return 1;
+	}
+
+	@Override
+	public int total() {
+		return 1 + (service  == null ? 1 : (int) service.getTaskCount());
+	}
+
+	@Override
+	public int progress() {
+		return 1 + (service == null ? 1 : (int) service.getCompletedTaskCount());
+	}
+
+	@Override
+	public boolean isRunning() {
+		return botRunStats.botStats.isEmpty() ? false : botRunStats.getCurrentBotState().running;
+	}
+
+	@Override
+	public Deque<BotRunStats.BotStats> getHistoryRuns() {
+		return botRunStats.botStats;
+	}
 
 	@Override
 	public boolean interrupt() {
@@ -278,7 +290,6 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		}
 		return false;
 	}
-
 
 	@Override
 	public String getAPI() {

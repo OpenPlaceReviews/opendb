@@ -212,7 +212,7 @@ public class ApiController {
 		if (op == null) {
 			return "{}";
 		}
-		return formatter.fullObjectToJson(op);
+		return formatter.fullObjectToJson(Collections.singletonList(op));
 	}
 
 	@GetMapping(path = "/ops-by-id", produces = "text/json;charset=UTF-8")

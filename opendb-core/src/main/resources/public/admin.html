@@ -63,6 +63,23 @@
             width: 100%;
         }
 
+        .pre-scroll {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            overflow: auto;
+            background-color: #eeeeee;
+            word-break: normal !important;
+            word-wrap: normal !important;
+            white-space: pre !important;
+        }
+
+        .table_wrapper{
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
     </style>
 </head>
 
@@ -498,34 +515,45 @@ Details: <b><span did="block-details"></span></b></pre>
                 </div>
                 <div class="modal-body">
                     <h4 class="control-label">Bot API: <span id="bot-api"></span> </h4>
-                    <button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-                    <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-md-2 form-group">
+                            <button class="btn btn-primary form-control" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                        </div>
+                    </div>
+                    <div class="table_wrapper">
                         <table id="bots-history-table" class="table table-bordered table-striped table-hover">
                             <thead>
                             <tr>
+                                <th>Added operations</th>
                                 <th>Time started</th>
                                 <th>Time finished</th>
-                                <th>Amount of tasks</th>
+                                <th>Tasks</th>
+                                <th>Progress</th>
                                 <th>Finish status</th>
-                                <th>Added operations</th>
                                 <th>Logs</th>
                             </tr>
                             </thead>
 
                             <tbody id="main-bot-history-table"></tbody>
                             <tbody>
-                                <tr id="bot-history-template" class="hidden">
-                                    <td did="time-start"></td>
-                                    <td did="time-finish"></td>
-                                    <td did="amount-tasks"></td>
-                                    <td did="finish-status"></td>
-                                    <td did="added-ops">
-                                        <details><summary><b>OPS</b></summary><pre did="ops-json"></pre></details>
-                                    </td>
-                                    <td did="logs">
-                                        <details><summary><b>Logs</b></summary><pre did="logs-json"></pre></details>
-                                    </td>
-                                </tr>
+                            <tr id="bot-history-template" class="hidden">
+                                <td did="added-ops">
+                                    <details style="width: inherit"><summary><b did="ops-amount">OPS</b></summary><pre did="ops-json" class="pre-scroll"></pre></details>
+                                </td>
+                                <td did="time-start"></td>
+                                <td did="time-finish"></td>
+                                <td did="amount-tasks"></td>
+                                <td>
+                                    <div did="progress">
+                                        <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
+                                             role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </td>
+                                <td did="finish-status"></td>
+                                <td did="logs">
+                                    <details style="width: inherit"><summary><b>Logs</b></summary><pre did="logs-json" class="pre-scroll"></pre></details>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
