@@ -168,7 +168,10 @@ var API_VIEW = function () {
                     
                     newTemplate.find("[did='bot-show-history-btn']")
                         .click(function () {
-                            API_VIEW.showBotHistory(obj.id, false);
+                            getJsonAction("/api/bot", function (data) {
+                                API_VIEW.botStats = data;
+                                API_VIEW.showBotHistory(obj.id, false);
+                            });
                         });
                     newTemplate.find("[did='bot-schedule-btn']")
                         .click(function () {
