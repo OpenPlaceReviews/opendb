@@ -537,20 +537,20 @@ Details: <b><span did="block-details"></span></b></pre>
                             <tbody id="main-bot-history-table"></tbody>
                             <tbody>
                             <tr id="bot-history-template" class="hidden">
-                                <td did="added-ops">
+                                <td did="added-ops" style="table-layout: fixed; width: 250px">
                                     <details style="width: inherit"><summary><b did="ops-amount">OPS</b></summary><pre did="ops-json" class="pre-scroll"></pre></details>
                                 </td>
-                                <td did="time-start"></td>
-                                <td did="time-finish"></td>
-                                <td did="amount-tasks"></td>
-                                <td>
+                                <td did="time-start" style="table-layout: fixed;"></td>
+                                <td did="time-finish" style="table-layout: fixed;"></td>
+                                <td did="amount-tasks" style="table-layout: fixed; min-width: 100px; max-width: 200px"></td>
+                                <td style="table-layout: fixed; min-width: 200px;">
                                     <div did="progress">
                                         <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
                                              role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                 </td>
-                                <td did="finish-status"></td>
-                                <td did="logs">
+                                <td did="finish-status" style="table-layout: fixed; min-width: 130px;"></td>
+                                <td did="logs" style="table-layout: fixed; width: 1000px;">
                                     <details style="width: inherit"><summary><b>Logs</b></summary><pre did="logs-json" class="pre-scroll"></pre></details>
                                 </td>
                             </tr>
