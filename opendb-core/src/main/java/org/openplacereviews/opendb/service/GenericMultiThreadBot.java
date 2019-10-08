@@ -185,7 +185,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		botRunStats.getCurrentBotState().setSuccess(progress());
 	}
 
-	public void setfailedState() {
+	public void setFailedState() {
 		botRunStats.getCurrentBotState().setFailed(progress());
 	}
 
