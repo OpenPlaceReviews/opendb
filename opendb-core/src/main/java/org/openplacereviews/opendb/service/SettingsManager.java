@@ -95,6 +95,9 @@ public class SettingsManager {
 			}
 			
 		}
+
+		List<CommonPreference<Object>> indexList = getPreferencesByPrefix(DB_SCHEMA_INDEXES.prefix);
+		dbSchemaManager.setSetting(jdbcTemplate, DB_SCHEMA_INDEXES.prefix, jsonFormatter.fullObjectToJson(indexList));
 	}
 
 	public Collection<CommonPreference<?>> getPreferences() {

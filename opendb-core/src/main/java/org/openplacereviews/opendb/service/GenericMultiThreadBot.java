@@ -23,7 +23,7 @@ import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
 
 public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 
-	private static final Log LOGGER = LogFactory.getLog(GenericMultiThreadBot.class);
+	protected static final Log LOGGER = LogFactory.getLog(GenericMultiThreadBot.class);
 	private static final long TIMEOUT_OVERPASS_HOURS = 4;
 	private static final long TIMEOUT_BLOCK_CREATION_MS = 15000;
 	public static final String F_BLOCKCHAIN_CONFIG = "blockchain-config";

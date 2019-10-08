@@ -395,7 +395,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	private void generateIndexColumn(Map<String, Object> entry) {
+	protected void generateIndexColumn(Map<String, Object> entry) {
 		String name = (String) entry.get(SettingsManager.INDEX_NAME);
 		String tableName = (String) entry.get(SettingsManager.INDEX_TABLENAME);
 		String colType = (String) entry.get(SettingsManager.INDEX_SQL_TYPE);
@@ -473,7 +473,7 @@ public class DBSchemaManager {
 
 	}
 
-	private void removeIndex(JdbcTemplate jdbcTemplate, String column) {
+	protected void removeIndex(JdbcTemplate jdbcTemplate, String column) {
 		jdbcTemplate.execute("DROP INDEX " + column);
 	}
 
@@ -526,7 +526,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	private String generateIndexQuery(ColumnDef c) {
+	protected String generateIndexQuery(ColumnDef c) {
 		if (c.getIndex() == INDEXED) {
 			return String.format("create index %s_%s_ind on %s (%s);\n", c.getTableName(), c.getColName(),
 					c.getTableName(), c.getColName());

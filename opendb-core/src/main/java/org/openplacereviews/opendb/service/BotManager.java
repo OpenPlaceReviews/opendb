@@ -32,6 +32,16 @@ public class BotManager {
 	private SettingsManager settings;
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
+	private static List<OpObject> systemBots = new ArrayList<>();
+
+	static {
+		OpObject botObject = new OpObject();
+		botObject.setId("update-indexes");
+
+		botObject.putStringValue("api", "org.openplacereviews.opendb.service.UpdateIndexesBot");
+		systemBots.add(botObject);
+	}
+
 
 	List<Future<?>> futures = new ArrayList<>();
 	ExecutorService service = Executors.newFixedThreadPool(5);
@@ -48,6 +58,26 @@ public class BotManager {
 		return recreateBots(req, blc);
 	}
 
+	private void addSystemBots(Map<String, IOpenDBBot<?>> bots) {
+		for (OpObject systemBot : systemBots) {
+			String id = systemBot.getId().get(0);
+			String api = systemBot.getStringValue("api");
+			IOpenDBBot<?> exBot = bots.get(id);
+			CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
+			if(p == null) {
+				TreeMap<String, Object> mp = new TreeMap<>();
+				mp.put(SettingsManager.BOT_ID, id);
+				p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
+			}
+			if (exBot == null || !exBot.getAPI().equals(api)) {
+				try {
+					generateBotInstance(bots, systemBot, id, api);
+				} catch (Exception e) {
+					LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
+				}
+			}
+		}
+	}
 
 	private synchronized Map<String, IOpenDBBot<?>> recreateBots(OpBlockChain.ObjectsSearchRequest req, OpBlockChain blc) {
 		Map<String, IOpenDBBot<?>> nbots = new TreeMap<>(this.bots);
@@ -64,23 +94,28 @@ public class BotManager {
 			}
 			if (exBot == null || !exBot.getAPI().equals(api)) {
 				try {
-					Class<?> bot = Class.forName(api);
-					Constructor<?> constructor = bot.getConstructor(OpObject.class);
-					IOpenDBBot<?> bi = (IOpenDBBot<?>) constructor.newInstance(cfg);
-					nbots.put(id, bi);
-					beanFactory.autowireBean(bi);
+					generateBotInstance(nbots, cfg, id, api);
 				} catch (Exception e) {
 					LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
 				}
 			}
 			
 		}
+		addSystemBots(nbots);
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
 		return nbots;
 	}
 
-	
+	private void generateBotInstance(Map<String, IOpenDBBot<?>> nbots, OpObject cfg, String id, String api) throws Exception {
+		Class<?> bot = Class.forName(api);
+		Constructor<?> constructor = bot.getConstructor(OpObject.class);
+		IOpenDBBot<?> bi = (IOpenDBBot<?>) constructor.newInstance(cfg);
+		nbots.put(id, bi);
+		beanFactory.autowireBean(bi);
+	}
+
+
 	public boolean startBot(String botId) {
 		IOpenDBBot<?> botObj = getBots().get(botId);
 		MapStringObjectPreference p = getBotConfiguration(botId);

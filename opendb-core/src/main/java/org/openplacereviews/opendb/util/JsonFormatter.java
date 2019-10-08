@@ -1,9 +1,11 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.service.SettingsManager;
 import org.springframework.stereotype.Component;
 
 import java.io.Reader;
@@ -116,6 +118,12 @@ public class JsonFormatter {
 	@SuppressWarnings("unchecked")
 	public TreeMap<String, Object> fromJsonToTreeMap(String json) {
 		return gson.fromJson(json, TreeMap.class);
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<SettingsManager.CommonPreference<Map<String, Object>>> fromJsonToListTreeMap(String json) {
+		Type listOfMyClassObject = new TypeToken<ArrayList<SettingsManager.CommonPreference<Map<String, Object>>>>() {}.getType();
+		return gson.fromJson(json, listOfMyClassObject);
 	}
 
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
