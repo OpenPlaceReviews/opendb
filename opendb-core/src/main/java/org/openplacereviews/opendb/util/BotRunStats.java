@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.service;
+package org.openplacereviews.opendb.util;
 
 import org.openplacereviews.opendb.ops.OpOperation;
 
@@ -13,7 +13,7 @@ public class BotRunStats {
 	}
 
 	private static final int logSize = 10;
-	Deque<BotStats> botStats = new ArrayDeque<>();
+	public Deque<BotStats> botStats = new ArrayDeque<>();
 
 	public void createNewState() {
 		if (botStats.size() >= logSize) {
@@ -29,7 +29,7 @@ public class BotRunStats {
 
 	public class BotStats {
 		boolean interrupted;
-		boolean running;
+		public boolean running;
 		List<LogEntry> logEntries;
 		Long timeStarted, timeFinished;
 		FinishStatus finishStatus;
