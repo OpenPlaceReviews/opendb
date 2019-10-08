@@ -35,11 +35,11 @@ public class SettingsManager {
 	
 	public static final PreferenceFamily USER = new PreferenceFamily(null, "User");
 	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily("opendb.db-schema.objtables", "DB Tables").
-			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded().setEditable();
+			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded();
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
-			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable();
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable().setDeletable();
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
-			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).setEditable();
+			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID);
 	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
 			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).setEditable();
 	
@@ -124,6 +124,37 @@ public class SettingsManager {
 	public <T> CommonPreference<T> getPreferenceByKey(String keyPreference) {
 		return (CommonPreference<T>) preferences.get(keyPreference);
 	}
+
+	public boolean removePreference(CommonPreference preference) {
+		if (preference.family.deletable) {
+			preferences.remove(preference.getId());
+			if (dbSchemaManager.removeSetting(jdbcTemplate, preference) >= 1) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private PreferenceFamily getPreferenceFamily(String name) {
+		for (PreferenceFamily preferenceFamily : SETTINGS_FAMILIES) {
+			if (preferenceFamily.name.equals(name)) {
+				return preferenceFamily;
+			}
+		}
+
+		return null;
+	}
+
+	public boolean addNewPreference(String family, String value) {
+		PreferenceFamily preferenceFamily = getPreferenceFamily(family);
+		CommonPreference commonPreference = registerMapPreferenceForFamily(preferenceFamily, jsonFormatter.fromJsonToTreeMap(value));
+		if (commonPreference != null) {
+			dbSchemaManager.setSetting(jdbcTemplate, commonPreference.getId(), jsonFormatter.fullObjectToJson(commonPreference.value));
+			return true;
+		}
+
+		return false;
+	}
 	
 	public enum CommonPreferenceSource {
 		DEFAULT,
@@ -141,6 +172,7 @@ public class SettingsManager {
 		public String[] idProperties;
 		public boolean restartNeeded;
 		public boolean editable;
+		public boolean deletable;
 		
 		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
@@ -159,6 +191,11 @@ public class SettingsManager {
 		
 		public PreferenceFamily setEditable() {
 			this.editable = true;
+			return this;
+		}
+
+		public PreferenceFamily setDeletable() {
+			this.deletable = true;
 			return this;
 		}
 		
@@ -245,7 +282,6 @@ public class SettingsManager {
 		public boolean restartIsNeeded() {
 			return restartIsNeeded;
 		}
-
 
 		public String getId() {
 			return id;

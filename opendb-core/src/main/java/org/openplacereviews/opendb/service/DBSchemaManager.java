@@ -96,7 +96,7 @@ public class DBSchemaManager {
 			lst = new ArrayList<ColumnDef>();
 			schema.put(tableName, lst);
 		}
-		
+
 		lst.add(cd);
 	}
 
@@ -434,6 +434,12 @@ public class DBSchemaManager {
 		registerColumn(tableName, cd);
 	}
 
+	private Map<String, OpIndexColumn> generateOpIndexColumn(List<CommonPreference<Map<String, Object>>> prefs) {
+		List<CommonPreference<Map<String, Object>>> indexes = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+
+		return null;
+	}
+
 	@SuppressWarnings("unchecked")
 	private void prepareObjTableMapping() {
 		for(String tableName : getObjtables().keySet()) {
@@ -460,6 +466,15 @@ public class DBSchemaManager {
 			}
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
+	}
+
+	protected void prepareColumnIndexMapping() {
+
+
+	}
+
+	private void removeIndex(JdbcTemplate jdbcTemplate, String column) {
+		jdbcTemplate.execute("DROP INDEX " + column);
 	}
 
 	private void addIndexCol(OpIndexColumn indexColumn) {
@@ -538,6 +553,10 @@ public class DBSchemaManager {
 			return 0;
 		}
 		return Integer.parseInt(s);
+	}
+
+	protected Integer removeSetting(JdbcTemplate jdbcTemplate, CommonPreference preference) {
+		return jdbcTemplate.update("DELETE FROM " + SETTINGS_TABLE + " WHERE key = ?", preference.getId());
 	}
 
 	protected String getSetting(JdbcTemplate jdbcTemplate, String key) {
