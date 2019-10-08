@@ -45,8 +45,6 @@ public class BotRunStats {
 				logEntries = new LinkedList<>();
 			}
 			if (e != null) {
-				StringWriter errors = new StringWriter();
-				e.printStackTrace(new PrintWriter(errors));
 				logEntries.add(new LogEntry(msg, e));
 			} else {
 				logEntries.add(new LogEntry(msg, null));
@@ -103,6 +101,12 @@ public class BotRunStats {
 			this.msg = msg;
 			exception = e;
 			date = getCurrentTime();
+		}
+
+		public String getException() {
+			StringWriter errors = new StringWriter();
+			exception.printStackTrace(new PrintWriter(errors));
+			return String.valueOf(errors);
 		}
 	}
 
