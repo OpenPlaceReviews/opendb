@@ -1,10 +1,14 @@
-package org.openplacereviews.opendb.service;
+package org.openplacereviews.opendb.service.bots;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
+import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.DBSchemaManager;
+import org.openplacereviews.opendb.service.GenericMultiThreadBot;
+import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;

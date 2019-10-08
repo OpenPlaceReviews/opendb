@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.util;
+package org.openplacereviews.opendb.service.bots;
 
 import org.openplacereviews.opendb.ops.OpOperation;
 
