@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.api;
 
 import org.openplacereviews.opendb.service.BotManager;
 import org.openplacereviews.opendb.service.IOpenDBBot;
+import org.openplacereviews.opendb.util.BotRunStats;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.ResponseEntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
+import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -36,7 +37,7 @@ public class BotController {
 		public Map<String, Object> settings;
 		public String id;
 		public String api;
-		public Collection botRunStats;
+		public Deque<BotRunStats.BotStats> botRunStats;
 
 		public BotStats(String id, IOpenDBBot<?> i) {
 			this.api = i.getAPI();

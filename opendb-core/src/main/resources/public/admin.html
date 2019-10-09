@@ -59,6 +59,7 @@
             cursor: inherit;
             display: block;
         }
+
         #img-upload {
             width: 100%;
         }
@@ -66,18 +67,43 @@
         .pre-scroll {
             width: 100%;
             height: auto;
-            max-height: 300px;
+            max-height: 50%;
             overflow: auto;
             background-color: #eeeeee;
-            word-break: normal !important;
-            word-wrap: normal !important;
-            white-space: pre !important;
+            word-break: break-all;
+            word-wrap: break-word;
+            white-space: pre-wrap;
         }
 
-        .table_wrapper{
+        .table_wrapper {
             display: block;
             overflow-x: auto;
             white-space: nowrap;
+        }
+
+        .large-modal {
+            width: 90%;
+        }
+
+        .radio-btn span.glyphicon {
+            opacity: 0;
+        }
+        .radio-btn.active span.glyphicon {
+            opacity: 1;
+        }
+
+        .inherit {
+            width: inherit;
+        }
+
+        .table_layout_fixed_with {
+            table-layout: fixed;
+            width: 250px;
+        }
+
+        .table_layout_200 {
+            table-layout: fixed;
+            min-width: 200px;
         }
 
     </style>
@@ -428,10 +454,11 @@ Details: <b><span did="block-details"></span></b></pre>
             <table id="bots-table" class="table table-bordered table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>Id</th>
-                        <th>Task name</th>
+                        <th>Bot Id</th>
+                        <th>Task</th>
                         <th>Task description</th>
                         <th>Last launch</th>
+                        <th>System bot</th>
                         <th>Interval</th>
                         <th>Progress</th>
                         <th>Actions</th>
@@ -445,6 +472,18 @@ Details: <b><span did="block-details"></span></b></pre>
                         <td did="task-name"></td>
                         <td did="task-description"></td>
                         <td did="last-launch"></td>
+                        <td>
+                            <div class="btn-group" data-toggle="buttons">
+                                <label class="btn radio-btn btn-danger active disabled" aria-disabled="true">
+                                    <input type="radio" name="options" did="option1" autocomplete="off" checked>
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                </label>
+                                <label class="btn radio-btn btn-success disabled" aria-disabled="true">
+                                    <input type="radio" name="options" did="option2" autocomplete="off">
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                </label>
+                            </div>
+                        </td>
                         <td did="interval"></td>
                         <td>
                             <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
@@ -504,7 +543,7 @@ Details: <b><span did="block-details"></span></b></pre>
     </div>
 
     <div class="modal fade" id="bot-history-modal" role="dialog">
-        <div class="modal-dialog modal-lg" style="width:90%">
+        <div class="modal-dialog modal-lg large-modal">
 
             <!-- Modal content-->
             <div class="modal-content">
@@ -537,21 +576,26 @@ Details: <b><span did="block-details"></span></b></pre>
                             <tbody id="main-bot-history-table"></tbody>
                             <tbody>
                             <tr id="bot-history-template" class="hidden">
-                                <td did="added-ops" style="table-layout: fixed; width: 250px">
+                                <td did="added-ops" class="table_layout_fixed_with">
                                     <details style="width: inherit"><summary><b did="ops-amount">OPS</b></summary><pre did="ops-json" class="pre-scroll"></pre></details>
                                 </td>
-                                <td did="time-start" style="table-layout: fixed;"></td>
-                                <td did="time-finish" style="table-layout: fixed;"></td>
-                                <td did="amount-tasks" style="table-layout: fixed; min-width: 100px; max-width: 200px"></td>
-                                <td style="table-layout: fixed; min-width: 200px;">
+                                <td did="time-start"></td>
+                                <td did="time-finish"></td>
+                                <td did="amount-tasks"></td>
+                                <td class="table_layout_200">
                                     <div did="progress">
                                         <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
                                              role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                 </td>
-                                <td did="finish-status" style="table-layout: fixed; min-width: 130px;"></td>
-                                <td did="logs" style="table-layout: fixed; width: 1000px;">
-                                    <details style="width: inherit"><summary><b>Logs</b></summary><pre did="logs-json" class="pre-scroll"></pre></details>
+                                <td did="finish-status"></td>
+                                <td did="logs">
+                                    <button type="button" class="btn btn-primary" did="button-logs"></button>
+                                </td>
+                            </tr>
+                            <tr id="bot-history-colspan-template" class="hidden">
+                                <td did="logs" colspan="7">
+                                    <pre did="logs-json" class="pre-scroll inherit"></pre>
                                 </td>
                             </tr>
                             </tbody>
