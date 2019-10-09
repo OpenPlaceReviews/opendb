@@ -56,7 +56,7 @@ var API_VIEW = function () {
                     var progressBarValue = parseInt((botStat.progress / botStat.total) * 100);
                     newTemplate.find("[did='progress-bar']")
                         .attr("aria-valuenow", progressBarValue)
-                        .attr("style", "width:" + progressBarValue + "%")
+                        .css("width",  progressBarValue + "%")
                         .html(progressBarValue + "%");
                 } else {
                     newTemplate.find("[did='progress']").html("-");
