@@ -37,7 +37,6 @@ public class BotManager {
 	static {
 		OpObject botObject = new OpObject();
 		botObject.setId("update-indexes");
-
 		botObject.putStringValue("api", "org.openplacereviews.opendb.service.bots.UpdateIndexesBot");
 		systemBots.add(botObject);
 	}

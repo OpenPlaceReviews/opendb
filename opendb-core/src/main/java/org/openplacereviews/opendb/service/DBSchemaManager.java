@@ -395,7 +395,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	protected void generateIndexColumn(Map<String, Object> entry) {
+	public void generateIndexColumn(Map<String, Object> entry) {
 		String name = (String) entry.get(SettingsManager.INDEX_NAME);
 		String tableName = (String) entry.get(SettingsManager.INDEX_TABLENAME);
 		String colType = (String) entry.get(SettingsManager.INDEX_SQL_TYPE);
@@ -473,7 +473,7 @@ public class DBSchemaManager {
 
 	}
 
-	protected void removeIndex(JdbcTemplate jdbcTemplate, String column) {
+	public void removeIndex(JdbcTemplate jdbcTemplate, String column) {
 		jdbcTemplate.execute("DROP INDEX " + column);
 	}
 
@@ -526,7 +526,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	protected String generateIndexQuery(ColumnDef c) {
+	public String generateIndexQuery(ColumnDef c) {
 		if (c.getIndex() == INDEXED) {
 			return String.format("create index %s_%s_ind on %s (%s);\n", c.getTableName(), c.getColName(),
 					c.getTableName(), c.getColName());
@@ -542,7 +542,7 @@ public class DBSchemaManager {
 	}
 
 
-	protected boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
+	public boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
 		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?) "
 				+ " ON CONFLICT (key) DO UPDATE SET value = ? ", key, v, v) != 0;
 	}
@@ -559,7 +559,7 @@ public class DBSchemaManager {
 		return jdbcTemplate.update("DELETE FROM " + SETTINGS_TABLE + " WHERE key = ?", preference.getId());
 	}
 
-	protected String getSetting(JdbcTemplate jdbcTemplate, String key) {
+	public String getSetting(JdbcTemplate jdbcTemplate, String key) {
 		String s = null;
 		try {
 			s = jdbcTemplate.query("select value from " + SETTINGS_TABLE + " where key = ?", new ResultSetExtractor<String>() {

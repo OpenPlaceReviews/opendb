@@ -1,6 +1,6 @@
 package org.openplacereviews.opendb.service;
 
-import org.openplacereviews.opendb.util.BotRunStats;
+import org.openplacereviews.opendb.service.bots.BotRunStats;
 
 import java.util.Deque;
 import java.util.concurrent.Callable;

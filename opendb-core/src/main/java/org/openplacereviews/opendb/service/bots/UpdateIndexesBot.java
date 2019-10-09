@@ -64,19 +64,19 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			for (SettingsManager.CommonPreference<Map<String, Object>> index : dbIndexes) {
 				boolean indexIsExist = false;
 				for (SettingsManager.CommonPreference<Map<String, Object>> currentIndex : currentIndexPrefs) {
-					if (index.getId().equals(currentIndex.id)) {
-						String indexName = (String) currentIndex.value.get("name");
+					if (index.getId().equals(currentIndex.getId())) {
+						String indexName = (String) currentIndex.getValue().get("name");
 						info("Start checking index: " + indexName + " on changes ...");
-						validatePreferencesOnChanges(index.value, currentIndex.value);
+						validatePreferencesOnChanges(index.getValue(), currentIndex.getValue());
 						indexIsExist = true;
 						info("Checking index: " + indexName + " on changes was finished");
 					}
 				}
 				if (!indexIsExist) {
-					String indexName = (String) index.value.get("name");
-					String tableName = (String) index.value.get("tablename");
+					String indexName = (String) index.getValue().get("name");
+					String tableName = (String) index.getValue().get("tablename");
 					info("Found index for removing: '" + indexName + "' for table: " + tableName + " ...");
-					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(index.value));
+					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(index.getValue()));
 					TreeMap<String, Map<String, OpIndexColumn>> indexes = dbSchemaManager.getIndexes();
 					Map<String, OpIndexColumn> tableIndexes = indexes.get(tableName);
 					List<String> indexesForRemoving = new ArrayList<>();
@@ -95,17 +95,17 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			for (SettingsManager.CommonPreference<Map<String, Object>> currentIndex : currentIndexPrefs) {
 				boolean indexIsExist = false;
 				for (SettingsManager.CommonPreference<Map<String, Object>> dbIndex : dbIndexes) {
-					if (dbIndex.getId().equals(currentIndex.id)) {
+					if (dbIndex.getId().equals(currentIndex.getId())) {
 						indexIsExist = true;
 					}
 				}
 				if (!indexIsExist) {
-					String tableName = (String) currentIndex.value.get("tablename");
-					String colName = (String) currentIndex.value.get("name");
-					String index = (String) currentIndex.value.get("index");
-					String type = (String) currentIndex.value.get("sqltype");
+					String tableName = (String) currentIndex.getValue().get("tablename");
+					String colName = (String) currentIndex.getValue().get("name");
+					String index = (String) currentIndex.getValue().get("index");
+					String type = (String) currentIndex.getValue().get("sqltype");
 					info("Start creating new index: '" + index + "' for column: " + colName + " ...");
-					dbSchemaManager.generateIndexColumn(currentIndex.value);
+					dbSchemaManager.generateIndexColumn(currentIndex.getValue());
 					ColumnDef.IndexType di = null;
 					if (index != null) {
 						if (index.equalsIgnoreCase("true")) {

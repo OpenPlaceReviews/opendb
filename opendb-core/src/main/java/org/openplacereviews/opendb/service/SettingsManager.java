@@ -289,7 +289,11 @@ public class SettingsManager {
 		public String getId() {
 			return id;
 		}
-		
+
+		public T getValue() {
+			return value;
+		}
+
 		public boolean setString(String o) {
 			return setString(o, true);
 		}
