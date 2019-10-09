@@ -1,17 +1,6 @@
 package org.openplacereviews.opendb.service;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
-
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
@@ -20,14 +9,17 @@ import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
-import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.service.IOpenDBBot;
-import org.openplacereviews.opendb.service.LogOperationService;
+import org.openplacereviews.opendb.util.BotRunStats;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.*;
+
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
 
 public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 
@@ -46,14 +38,14 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	public static final String F_DATE = "date";
 	
 	private static final PerformanceMetric mBlock = PerformanceMetrics.i().getMetric("bot.osm-sync.block");
-	
+
 	private List<TaskResult> successfulResults = new ArrayList<>();
 	protected long placesPerOperation = 250;
 	protected long operationsPerBlock = 16;
 	protected double blockCapacity = 0.8;
 	protected OpObject botObject;
 	protected String opType;
-	protected boolean isRunning;
+	protected BotRunStats botRunStats = new BotRunStats();
 	
 	@Autowired
 	private BlocksManager blocksManager;
@@ -92,6 +84,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		}
 		Future<TaskResult> f = service.submit(task);
 		futures.add(f);
+		botRunStats.getCurrentBotState().setAmountOfTasks(progress());
 		return f;
 	}
 	
@@ -101,7 +94,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 			return 0;
 		}
 		if(msg != null) {
-			LOGGER.info(msg);
+			info(msg);
 		}
 		Future<TaskResult> f = service.submit(task);
 		int cnt = 0;
@@ -130,11 +123,11 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		int tot = id + futures.size();
 		String msg = String.format("%d / %d (%d + %d): %s", id, tot, overall, r.counter, r.msg);
 		if(r.e != null) {
-			LOGGER.error(msg);
+			error(msg, r.e);
 			throw r.e;
 		} else {
 			successfulResults.add(r);
-			LOGGER.info(msg);
+			info(msg);
 		}
 		while (blockCreateNeeded(1)) {
 			Metric m = mBlock.start();
@@ -176,6 +169,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		opOperation = formatter.parseOperation(formatter.opToJson(opOperation));
 		OpOperation op = blocksManager.generateHashAndSign(opOperation, blocksManager.getServerLoginKeyPair());
 		blocksManager.addOperation(op);
+		botRunStats.getCurrentBotState().addOperation(opOperation);
 		return op;
 	}
 
@@ -186,40 +180,47 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	public List<TaskResult> getSuccessfulResults() {
 		return successfulResults;
 	}
-	
-	@Override
-	public abstract String getTaskDescription();
 
-	@Override
-	public abstract String getTaskName();
-	
-	@Override
-	public int taskCount() {
-		return 1;
+	public void setSuccessState() {
+		botRunStats.getCurrentBotState().setSuccess(progress());
 	}
 
-	@Override
-	public int total() {
-		return 1 + (service  == null ? 1 : (int) service.getTaskCount());
+	public void setFailedState() {
+		botRunStats.getCurrentBotState().setFailed(progress());
 	}
 
-	@Override
-	public int progress() {
-		return 1 + (service == null ? 1 : (int) service.getCompletedTaskCount());
+	public void addNewBotStat() {
+		botRunStats.createNewState();
 	}
 
-	@Override
-	public boolean isRunning() {
-		return isRunning;
+	private void addLogEntry(String log, Exception e) {
+		botRunStats.getCurrentBotState().addLogEntry(log, e);
+	}
+
+	public void info(String msg) {
+		LOGGER.info(msg);
+		addLogEntry(msg, null);
+	}
+
+	public void info(String msg, Exception e) {
+		LOGGER.info(msg, e);
+		addLogEntry(msg, e);
+	}
+
+	public void error(String msg, Exception e) {
+		LOGGER.error(msg, e);
+		addLogEntry(msg, e);
 	}
 	
 	public TaskResult errorResult(String msg, Exception e) {
 		logSystem.logError(botObject, ErrorType.BOT_PROCESSING_ERROR, getTaskName() + " failed: " + e.getMessage(), e);
+		addLogEntry(getTaskName() + " failed: " + e.getMessage(), e);
 		return new TaskResult(e.getMessage(), e);
 	}
 	
 	public void logError(String msg) {
 		logSystem.logError(botObject, ErrorType.BOT_PROCESSING_ERROR, msg, null);
+		addLogEntry(msg, null);
 	}
 	
 	protected void initVars() {
@@ -249,18 +250,47 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		}
 	}
 
+	@Override
+	public abstract String getTaskDescription();
+
+	@Override
+	public abstract String getTaskName();
+
+	@Override
+	public int taskCount() {
+		return 1;
+	}
+
+	@Override
+	public int total() {
+		return 1 + (service  == null ? 1 : (int) service.getTaskCount());
+	}
+
+	@Override
+	public int progress() {
+		return 1 + (service == null ? 1 : (int) service.getCompletedTaskCount());
+	}
+
+	@Override
+	public boolean isRunning() {
+		return botRunStats.botStats.isEmpty() ? false : botRunStats.getCurrentBotState().running;
+	}
+
+	@Override
+	public Deque<BotRunStats.BotStats> getHistoryRuns() {
+		return botRunStats.botStats;
+	}
 
 	@Override
 	public boolean interrupt() {
 		if(this.service != null) {
 			this.service.shutdownNow();
 			this.service = null;
-			this.isRunning = false;
+			botRunStats.getCurrentBotState().setInterrupted();
 			return true;
 		}
 		return false;
 	}
-
 
 	@Override
 	public String getAPI() {

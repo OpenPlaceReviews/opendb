@@ -176,6 +176,7 @@ var STATUS_VIEW = function () {
 
             }
             $("#blockchain-blocks").html(items);
+            $("#blocks-tab").html("Blocks (" + data.amountBlocks + ")");
             $("#operations-tab").html("Operations (" + data.sblocks[0] + ")");
 
             $("#admin-user").html(data.serverUser);

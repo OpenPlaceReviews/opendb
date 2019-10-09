@@ -59,8 +59,51 @@
             cursor: inherit;
             display: block;
         }
+
         #img-upload {
             width: 100%;
+        }
+
+        .pre-scroll {
+            width: 100%;
+            height: auto;
+            max-height: 50%;
+            overflow: auto;
+            background-color: #eeeeee;
+            word-break: break-all;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .table_wrapper {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .large-modal {
+            width: 90%;
+        }
+
+        .radio-btn span.glyphicon {
+            opacity: 0;
+        }
+        .radio-btn.active span.glyphicon {
+            opacity: 1;
+        }
+
+        .inherit {
+            width: inherit;
+        }
+
+        .table_layout_fixed_with {
+            table-layout: fixed;
+            width: 250px;
+        }
+
+        .table_layout_200 {
+            table-layout: fixed;
+            min-width: 200px;
         }
 
     </style>
@@ -411,10 +454,11 @@ Details: <b><span did="block-details"></span></b></pre>
             <table id="bots-table" class="table table-bordered table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>Id</th>
-                        <th>Task name</th>
+                        <th>Bot Id</th>
+                        <th>Task</th>
                         <th>Task description</th>
                         <th>Last launch</th>
+                        <th>System bot</th>
                         <th>Interval</th>
                         <th>Progress</th>
                         <th>Actions</th>
@@ -428,6 +472,18 @@ Details: <b><span did="block-details"></span></b></pre>
                         <td did="task-name"></td>
                         <td did="task-description"></td>
                         <td did="last-launch"></td>
+                        <td>
+                            <div class="btn-group" data-toggle="buttons">
+                                <label class="btn radio-btn btn-danger active disabled" aria-disabled="true">
+                                    <input type="radio" name="options" did="option1" autocomplete="off" checked>
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                </label>
+                                <label class="btn radio-btn btn-success disabled" aria-disabled="true">
+                                    <input type="radio" name="options" did="option2" autocomplete="off">
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                </label>
+                            </div>
+                        </td>
                         <td did="interval"></td>
                         <td>
                             <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
@@ -487,7 +543,7 @@ Details: <b><span did="block-details"></span></b></pre>
     </div>
 
     <div class="modal fade" id="bot-history-modal" role="dialog">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg large-modal">
 
             <!-- Modal content-->
             <div class="modal-content">
@@ -497,30 +553,51 @@ Details: <b><span did="block-details"></span></b></pre>
                     <p class="modal-title" id="history-bot-name"></p>
                 </div>
                 <div class="modal-body">
-                    <h4>Bots</h4><button class="btn btn-primary" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-                    <div class="table-responsive">
-                        <table id="bots-history-table" class="table table-bordred table-striped table-hover">
+                    <h4 class="control-label">Bot API: <span id="bot-api"></span> </h4>
+                    <div class="row">
+                        <div class="col-md-2 form-group">
+                            <button class="btn btn-primary form-control" id="refresh-bot-history-btn"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+                        </div>
+                    </div>
+                    <div class="table_wrapper">
+                        <table id="bots-history-table" class="table table-bordered table-striped table-hover">
                             <thead>
                             <tr>
-                                <th>Bot ID</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Total</th>
-                                <th>Processed</th>
-                                <th>Status</th>
+                                <th>Added operations</th>
+                                <th>Time started</th>
+                                <th>Time finished</th>
+                                <th>Tasks</th>
+                                <th>Progress</th>
+                                <th>Finish status</th>
+                                <th>Logs</th>
                             </tr>
                             </thead>
 
                             <tbody id="main-bot-history-table"></tbody>
                             <tbody>
-                                <tr id="bot-history-template" class="hidden">
-                                    <td did="bot-id"></td>
-                                    <td did="start-date"></td>
-                                    <td did="end-date"></td>
-                                    <td did="total"></td>
-                                    <td did="processed"></td>
-                                    <td did="status"></td>
-                                </tr>
+                            <tr id="bot-history-template" class="hidden">
+                                <td did="added-ops" class="table_layout_fixed_with">
+                                    <details style="width: inherit"><summary><b did="ops-amount">OPS</b></summary><pre did="ops-json" class="pre-scroll"></pre></details>
+                                </td>
+                                <td did="time-start"></td>
+                                <td did="time-finish"></td>
+                                <td did="amount-tasks"></td>
+                                <td class="table_layout_200">
+                                    <div did="progress">
+                                        <div did="progress-bar" class="progress progress-bar progress-bar-info progress-bar-striped active"
+                                             role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </td>
+                                <td did="finish-status"></td>
+                                <td did="logs">
+                                    <button type="button" class="btn btn-primary" did="button-logs"></button>
+                                </td>
+                            </tr>
+                            <tr id="bot-history-colspan-template" class="hidden">
+                                <td did="logs" colspan="7">
+                                    <pre did="logs-json" class="pre-scroll inherit"></pre>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
@@ -532,7 +609,21 @@ Details: <b><span did="block-details"></span></b></pre>
 
         </div>
     </div>
-    <!--BOTS MODALS-->
+
+    <div class="modal fade" id="log-ops-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title" id="log-ops-header"></h4>
+                </div>
+                <div class="modal-body">
+
+                </div>
+            </div>
+        </div>
+    </div>
+        <!--BOTS MODALS-->
 
     <!--API MODALS VIEWS-->
 
