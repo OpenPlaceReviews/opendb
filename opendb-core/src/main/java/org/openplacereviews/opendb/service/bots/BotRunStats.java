@@ -27,7 +27,7 @@ public class BotRunStats {
 		return botStats.getLast();
 	}
 
-	public class BotStats {
+	public static class BotStats {
 		boolean interrupted;
 		public boolean running;
 		List<LogEntry> logEntries;
@@ -92,7 +92,7 @@ public class BotRunStats {
 		}
 	}
 
-	class LogEntry {
+	public static class LogEntry {
 		public String msg;
 		public Exception exception;
 		public Long date;
@@ -110,7 +110,7 @@ public class BotRunStats {
 		}
 	}
 
-	class OperationInfo {
+	public static class OperationInfo {
 		public String hash;
 		public Integer added;
 		public Integer edited;
@@ -124,7 +124,7 @@ public class BotRunStats {
 		}
 	}
 
-	private Long getCurrentTime() {
+	private static Long getCurrentTime() {
 		return new Date().getTime();
 	}
 }

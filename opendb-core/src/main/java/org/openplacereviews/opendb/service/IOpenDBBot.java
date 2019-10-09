@@ -1,6 +1,8 @@
 package org.openplacereviews.opendb.service;
 
-import java.util.Collection;
+import org.openplacereviews.opendb.util.BotRunStats;
+
+import java.util.Deque;
 import java.util.concurrent.Callable;
 
 
@@ -49,6 +51,6 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	/**
 	 * @return history of bot runs
 	 */
-	Collection getHistoryRuns();
+	Deque<BotRunStats.BotStats> getHistoryRuns();
 
 }

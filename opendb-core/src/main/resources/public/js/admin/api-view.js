@@ -22,12 +22,14 @@ var API_VIEW = function () {
             if (update) {
                 getJsonAction("/api/bot", function (data) {
                     API_VIEW.botStats = data;
+                    var prevLastStat = $('#main-bot-history-table > tr:last').prev();
                     var lastStat = $('#main-bot-history-table > tr').last();
-                    fillTableBody(lastStat, botStat.botRunStats[botStat.botRunStats.length - 1]);
+                    fillTableBody(prevLastStat, botStat.botRunStats[botStat.botRunStats.length - 1], lastStat, update);
                 });
             } else {
                 table.empty();
                 var template = $("#bot-history-template");
+                var colspan_template = $("#bot-history-colspan-template");
                 $("#bot-api").html(botStat.api);
                 for (var i = 0; i < botStat.botRunStats.length; i++) {
                     var obj = botStat.botRunStats[i];
@@ -35,12 +37,16 @@ var API_VIEW = function () {
                         .appendTo(table)
                         .removeClass("hidden")
                         .show();
-                    fillTableBody(newTemplate, obj);
+                    var colspan = colspan_template.clone()
+                        .appendTo(table)
+                        .removeClass("hidden")
+                        .show();
+                    fillTableBody(newTemplate, obj, colspan);
                 }
                 $("#history-bot-name").val(bot);
                 $("#bot-history-header").html("Bot stats for: " + bot);
             }
-            function fillTableBody(newTemplate, obj) {
+            function fillTableBody(newTemplate, obj, colspan, update) {
                 newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toISOString());
                 if (obj.timeFinished) {
                     newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toISOString());
@@ -91,9 +97,33 @@ var API_VIEW = function () {
                             logs += logObj.exception + "\n";
                         }
                     }
-                    newTemplate.find("[did='logs-json']").html(logs);
+                    colspan.find("[did='logs-json']").html(logs);
+                    var logButton = newTemplate.find("[did='button-logs']");
+                    if (!update) {
+                        colspan.find("[did='logs']").addClass("hidden");
+                    } else {
+                        logButton.html("Show");
+                    }
 
+                    if (colspan.find("[did='logs']").hasClass("hidden")) {
+                        logButton.html("Show");
+                    } else {
+                        logButton.html("Hide");
+                    }
+
+                    logButton.click(function () {
+                        API_VIEW.showBotLogs(colspan, logButton);
+                    });
                 }
+            }
+        },
+        showBotLogs: function(colspan, logButton) {
+            if (colspan.find("[did='logs']").hasClass("hidden")) {
+                colspan.find("[did='logs']").removeClass("hidden");
+                logButton.html("Hide")
+            } else {
+                colspan.find("[did='logs']").addClass("hidden");
+                logButton.html("Show")
             }
         },
         showBotScheduleSettings: function(bot) {
@@ -134,7 +164,7 @@ var API_VIEW = function () {
                         var progressBarValue = parseInt((obj.progress / obj.total) * 100);
                         newTemplate.find("[did='progress-bar']")
                                 .attr("aria-valuenow", progressBarValue)
-                                .attr("style", "width:" + progressBarValue + "%")
+                                .css("width", progressBarValue + "%")
                                 .html(progressBarValue + "%");
                     }
                     if (obj.isRunning === false) {
