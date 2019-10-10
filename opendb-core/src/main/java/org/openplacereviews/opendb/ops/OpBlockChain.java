@@ -57,6 +57,7 @@ public class OpBlockChain {
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
 	public static final int LOCKED_STATE = 2; // FINAL STATE. locked successfully and could be used as parent superblock
+	public static final int LOCKED_FOR_UPDATING =  3; // locked by system for updating
 	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 	
@@ -173,6 +174,28 @@ public class OpBlockChain {
 			this.locked = LOCKED_BY_USER;
 		} else if(this.locked != LOCKED_BY_USER) {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
+		}
+	}
+
+	public synchronized void lockForSystemUpdate() {
+		if (nullObject) {
+			return;
+		}
+		if(this.locked == UNLOCKED) {
+			this.locked = LOCKED_FOR_UPDATING;
+		} else if(this.locked != LOCKED_FOR_UPDATING) {
+			throw new IllegalStateException("This chain is locked not by system or in a broken state");
+		}
+	}
+
+	public synchronized void unlockAfterSystemUpdate() {
+		if(nullObject) {
+			return;
+		}
+		if(this.locked == LOCKED_FOR_UPDATING) {
+			this.locked = UNLOCKED;
+		} else if(this.locked != UNLOCKED) {
+			throw new IllegalStateException("This chain is locked not by system or in a broken state");
 		}
 	}
 

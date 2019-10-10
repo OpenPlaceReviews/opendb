@@ -46,6 +46,7 @@ var SETTINGS_VIEW = function () {
         }
         it.find("[did='settings-name']").html(obj.id);
         it.find("[did='settings-description']").html(obj.description);
+        it.find("[did='settings-source']").html(obj.source);
         if (obj.type === "Map" || obj.type === "TreeMap") {
             it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
             it.find("[did='settings-value']").addClass("hidden");
@@ -200,7 +201,6 @@ var SETTINGS_VIEW = function () {
             });
 
             $("#add-settings-btn").click(function () {
-                $("#settings-add-modal .close").click();
                 let familyName = $("#settings-pills").children(".active").first().text();
                 $("#family-name").html(familyName);
                 var data = SETTINGS_VIEW.settingsData;
@@ -214,6 +214,7 @@ var SETTINGS_VIEW = function () {
             });
             
             $("#add-new-settings-btn").click(function () {
+                $("#settings-add-modal .close").click();
                 addNewPreference();
             });
         }

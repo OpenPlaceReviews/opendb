@@ -100,6 +100,7 @@ public class DBConsensusManager {
 	public OpBlockChain init(MetadataDb metadataDB) {
 		settingsManager.initPreferences();
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
+		settingsManager.saveCurrentDbIndexes();
 		backupManager.init();
 		rules = new OpBlockchainRules(formatter, logSystem);
 		LOGGER.info("... Loading block headers ...");

@@ -49,6 +49,11 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	public String getAPI();
 
 	/**
+	 * @return system bot or not
+	 */
+	public boolean isSystemBot();
+
+	/**
 	 * @return history of bot runs
 	 */
 	Deque<BotRunStats.BotStats> getHistoryRuns();

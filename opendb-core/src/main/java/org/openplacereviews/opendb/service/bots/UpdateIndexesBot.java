@@ -1,10 +1,12 @@
 package org.openplacereviews.opendb.service.bots;
 
-import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
+import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBSchemaManager;
 import org.openplacereviews.opendb.service.GenericMultiThreadBot;
@@ -13,16 +15,18 @@ import org.openplacereviews.opendb.util.JsonFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
+import static org.openplacereviews.opendb.service.SettingsManager.*;
 
 public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
-	private static final Log LOGGER = LogFactory.getLog(UpdateIndexesBot.class);
+	private int totalCnt = 1;
+	private int progress = 0;
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
@@ -40,17 +44,8 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	private BlocksManager blocksManager;
 
 	public UpdateIndexesBot(OpObject botObject) {
-		super(botObject);
-	}
-
-	@Override
-	public String getTaskDescription() {
-		return "Updating DB indexes";
-	}
-
-	@Override
-	public String getTaskName() {
-		return "update-indexes";
+		super(botObject, true);
+		LOGGER = LogFactory.getLog(UpdateIndexesBot.class);
 	}
 
 	@Override
@@ -58,31 +53,29 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		addNewBotStat();
 		try {
 			info("Start Indexes updating...");
-			List<SettingsManager.CommonPreference<Map<String, Object>>> dbIndexes = formatter.fromJsonToListTreeMap(dbSchemaManager.getSetting(jdbcTemplate, SettingsManager.DB_SCHEMA_INDEXES.prefix));
+			List<SettingsManager.CommonPreference<Map<String, Object>>> dbIndexes = formatter.fromJsonToListTreeMap(dbSchemaManager.getSetting(jdbcTemplate, SettingsManager.DB_INDEX_STATE.prefix));
 			List<SettingsManager.CommonPreference<Map<String, Object>>> currentIndexPrefs = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+			Map<String, SettingsManager.CommonPreference<Map<String, Object>>> userIndexMap = generateMapFromList(dbIndexes);
+			Map<String, SettingsManager.CommonPreference<Map<String, Object>>> currentIndexMap = generateMapFromList(currentIndexPrefs);
 
-			for (SettingsManager.CommonPreference<Map<String, Object>> index : dbIndexes) {
-				boolean indexIsExist = false;
-				for (SettingsManager.CommonPreference<Map<String, Object>> currentIndex : currentIndexPrefs) {
-					if (index.getId().equals(currentIndex.getId())) {
-						String indexName = (String) currentIndex.getValue().get("name");
-						info("Start checking index: " + indexName + " on changes ...");
-						validatePreferencesOnChanges(index.getValue(), currentIndex.getValue());
-						indexIsExist = true;
-						info("Checking index: " + indexName + " on changes was finished");
-					}
-				}
-				if (!indexIsExist) {
-					String indexName = (String) index.getValue().get("name");
-					String tableName = (String) index.getValue().get("tablename");
+			for (String dbIndex : userIndexMap.keySet()) {
+				if (currentIndexMap.containsKey(dbIndex)) {
+					String indexName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_NAME);
+					info("Start checking index: " + indexName + " on changes ...");
+					validatePreferencesOnChanges(userIndexMap.get(dbIndex).getValue(), currentIndexMap.get(dbIndex).getValue());
+					info("Checking index: " + indexName + " on changes was finished");
+				} else {
+					String indexName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_NAME);
+					String tableName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_TABLENAME);
 					info("Found index for removing: '" + indexName + "' for table: " + tableName + " ...");
-					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(index.getValue()));
+					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(userIndexMap.get(dbIndex).getValue()));
+					String objType = dbSchemaManager.getTypeByTable(tableName);
 					TreeMap<String, Map<String, OpIndexColumn>> indexes = dbSchemaManager.getIndexes();
-					Map<String, OpIndexColumn> tableIndexes = indexes.get(tableName);
+					Map<String, OpIndexColumn> tableIndexes = indexes.get(objType);
 					List<String> indexesForRemoving = new ArrayList<>();
-					for (Map.Entry<String, OpIndexColumn> opIndexColumn : tableIndexes.entrySet()) {
-						if (opIndexColumn.getValue().getIndexId().equals(indexName)) {
-							indexesForRemoving.add(opIndexColumn.getKey());
+					for (Map.Entry<String, OpIndexColumn> entry : tableIndexes.entrySet()) {
+						if (entry.getValue().getIndexId().equals(indexName)) {
+							indexesForRemoving.add(entry.getKey());
 						}
 					}
 					for (String key : indexesForRemoving) {
@@ -92,20 +85,14 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 				}
 			}
 
-			for (SettingsManager.CommonPreference<Map<String, Object>> currentIndex : currentIndexPrefs) {
-				boolean indexIsExist = false;
-				for (SettingsManager.CommonPreference<Map<String, Object>> dbIndex : dbIndexes) {
-					if (dbIndex.getId().equals(currentIndex.getId())) {
-						indexIsExist = true;
-					}
-				}
-				if (!indexIsExist) {
-					String tableName = (String) currentIndex.getValue().get("tablename");
-					String colName = (String) currentIndex.getValue().get("name");
-					String index = (String) currentIndex.getValue().get("index");
-					String type = (String) currentIndex.getValue().get("sqltype");
+			for (String currentIndex : currentIndexMap.keySet()) {
+				if (!userIndexMap.containsKey(currentIndex)) {
+					String tableName = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_TABLENAME);
+					String colName = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_NAME);
+					String index = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_INDEX_TYPE);
+					String sqlType = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_SQL_TYPE);
 					info("Start creating new index: '" + index + "' for column: " + colName + " ...");
-					dbSchemaManager.generateIndexColumn(currentIndex.getValue());
+					dbSchemaManager.generateIndexColumn(currentIndexMap.get(currentIndex).getValue());
 					ColumnDef.IndexType di = null;
 					if (index != null) {
 						if (index.equalsIgnoreCase("true")) {
@@ -116,19 +103,40 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 					}
 
 					ColumnDef columnDef = new ColumnDef(tableName, colName, null, di);
-					createColumnForIndex(tableName, colName, type);
+					createColumnForIndex(tableName, colName, sqlType);
 					jdbcTemplate.execute(dbSchemaManager.generateIndexQuery(columnDef));
 					info("Index: '" + index + "' for table: " + tableName + " was added");
 					info(" Start data migration for new index ...");
-					blocksManager.lockBlockchain();
-					// TODO fill new index field
-					blocksManager.unlockBlockchain();
+					blocksManager.lockBlockchainForSystemUpdate();
+
+					String objType = dbSchemaManager.getTypeByTable(tableName);
+					Collection<OpIndexColumn> indexes = dbSchemaManager.getIndicesForType(objType);
+					List<OpIndexColumn> dbIndexesUpdate = new ArrayList<OpIndexColumn>();
+					for (OpIndexColumn opIndexColumn : indexes) {
+						if(opIndexColumn.getIndexId().equals(colName)) {
+							dbIndexesUpdate.add(opIndexColumn);
+						}
+					}
+
+					OpBlockChain opBlockChain = blocksManager.getBlockchain();
+					while (opBlockChain.getParent() != null) {
+						Stream<Map.Entry<CompoundKey, OpObject>> objects = opBlockChain.getRawSuperblockObjects(objType);
+						List<Object[]> insertBatch = prepareInsertIndexObjBatch(objects, objType, dbIndexesUpdate);
+						if (insertBatch.size() > 0) {
+							totalCnt += insertBatch.size();
+							insertIndexesIntoTable(insertBatch, tableName, jdbcTemplate, dbIndexesUpdate);
+						}
+
+						opBlockChain = opBlockChain.getParent();
+					}
+
+					blocksManager.unlockBlockchainAfterSystemUpdate();
 					info(" Data migration for new index was finished");
 				}
 			}
 
 			setSuccessState();
-			dbSchemaManager.setSetting(jdbcTemplate, SettingsManager.DB_SCHEMA_INDEXES.prefix, formatter.fullObjectToJson(currentIndexPrefs));
+			dbSchemaManager.setSetting(jdbcTemplate, SettingsManager.DB_INDEX_STATE.prefix, formatter.fullObjectToJson(currentIndexPrefs));
 			info("Updating Indexes is finished");
 		} catch (Exception e) {
 			setFailedState();
@@ -140,22 +148,43 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		return this;
 	}
 
-	private void validatePreferencesOnChanges(Map<String, Object> dbIndex, Map<String, Object> currentIndex) {
-		Integer dbIndexCacheDbMax = (Integer) dbIndex.get("cache-db-max");
-		Integer currIndexCacheDbMax = (Integer) currentIndex.get("cache-db-max");
-		Integer dbIndexCacheRuntimeMax = (Integer) dbIndex.get("cache-runtime-max");
-		Integer currIndexCacheRuntimeMax = (Integer) currentIndex.get("cache-runtime-max");
-		List<String> dbIndexField = (List<String>) dbIndex.get("field");
-		List<String> currIndexField = (List<String>) currentIndex.get("field");
+	private void insertIndexesIntoTable(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, Collection<OpIndexColumn> indexes) {
+		StringBuilder extraColumnNames = new StringBuilder();
+		for(OpIndexColumn index : indexes) {
+			if (extraColumnNames.length() == 0) {
+				extraColumnNames.append(index.getColumnDef().getColName()).append(" = ?");
+			} else {
+				extraColumnNames.append(", ").append(index.getColumnDef().getColName()).append(" = ?");
+			}
+		}
+		for (Object[] arg : args) {
+			progress++;
+			jdbcTemplate.update("UPDATE " + table +
+					" SET " + extraColumnNames.toString() + " WHERE " + dbSchemaManager.generatePKString(table, "p%1$d = ?", " AND ") + " AND ophash = ?", arg
+			);
+
+			if (progress % 5000 == 0) {
+				info(String.format("Progress of 'update-indexes' %d / %d", progress, totalCnt));
+			}
+		}
+	}
+
+	private void validatePreferencesOnChanges(Map<String, Object> dbIndex, Map<String, Object> currentIndex) throws Exception {
+		Integer dbIndexCacheDbMax = ((Number) dbIndex.get(INDEX_CACHE_DB_MAX)).intValue();
+		int currIndexCacheDbMax = ((Number) currentIndex.get(INDEX_CACHE_DB_MAX)).intValue();
+		Integer dbIndexCacheRuntimeMax = ((Number) dbIndex.get(INDEX_CACHE_RUNTIME_MAX)).intValue();
+		int currIndexCacheRuntimeMax = ((Number) currentIndex.get(INDEX_CACHE_RUNTIME_MAX)).intValue();
+		List<String> dbIndexField = (List<String>) dbIndex.get(INDEX_FIELD);
+		List<String> currIndexField = (List<String>) currentIndex.get(INDEX_FIELD);
 
 		if (!dbIndexCacheDbMax.equals(currIndexCacheDbMax) || !dbIndexCacheRuntimeMax.equals(currIndexCacheRuntimeMax) ||
 				!dbIndexField.equals(currIndexField)) {
-			String tableName = (String) dbIndex.get("tablename");
-			String indexName = (String) dbIndex.get("name");
+			String tableName = (String) dbIndex.get(INDEX_TABLENAME);
+			String indexName = (String) dbIndex.get(INDEX_NAME);
 			info("Updating index: " + indexName + " for table: " + tableName + " ...");
 
 			TreeMap<String, Map<String, OpIndexColumn>> indexes = dbSchemaManager.getIndexes();
-			Map<String, OpIndexColumn> tableIndexes = indexes.get(tableName);
+			Map<String, OpIndexColumn> tableIndexes = indexes.get(dbSchemaManager.getTypeByTable(tableName));
 			for (Map.Entry<String, OpIndexColumn> opIndexColumn : tableIndexes.entrySet()) {
 				OpIndexColumn indexColumn = opIndexColumn.getValue();
 				if (indexColumn.getIndexId().equals(indexName)) {
@@ -168,20 +197,63 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
 		}
 
-		String dbIndexId = (String) dbIndex.get("index");
-		String currIndexId = (String) dbIndex.get("index");
-		String dbIndexName = (String) dbIndex.get("name");
-		String currIndexName = (String) dbIndex.get("name");
+		String dbIndexId = (String) dbIndex.get(INDEX_INDEX_TYPE);
+		String currIndexId = (String) currentIndex.get(INDEX_INDEX_TYPE);
+		String dbIndexName = (String) dbIndex.get(INDEX_NAME);
+		String currIndexName = (String) currentIndex.get(INDEX_NAME);
 		String dbIndexSqlmapping = (String) dbIndex.get("sqlmapping");
-		String currIndexSqlmapping = (String) dbIndex.get("sqlmapping");
-		String dbIndexSqltype = (String) dbIndex.get("sqltype");
-		String currIndexSqltype = (String) dbIndex.get("sqltype");
+		String currIndexSqlmapping = (String) currentIndex.get("sqlmapping");
+		String dbIndexSqltype = (String) dbIndex.get(INDEX_SQL_TYPE);
+		String currIndexSqltype = (String) currentIndex.get(INDEX_SQL_TYPE);
 		if (!dbIndexId.equals(currIndexId) || !dbIndexName.equals(currIndexName) || !dbIndexSqlmapping.equals(currIndexSqlmapping) ||
 				!dbIndexSqltype.equals(currIndexSqltype)) {
-			// TODO throw exception
-			error("Cannot to change fields: index, name, sqlmapping, sqltype!!! Please, remove index and create new!!", new Exception());
+			throw new IllegalArgumentException("Cannot to change fields: index, name, sqlmapping, sqltype!!! Please, remove index and create new!!");
 		}
 
+	}
+
+	private List<Object[]> prepareInsertIndexObjBatch(Stream<Map.Entry<CompoundKey, OpObject>> objects, String type, Collection<OpIndexColumn> indexes) {
+		List<Object[]> updateList = new ArrayList<>();
+		int ksize = dbSchemaManager.getKeySizeByType(type);
+		Iterator<Map.Entry<CompoundKey, OpObject>> it = objects.iterator();
+		try {
+			Connection conn = jdbcTemplate.getDataSource().getConnection();
+			while (it.hasNext()) {
+				Map.Entry<CompoundKey, OpObject> e = it.next();
+				CompoundKey pkey = e.getKey();
+				OpObject obj = e.getValue();
+
+				Object[] args = new Object[indexes.size() + ksize + 1];
+				int ind = 0;
+
+				for (OpIndexColumn index : indexes) {
+					if (!obj.isDeleted()) {
+						args[ind++] = index.evalDBValue(obj, conn);
+					} else {
+						args[ind++] = null;
+					}
+				}
+				pkey.toArray(args, ind);
+				ind += ksize;
+				args[ind] = SecUtils.getHashBytes(obj.getParentHash());
+
+				updateList.add(args);
+			}
+			conn.close();
+		} catch (SQLException e) {
+			throw new IllegalArgumentException();
+		}
+
+		return updateList;
+	}
+
+	private Map<String, SettingsManager.CommonPreference<Map<String, Object>>> generateMapFromList(List<SettingsManager.CommonPreference<Map<String, Object>>> list) {
+		Map<String, SettingsManager.CommonPreference<Map<String, Object>>> map = new HashMap<>();
+		for (SettingsManager.CommonPreference<Map<String, Object>> object : list) {
+			map.put(object.getId(), object);
+		}
+
+		return map;
 	}
 
 	private void createColumnForIndex(String tableName, String colName, String type) {
@@ -189,9 +261,9 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	}
 
 	private String generateIndexName(Map<String, Object> indexInfo) {
-		String indexType = (String) indexInfo.get("index");
-		String tableName = (String) indexInfo.get("tablename");
-		String colName = (String) indexInfo.get("name");
+		String indexType = (String) indexInfo.get(INDEX_INDEX_TYPE);
+		String tableName = (String) indexInfo.get(INDEX_TABLENAME);
+		String colName = (String) indexInfo.get(INDEX_NAME);
 		switch (indexType) {
 			case "true": {
 				return String.format("%s_%s_ind", tableName, colName);
@@ -207,4 +279,25 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			}
 		}
 	}
+
+	@Override
+	public int total() {
+		return totalCnt;
+	}
+
+	@Override
+	public int progress() {
+		return progress;
+	}
+
+	@Override
+	public String getTaskDescription() {
+		return "Updating DB indexes";
+	}
+
+	@Override
+	public String getTaskName() {
+		return "update-indexes";
+	}
+
 }

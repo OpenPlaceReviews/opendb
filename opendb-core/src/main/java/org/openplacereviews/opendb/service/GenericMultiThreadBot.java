@@ -23,7 +23,7 @@ import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
 
 public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 
-	protected static final Log LOGGER = LogFactory.getLog(GenericMultiThreadBot.class);
+	protected static Log LOGGER = LogFactory.getLog(GenericMultiThreadBot.class);
 	private static final long TIMEOUT_OVERPASS_HOURS = 4;
 	private static final long TIMEOUT_BLOCK_CREATION_MS = 15000;
 	public static final String F_BLOCKCHAIN_CONFIG = "blockchain-config";
@@ -43,6 +43,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	protected long placesPerOperation = 250;
 	protected long operationsPerBlock = 16;
 	protected double blockCapacity = 0.8;
+	protected boolean systemBot;
 	protected OpObject botObject;
 	protected String opType;
 	protected BotRunStats botRunStats = new BotRunStats();
@@ -56,8 +57,9 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	private ThreadPoolExecutor service;
 	private final String api;
 
-	public GenericMultiThreadBot(OpObject botObject) {
+	public GenericMultiThreadBot(OpObject botObject, Boolean systemBot) {
 		this.botObject = botObject;
+		this.systemBot = systemBot;
 		this.api = botObject.getStringValue("api");
 	}
 	
@@ -295,5 +297,10 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	@Override
 	public String getAPI() {
 		return api;
+	}
+
+	@Override
+	public boolean isSystemBot() {
+		return systemBot;
 	}
 }

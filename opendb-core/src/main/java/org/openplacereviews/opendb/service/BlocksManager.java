@@ -1,37 +1,13 @@
 package org.openplacereviews.opendb.service;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
-import org.openplacereviews.opendb.ops.OpIndexColumn;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.service.SettingsManager.BlockSource;
@@ -41,6 +17,14 @@ import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.KeyPair;
+import java.util.*;
 
 @Service
 public class BlocksManager {
@@ -150,6 +134,22 @@ public class BlocksManager {
 	public synchronized boolean lockBlockchain() {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
 			blockchain.lockByUser();
+			return true;
+		}
+		return false;
+	}
+
+	public synchronized boolean lockBlockchainForSystemUpdate() {
+		if (blockchain.getStatus() == OpBlockChain.UNLOCKED) {
+			blockchain.lockForSystemUpdate();
+			return true;
+		}
+		return false;
+	}
+
+	public synchronized boolean unlockBlockchainAfterSystemUpdate() {
+		if(blockchain.getStatus() == OpBlockChain.LOCKED_FOR_UPDATING) {
+			blockchain.unlockAfterSystemUpdate();
 			return true;
 		}
 		return false;

@@ -38,6 +38,7 @@ public class SettingsManager {
 			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded();
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
 			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable().setDeletable();
+	public static final PreferenceFamily DB_INDEX_STATE = new PreferenceFamily("opendb.state.indexes", "State for Indexes");
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
 			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID);
 	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
@@ -96,8 +97,11 @@ public class SettingsManager {
 			
 		}
 
+	}
+
+	public void saveCurrentDbIndexes() {
 		List<CommonPreference<Object>> indexList = getPreferencesByPrefix(DB_SCHEMA_INDEXES.prefix);
-		dbSchemaManager.setSetting(jdbcTemplate, DB_SCHEMA_INDEXES.prefix, jsonFormatter.fullObjectToJson(indexList));
+		dbSchemaManager.setSetting(jdbcTemplate, DB_INDEX_STATE.prefix, jsonFormatter.fullObjectToJson(indexList));
 	}
 
 	public Collection<CommonPreference<?>> getPreferences() {

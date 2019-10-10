@@ -41,7 +41,7 @@ public class BotController {
 		public Deque<BotRunStats.BotStats> botRunStats;
 
 		public BotStats(String id, IOpenDBBot<?> i) {
-			this.systemBot = false;
+			this.systemBot = i.isSystemBot();
 			this.api = i.getAPI();
 			this.id = id;
 			this.taskDescription = i.getTaskDescription();

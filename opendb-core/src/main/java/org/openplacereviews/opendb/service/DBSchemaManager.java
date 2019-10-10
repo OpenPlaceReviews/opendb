@@ -203,6 +203,16 @@ public class DBSchemaManager {
 		}
 		return OBJS_TABLE;
 	}
+
+	public String getTypeByTable(String table) {
+		for (Map.Entry<String, String> entry : typeToTables.entrySet()) {
+			if (table.equals(entry.getValue())) {
+				return entry.getKey();
+			}
+		}
+
+		return null;
+	}
 	
 	public int getKeySizeByType(String type) {
 		return getKeySizeByTable(getTableByType(type));

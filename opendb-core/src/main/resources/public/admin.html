@@ -474,12 +474,8 @@ Details: <b><span did="block-details"></span></b></pre>
                         <td did="last-launch"></td>
                         <td>
                             <div class="btn-group" data-toggle="buttons">
-                                <label class="btn radio-btn btn-danger active disabled" aria-disabled="true">
-                                    <input type="radio" name="options" did="option1" autocomplete="off" checked>
-                                    <span class="glyphicon glyphicon-ok"></span>
-                                </label>
-                                <label class="btn radio-btn btn-success disabled" aria-disabled="true">
-                                    <input type="radio" name="options" did="option2" autocomplete="off">
+                                <label did="bot-status-active" class="btn radio-btn btn-success active disabled" aria-disabled="true">
+                                    <input type="radio" name="options" autocomplete="off">
                                     <span class="glyphicon glyphicon-ok"></span>
                                 </label>
                             </div>
@@ -692,28 +688,6 @@ Details: <b><span did="block-details"></span></b></pre>
                         </div>
                         <hr>
                         <div class="container">
-                            <!--<div class="col-md-8 form-inline">-->
-                                <!--<label for="add-preference-editable" class="label-control">Can preference edit:</label>-->
-                                <!--<select id="add-preference-editable" class="form-control">-->
-                                    <!--<option selected value="true">True</option>-->
-                                    <!--<option value="false">False</option>-->
-                                <!--</select>-->
-                                <!--<label for="add-preference-type">Preference type:</label>-->
-                                <!--<select id="add-preference-type" class="form-control">-->
-                                    <!--<option selected value="Integer">Integer</option>-->
-                                    <!--<option value="Long">Long</option>-->
-                                    <!--<option value="Double">Double</option>-->
-                                    <!--<option value="String">String</option>-->
-                                    <!--<option value="Boolean">Boolean</option>-->
-                                    <!--<option value="Map" selected>Map</option>-->
-                                    <!--&lt;!&ndash;<option value="Table">Table</option>&ndash;&gt;-->
-                                <!--</select>-->
-                                <!--<label for="add-preference-restart">Restart is needed:</label>-->
-                                <!--<select id="add-preference-restart" class="form-control">-->
-                                    <!--<option selected value="true">True</option>-->
-                                    <!--<option value="false">False</option>-->
-                                <!--</select>-->
-                            <!--</div>-->
                             <div class="col-md-8">
                                 <label for="add-preference-key">Preference key:</label>
                                 <input type="text" id="add-preference-key" class="form-control">
@@ -722,10 +696,6 @@ Details: <b><span did="block-details"></span></b></pre>
                                 <label for="add-preference-value">Preference value:</label>
                                 <textarea class="form-control" rows="1" id="add-preference-value"></textarea>
                             </div>
-                            <!--<div class="col-md-8">-->
-                                <!--<label for="add-preference-description">Preference description:</label>-->
-                                <!--<input type="text" class="form-control" id="add-preference-description">-->
-                            <!--</div>-->
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -746,7 +716,8 @@ Details: <b><span did="block-details"></span></b></pre>
                     <a type="button" did="edit-settings" class="btn btn-default btn-xs pull-right" data-toggle="modal" data-target="#settings-edit-modal" >Edit</a>
                     <a type="button" did="remove-settings" class="btn btn-default btn-xs pull-right">Remove</a>
                     <b><span type="text" did="settings-name"></span></b>:
-                    <span type="text" did="settings-description"></span>
+                    <span type="text" did="settings-description"></span> (source:
+                    <b><span type="text" did="settings-source"></span></b>)
                 </p>
                 <div class="panel-body">
                     <p><b><span did="settings-value"></span></b></p>
