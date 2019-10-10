@@ -405,6 +405,18 @@ public class DBSchemaManager {
 		}
 	}
 
+	public IndexType getIndexType(String index) {
+		if (index != null) {
+			if (index.equalsIgnoreCase("true")) {
+				return INDEXED;
+			} else {
+				return ColumnDef.IndexType.valueOf(index);
+			}
+		}
+
+		return null;
+	}
+
 	public void generateIndexColumn(Map<String, Object> entry) {
 		String name = (String) entry.get(SettingsManager.INDEX_NAME);
 		String tableName = (String) entry.get(SettingsManager.INDEX_TABLENAME);
@@ -415,14 +427,7 @@ public class DBSchemaManager {
 		Integer cacheDB = entry.get(SettingsManager.INDEX_CACHE_DB_MAX) == null ? null : ((Number) entry.get(SettingsManager.INDEX_CACHE_DB_MAX)).intValue();
 		@SuppressWarnings("unchecked")
 		List<String> fld = (List<String>) entry.get(SettingsManager.INDEX_FIELD);
-		IndexType di = null;
-		if (index != null) {
-			if (index.equalsIgnoreCase("true")) {
-				di = INDEXED;
-			} else {
-				di = IndexType.valueOf(index);
-			}
-		}
+		IndexType di = getIndexType(index);
 
 		ColumnDef cd = new ColumnDef(tableName, name, colType, di);
 		// to be used array
@@ -476,11 +481,6 @@ public class DBSchemaManager {
 			}
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
-	}
-
-	protected void prepareColumnIndexMapping() {
-
-
 	}
 
 	public void removeIndex(JdbcTemplate jdbcTemplate, String column) {

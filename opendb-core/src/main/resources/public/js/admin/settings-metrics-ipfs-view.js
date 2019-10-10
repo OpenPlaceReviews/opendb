@@ -111,18 +111,14 @@ var SETTINGS_VIEW = function () {
             value:$("#add-preference-value").val()
         };
 
-        $.post('/api/mgmt/config/new', obj)
-            .done(function (data) {
+        postActionWithoutFailParam('/api/mgmt/config/new', obj, function (data) {
                 done(data, true);
                 loadAddPossibilityForTab();
                 let familyName = $("#settings-pills").children(".active").first().text();
                 if (familyName === "DB Indexes") {
                     alert("Please run Bot: Update Indexes")
                 }
-            })
-            .fail(function(xhr, status, error){
-                fail(error, false);
-            });
+            }, false);
     }
 
     function loadAddPossibilityForTab() {

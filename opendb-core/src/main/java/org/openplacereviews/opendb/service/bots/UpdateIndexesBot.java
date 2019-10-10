@@ -20,7 +20,6 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
 import static org.openplacereviews.opendb.service.SettingsManager.*;
 
 public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
@@ -67,10 +66,11 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 				} else {
 					String indexName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_NAME);
 					String tableName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_TABLENAME);
-					info("Found index for removing: '" + indexName + "' for table: " + tableName + " ...");
-					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(userIndexMap.get(dbIndex).getValue()));
 					String objType = dbSchemaManager.getTypeByTable(tableName);
 					TreeMap<String, Map<String, OpIndexColumn>> indexes = dbSchemaManager.getIndexes();
+
+					info("Found index for removing: '" + indexName + "' for table: " + tableName + " ...");
+					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(userIndexMap.get(dbIndex).getValue()));
 					Map<String, OpIndexColumn> tableIndexes = indexes.get(objType);
 					List<String> indexesForRemoving = new ArrayList<>();
 					for (Map.Entry<String, OpIndexColumn> entry : tableIndexes.entrySet()) {
@@ -91,16 +91,10 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 					String colName = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_NAME);
 					String index = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_INDEX_TYPE);
 					String sqlType = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_SQL_TYPE);
+
 					info("Start creating new index: '" + index + "' for column: " + colName + " ...");
 					dbSchemaManager.generateIndexColumn(currentIndexMap.get(currentIndex).getValue());
-					ColumnDef.IndexType di = null;
-					if (index != null) {
-						if (index.equalsIgnoreCase("true")) {
-							di = INDEXED;
-						} else {
-							di = ColumnDef.IndexType.valueOf(index);
-						}
-					}
+					ColumnDef.IndexType di = dbSchemaManager.getIndexType(index);
 
 					ColumnDef columnDef = new ColumnDef(tableName, colName, null, di);
 					createColumnForIndex(tableName, colName, sqlType);
@@ -136,7 +130,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			}
 
 			setSuccessState();
-			dbSchemaManager.setSetting(jdbcTemplate, SettingsManager.DB_INDEX_STATE.prefix, formatter.fullObjectToJson(currentIndexPrefs));
+			settingsManager.saveCurrentDbIndexes();
 			info("Updating Indexes is finished");
 		} catch (Exception e) {
 			setFailedState();
