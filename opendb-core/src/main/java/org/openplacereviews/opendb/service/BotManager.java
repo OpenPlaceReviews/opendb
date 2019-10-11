@@ -57,53 +57,37 @@ public class BotManager {
 		return recreateBots(req, blc);
 	}
 
-	private void addSystemBots(Map<String, IOpenDBBot<?>> bots) {
-		for (OpObject systemBot : systemBots) {
-			String id = systemBot.getId().get(0);
-			String api = systemBot.getStringValue("api");
-			IOpenDBBot<?> exBot = bots.get(id);
-			CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
-			if(p == null) {
-				TreeMap<String, Object> mp = new TreeMap<>();
-				mp.put(SettingsManager.BOT_ID, id);
-				p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
-			}
-			if (exBot == null || !exBot.getAPI().equals(api)) {
-				try {
-					generateBotInstance(bots, systemBot, id, api);
-				} catch (Exception e) {
-					LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
-				}
-			}
-		}
-	}
-
 	private synchronized Map<String, IOpenDBBot<?>> recreateBots(OpBlockChain.ObjectsSearchRequest req, OpBlockChain blc) {
 		Map<String, IOpenDBBot<?>> nbots = new TreeMap<>(this.bots);
 		for (OpObject cfg : req.result) {
-			String id = cfg.getId().get(0);
-			String api = cfg.getStringValue("api");
-			IOpenDBBot<?> exBot = nbots.get(id);
-			CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
-			if(p == null) {
-				TreeMap<String, Object> mp = new TreeMap<>();
-				mp.put(SettingsManager.BOT_ID, id);
-				mp.put(SettingsManager.BOT_ENABLED, false);
-				p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
-			}
-			if (exBot == null || !exBot.getAPI().equals(api)) {
-				try {
-					generateBotInstance(nbots, cfg, id, api);
-				} catch (Exception e) {
-					LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
-				}
-			}
-			
+			generateBots(nbots, cfg);
 		}
-		addSystemBots(nbots);
+		for (OpObject systemBot : systemBots) {
+			generateBots(nbots, systemBot);
+		}
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
 		return nbots;
+	}
+
+	private void generateBots(Map<String, IOpenDBBot<?>> nbots, OpObject cfg) {
+		String id = cfg.getId().get(0);
+		String api = cfg.getStringValue("api");
+		IOpenDBBot<?> exBot = nbots.get(id);
+		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
+		if(p == null) {
+			TreeMap<String, Object> mp = new TreeMap<>();
+			mp.put(SettingsManager.BOT_ID, id);
+			mp.put(SettingsManager.BOT_ENABLED, false);
+			p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
+		}
+		if (exBot == null || !exBot.getAPI().equals(api)) {
+			try {
+				generateBotInstance(nbots, cfg, id, api);
+			} catch (Exception e) {
+				LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
+			}
+		}
 	}
 
 	private void generateBotInstance(Map<String, IOpenDBBot<?>> nbots, OpObject cfg, String id, String api) throws Exception {
