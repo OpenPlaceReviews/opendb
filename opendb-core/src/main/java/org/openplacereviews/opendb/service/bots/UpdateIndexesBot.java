@@ -1,6 +1,5 @@
 package org.openplacereviews.opendb.service.bots;
 
-import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
@@ -44,7 +43,6 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
 	public UpdateIndexesBot(OpObject botObject) {
 		super(botObject, true);
-		LOGGER = LogFactory.getLog(UpdateIndexesBot.class);
 	}
 
 	@Override
@@ -52,25 +50,23 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		addNewBotStat();
 		try {
 			info("Start Indexes updating...");
-			List<SettingsManager.CommonPreference<Map<String, Object>>> dbIndexes = settingsManager.getPreferencesByPrefix(SettingsManager.DB_INDEX_STATE);
-			List<SettingsManager.CommonPreference<Map<String, Object>>> currentIndexPrefs = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
-			Map<String, SettingsManager.CommonPreference<Map<String, Object>>> userIndexMap = generateMapFromList(dbIndexes);
-			Map<String, SettingsManager.CommonPreference<Map<String, Object>>> currentIndexMap = generateMapFromList(currentIndexPrefs);
+			Map<String, Map<String, Object>> userIndexMap = generateMapFromList(settingsManager.getPreferencesByPrefix(SettingsManager.DB_INDEX_STATE));
+			Map<String, Map<String, Object>> currentIndexMap = generateMapFromList(settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES));
 
 			for (String dbIndex : userIndexMap.keySet()) {
 				if (currentIndexMap.containsKey(dbIndex)) {
-					String indexName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_NAME);
+					String indexName = (String) userIndexMap.get(dbIndex).get(INDEX_NAME);
 					info("Start checking index: " + indexName + " on changes ...");
-					validatePreferencesOnChanges(userIndexMap.get(dbIndex).getValue(), currentIndexMap.get(dbIndex).getValue());
+					validatePreferencesOnChanges(userIndexMap.get(dbIndex), currentIndexMap.get(dbIndex));
 					info("Checking index: " + indexName + " on changes was finished");
 				} else {
-					String indexName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_NAME);
-					String tableName = (String) userIndexMap.get(dbIndex).getValue().get(INDEX_TABLENAME);
+					String indexName = (String) userIndexMap.get(dbIndex).get(INDEX_NAME);
+					String tableName = (String) userIndexMap.get(dbIndex).get(INDEX_TABLENAME);
 					String objType = dbSchemaManager.getTypeByTable(tableName);
 					TreeMap<String, Map<String, OpIndexColumn>> indexes = dbSchemaManager.getIndexes();
 
 					info("Found index for removing: '" + indexName + "' for table: " + tableName + " ...");
-					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(userIndexMap.get(dbIndex).getValue()));
+					dbSchemaManager.removeIndex(jdbcTemplate, generateIndexName(userIndexMap.get(dbIndex)));
 					Map<String, OpIndexColumn> tableIndexes = indexes.get(objType);
 					List<String> indexesForRemoving = new ArrayList<>();
 					for (Map.Entry<String, OpIndexColumn> entry : tableIndexes.entrySet()) {
@@ -87,13 +83,13 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
 			for (String currentIndex : currentIndexMap.keySet()) {
 				if (!userIndexMap.containsKey(currentIndex)) {
-					String tableName = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_TABLENAME);
-					String colName = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_NAME);
-					String index = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_INDEX_TYPE);
-					String sqlType = (String) currentIndexMap.get(currentIndex).getValue().get(INDEX_SQL_TYPE);
+					String tableName = (String) currentIndexMap.get(currentIndex).get(INDEX_TABLENAME);
+					String colName = (String) currentIndexMap.get(currentIndex).get(INDEX_NAME);
+					String index = (String) currentIndexMap.get(currentIndex).get(INDEX_INDEX_TYPE);
+					String sqlType = (String) currentIndexMap.get(currentIndex).get(INDEX_SQL_TYPE);
 
 					info("Start creating new index: '" + index + "' for column: " + colName + " ...");
-					dbSchemaManager.generateIndexColumn(currentIndexMap.get(currentIndex).getValue());
+					dbSchemaManager.generateIndexColumn(currentIndexMap.get(currentIndex));
 					ColumnDef.IndexType di = dbSchemaManager.getIndexType(index);
 
 					ColumnDef columnDef = new ColumnDef(tableName, colName, null, di);
@@ -101,7 +97,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 					jdbcTemplate.execute(dbSchemaManager.generateIndexQuery(columnDef));
 					info("Index: '" + index + "' for table: " + tableName + " was added");
 					info(" Start data migration for new index ...");
-					blocksManager.lockBlockchainForSystemUpdate();
+					blocksManager.lockBlockchain("Locked for DB Index Updating");
 
 					String objType = dbSchemaManager.getTypeByTable(tableName);
 					Collection<OpIndexColumn> indexes = dbSchemaManager.getIndicesForType(objType);
@@ -124,7 +120,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 						opBlockChain = opBlockChain.getParent();
 					}
 
-					blocksManager.unlockBlockchainAfterSystemUpdate();
+					blocksManager.unlockBlockchain();
 					info(" Data migration for new index was finished");
 				}
 			}
@@ -241,10 +237,10 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		return updateList;
 	}
 
-	private Map<String, SettingsManager.CommonPreference<Map<String, Object>>> generateMapFromList(List<SettingsManager.CommonPreference<Map<String, Object>>> list) {
-		Map<String, SettingsManager.CommonPreference<Map<String, Object>>> map = new HashMap<>();
+	private Map<String, Map<String, Object>> generateMapFromList(List<SettingsManager.CommonPreference<Map<String, Object>>> list) {
+		Map<String, Map<String, Object>> map = new HashMap<>();
 		for (SettingsManager.CommonPreference<Map<String, Object>> object : list) {
-			map.put(settingsManager.DB_SCHEMA_INDEXES.getId(object.getValue()), object);
+			map.put(settingsManager.DB_SCHEMA_INDEXES.getId(object.getValue()), object.getValue());
 		}
 
 		return map;

@@ -153,7 +153,6 @@ var SETTINGS_VIEW = function () {
                     var test = $("#settings_" + activeTab);
                     let allpills = $("#settings-pills").children();
                     allpills.removeClass("active");
-                    console.log("AT: " + activeTab);
                     if (test) {
                         test.addClass("active");
                         loadAddPossibilityForTab();

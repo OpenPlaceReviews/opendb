@@ -57,12 +57,12 @@ public class OpBlockChain {
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
 	public static final int LOCKED_STATE = 2; // FINAL STATE. locked successfully and could be used as parent superblock
-	public static final int LOCKED_FOR_UPDATING =  3; // locked by system for updating
 	public static final int LOCKED_BY_USER = 4; // locked by user and it could be unlocked by user
 	public static final OpBlockChain NULL = new OpBlockChain(true);
 	
 	// 0-0 represents locked or unlocked state for blockchain
 	private volatile int locked = UNLOCKED;
+	private volatile String lockedMsg;
 	// 0-1 nullable object is always root (in order to perform operations in sync)
 	private final boolean nullObject;
 	// 0-2 immutable blockchain rules to validate operations
@@ -166,39 +166,21 @@ public class OpBlockChain {
 		return locked;
 	}
 
-	public synchronized void lockByUser() {
+	public String getLockedMsg() {
+		return lockedMsg;
+	}
+
+	public synchronized void lockByUser(String msg) {
 		if(nullObject) {
 			return;
 		}
 		if(this.locked == UNLOCKED) {
 			this.locked = LOCKED_BY_USER;
+			this.lockedMsg = msg;
 		} else if(this.locked != LOCKED_BY_USER) {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}
 	}
-
-	public synchronized void lockForSystemUpdate() {
-		if (nullObject) {
-			return;
-		}
-		if(this.locked == UNLOCKED) {
-			this.locked = LOCKED_FOR_UPDATING;
-		} else if(this.locked != LOCKED_FOR_UPDATING) {
-			throw new IllegalStateException("This chain is locked not by system or in a broken state");
-		}
-	}
-
-	public synchronized void unlockAfterSystemUpdate() {
-		if(nullObject) {
-			return;
-		}
-		if(this.locked == LOCKED_FOR_UPDATING) {
-			this.locked = UNLOCKED;
-		} else if(this.locked != UNLOCKED) {
-			throw new IllegalStateException("This chain is locked not by system or in a broken state");
-		}
-	}
-
 
 	public synchronized void unlockByUser() {
 		if(nullObject) {
@@ -206,6 +188,7 @@ public class OpBlockChain {
 		}
 		if(this.locked == LOCKED_BY_USER) {
 			this.locked = UNLOCKED;
+			this.lockedMsg = null;
 		} else if(this.locked != UNLOCKED) {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}

@@ -130,26 +130,14 @@ public class BlocksManager {
 		}
 		return false;
 	}
-	
+
 	public synchronized boolean lockBlockchain() {
+		return lockBlockchain(null);
+	}
+
+	public synchronized boolean lockBlockchain(String msg) {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
-			blockchain.lockByUser();
-			return true;
-		}
-		return false;
-	}
-
-	public synchronized boolean lockBlockchainForSystemUpdate() {
-		if (blockchain.getStatus() == OpBlockChain.UNLOCKED) {
-			blockchain.lockForSystemUpdate();
-			return true;
-		}
-		return false;
-	}
-
-	public synchronized boolean unlockBlockchainAfterSystemUpdate() {
-		if(blockchain.getStatus() == OpBlockChain.LOCKED_FOR_UPDATING) {
-			blockchain.unlockAfterSystemUpdate();
+			blockchain.lockByUser(msg);
 			return true;
 		}
 		return false;
@@ -501,7 +489,7 @@ public class BlocksManager {
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_STATE) {
 			return "LOCKED";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
-			return "LOCKED_BY_USER";
+			return "LOCKED_BY_USER" + (blockchain.getLockedMsg() == null ? "" : " (" + blockchain.getLockedMsg() + ")");
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_OP_IN_PROGRESS) {
 			return "OP_IN_PROGRESS";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_ERROR) {
