@@ -52,7 +52,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		addNewBotStat();
 		try {
 			info("Start Indexes updating...");
-			List<SettingsManager.CommonPreference<Map<String, Object>>> dbIndexes = formatter.fromJsonToListTreeMap(dbSchemaManager.getSetting(jdbcTemplate, SettingsManager.DB_INDEX_STATE.prefix));
+			List<SettingsManager.CommonPreference<Map<String, Object>>> dbIndexes = settingsManager.getPreferencesByPrefix(SettingsManager.DB_INDEX_STATE);
 			List<SettingsManager.CommonPreference<Map<String, Object>>> currentIndexPrefs = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
 			Map<String, SettingsManager.CommonPreference<Map<String, Object>>> userIndexMap = generateMapFromList(dbIndexes);
 			Map<String, SettingsManager.CommonPreference<Map<String, Object>>> currentIndexMap = generateMapFromList(currentIndexPrefs);
@@ -244,7 +244,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	private Map<String, SettingsManager.CommonPreference<Map<String, Object>>> generateMapFromList(List<SettingsManager.CommonPreference<Map<String, Object>>> list) {
 		Map<String, SettingsManager.CommonPreference<Map<String, Object>>> map = new HashMap<>();
 		for (SettingsManager.CommonPreference<Map<String, Object>> object : list) {
-			map.put(object.getId(), object);
+			map.put(settingsManager.DB_SCHEMA_INDEXES.getId(object.getValue()), object);
 		}
 
 		return map;
