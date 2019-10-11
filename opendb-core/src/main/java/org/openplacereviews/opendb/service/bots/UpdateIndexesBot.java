@@ -107,7 +107,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 					Collection<OpIndexColumn> indexes = dbSchemaManager.getIndicesForType(objType);
 					List<OpIndexColumn> dbIndexesUpdate = new ArrayList<OpIndexColumn>();
 					for (OpIndexColumn opIndexColumn : indexes) {
-						if(opIndexColumn.getIndexId().equals(colName)) {
+						if (opIndexColumn.getIndexId().equals(colName)) {
 							dbIndexesUpdate.add(opIndexColumn);
 						}
 					}
@@ -144,7 +144,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
 	private void insertIndexesIntoTable(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, Collection<OpIndexColumn> indexes) {
 		StringBuilder extraColumnNames = new StringBuilder();
-		for(OpIndexColumn index : indexes) {
+		for (OpIndexColumn index : indexes) {
 			if (extraColumnNames.length() == 0) {
 				extraColumnNames.append(index.getColumnDef().getColName()).append(" = ?");
 			} else {

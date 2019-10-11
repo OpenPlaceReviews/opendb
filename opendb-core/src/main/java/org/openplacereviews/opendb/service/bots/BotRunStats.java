@@ -9,12 +9,12 @@ import java.util.*;
 
 public class BotRunStats {
 
-	public enum FinishStatus {
-		FAILED, SUCCESS, INTERRUPTED
-	}
-
 	private static final int LOG_SIZE = 10;
 	public Deque<BotStats> botStats = new ArrayDeque<>();
+
+	private static Long getCurrentTime() {
+		return new Date().getTime();
+	}
 
 	public void createNewState() {
 		if (botStats.size() >= LOG_SIZE) {
@@ -28,9 +28,13 @@ public class BotRunStats {
 		return botStats.getLast();
 	}
 
+	public enum FinishStatus {
+		FAILED, SUCCESS, INTERRUPTED
+	}
+
 	public static class BotStats {
-		boolean interrupted;
 		public boolean running;
+		boolean interrupted;
 		List<LogEntry> logEntries;
 		Long timeStarted, timeFinished;
 		FinishStatus finishStatus;
@@ -121,9 +125,5 @@ public class BotRunStats {
 			this.edited = opOperation.getEdited().size();
 			this.deleted = opOperation.getDeleted().size();
 		}
-	}
-
-	private static Long getCurrentTime() {
-		return new Date().getTime();
 	}
 }
