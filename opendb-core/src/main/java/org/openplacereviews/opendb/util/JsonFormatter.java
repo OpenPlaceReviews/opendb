@@ -120,11 +120,6 @@ public class JsonFormatter {
 		return gson.fromJson(json, TreeMap.class);
 	}
 
-	@SuppressWarnings("unchecked")
-	public List<SettingsManager.CommonPreference<Map<String, Object>>> fromJsonToListTreeMap(String json) {
-		Type listOfMyClassObject = new TypeToken<ArrayList<SettingsManager.CommonPreference<Map<String, Object>>>>() {}.getType();
-		return gson.fromJson(json, listOfMyClassObject);
-	}
 
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
 		return gson.fromJson(json, classOfT);
