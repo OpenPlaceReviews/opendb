@@ -142,7 +142,7 @@ public class MgmtController {
     	if(manager.isBlockchainPaused()) {
     		manager.unlockBlockchain();
     	} else {
-    		manager.lockBlockchain();
+    		manager.lockBlockchain("");
     	}
     	return response.ok();
     }
@@ -263,19 +263,17 @@ public class MgmtController {
 
 	@PostMapping(path = "/config/new", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public ResponseEntity<String> addNewPreference(HttpSession session,
-												   @RequestParam String family,
-												   @RequestParam String key,
-												   @RequestParam String value) {
+	public ResponseEntity<String> addNewPreference(HttpSession session, @RequestParam String family,
+			@RequestParam String key, @RequestParam String value) {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
 		}
 		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
-		if(pref != null) {
+		if (pref != null) {
 			return response.badRequest("Key is already defined");
 		}
-    	if (settingsManager.addNewPreference(family, value)) {
-    		return response.ok("New preference was added");
+		if (settingsManager.addNewPreference(family, value)) {
+			return response.ok("New preference was added");
 		}
 
 		return response.badRequest("New preference was not added");
@@ -283,13 +281,12 @@ public class MgmtController {
 
 	@DeleteMapping(path = "/config/remove", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public ResponseEntity<String> removePreference(HttpSession session,
-												   @RequestParam String key) {
+	public ResponseEntity<String> removePreference(HttpSession session, @RequestParam String key) {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
 		}
 		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
-		if(pref == null) {
+		if (pref == null) {
 			return response.badRequest("Key is not defined");
 		}
 		if (settingsManager.removePreference(pref)) {

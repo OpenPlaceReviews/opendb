@@ -66,7 +66,9 @@ public class BlocksManager {
 	
 	private KeyPair serverKeyPair;
 	
-	private OpBlockChain blockchain; 
+	private OpBlockChain blockchain;
+	
+	private String statusDescription = "";
 	
 	public String getServerPrivateKey() {
 		return serverPrivateKey;
@@ -126,18 +128,16 @@ public class BlocksManager {
 	public synchronized boolean unlockBlockchain() {
 		if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
 			blockchain.unlockByUser();
+			statusDescription = "";
 			return true;
 		}
 		return false;
 	}
 
-	public synchronized boolean lockBlockchain() {
-		return lockBlockchain(null);
-	}
-
 	public synchronized boolean lockBlockchain(String msg) {
 		if(blockchain.getStatus() == OpBlockChain.UNLOCKED) {
-			blockchain.lockByUser(msg);
+			blockchain.lockByUser();
+			statusDescription = msg;
 			return true;
 		}
 		return false;
@@ -480,6 +480,12 @@ public class BlocksManager {
 		return dataManager.getOrphanedBlocks();
 	}
 	
+	
+	
+	public String getCurrentStateDescription() {
+		return statusDescription;
+	}
+	
 	public String getCurrentState() {
 		if(blockchain == null) {
 			return "INITIALIZING";
@@ -489,7 +495,7 @@ public class BlocksManager {
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_STATE) {
 			return "LOCKED";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_BY_USER) {
-			return "LOCKED_BY_USER" + (blockchain.getLockedMsg() == null ? "" : " (" + blockchain.getLockedMsg() + ")");
+			return "LOCKED_BY_USER";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_OP_IN_PROGRESS) {
 			return "OP_IN_PROGRESS";
 		} else if(blockchain.getStatus() == OpBlockChain.LOCKED_ERROR) {
@@ -594,4 +600,5 @@ public class BlocksManager {
 	private static final PerformanceMetric mBlockSaveSuperBlock = PerformanceMetrics.i().getMetric("block.mgmt.replicate.db.savehistory");
 	private static final PerformanceMetric mBlockCompact = PerformanceMetrics.i().getMetric("block.mgmt.replicate.compact");
 	private static final PerformanceMetric mBlockRebase = PerformanceMetrics.i().getMetric("block.mgmt.replicate.rebase");
+
 }

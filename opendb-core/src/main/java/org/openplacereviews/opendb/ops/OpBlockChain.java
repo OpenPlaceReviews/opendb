@@ -62,7 +62,6 @@ public class OpBlockChain {
 	
 	// 0-0 represents locked or unlocked state for blockchain
 	private volatile int locked = UNLOCKED;
-	private volatile String lockedMsg;
 	// 0-1 nullable object is always root (in order to perform operations in sync)
 	private final boolean nullObject;
 	// 0-2 immutable blockchain rules to validate operations
@@ -166,17 +165,13 @@ public class OpBlockChain {
 		return locked;
 	}
 
-	public String getLockedMsg() {
-		return lockedMsg;
-	}
 
-	public synchronized void lockByUser(String msg) {
+	public synchronized void lockByUser() {
 		if(nullObject) {
 			return;
 		}
 		if(this.locked == UNLOCKED) {
 			this.locked = LOCKED_BY_USER;
-			this.lockedMsg = msg;
 		} else if(this.locked != LOCKED_BY_USER) {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}
@@ -188,7 +183,6 @@ public class OpBlockChain {
 		}
 		if(this.locked == LOCKED_BY_USER) {
 			this.locked = UNLOCKED;
-			this.lockedMsg = null;
 		} else if(this.locked != UNLOCKED) {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}

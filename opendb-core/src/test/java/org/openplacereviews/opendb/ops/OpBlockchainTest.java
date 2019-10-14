@@ -95,7 +95,7 @@ public class OpBlockchainTest {
 
 	@Test
 	public void lockByUser() {
-		blc.lockByUser("");
+		blc.lockByUser();
 		assertEquals(OpBlockChain.LOCKED_BY_USER, blc.getStatus());
 	}
 
@@ -104,12 +104,12 @@ public class OpBlockchainTest {
 		blc.validateLocked();
 
 		exceptionRule.expect(IllegalStateException.class);
-		blc.lockByUser("");
+		blc.lockByUser();
 	}
 
 	@Test
 	public void unlockByUserIfBlockChainStatusLockedByUser() {
-		blc.lockByUser("");
+		blc.lockByUser();
 		assertEquals(OpBlockChain.LOCKED_BY_USER, blc.getStatus());
 
 		blc.unlockByUser();
@@ -260,8 +260,7 @@ public class OpBlockchainTest {
 	@Test
 	public void testChangeToEqualLockedParent() {
 		OpBlockChain newOp = new OpBlockChain(OpBlockChain.NULL, blc.getRules());
-		newOp.lockByUser("");
-
+		newOp.lockByUser();
 		exceptionRule.expect(IllegalStateException.class);
 		blc.changeToEqualParent(newOp);
 	}
