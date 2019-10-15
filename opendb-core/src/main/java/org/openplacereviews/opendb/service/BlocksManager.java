@@ -579,7 +579,7 @@ public class BlocksManager {
 		return null;
 	}
 
-	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
+	public Map<String, Map<String, OpIndexColumn>> getIndices() {
 		return dataManager.getIndices();
 	}
 

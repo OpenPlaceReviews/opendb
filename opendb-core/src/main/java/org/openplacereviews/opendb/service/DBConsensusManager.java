@@ -1105,7 +1105,7 @@ public class DBConsensusManager {
 		return dbSchema.getSetting(jdbcTemplate, key);
 	}
 
-	public TreeMap<String, Map<String, OpIndexColumn>> getIndices() {
+	public Map<String, Map<String, OpIndexColumn>> getIndices() {
 		return dbSchema.getIndexes();
 	}
 

@@ -44,7 +44,7 @@ public class BotManager {
 	public void initSystemBots() {
 		OpObject botObject = new OpObject();
 		botObject.setId("update-indexes");
-		// TODO setting
+		TODO;
 //		TreeMap<String, Object> mp = new TreeMap<>();
 //		mp.put(SettingsManager.BOT_ID, id);
 //		mp.put(SettingsManager.BOT_ENABLED, false);

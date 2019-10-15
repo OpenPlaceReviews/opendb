@@ -92,7 +92,7 @@ public class OUtils {
 	}
 	
 	public static boolean equalsStringValue(Object s1, Object s2) {
-		if(s1 == null) {
+		if(s1 == null || s2 == null) {
 			return s1 == s2;
 		}
 		return s1.toString().equals(s2.toString());
