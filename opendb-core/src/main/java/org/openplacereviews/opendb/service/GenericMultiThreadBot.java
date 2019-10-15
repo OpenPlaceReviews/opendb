@@ -39,7 +39,6 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	
 	private static final PerformanceMetric mBlock = PerformanceMetrics.i().getMetric("bot.osm-sync.block");
 
-	private final String api;
 	private final boolean systemBot;
 	private ThreadPoolExecutor service;
 	protected long placesPerOperation = 250;
@@ -60,7 +59,6 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	public GenericMultiThreadBot(OpObject botObject, boolean systemBot) {
 		this.botObject = botObject;
 		this.systemBot = systemBot;
-		this.api = botObject.getStringValue("api");
 	}
 	
 	protected static class TaskResult { 
@@ -296,7 +294,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 
 	@Override
 	public String getAPI() {
-		return api;
+		return getClass().getName();
 	}
 
 	@Override

@@ -7,6 +7,7 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
+import org.openplacereviews.opendb.service.bots.UpdateIndexesBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,8 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import javax.annotation.PostConstruct;
 
 @Service
 public class BotManager {
@@ -32,18 +35,24 @@ public class BotManager {
 	private SettingsManager settings;
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
-	private static List<OpObject> systemBots = new ArrayList<>();
+	private Map<String, IOpenDBBot<?>> systemBots = new TreeMap<String, IOpenDBBot<?>>();
+	private List<Future<?>> futures = new ArrayList<>();
+	private ExecutorService service = Executors.newFixedThreadPool(5);
+	
 
-	static {
+	@PostConstruct
+	public void initSystemBots() {
 		OpObject botObject = new OpObject();
 		botObject.setId("update-indexes");
-		botObject.putStringValue("api", "org.openplacereviews.opendb.service.bots.UpdateIndexesBot");
-		systemBots.add(botObject);
+		// TODO setting
+//		TreeMap<String, Object> mp = new TreeMap<>();
+//		mp.put(SettingsManager.BOT_ID, id);
+//		mp.put(SettingsManager.BOT_ENABLED, false);
+//		p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
+		UpdateIndexesBot bt = new UpdateIndexesBot(botObject);
+		beanFactory.autowireBean(bt);
+		systemBots.put(botObject.getId().get(0), bt);
 	}
-
-
-	List<Future<?>> futures = new ArrayList<>();
-	ExecutorService service = Executors.newFixedThreadPool(5);
 
 	@SuppressWarnings("unchecked")
 	public Map<String, IOpenDBBot<?>> getBots() {
@@ -62,9 +71,7 @@ public class BotManager {
 		for (OpObject cfg : req.result) {
 			generateBots(nbots, cfg);
 		}
-		for (OpObject systemBot : systemBots) {
-			generateBots(nbots, systemBot);
-		}
+		nbots.putAll(this.systemBots);;
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
 		return nbots;
