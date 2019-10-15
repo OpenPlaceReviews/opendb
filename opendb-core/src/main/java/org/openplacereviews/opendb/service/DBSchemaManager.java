@@ -449,11 +449,6 @@ public class DBSchemaManager {
 		registerColumn(tableName, cd);
 	}
 
-	private Map<String, OpIndexColumn> generateOpIndexColumn(List<CommonPreference<Map<String, Object>>> prefs) {
-		List<CommonPreference<Map<String, Object>>> indexes = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
-
-		return null;
-	}
 
 	@SuppressWarnings("unchecked")
 	private void prepareObjTableMapping() {
@@ -565,8 +560,8 @@ public class DBSchemaManager {
 		return Integer.parseInt(s);
 	}
 
-	protected Integer removeSetting(JdbcTemplate jdbcTemplate, CommonPreference preference) {
-		return jdbcTemplate.update("DELETE FROM " + SETTINGS_TABLE + " WHERE key = ?", preference.getId());
+	protected int removeSetting(JdbcTemplate jdbcTemplate, String key) {
+		return jdbcTemplate.update("DELETE FROM " + SETTINGS_TABLE + " WHERE key = ?", key);
 	}
 
 	public String getSetting(JdbcTemplate jdbcTemplate, String key) {

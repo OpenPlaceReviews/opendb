@@ -37,7 +37,7 @@ var SETTINGS_VIEW = function () {
         } else {
             it.find("[did='edit-settings']").addClass("hidden");
         }
-        if (obj.family.deletable) {
+        if (obj.family.canDelete) {
             it.find("[did='remove-settings']").removeClass("hidden").click(function () {
                 removePreferenceObject(obj);
             });
@@ -130,7 +130,7 @@ var SETTINGS_VIEW = function () {
             for (var i = 0; i < data.length; i++) {
                 var obj = data[i];
                 if (obj.family.name === familyName) {
-                    if (obj.family.editable) {
+                    if (obj.family.canAdd) {
                         $("#add-settings-btn").removeAttr('disabled');
                     } else {
                         $("#add-settings-btn").attr('disabled', 'disabled');
