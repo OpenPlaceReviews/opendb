@@ -210,7 +210,6 @@ public class DBSchemaManager {
 				return entry.getKey();
 			}
 		}
-
 		return null;
 	}
 	
@@ -413,7 +412,6 @@ public class DBSchemaManager {
 				return ColumnDef.IndexType.valueOf(index);
 			}
 		}
-
 		return null;
 	}
 
