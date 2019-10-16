@@ -11,6 +11,7 @@ import org.openplacereviews.opendb.service.DBSchemaManager;
 import org.openplacereviews.opendb.service.GenericMultiThreadBot;
 import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
+import org.openplacereviews.opendb.service.SettingsManager.PreferenceFamily;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,6 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	private int totalCnt = 1;
 	private int progress = 0;
 	
-	public static final String INDEX_CURRENT_STATE = "opendb.current-index.state";
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
@@ -38,9 +38,6 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
 	@Autowired
 	private DBSchemaManager dbSchemaManager;
-
-	@Autowired
-	private JsonFormatter formatter;
 
 	@Autowired
 	private BlocksManager blocksManager;
@@ -55,28 +52,21 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		addNewBotStat();
 		try {
 			info("Start Indexes updating...");
-			Map<String, Map<String, Object>> expectedIndexState = new LinkedHashMap<String, Map<String,Object>>();
-			Map<String, Map<String, Object>> actualIndexState = new LinkedHashMap<String, Map<String,Object>>();
-			List<CommonPreference<Map<String, Object>>> userIndexes = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
-			for(CommonPreference<Map<String, Object>> p : userIndexes) {
-				expectedIndexState.put(p.getId(), p.get());
-			}
-			String s = dbSchemaManager.getSetting(jdbcTemplate, INDEX_CURRENT_STATE);
-			if(s == null ) {
-				TreeMap<String, Object> mp = formatter.fromJsonToTreeMap(s);
-				for(String k : mp.keySet()) {
-					actualIndexState.put(k, (Map<String, Object>) mp.get(k));
-				}
-			}
+			Map<String, CommonPreference<Map<String, Object>>> expectedIndexState = 
+					(Map<String, CommonPreference<Map<String, Object>>>) settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+			Map<String, CommonPreference<Map<String, Object>>> actualIndexState = 
+					(Map<String, CommonPreference<Map<String, Object>>>) settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES);
+			
 
 			for (String indexId : actualIndexState.keySet()) {
-				Map<String, Object> currentIndex = actualIndexState.get(indexId);
-				Map<String, Object> userInput = expectedIndexState.remove(indexId);
+				Map<String, Object> currentIndex = actualIndexState.get(indexId).get();
+				CommonPreference<Map<String, Object>> userInputPref = expectedIndexState.remove(indexId);
 				String indexName = (String) currentIndex.get(INDEX_NAME);
-				String tableName = (String) currentIndex.get(INDEX_TABLENAME);
-				if (userInput != null) {
+				if (userInputPref != null) {
+					Map<String, Object> userInput = userInputPref.get();
 					info("Start checking index: " + indexName + " on changes ...");
 					validatePreferencesOnChanges(currentIndex, userInput);
+					actualIndexState.get(indexId).set(userInput);
 					info("Checking index: " + indexName + " on changes was finished");
 				} else {
 					dbSchemaManager.removeIndex(jdbcTemplate, currentIndex);
@@ -85,7 +75,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			}
 
 			for (String indexId : expectedIndexState.keySet()) {
-				Map<String, Object> expectedIndex = expectedIndexState.remove(indexId);
+				Map<String, Object> expectedIndex = expectedIndexState.remove(indexId).get();
 				String colName = (String) expectedIndex.get(INDEX_NAME);
 				String tableName = (String) expectedIndex.get(INDEX_TABLENAME);
 				
@@ -102,13 +92,12 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 						reindexOpColumn(tableName, objType, map.get(colName));
 					}
 				}
-				
 				blocksManager.unlockBlockchain();
+				CommonPreference<Map<String, Object>> pn = settingsManager.registerMapPreferenceForFamily(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES, expectedIndex);
+				pn.set(expectedIndex);
 				info("Data migration for new index was finished");
 			}
-
 			setSuccessState();
-			settingsManager.saveCurrentDbIndexes();
 			info("Updating Indexes is finished");
 		} catch (Exception e) {
 			setFailedState();
@@ -119,6 +108,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		}
 		return this;
 	}
+
 
 	private void reindexOpColumn(String tableName, String objType, OpIndexColumn indCol) {
 		OpBlockChain opBlockChain = blocksManager.getBlockchain();

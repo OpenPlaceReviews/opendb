@@ -34,7 +34,7 @@ import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 4;
+	private static final int OPENDB_SCHEMA_VERSION = 5;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -79,10 +79,21 @@ public class DBSchemaManager {
 		int keySize;
 		Set<String> types = new TreeSet<>();
 	}
+	
+	public Map<String, Map<String, Object>> getIndexState(boolean actualState) {
+		LinkedHashMap<String, Map<String, Object>> state = new LinkedHashMap<String, Map<String,Object>>();
+		List<CommonPreference<Map<String, Object>>> userIndexes = settingsManager.getPreferencesByPrefix(
+				actualState? SettingsManager.DB_SCHEMA_INTERNAL_INDEXES : SettingsManager.DB_SCHEMA_INDEXES);
+		for(CommonPreference<Map<String, Object>> p : userIndexes) {
+			state.put(p.getId(), p.get());
+		}
+		return state;
+	}
 
 	public Map<String, Map<String, OpIndexColumn>> getIndexes() {
 		return indexes;
 	}
+	
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType basicIndexType) {
 		ColumnDef cd = new ColumnDef(tableName, colName, colType, basicIndexType);
@@ -250,6 +261,13 @@ public class DBSchemaManager {
 			}
 			if (dbVersion <= 3) {
 				addBlockAdditionalInfo(jdbcTemplate);
+			}
+			if (dbVersion <= 4) {
+				List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+				for(CommonPreference<Map<String, Object>> p : prefs) {
+					CommonPreference<Map<String, Object>> ps = settingsManager.registerMapPreferenceForFamily(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES, p.get());
+					ps.set(p.get());
+				}
 			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if(dbVersion > OPENDB_SCHEMA_VERSION) {
@@ -490,6 +508,10 @@ public class DBSchemaManager {
 			indexesByType.remove(index);
 		}
 		jdbcTemplate.execute("DROP INDEX " + generateIndexName(it, tableName, colName));
+		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES.getId(colName));
+		if(pref != null) {
+			settingsManager.removePreference(pref);
+		}
 	}
 
 	private void addIndexCol(OpIndexColumn indexColumn) {

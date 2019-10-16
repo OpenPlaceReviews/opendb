@@ -38,6 +38,8 @@ public class SettingsManager {
 			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded().canAdd().canEdit().canDelete();
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
 			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).canAdd().canEdit().canDelete();
+	public static final PreferenceFamily DB_SCHEMA_INTERNAL_INDEXES = new PreferenceFamily("opendb.db-schema.internal-indexes", "Internal DB Indexes").
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe actual index state %s.%s ", INDEX_TABLENAME, INDEX_NAME);
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
 			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).canEdit().canDelete();
 	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
@@ -128,12 +130,18 @@ public class SettingsManager {
 
 	public <T> boolean removePreference(CommonPreference<T> preference) {
 		if (preference.family.canDelete) {
-			if (dbSchemaManager.removeSetting(jdbcTemplate, preference.getId()) > 0) {
-				Map<String, CommonPreference<?>> nprefs = new TreeMap<>(preferences);
-				nprefs.remove(preference.getId());
-				preferences = nprefs;
-				return true;
-			}
+			return removePreferenceInternal(preference);
+		}
+		return false;
+	}
+
+
+	public <T> boolean removePreferenceInternal(CommonPreference<T> preference) {
+		if (dbSchemaManager.removeSetting(jdbcTemplate, preference.getId()) > 0) {
+			Map<String, CommonPreference<?>> nprefs = new TreeMap<>(preferences);
+			nprefs.remove(preference.getId());
+			preferences = nprefs;
+			return true;
 		}
 		return false;
 	}
@@ -539,5 +547,7 @@ public class SettingsManager {
 		CREATE
 	}
 	public final CommonPreference<BlockSource> OPENDB_BLOCKCHAIN_STATUS = registerEnumPreference(BlockSource.class, "opendb.blockchain-status", BlockSource.NONE, "Block source (none, replicate, create)");
+
+	
 
 }
