@@ -792,8 +792,9 @@ public class DBConsensusManager {
 		List<Object[]> insertBatch = new ArrayList<>();
 		int ksize = dbSchema.getKeySizeByType(type);
 		Iterator<Entry<CompoundKey, OpObject>> it = objects.iterator();
+		Connection conn = null;
 		try {
-			Connection conn = jdbcTemplate.getDataSource().getConnection();
+			conn = jdbcTemplate.getDataSource().getConnection();
 			while (it.hasNext()) {
 				Entry<CompoundKey, OpObject> e = it.next();
 				CompoundKey pkey = e.getKey();
@@ -848,6 +849,14 @@ public class DBConsensusManager {
 			conn.close();
 		} catch (SQLException e) {
 			throw new IllegalArgumentException();
+		} finally {
+			if(conn != null) {
+				try {
+					conn.close();
+				} catch (SQLException e) {
+					throw new IllegalArgumentException(e);
+				}
+			}
 		}
 
 		return insertBatch;

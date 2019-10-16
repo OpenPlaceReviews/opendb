@@ -4,15 +4,12 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
 import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.service.DBSchemaManager;
 import org.openplacereviews.opendb.service.GenericMultiThreadBot;
 import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
-import org.openplacereviews.opendb.service.SettingsManager.PreferenceFamily;
-import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -88,7 +85,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 				List<String> objTypes = dbSchemaManager.getTypesByTable(tableName);
 				for (String objType : objTypes) {
 					Map<String, OpIndexColumn> map = dbSchemaManager.getIndexes().get(objType);
-					if(map != null) {
+					if(map != null && map.get(colName) != null) {
 						reindexOpColumn(tableName, objType, map.get(colName));
 					}
 				}
@@ -110,75 +107,64 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	}
 
 
-	private void reindexOpColumn(String tableName, String objType, OpIndexColumn indCol) {
+	private void reindexOpColumn(String tableName, String objType, OpIndexColumn ind) {
+		String sql = "UPDATE " + tableName + " SET " + ind.getColumnDef().getColName() + " = ? WHERE "
+				+ dbSchemaManager.generatePKString(tableName, "p%1$d = ?", " AND ") + " AND ophash = ?";
+		
 		OpBlockChain opBlockChain = blocksManager.getBlockchain();
 		while (opBlockChain.getParent() != null) {
 			Stream<Map.Entry<CompoundKey, OpObject>> objects = opBlockChain.getRawSuperblockObjects(objType);
-			List<Object[]> insertBatch = prepareInsertIndexObjBatch(objects, objType, dbIndexesUpdate);
-			if (insertBatch.size() > 0) {
-				totalCnt += insertBatch.size();
-				insertIndexesIntoTable(insertBatch, tableName, jdbcTemplate, dbIndexesUpdate);
+			List<Object[]> args = prepareInsertIndexObjBatch(objects, objType, ind);
+			if (args.size() > 0) {
+				totalCnt += args.size();
+				for (Object[] arg : args) {
+					progress++;
+					jdbcTemplate.update(sql, arg);
+					if (progress % 5000 == 0) {
+						info(String.format("Progress of 'update-indexes' %d / %d", progress, totalCnt));
+					}
+				}
 			}
 
 			opBlockChain = opBlockChain.getParent();
 		}
 	}
 	
-	private List<Object[]> prepareInsertIndexObjBatch(Stream<Map.Entry<CompoundKey, OpObject>> objects, String type, Collection<OpIndexColumn> indexes) {
+	private List<Object[]> prepareInsertIndexObjBatch(Stream<Map.Entry<CompoundKey, OpObject>> objects, String type, OpIndexColumn index) {
 		List<Object[]> updateList = new ArrayList<>();
 		int ksize = dbSchemaManager.getKeySizeByType(type);
 		Iterator<Map.Entry<CompoundKey, OpObject>> it = objects.iterator();
+		Connection conn = null;
 		try {
-			Connection conn = jdbcTemplate.getDataSource().getConnection();
+			conn = jdbcTemplate.getDataSource().getConnection();
 			while (it.hasNext()) {
 				Map.Entry<CompoundKey, OpObject> e = it.next();
 				CompoundKey pkey = e.getKey();
 				OpObject obj = e.getValue();
-
-				Object[] args = new Object[indexes.size() + ksize + 1];
-				int ind = 0;
-
-				for (OpIndexColumn index : indexes) {
-					if (!obj.isDeleted()) {
-						args[ind++] = index.evalDBValue(obj, conn);
-					} else {
-						args[ind++] = null;
-					}
+				Object[] args = new Object[1 + ksize + 1];
+				if (obj != null && !obj.isDeleted()) {
+					args[0] = index.evalDBValue(obj, conn);
 				}
-				pkey.toArray(args, ind);
-				ind += ksize;
-				args[ind] = SecUtils.getHashBytes(obj.getParentHash());
-
+				pkey.toArray(args, 1);
+				args[ksize + 1] = SecUtils.getHashBytes(obj.getParentHash());
 				updateList.add(args);
+				
 			}
-			conn.close();
 		} catch (SQLException e) {
 			throw new IllegalArgumentException();
+		} finally {
+			if(conn != null) {
+				try {
+					conn.close();
+				} catch (SQLException e) {
+					throw new IllegalArgumentException(e);
+				}
+			}
 		}
 
 		return updateList;
 	}
 
-	private void insertIndexesIntoTable(List<Object[]> args, String table, JdbcTemplate jdbcTemplate, OpIndexColumn ind) {
-		StringBuilder extraColumnNames = new StringBuilder();
-		for (OpIndexColumn index : indexes) {
-			if (extraColumnNames.length() == 0) {
-				extraColumnNames.append(index.getColumnDef().getColName()).append(" = ?");
-			} else {
-				extraColumnNames.append(", ").append(index.getColumnDef().getColName()).append(" = ?");
-			}
-		}
-		for (Object[] arg : args) {
-			progress++;
-			jdbcTemplate.update("UPDATE " + table +
-					" SET " + extraColumnNames.toString() + " WHERE " + dbSchemaManager.generatePKString(table, "p%1$d = ?", " AND ") + " AND ophash = ?", arg
-			);
-
-			if (progress % 5000 == 0) {
-				info(String.format("Progress of 'update-indexes' %d / %d", progress, totalCnt));
-			}
-		}
-	}
 	
 	private boolean compare(Map<String, Object> dbIndex, Map<String, Object> currentIndex, String field) {
 		Object o1 = dbIndex.get(field);
