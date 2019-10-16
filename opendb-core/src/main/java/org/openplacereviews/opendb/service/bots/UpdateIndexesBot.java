@@ -48,7 +48,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	public UpdateIndexesBot call() throws Exception {
 		addNewBotStat();
 		try {
-			info("Start Indexes updating...");
+			info("Start updating indexes...");
 			Map<String, CommonPreference<Map<String, Object>>> expectedIndexState = getState(SettingsManager.DB_SCHEMA_INDEXES);
 			Map<String, CommonPreference<Map<String, Object>>> actualIndexState = getState(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES);
 			
@@ -60,8 +60,10 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 				if (userInputPref != null) {
 					Map<String, Object> userInput = userInputPref.get();
 					info("Start checking index: " + indexName + " on changes ...");
-					validatePreferencesOnChanges(currentIndex, userInput);
-					actualIndexState.get(indexId).set(userInput);
+					if(validatePreferencesOnChanges(currentIndex, userInput)) {
+						actualIndexState.get(indexId).set(userInput);
+						info("Saving index state: " + indexName );
+					}
 					info("Checking index: " + indexName + " on changes was finished");
 				} else {
 					dbSchemaManager.removeIndex(jdbcTemplate, currentIndex);
@@ -177,7 +179,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		return OUtils.equalsStringValue(o1, o2);
 	}
 
-	private void validatePreferencesOnChanges(Map<String, Object> actual, Map<String, Object> expected)
+	private boolean validatePreferencesOnChanges(Map<String, Object> actual, Map<String, Object> expected)
 			throws Exception {
 		if (!compare(actual, expected, INDEX_CACHE_DB_MAX) || !compare(actual, expected, INDEX_CACHE_RUNTIME_MAX)) {
 			String tableName = (String) actual.get(INDEX_TABLENAME);
@@ -198,6 +200,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 				}
 			}
 			info("Updating index: " + indexName + " for table: " + tableName + " was finished");
+			return true;
 		}
 		if (!compare(actual, expected, INDEX_INDEX_TYPE) || !compare(actual, expected, INDEX_NAME)
 				|| !compare(actual, expected, INDEX_FIELD) || !compare(actual, expected, "sqlmapping")
@@ -205,6 +208,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			throw new IllegalArgumentException(
 					"Cannot to change fields: index, name, sqlmapping, sqltype!!! Please, remove index and create new!!");
 		}
+		return false;
 
 	}
 
