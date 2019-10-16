@@ -49,7 +49,8 @@ public class SettingsManager {
 			USER,
 			DB_SCHEMA_OBJTABLES,
 			DB_SCHEMA_INDEXES,
-			OPENDB_BOTS_CONFIG
+			OPENDB_BOTS_CONFIG,
+			DB_SCHEMA_INTERNAL_INDEXES // could be disabled to be non-visible
 	};
 	
 	@Autowired
