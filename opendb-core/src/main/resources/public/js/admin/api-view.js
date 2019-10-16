@@ -189,7 +189,7 @@ var API_VIEW = function () {
                         newTemplate.find("[did='last-launch']").html("-");
                     }
                     if (!obj.systemBot) {
-                        newTemplate.find("[did='bot-status-active']").addClass("hidden");
+                        newTemplate.find("[did='bot-system']").addClass("hidden");
                     }
                     if(obj.settings && obj.settings.interval_sec && obj.settings.enabled) {
                         var tm = obj.settings.interval_sec + " seconds";

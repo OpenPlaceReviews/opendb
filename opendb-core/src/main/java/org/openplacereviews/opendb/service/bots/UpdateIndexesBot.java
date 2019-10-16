@@ -10,6 +10,7 @@ import org.openplacereviews.opendb.service.DBSchemaManager;
 import org.openplacereviews.opendb.service.GenericMultiThreadBot;
 import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
+import org.openplacereviews.opendb.service.SettingsManager.PreferenceFamily;
 import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -43,16 +44,13 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		super(id);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public UpdateIndexesBot call() throws Exception {
 		addNewBotStat();
 		try {
 			info("Start Indexes updating...");
-			Map<String, CommonPreference<Map<String, Object>>> expectedIndexState = 
-					(Map<String, CommonPreference<Map<String, Object>>>) settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
-			Map<String, CommonPreference<Map<String, Object>>> actualIndexState = 
-					(Map<String, CommonPreference<Map<String, Object>>>) settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES);
+			Map<String, CommonPreference<Map<String, Object>>> expectedIndexState = getState(SettingsManager.DB_SCHEMA_INDEXES);
+			Map<String, CommonPreference<Map<String, Object>>> actualIndexState = getState(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES);
 			
 
 			for (String indexId : actualIndexState.keySet()) {
@@ -106,6 +104,15 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		return this;
 	}
 
+
+	private Map<String, CommonPreference<Map<String, Object>>> getState(PreferenceFamily dbSchemaIndexes) {
+		Map<String, CommonPreference<Map<String, Object>>> mp = new TreeMap<>();
+		List<CommonPreference<Map<String, Object>>> l = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+		for(CommonPreference<Map<String, Object>> p : l) {
+			mp.put((String)p.get().get(INDEX_NAME), p);
+		}
+		return mp;
+	}
 
 	private void reindexOpColumn(String tableName, String objType, OpIndexColumn ind) {
 		String sql = "UPDATE " + tableName + " SET " + ind.getColumnDef().getColName() + " = ? WHERE "
