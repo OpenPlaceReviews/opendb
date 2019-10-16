@@ -1,22 +1,27 @@
-package org.openplacereviews.opendb.util;
+package org.openplacereviews.opendb.service.bots;
 
 import org.openplacereviews.opendb.ops.OpOperation;
 
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.*;
 
 public class BotRunStats {
 
-	public enum FinishStatus {
-		FAILED, SUCCESS, INTERRUPTED
-	}
-
-	private static final int logSize = 10;
+	private static final int LOG_SIZE = 10;
 	public Deque<BotStats> botStats = new ArrayDeque<>();
 
+	private static long currentTime() {
+		return System.currentTimeMillis();
+	}
+	
+	public boolean isRunning() {
+		return botStats.isEmpty() ? false : getCurrentBotState().running;
+	}
+
 	public void createNewState() {
-		if (botStats.size() >= logSize) {
+		if (botStats.size() >= LOG_SIZE) {
 			botStats.removeFirst();
 		}
 		botStats.addLast(new BotStats());
@@ -27,9 +32,13 @@ public class BotRunStats {
 		return botStats.getLast();
 	}
 
+	public enum FinishStatus {
+		FAILED, SUCCESS, INTERRUPTED
+	}
+
 	public static class BotStats {
-		boolean interrupted;
 		public boolean running;
+		boolean interrupted;
 		List<LogEntry> logEntries;
 		Long timeStarted, timeFinished;
 		FinishStatus finishStatus;
@@ -37,7 +46,7 @@ public class BotRunStats {
 		List<OperationInfo> addedOperations;
 
 		public BotStats() {
-			timeStarted = getCurrentTime();
+			timeStarted = currentTime();
 		}
 
 		public String addLogEntry(String msg, Exception e) {
@@ -55,7 +64,7 @@ public class BotRunStats {
 		public void setInterrupted() {
 			interrupted = true;
 			running = false;
-			timeFinished = getCurrentTime();
+			timeFinished = currentTime();
 			finishStatus = FinishStatus.INTERRUPTED;
 		}
 
@@ -65,7 +74,7 @@ public class BotRunStats {
 
 		private void saveState(FinishStatus finishStatus, int amountOfTasks) {
 			running = false;
-			timeFinished = getCurrentTime();
+			timeFinished = currentTime();
 			this.finishStatus = finishStatus;
 			this.amountOfTasks = amountOfTasks;
 		}
@@ -92,21 +101,19 @@ public class BotRunStats {
 		}
 	}
 
-	public static class LogEntry {
+	public static class LogEntry implements Serializable {
 		public String msg;
-		public Exception exception;
+		public String exception;
 		public Long date;
 
 		public LogEntry(String msg, Exception e) {
 			this.msg = msg;
-			exception = e;
-			date = getCurrentTime();
-		}
-
-		public String getException() {
-			StringWriter errors = new StringWriter();
-			exception.printStackTrace(new PrintWriter(errors));
-			return String.valueOf(errors);
+			if (e != null) {
+				StringWriter errors = new StringWriter();
+				e.printStackTrace(new PrintWriter(errors));
+				exception = errors.toString();
+			}
+			date = currentTime();
 		}
 	}
 
@@ -122,9 +129,5 @@ public class BotRunStats {
 			this.edited = opOperation.getEdited().size();
 			this.deleted = opOperation.getDeleted().size();
 		}
-	}
-
-	private static Long getCurrentTime() {
-		return new Date().getTime();
 	}
 }

@@ -165,6 +165,7 @@ public class OpBlockChain {
 		return locked;
 	}
 
+
 	public synchronized void lockByUser() {
 		if(nullObject) {
 			return;
@@ -175,7 +176,6 @@ public class OpBlockChain {
 			throw new IllegalStateException("This chain is locked not by user or in a broken state");
 		}
 	}
-
 
 	public synchronized void unlockByUser() {
 		if(nullObject) {

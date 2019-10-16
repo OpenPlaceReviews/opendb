@@ -118,6 +118,7 @@ public class JsonFormatter {
 		return gson.fromJson(json, TreeMap.class);
 	}
 
+
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
 		return gson.fromJson(json, classOfT);
 	}

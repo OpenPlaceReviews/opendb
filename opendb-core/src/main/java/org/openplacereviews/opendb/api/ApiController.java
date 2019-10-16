@@ -72,6 +72,7 @@ public class ApiController {
 		res.orphanedBlocks = manager.getOrphanedBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
+		res.statusDescription = manager.getCurrentStateDescription();
 		res.loginUser = OpApiController.getServerUser(session);
 		if (manager.isBlockCreationOn()) {
 			res.status += " (blocks every " + scheduledServices.getMinSecondsInterval() + " seconds)";
@@ -114,6 +115,7 @@ public class ApiController {
 
 	protected static class BlockchainStatus {
 		public String status;
+		public String statusDescription;
 		public String serverUser;
 		public String loginUser;
 		public Integer amountBlocks;

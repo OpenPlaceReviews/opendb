@@ -4,12 +4,13 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
-import org.openplacereviews.opendb.util.BotRunStats;
+import org.openplacereviews.opendb.service.bots.BotRunStats;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
 
 public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 
-	private static final Log LOGGER = LogFactory.getLog(GenericMultiThreadBot.class);
+	protected final Log LOGGER = LogFactory.getLog(this.getClass());
 	private static final long TIMEOUT_OVERPASS_HOURS = 4;
 	private static final long TIMEOUT_BLOCK_CREATION_MS = 15000;
 	public static final String F_BLOCKCHAIN_CONFIG = "blockchain-config";
@@ -39,26 +40,34 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	
 	private static final PerformanceMetric mBlock = PerformanceMetrics.i().getMetric("bot.osm-sync.block");
 
-	private List<TaskResult> successfulResults = new ArrayList<>();
+	protected final boolean systemBot;
+	protected final String id;
+	protected final BotRunStats botRunStats = new BotRunStats();
+	protected final List<TaskResult> successfulResults = new ArrayList<>();
+	
+	protected ThreadPoolExecutor service;
 	protected long placesPerOperation = 250;
 	protected long operationsPerBlock = 16;
 	protected double blockCapacity = 0.8;
 	protected OpObject botObject;
 	protected String opType;
-	protected BotRunStats botRunStats = new BotRunStats();
 	
 	@Autowired
 	private BlocksManager blocksManager;
 	
 	@Autowired
 	private LogOperationService logSystem;
-
-	private ThreadPoolExecutor service;
-	private final String api;
+	
 
 	public GenericMultiThreadBot(OpObject botObject) {
 		this.botObject = botObject;
-		this.api = botObject.getStringValue("api");
+		this.id = botObject.getId().get(0);
+		this.systemBot = false;
+	}
+	
+	public GenericMultiThreadBot(String id) {
+		this.id = id;
+		this.systemBot = true;
 	}
 	
 	protected static class TaskResult { 
@@ -224,7 +233,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	}
 	
 	protected void initVars() {
-		OpObject nbot = blocksManager.getBlockchain().getObjectByName(botObject.getParentType(), botObject.getId());
+		OpObject nbot = blocksManager.getBlockchain().getObjectByName(OpBlockchainRules.OP_BOT, id);
 		if(nbot == null) {
 			throw new IllegalStateException("Can't retrieve bot object state");
 		}
@@ -273,7 +282,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 
 	@Override
 	public boolean isRunning() {
-		return botRunStats.botStats.isEmpty() ? false : botRunStats.getCurrentBotState().running;
+		return botRunStats.isRunning();
 	}
 
 	@Override
@@ -291,9 +300,19 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		}
 		return false;
 	}
+	
+	@Override
+	public String getId() {
+		return id;
+	}
 
 	@Override
 	public String getAPI() {
-		return api;
+		return getClass().getName();
+	}
+
+	@Override
+	public boolean isSystemBot() {
+		return systemBot;
 	}
 }

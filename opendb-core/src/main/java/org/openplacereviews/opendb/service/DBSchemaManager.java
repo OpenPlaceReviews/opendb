@@ -30,12 +30,11 @@ import java.util.*;
 
 import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
 
-
 @Service
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 4;
+	private static final int OPENDB_SCHEMA_VERSION = 5;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -80,24 +79,36 @@ public class DBSchemaManager {
 		int keySize;
 		Set<String> types = new TreeSet<>();
 	}
+	
+	public Map<String, Map<String, Object>> getIndexState(boolean actualState) {
+		LinkedHashMap<String, Map<String, Object>> state = new LinkedHashMap<String, Map<String,Object>>();
+		List<CommonPreference<Map<String, Object>>> userIndexes = settingsManager.getPreferencesByPrefix(
+				actualState? SettingsManager.DB_SCHEMA_INTERNAL_INDEXES : SettingsManager.DB_SCHEMA_INDEXES);
+		for(CommonPreference<Map<String, Object>> p : userIndexes) {
+			state.put(p.getId(), p.get());
+		}
+		return state;
+	}
 
-	public TreeMap<String, Map<String, OpIndexColumn>> getIndexes() {
+	public Map<String, Map<String, OpIndexColumn>> getIndexes() {
 		return indexes;
 	}
+	
 
 	private static void registerColumn(String tableName, String colName, String colType, IndexType basicIndexType) {
 		ColumnDef cd = new ColumnDef(tableName, colName, colType, basicIndexType);
 		registerColumn(tableName, cd);
 	}
 
-	private static void registerColumn(String tableName, ColumnDef cd) {
+	private static ColumnDef registerColumn(String tableName, ColumnDef cd) {
 		List<ColumnDef> lst = schema.get(tableName);
 		if (lst == null) {
 			lst = new ArrayList<ColumnDef>();
 			schema.put(tableName, lst);
 		}
-		
+
 		lst.add(cd);
+		return cd;
 	}
 
 	static {
@@ -203,6 +214,16 @@ public class DBSchemaManager {
 		}
 		return OBJS_TABLE;
 	}
+
+	public List<String> getTypesByTable(String table) {
+		List<String> types = new ArrayList<String>();
+		for (Map.Entry<String, String> entry : typeToTables.entrySet()) {
+			if (table.equals(entry.getValue())) {
+				types.add(entry.getKey());
+			}
+		}
+		return types;
+	}
 	
 	public int getKeySizeByType(String type) {
 		return getKeySizeByTable(getTableByType(type));
@@ -240,6 +261,13 @@ public class DBSchemaManager {
 			}
 			if (dbVersion <= 3) {
 				addBlockAdditionalInfo(jdbcTemplate);
+			}
+			if (dbVersion <= 4) {
+				List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+				for(CommonPreference<Map<String, Object>> p : prefs) {
+					CommonPreference<Map<String, Object>> ps = settingsManager.registerMapPreferenceForFamily(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES, p.get());
+					ps.set(p.get());
+				}
 			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if(dbVersion > OPENDB_SCHEMA_VERSION) {
@@ -395,7 +423,18 @@ public class DBSchemaManager {
 		}
 	}
 
-	private void generateIndexColumn(Map<String, Object> entry) {
+	private IndexType getIndexType(String index) {
+		if (index != null) {
+			if (index.equalsIgnoreCase("true")) {
+				return INDEXED;
+			} else {
+				return ColumnDef.IndexType.valueOf(index);
+			}
+		}
+		return null;
+	}
+
+	public ColumnDef generateIndexColumn(Map<String, Object> entry) {
 		String name = (String) entry.get(SettingsManager.INDEX_NAME);
 		String tableName = (String) entry.get(SettingsManager.INDEX_TABLENAME);
 		String colType = (String) entry.get(SettingsManager.INDEX_SQL_TYPE);
@@ -405,20 +444,13 @@ public class DBSchemaManager {
 		Integer cacheDB = entry.get(SettingsManager.INDEX_CACHE_DB_MAX) == null ? null : ((Number) entry.get(SettingsManager.INDEX_CACHE_DB_MAX)).intValue();
 		@SuppressWarnings("unchecked")
 		List<String> fld = (List<String>) entry.get(SettingsManager.INDEX_FIELD);
-		IndexType di = null;
-		if (index != null) {
-			if (index.equalsIgnoreCase("true")) {
-				di = INDEXED;
-			} else {
-				di = IndexType.valueOf(index);
-			}
-		}
+		IndexType di = getIndexType(index);
 
 		ColumnDef cd = new ColumnDef(tableName, name, colType, di);
 		// to be used array
 		// String sqlmapping = (String) entry.get("sqlmapping");
-		ObjectTypeTable objectTypeTable = objTableDefs.get(tableName);
 		if (fld != null) {
+			ObjectTypeTable objectTypeTable = objTableDefs.get(tableName);
 			for (String type : objectTypeTable.types) {
 				OpIndexColumn indexColumn = new OpIndexColumn(type, name, -1, cd);
 				if (cacheRuntime != null) {
@@ -431,8 +463,9 @@ public class DBSchemaManager {
 				addIndexCol(indexColumn);
 			}
 		}
-		registerColumn(tableName, cd);
+		return registerColumn(tableName, cd);
 	}
+
 
 	@SuppressWarnings("unchecked")
 	private void prepareObjTableMapping() {
@@ -460,6 +493,25 @@ public class DBSchemaManager {
 			}
 		}
 		objTableDefs.put(OBJS_TABLE, new ObjectTypeTable(OBJS_TABLE, MAX_KEY_SIZE));
+	}
+
+	
+	public void removeIndex(JdbcTemplate jdbcTemplate, Map<String, Object> entry) {
+		String colName = (String) entry.get(SettingsManager.INDEX_NAME);
+		String tableName = (String) entry.get(SettingsManager.INDEX_TABLENAME);
+		String index = (String) entry.get(SettingsManager.INDEX_INDEX_TYPE);
+		IndexType it = getIndexType(index);
+		ObjectTypeTable objectTypeTable = objTableDefs.get(tableName);
+		for (String type : objectTypeTable.types) {
+			Map<String, OpIndexColumn> indexesByType = indexes.get(type);
+			// potentially concurrent modification exception
+			indexesByType.remove(index);
+		}
+		jdbcTemplate.execute("DROP INDEX " + generateIndexName(it, tableName, colName));
+		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES.getId(colName));
+		if(pref != null) {
+			settingsManager.removePreference(pref);
+		}
 	}
 
 	private void addIndexCol(OpIndexColumn indexColumn) {
@@ -500,34 +552,55 @@ public class DBSchemaManager {
 					}
 				}
 				if (!found) {
-					String alterTable = String.format("alter table %s add column %s %s", tableName, 
-							c.getColName(), c.getColType());
-					jdbcTemplate.execute(alterTable);
-					if(c.getIndex() != NOT_INDEXED) {
-						jdbcTemplate.execute(generateIndexQuery(c));
-					}
+					alterTableNewColumn(jdbcTemplate, c);
 				}
 			}
 		}
 	}
 
+	public void alterTableNewColumn(JdbcTemplate jdbcTemplate, ColumnDef c) {
+		String alterTable = String.format("alter table %s add column %s %s", c.getTableName(), 
+				c.getColName(), c.getColType());
+		jdbcTemplate.execute(alterTable);
+		if(c.getIndex() != NOT_INDEXED) {
+			jdbcTemplate.execute(generateIndexQuery(c));
+		}
+	}
+	
+	private String generateIndexName(IndexType indexType, String tableName, String colName) {
+		switch (indexType) {
+			case INDEXED: {
+				return String.format("%s_%s_ind", tableName, colName);
+			}
+			case GIN: {
+				return String.format("%s_%s_gin_ind", tableName, colName);
+			}
+			case GIST: {
+				return String.format("%s_%s_gist_ind", tableName, colName);
+			}
+			default: {
+				throw new UnsupportedOperationException();
+			}
+		}
+	}
+
 	private String generateIndexQuery(ColumnDef c) {
+		String indName = generateIndexName(c.getIndex(), c.getTableName(), c.getColName());
 		if (c.getIndex() == INDEXED) {
-			return String.format("create index %s_%s_ind on %s (%s);\n", c.getTableName(), c.getColName(),
+			return String.format("create index %s_%s_ind on %s (%s);\n", indName,
 					c.getTableName(), c.getColName());
 		} else if (c.getIndex() == GIN) {
-			return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", c.getTableName(), c.getColName(),
+			return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", indName,
 					c.getTableName(), c.getColName());
 		} else if (c.getIndex() == GIST) {
-			return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", c.getTableName(),
-					c.getColName(), c.getTableName(), c.getColName());
+			return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", indName,
+					c.getTableName(), c.getColName());
 		}
-
 		return null;
 	}
 
 
-	protected boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
+	public boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
 		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?) "
 				+ " ON CONFLICT (key) DO UPDATE SET value = ? ", key, v, v) != 0;
 	}
@@ -540,7 +613,11 @@ public class DBSchemaManager {
 		return Integer.parseInt(s);
 	}
 
-	protected String getSetting(JdbcTemplate jdbcTemplate, String key) {
+	protected int removeSetting(JdbcTemplate jdbcTemplate, String key) {
+		return jdbcTemplate.update("DELETE FROM " + SETTINGS_TABLE + " WHERE key = ?", key);
+	}
+
+	public String getSetting(JdbcTemplate jdbcTemplate, String key) {
 		String s = null;
 		try {
 			s = jdbcTemplate.query("select value from " + SETTINGS_TABLE + " where key = ?", new ResultSetExtractor<String>() {

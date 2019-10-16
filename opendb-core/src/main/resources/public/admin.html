@@ -458,7 +458,7 @@ Details: <b><span did="block-details"></span></b></pre>
                         <th>Task</th>
                         <th>Task description</th>
                         <th>Last launch</th>
-                        <th>System bot</th>
+                        <th>System</th>
                         <th>Interval</th>
                         <th>Progress</th>
                         <th>Actions</th>
@@ -473,16 +473,7 @@ Details: <b><span did="block-details"></span></b></pre>
                         <td did="task-description"></td>
                         <td did="last-launch"></td>
                         <td>
-                            <div class="btn-group" data-toggle="buttons">
-                                <label class="btn radio-btn btn-danger active disabled" aria-disabled="true">
-                                    <input type="radio" name="options" did="option1" autocomplete="off" checked>
-                                    <span class="glyphicon glyphicon-ok"></span>
-                                </label>
-                                <label class="btn radio-btn btn-success disabled" aria-disabled="true">
-                                    <input type="radio" name="options" did="option2" autocomplete="off">
-                                    <span class="glyphicon glyphicon-ok"></span>
-                                </label>
-                            </div>
+                            <span did="bot-system" class="glyphicon glyphicon-ok"></span>
                         </td>
                         <td did="interval"></td>
                         <td>
@@ -635,6 +626,8 @@ Details: <b><span did="block-details"></span></b></pre>
         
             <button class="btn btn-primary form-control" id="refresh-settings-btn"><span
                     class="glyphicon glyphicon-refresh"></span> Refresh</button>
+            <button class="btn btn-primary form-control" id="add-settings-btn" disabled data-toggle="modal" data-target="#settings-add-modal" ><span
+                    class="glyphicon glyphicon-plus"></span> Add</button>
         </div>
         <div class="form-group">
             <ul class="nav nav-pills" id="settings-pills">
@@ -674,6 +667,41 @@ Details: <b><span did="block-details"></span></b></pre>
         </div>
         <!--MODAL EDIT-->
 
+        <!--MODAL ADD-->
+        <div class="modal fade" id="settings-add-modal" role="dialog">
+            <div class="modal-dialog modal-lg">
+
+                <!-- Modal content-->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title" id="settings-add-header">Adding new preference</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="container">
+                            <h4 class="modal-title" id="add-family">Family: <span id="family-name"></span></h4>
+                        </div>
+                        <hr>
+                        <div class="container">
+                            <div class="col-md-8">
+                                <label for="add-preference-key">Preference key:</label>
+                                <input type="text" id="add-preference-key" class="form-control">
+                            </div>
+                            <div class="col-md-8">
+                                <label for="add-preference-value">Preference value:</label>
+                                <textarea class="form-control" rows="1" id="add-preference-value"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" id="add-new-settings-btn">Save</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--MODAL ADD-->
+
         <ul class="list-group form-group" id="settings-result-list">
         </ul>
 
@@ -681,8 +709,10 @@ Details: <b><span did="block-details"></span></b></pre>
             <li class="panel panel-default" id="settings-list-item">
                 <p class="panel-heading">
                     <a type="button" did="edit-settings" class="btn btn-default btn-xs pull-right" data-toggle="modal" data-target="#settings-edit-modal" >Edit</a>
+                    <a type="button" did="remove-settings" class="btn btn-default btn-xs pull-right">Remove</a>
                     <b><span type="text" did="settings-name"></span></b>:
-                    <span type="text" did="settings-description"></span>
+                    <span type="text" did="settings-description"></span> (source:
+                    <b><span type="text" did="settings-source"></span></b>)
                 </p>
                 <div class="panel-body">
                     <p><b><span did="settings-value"></span></b></p>
