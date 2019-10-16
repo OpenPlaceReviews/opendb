@@ -115,14 +115,12 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 		while (opBlockChain.getParent() != null) {
 			Stream<Map.Entry<CompoundKey, OpObject>> objects = opBlockChain.getRawSuperblockObjects(objType);
 			List<Object[]> args = prepareInsertIndexObjBatch(objects, objType, ind);
-			if (args.size() > 0) {
-				totalCnt += args.size();
-				for (Object[] arg : args) {
-					progress++;
-					jdbcTemplate.update(sql, arg);
-					if (progress % 5000 == 0) {
-						info(String.format("Progress of 'update-indexes' %d / %d", progress, totalCnt));
-					}
+			totalCnt += args.size();
+			for (Object[] arg : args) {
+				progress++;
+				jdbcTemplate.update(sql, arg);
+				if (progress % 5000 == 0) {
+					info(String.format("Progress of 'update-indexes' %d / %d", progress, totalCnt));
 				}
 			}
 
