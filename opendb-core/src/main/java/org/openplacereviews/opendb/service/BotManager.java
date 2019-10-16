@@ -42,16 +42,12 @@ public class BotManager {
 
 	@PostConstruct
 	public void initSystemBots() {
-		OpObject botObject = new OpObject();
-		botObject.setId("update-indexes");
-		TODO;
-//		TreeMap<String, Object> mp = new TreeMap<>();
-//		mp.put(SettingsManager.BOT_ID, id);
-//		mp.put(SettingsManager.BOT_ENABLED, false);
-//		p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
-		UpdateIndexesBot bt = new UpdateIndexesBot(botObject);
+		regSystemBot(new UpdateIndexesBot("update-indexes"));
+	}
+
+	public void regSystemBot(IOpenDBBot<?> bt) {
 		beanFactory.autowireBean(bt);
-		systemBots.put(botObject.getId().get(0), bt);
+		systemBots.put(bt.getId(), bt);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -69,18 +65,35 @@ public class BotManager {
 	private synchronized Map<String, IOpenDBBot<?>> recreateBots(OpBlockChain.ObjectsSearchRequest req, OpBlockChain blc) {
 		Map<String, IOpenDBBot<?>> nbots = new TreeMap<>(this.bots);
 		for (OpObject cfg : req.result) {
-			generateBots(nbots, cfg);
+			recreateBotInstance(nbots, cfg);
 		}
-		nbots.putAll(this.systemBots);;
+		nbots.putAll(this.systemBots);
+		for(String id : nbots.keySet()) {
+			initBotPreference(id);
+		}
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
 		return nbots;
 	}
 
-	private void generateBots(Map<String, IOpenDBBot<?>> nbots, OpObject cfg) {
+	private void recreateBotInstance(Map<String, IOpenDBBot<?>> nbots, OpObject cfg) {
 		String id = cfg.getId().get(0);
 		String api = cfg.getStringValue("api");
 		IOpenDBBot<?> exBot = nbots.get(id);
+		if (exBot == null || !exBot.getAPI().equals(api)) {
+			try {
+				Class<?> bot = Class.forName(api);
+				Constructor<?> constructor = bot.getConstructor(OpObject.class);
+				IOpenDBBot<?> bi = (IOpenDBBot<?>) constructor.newInstance(cfg);
+				nbots.put(id, bi);
+				beanFactory.autowireBean(bi);
+			} catch (Exception e) {
+				LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
+			}
+		}
+	}
+
+	private CommonPreference<Map<String, Object>> initBotPreference(String id) {
 		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
 		if(p == null) {
 			TreeMap<String, Object> mp = new TreeMap<>();
@@ -88,22 +101,9 @@ public class BotManager {
 			mp.put(SettingsManager.BOT_ENABLED, false);
 			p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
 		}
-		if (exBot == null || !exBot.getAPI().equals(api)) {
-			try {
-				generateBotInstance(nbots, cfg, id, api);
-			} catch (Exception e) {
-				LOGGER.error(String.format("Error while creating bot %s instance api %s", id, api), e);
-			}
-		}
+		return p;
 	}
 
-	private void generateBotInstance(Map<String, IOpenDBBot<?>> nbots, OpObject cfg, String id, String api) throws Exception {
-		Class<?> bot = Class.forName(api);
-		Constructor<?> constructor = bot.getConstructor(OpObject.class);
-		IOpenDBBot<?> bi = (IOpenDBBot<?>) constructor.newInstance(cfg);
-		nbots.put(id, bi);
-		beanFactory.autowireBean(bi);
-	}
 
 
 	public boolean startBot(String botId) {

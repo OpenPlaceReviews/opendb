@@ -45,8 +45,8 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	@Autowired
 	private BlocksManager blocksManager;
 
-	public UpdateIndexesBot(OpObject botObject) {
-		super(botObject, true);
+	public UpdateIndexesBot(String id) {
+		super(id);
 	}
 
 	@SuppressWarnings("unchecked")

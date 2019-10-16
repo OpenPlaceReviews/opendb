@@ -405,7 +405,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	public IndexType getIndexType(String index) {
+	private IndexType getIndexType(String index) {
 		if (index != null) {
 			if (index.equalsIgnoreCase("true")) {
 				return INDEXED;
@@ -562,7 +562,7 @@ public class DBSchemaManager {
 		}
 	}
 
-	public String generateIndexQuery(ColumnDef c) {
+	private String generateIndexQuery(ColumnDef c) {
 		String indName = generateIndexName(c.getIndex(), c.getTableName(), c.getColName());
 		if (c.getIndex() == INDEXED) {
 			return String.format("create index %s_%s_ind on %s (%s);\n", indName,

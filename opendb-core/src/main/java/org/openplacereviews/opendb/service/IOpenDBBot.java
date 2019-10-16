@@ -57,5 +57,10 @@ public interface IOpenDBBot<T> extends Callable<T> {
 	 * @return history of bot runs
 	 */
 	Deque<BotRunStats.BotStats> getHistoryRuns();
+	
+	/**
+	 * @return bot id
+	 */
+	String getId();
 
 }
