@@ -261,7 +261,6 @@ public class OpBlockchainTest {
 	public void testChangeToEqualLockedParent() {
 		OpBlockChain newOp = new OpBlockChain(OpBlockChain.NULL, blc.getRules());
 		newOp.lockByUser();
-
 		exceptionRule.expect(IllegalStateException.class);
 		blc.changeToEqualParent(newOp);
 	}

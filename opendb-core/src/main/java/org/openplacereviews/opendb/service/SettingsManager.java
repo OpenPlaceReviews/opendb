@@ -35,19 +35,22 @@ public class SettingsManager {
 	
 	public static final PreferenceFamily USER = new PreferenceFamily(null, "User");
 	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily("opendb.db-schema.objtables", "DB Tables").
-			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded().setEditable();
+			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded().canAdd().canEdit().canDelete();
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
-			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable();
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).canAdd().canEdit().canDelete();
+	public static final PreferenceFamily DB_SCHEMA_INTERNAL_INDEXES = new PreferenceFamily("opendb.db-schema.internal-indexes", "Internal DB Indexes").
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe actual index state %s.%s ", INDEX_TABLENAME, INDEX_NAME);
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
-			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).setEditable();
+			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).canEdit().canDelete();
 	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
-			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).setEditable();
+			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).canEdit();
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			USER,
 			DB_SCHEMA_OBJTABLES,
 			DB_SCHEMA_INDEXES,
-			OPENDB_BOTS_CONFIG
+			OPENDB_BOTS_CONFIG,
+			DB_SCHEMA_INTERNAL_INDEXES // could be disabled to be non-visible
 	};
 	
 	@Autowired
@@ -97,6 +100,7 @@ public class SettingsManager {
 		}
 	}
 
+
 	public Collection<CommonPreference<?>> getPreferences() {
 		return preferences.values();
 	}
@@ -124,6 +128,46 @@ public class SettingsManager {
 	public <T> CommonPreference<T> getPreferenceByKey(String keyPreference) {
 		return (CommonPreference<T>) preferences.get(keyPreference);
 	}
+
+	public <T> boolean removePreference(CommonPreference<T> preference) {
+		if (preference.family.canDelete) {
+			return removePreferenceInternal(preference);
+		}
+		return false;
+	}
+
+
+	public <T> boolean removePreferenceInternal(CommonPreference<T> preference) {
+		if (dbSchemaManager.removeSetting(jdbcTemplate, preference.getId()) > 0) {
+			Map<String, CommonPreference<?>> nprefs = new TreeMap<>(preferences);
+			nprefs.remove(preference.getId());
+			preferences = nprefs;
+			return true;
+		}
+		return false;
+	}
+
+	private PreferenceFamily getPreferenceFamily(String name) {
+		for (PreferenceFamily preferenceFamily : SETTINGS_FAMILIES) {
+			if (preferenceFamily.name.equals(name)) {
+				return preferenceFamily;
+			}
+		}
+		return null;
+	}
+
+	public boolean addNewPreference(String family, String value) {
+		PreferenceFamily preferenceFamily = getPreferenceFamily(family);
+		if (preferenceFamily != null && preferenceFamily.canAdd) {
+			CommonPreference<Map<String, Object>> commonPreference = registerMapPreferenceForFamily(preferenceFamily,
+					jsonFormatter.fromJsonToTreeMap(value));
+			dbSchemaManager.setSetting(jdbcTemplate, commonPreference.getId(),
+					jsonFormatter.fullObjectToJson(commonPreference.value));
+			return true;
+		}
+
+		return false;
+	}
 	
 	public enum CommonPreferenceSource {
 		DEFAULT,
@@ -140,7 +184,9 @@ public class SettingsManager {
 		public String[] descProperties;
 		public String[] idProperties;
 		public boolean restartNeeded;
-		public boolean editable;
+		public boolean canEdit;
+		public boolean canDelete;
+		public boolean canAdd;
 		
 		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
@@ -157,8 +203,18 @@ public class SettingsManager {
 			return this;
 		}
 		
-		public PreferenceFamily setEditable() {
-			this.editable = true;
+		public PreferenceFamily canEdit() {
+			this.canEdit = true;
+			return this;
+		}
+
+		public PreferenceFamily canDelete() {
+			this.canDelete = true;
+			return this;
+		}
+		
+		public PreferenceFamily canAdd() {
+			this.canAdd = true;
 			return this;
 		}
 		
@@ -238,19 +294,15 @@ public class SettingsManager {
 			return description;
 		}
 
-		public boolean isCanEdit() {
-			return canEdit;
-		}
 
 		public boolean restartIsNeeded() {
 			return restartIsNeeded;
 		}
 
-
 		public String getId() {
 			return id;
 		}
-		
+
 		public boolean setString(String o) {
 			return setString(o, true);
 		}
@@ -442,7 +494,7 @@ public class SettingsManager {
 		if(pf.restartNeeded) {
 			cp = cp.restartNeeded();
 		}
-		if(pf.editable) {
+		if(pf.canEdit) {
 			cp = cp.editable();
 		}
 		return regPreference(cp);
@@ -496,5 +548,7 @@ public class SettingsManager {
 		CREATE
 	}
 	public final CommonPreference<BlockSource> OPENDB_BLOCKCHAIN_STATUS = registerEnumPreference(BlockSource.class, "opendb.blockchain-status", BlockSource.NONE, "Block source (none, replicate, create)");
+
+	
 
 }

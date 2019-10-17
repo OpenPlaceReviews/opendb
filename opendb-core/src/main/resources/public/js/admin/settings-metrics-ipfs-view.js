@@ -12,6 +12,22 @@ var SETTINGS_VIEW = function () {
         $("#settings-edit-modal .modal-header #settings-edit-header").html("Preference: " + obj.id);
     }
 
+    function removePreferenceObject(pref) {
+        $.ajax({
+            url: '/api/mgmt/config/remove?key=' + pref.id,
+            type: 'DELETE',
+            success: function(data) {
+                done(data, true);
+                loadAddPossibilityForTab();
+                let familyName = $("#settings-pills").children(".active").first().text();
+                if (familyName === "DB Indexes") {
+                    alert("Please run Bot: Update Indexes")
+                }
+            }
+        });
+
+    }
+
     function renderSettingItem(obj, templateItem) {
         var it = templateItem.clone();
         if (obj.canEdit === true) {
@@ -21,8 +37,16 @@ var SETTINGS_VIEW = function () {
         } else {
             it.find("[did='edit-settings']").addClass("hidden");
         }
+        if (obj.family.canDelete) {
+            it.find("[did='remove-settings']").removeClass("hidden").click(function () {
+                removePreferenceObject(obj);
+            });
+        } else {
+            it.find("[did='remove-settings']").addClass("hidden");
+        }
         it.find("[did='settings-name']").html(obj.id);
         it.find("[did='settings-description']").html(obj.description);
+        it.find("[did='settings-source']").html(obj.source);
         if (obj.type === "Map" || obj.type === "TreeMap") {
             it.find("[did='settings-value-json']").html(JSON.stringify(obj.value, null, 4));
             it.find("[did='settings-value']").addClass("hidden");
@@ -50,7 +74,7 @@ var SETTINGS_VIEW = function () {
         pills.empty();
         var active = true;
         for (var nm in dt) {
-            let link = $("<li>");
+            let link = $("<li id='settings_" + nm.replace(/\s/g, '') +"'>");
             if(active) {
                 link.addClass("active");
                 active = false;
@@ -74,22 +98,77 @@ var SETTINGS_VIEW = function () {
         var templateItem = $("#settings-list-item");
         for (var i = 0; i < data.length; i++) {
             var obj = data[i];
-            if(familyName == "All" || obj.family.name == familyName) {
+            if(familyName === "All" || obj.family.name === familyName) {
                 items.append(renderSettingItem(obj, templateItem));
             }
         }
     }
+    
+    function addNewPreference() {
+        var obj = {
+            family: $("#family-name").html(),
+            key:$("#add-preference-key").val(),
+            value:$("#add-preference-value").val()
+        };
+
+        postActionWithoutFailParam('/api/mgmt/config/new', obj, function (data) {
+                done(data, true);
+                loadAddPossibilityForTab();
+                let familyName = $("#settings-pills").children(".active").first().text();
+                if (familyName === "DB Indexes") {
+                    alert("Please run Bot: Update Indexes")
+                }
+            }, false);
+    }
+
+    function loadAddPossibilityForTab() {
+        let familyName = $("#settings-pills").children(".active").first().text();
+        if (familyName === "All") {
+            $("#add-settings-btn").attr('disabled', 'disabled');
+        } else {
+            var data = SETTINGS_VIEW.settingsData;
+            for (var i = 0; i < data.length; i++) {
+                var obj = data[i];
+                if (obj.family.name === familyName) {
+                    if (obj.family.canAdd) {
+                        $("#add-settings-btn").removeAttr('disabled');
+                    } else {
+                        $("#add-settings-btn").attr('disabled', 'disabled');
+                    }
+                    break;
+                }
+            }
+        }
+        displaySettings();
+        return familyName;
+    }
 
     return {
         settingsData : [],
+        loadURLParams: function() {
+            var url = new URL(window.location.href);
+            if (window.location.href.toLowerCase().indexOf('api/admin?view=settings') > 1) {
+                var activeTab = url.searchParams.get('tab');
+                if (activeTab) {
+                    var test = $("#settings_" + activeTab);
+                    let allpills = $("#settings-pills").children();
+                    allpills.removeClass("active");
+                    if (test) {
+                        test.addClass("active");
+                        loadAddPossibilityForTab();
+                    }
+                }
+            }
+        },
         loadConfiguration: function() {
             getJsonAction("/api/mgmt/config", function (data) {
                 SETTINGS_VIEW.settingsData = data;
                 loadSettingsFamily();
                 displaySettings();
+                SETTINGS_VIEW.loadURLParams();
             });
         },
-        onReady: function() {
+         onReady: function() {
             $("#refresh-settings-btn").click(function() {
                 SETTINGS_VIEW.loadConfiguration();
             });
@@ -108,6 +187,30 @@ var SETTINGS_VIEW = function () {
                 );
 
                 $("#settings-edit-modal .close").click();
+            });
+            
+            $("#settings-pills").click(function () {
+                let familyName = loadAddPossibilityForTab();
+                var url = '/api/admin?view=settings&tab=' + familyName.replace(/\s/g, '');
+                window.history.pushState(null, "State Settings",  url);
+            });
+
+            $("#add-settings-btn").click(function () {
+                let familyName = $("#settings-pills").children(".active").first().text();
+                $("#family-name").html(familyName);
+                var data = SETTINGS_VIEW.settingsData;
+                for (var i = 0; i < data.length; i++) {
+                    var obj = data[i];
+                    if (obj.family.name === familyName) {
+                        $("#add-preference-key").val(obj.family.prefix + ".");
+                        break;
+                    }
+                }
+            });
+            
+            $("#add-new-settings-btn").click(function () {
+                $("#settings-add-modal .close").click();
+                addNewPreference();
             });
         }
     };

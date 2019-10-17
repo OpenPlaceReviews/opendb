@@ -20,9 +20,8 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-
 import javax.servlet.http.HttpSession;
+import java.util.*;
 
 @Controller
 @RequestMapping("/api")
@@ -69,9 +68,11 @@ public class ApiController {
 			}
 			o = o.getParent();
 		}
+		res.amountBlocks = manager.getBlockchain().getDepth();
 		res.orphanedBlocks = manager.getOrphanedBlocks();
 		res.serverUser = manager.getServerUser();
 		res.status = manager.getCurrentState();
+		res.statusDescription = manager.getCurrentStateDescription();
 		res.loginUser = OpApiController.getServerUser(session);
 		if (manager.isBlockCreationOn()) {
 			res.status += " (blocks every " + scheduledServices.getMinSecondsInterval() + " seconds)";
@@ -114,8 +115,10 @@ public class ApiController {
 
 	protected static class BlockchainStatus {
 		public String status;
+		public String statusDescription;
 		public String serverUser;
 		public String loginUser;
+		public Integer amountBlocks;
 		public Map<String, OpBlock> orphanedBlocks;
 		public List<String> sblocks = new ArrayList<String>();
 	}
@@ -211,7 +214,7 @@ public class ApiController {
 		if (op == null) {
 			return "{}";
 		}
-		return formatter.fullObjectToJson(op);
+		return formatter.fullObjectToJson(Collections.singletonList(op));
 	}
 
 	@GetMapping(path = "/ops-by-id", produces = "text/json;charset=UTF-8")

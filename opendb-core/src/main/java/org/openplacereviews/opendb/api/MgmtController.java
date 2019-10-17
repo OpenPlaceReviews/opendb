@@ -30,39 +30,39 @@ import java.util.TreeSet;
 public class MgmtController {
 
 	protected static final Log LOGGER = LogFactory.getLog(MgmtController.class);
-    
+
     @Autowired
     private BlocksManager manager;
-    
+
     @Autowired
     private LogOperationService logService;
 
     @Autowired
 	private SettingsManager settingsManager;
-    
+
     @Autowired
     private JsonFormatter formatter;
 
     @Autowired
 	private ResponseEntityUtils response;
-    
+
     public boolean validateServerLogin(HttpSession session) {
     	String loginName = (String) session.getAttribute(OpApiController.ADMIN_LOGIN_NAME);
     	return OUtils.equals(loginName, manager.getServerUser());
 	}
-    
+
     private KeyPair getServerLoginKeyPair(HttpSession session) {
     	return manager.getServerLoginKeyPair();
 	}
-    
+
     private String getServerUser(HttpSession session) {
     	return manager.getServerUser();
 	}
-    
+
     private ResponseEntity<String> unauthorizedByServer() {
     	return response.unauthorized("Unauthorized access");
 	}
-    
+
     @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> createBlock(HttpSession session) throws FailedVerificationException {
@@ -75,7 +75,7 @@ public class MgmtController {
     	}
     	return ResponseEntity.ok(formatter.fullObjectToJson(block));
     }
-    
+
     @PostMapping(path = "/queue-clear")
     @ResponseBody
     public ResponseEntity<String> clearQueue(HttpSession session) {
@@ -85,7 +85,7 @@ public class MgmtController {
     	manager.clearQueue();
         return response.ok("Queue was cleared");
     }
-    
+
     @PostMapping(path = "/logs-clear")
     @ResponseBody
     public ResponseEntity<String> logsClear(HttpSession session) {
@@ -95,8 +95,8 @@ public class MgmtController {
     	logService.clearLogs();
     	return response.ok("Logs was cleared");
     }
-    
-    
+
+
     @PostMapping(path = "/revert-superblock", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> revertSuperblock(HttpSession session) throws FailedVerificationException {
@@ -108,7 +108,7 @@ public class MgmtController {
     	}
     	return response.ok("Blocks are reverted and operations added to the queue.");
     }
-    
+
     @PostMapping(path = "/revert-1-block", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> revert1block(HttpSession session) throws FailedVerificationException {
@@ -120,7 +120,7 @@ public class MgmtController {
     	}
     	return response.ok("Block is reverted and operations added to the queue.");
     }
-    
+
     @PostMapping(path = "/compact", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> compact(HttpSession session) throws FailedVerificationException {
@@ -132,7 +132,7 @@ public class MgmtController {
     	}
     	return response.ok("Blocks are compacted.");
     }
-    
+
     @PostMapping(path = "/toggle-blockchain-pause", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> toggleOpsCreation(HttpSession session) {
@@ -142,11 +142,11 @@ public class MgmtController {
     	if(manager.isBlockchainPaused()) {
     		manager.unlockBlockchain();
     	} else {
-    		manager.lockBlockchain();
+    		manager.lockBlockchain("");
     	}
     	return response.ok();
     }
-    
+
     @PostMapping(path = "/toggle-blocks-pause", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> toggleBlockCreation(HttpSession session) {
@@ -156,7 +156,7 @@ public class MgmtController {
     	manager.setBlockCreationOn(!manager.isBlockCreationOn());
 		return response.ok();
     }
-    
+
     @PostMapping(path = "/toggle-replicate-pause", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> toggleReplicateCreation(HttpSession session) {
@@ -166,7 +166,7 @@ public class MgmtController {
     	manager.setReplicateOn(!manager.isReplicateOn());
 		return response.ok();
     }
-    
+
     @PostMapping(path = "/replicate", produces = "text/json;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> replicate(HttpSession session) {
@@ -176,7 +176,7 @@ public class MgmtController {
     	manager.replicate();
 		return response.ok();
     }
-    
+
     @PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
     @ResponseBody
     public ResponseEntity<String> bootstrap(HttpSession session) throws Exception {
@@ -188,8 +188,8 @@ public class MgmtController {
     	manager.bootstrap(serverName, serverLoginKeyPair);
 		return response.ok();
     }
-    
-    
+
+
 	@PostMapping(path = "/delete-orphaned-blocks", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> deleteOrphanedBlocks(HttpSession session,
@@ -212,7 +212,7 @@ public class MgmtController {
 		}
 		return ResponseEntity.ok(formatter.fullObjectToJson(blocks));
 	}
-	
+
 	@PostMapping(path = "/delete-queue-ops", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> deleteQueueOperations(HttpSession session,
@@ -259,6 +259,41 @@ public class MgmtController {
 		} else {
 			return response.badRequest("Preference was not updated");
 		}
+	}
+
+	@PostMapping(path = "/config/new", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> addNewPreference(HttpSession session, @RequestParam String family,
+			@RequestParam String key, @RequestParam String value) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
+		if (pref != null) {
+			return response.badRequest("Key is already defined");
+		}
+		if (settingsManager.addNewPreference(family, value)) {
+			return response.ok("New preference was added");
+		}
+
+		return response.badRequest("New preference was not added");
+	}
+
+	@DeleteMapping(path = "/config/remove", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> removePreference(HttpSession session, @RequestParam String key) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
+		if (pref == null) {
+			return response.badRequest("Key is not defined");
+		}
+		if (settingsManager.removePreference(pref)) {
+			return response.ok("Preference was removed");
+		}
+
+		return response.badRequest("Preference cannot be removed");
 	}
 
 
