@@ -51,7 +51,6 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 			info("Start updating indexes...");
 			Map<String, CommonPreference<Map<String, Object>>> expectedIndexState = getState(SettingsManager.DB_SCHEMA_INDEXES);
 			Map<String, CommonPreference<Map<String, Object>>> actualIndexState = getState(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES);
-			
 
 			for (String indexId : actualIndexState.keySet()) {
 				Map<String, Object> currentIndex = actualIndexState.get(indexId).get();
@@ -109,7 +108,7 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 
 	private Map<String, CommonPreference<Map<String, Object>>> getState(PreferenceFamily dbSchemaIndexes) {
 		Map<String, CommonPreference<Map<String, Object>>> mp = new TreeMap<>();
-		List<CommonPreference<Map<String, Object>>> l = settingsManager.getPreferencesByPrefix(SettingsManager.DB_SCHEMA_INDEXES);
+		List<CommonPreference<Map<String, Object>>> l = settingsManager.getPreferencesByPrefix(dbSchemaIndexes);
 		for(CommonPreference<Map<String, Object>> p : l) {
 			mp.put((String)p.get().get(INDEX_NAME), p);
 		}

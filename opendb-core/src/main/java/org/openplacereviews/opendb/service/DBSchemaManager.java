@@ -508,9 +508,9 @@ public class DBSchemaManager {
 			indexesByType.remove(index);
 		}
 		jdbcTemplate.execute("DROP INDEX " + generateIndexName(it, tableName, colName));
-		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES.getId(colName));
+		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES.getId(tableName + "." + colName));
 		if(pref != null) {
-			settingsManager.removePreference(pref);
+			settingsManager.removePreferenceInternal(pref);
 		}
 	}
 
@@ -587,13 +587,13 @@ public class DBSchemaManager {
 	private String generateIndexQuery(ColumnDef c) {
 		String indName = generateIndexName(c.getIndex(), c.getTableName(), c.getColName());
 		if (c.getIndex() == INDEXED) {
-			return String.format("create index %s_%s_ind on %s (%s);\n", indName,
+			return String.format("create index %s on %s (%s);\n", indName,
 					c.getTableName(), c.getColName());
 		} else if (c.getIndex() == GIN) {
-			return String.format("create index %s_%s_gin_ind on %s using gin (%s);\n", indName,
+			return String.format("create index %s on %s using gin (%s);\n", indName,
 					c.getTableName(), c.getColName());
 		} else if (c.getIndex() == GIST) {
-			return String.format("create index %s_%s_gist_ind on %s using gist (tsvector(%s));\n", indName,
+			return String.format("create index %s on %s using gist (tsvector(%s));\n", indName,
 					c.getTableName(), c.getColName());
 		}
 		return null;
