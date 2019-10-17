@@ -158,26 +158,63 @@ public class OpObject {
 
 		return fields.get(field);
 	}
-
-	private List<String> generateFieldSequence(String field) {
-		int indexBrace = field.indexOf(".{");
-		if (indexBrace != -1) {
-			int finishIndexBrace = field.indexOf("}");
-			List<String> fieldSequence = new ArrayList<>();
-			fieldSequence.addAll(Arrays.asList((field.substring(0, indexBrace).split("\\."))));
-			fieldSequence.add(field.substring(indexBrace + 2, finishIndexBrace));
-			String lastSequence = field.substring(finishIndexBrace + 1);
-			if (!lastSequence.equals("")) {
-				if (lastSequence.startsWith(".")) {
-					fieldSequence.addAll(Arrays.asList(lastSequence.substring(1).split("\\.")));
+	
+	/**
+	 * generateFieldSequence("a") - [a]
+	 * generateFieldSequence("a.b") - [a, b]
+	 * generateFieldSequence("a.b.c.de") - [a, b, c, de]
+	 * generateFieldSequence("a.bwerq.c") - [a, bwerq, c]
+	 * generateFieldSequence("a.bwerq...c") - [a, bwerq, c] 
+	 * generateFieldSequence("a.bwereq..c..") - [a, bwerq, c]
+	 * generateFieldSequence("a.{b}") - [a, b]
+	 * generateFieldSequence("a.{b.c.de}") - [a, b.c.de]
+	 * generateFieldSequence("a.{b.c.de}") - [a, b.c.de]
+	 * generateFieldSequence("a.{b{}}") - [a, b{}]
+	 * generateFieldSequence("a.{b{}d.q}") - [a, b{}d.q]
+	 */
+	private static List<String> generateFieldSequence(String field) {
+		int STATE_OPEN_BRACE = 1;
+		int STATE_OPEN = 0;
+		int state = STATE_OPEN;
+		int start = 0;
+		List<String> l = new ArrayList<String>();
+		for(int i = 0; i < field.length(); i++) {
+			boolean split = false;
+			if (i == field.length() - 1) {
+				if (state == STATE_OPEN_BRACE) {
+					if(field.charAt(i) == '}') {
+						split = true;
+					} else {
+						throw new IllegalArgumentException("Illegal field expression: " + field);
+					}
 				} else {
-					fieldSequence.addAll(Arrays.asList(lastSequence.split("\\.")));
+					if(field.charAt(i) != '.') {
+						i++;
+					}
+					split = true;
+				}
+			} else {
+				if (field.charAt(i) == '.' && state == STATE_OPEN) {
+					split = true;
+				} else if (field.charAt(i) == '}' && field.charAt(i + 1) == '.' && state == STATE_OPEN_BRACE) {
+					split = true;
+				} else if (field.charAt(i) == '{' && state == STATE_OPEN) {
+					if(start != i) {
+						throw new IllegalArgumentException("Illegal field expression (wrap {} is necessary): " + field);
+					}
+					state = STATE_OPEN_BRACE;
+					start = i + 1;
 				}
 			}
-			return fieldSequence;
-		} else {
-			return Arrays.asList(field.split("\\."));
+			if(split) {
+				if (i != start) {
+					l.add(field.substring(start, i));
+				}
+				start = i + 1;
+				state = STATE_OPEN;
+			}
 		}
+		return l;
 	}
 
 	public void setFieldByExpr(String field, Object object) {
