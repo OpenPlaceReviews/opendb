@@ -1,31 +1,16 @@
 package org.openplacereviews.opendb.ops;
 
-import java.lang.reflect.Type;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-
+import com.google.gson.*;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class OpObject {
 	
@@ -52,6 +37,7 @@ public class OpObject {
 	public static final String F_VOTES = "votes";
 	public static final String F_SUBMITTED_OP_HASH = "submittedOpHash";
 	public static final String F_USER = "user";
+	public static final String F_TAGS = "tags";
 
 	public static final OpObject NULL = new OpObject(true);
 
@@ -168,7 +154,14 @@ public class OpObject {
 
 	public Object getFieldByExpr(String field) {
 		if (field.contains(".") || field.contains("[") || field.contains("]")) {
-			String[] fieldSequence = field.split("\\.");
+			List<String> fieldSequence;
+			int indexTag = field.indexOf(F_TAGS);
+			if (indexTag != -1) {
+				fieldSequence = new ArrayList<>(Arrays.asList(field.substring(0, indexTag + F_TAGS.length()).split("\\.")));
+				fieldSequence.add(field.substring(indexTag + F_TAGS.length() + 1));
+			} else {
+				fieldSequence = Arrays.asList(field.split("\\."));
+			}
 			return JsonObjectUtils.getField(this.fields, fieldSequence);
 		}
 
