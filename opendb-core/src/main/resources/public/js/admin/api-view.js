@@ -13,9 +13,9 @@ var API_VIEW = function () {
         postActionWithDataUpdating("/api/bot/"+action, obj, false);
     }
     function fillTableBody(newTemplate, obj, colspan, update, botStat) {
-        newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toISOString());
+        newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toLocaleString('en-US'));
         if (obj.timeFinished) {
-            newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toISOString());
+            newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toLocaleString('en-US'));
         }
         newTemplate.find("[did='amount-tasks']").html(obj.amountOfTasks);
         if (obj.running) {
@@ -58,7 +58,7 @@ var API_VIEW = function () {
             var logs = "";
             for (var k = 0; k < obj.logEntries.length; k++) {
                 var logObj = obj.logEntries[k];
-                logs += new Date(logObj.date).toISOString() + ": " + logObj.msg + "\n";
+                logs += new Date(logObj.date).toLocaleString('en-US') + ": " + logObj.msg + "\n";
                 if (logObj.exception) {
                     logs += logObj.exception + "\n";
                 }
@@ -133,8 +133,10 @@ var API_VIEW = function () {
             if (botState.settings.enabled) {
                 $("#enable-bot-btn").addClass("hidden");
                 $("#disable-bot-btn").removeClass("hidden");
+                $("#update-bot-interval-btn").removeClass("hidden");
             } else {
                 $("#disable-bot-btn").addClass("hidden");
+                $("#update-bot-interval-btn").addClass("hidden");
                 $("#enable-bot-btn").removeClass("hidden");
             }
             $("#bot-timeout-header").html("Setting schedule for bot: " + bot);
@@ -235,6 +237,16 @@ var API_VIEW = function () {
             $("#disable-bot-btn").click(function () {
                 enableDisableBot($("#timeout-bot-name").val(), "disable");
                 $("#bot-timeout-modal .close").click();
+                API_VIEW.loadBotData();
+            });
+
+            $("#update-bot-interval-btn").click(function () {
+                var obj = {
+                    "botName": $("#timeout-bot-name").val(),
+                    "interval": $("#bot-interval").val()
+                };
+                $("#bot-timeout-modal .close").click();
+                postActionWithDataUpdating("/api/bot/enable", obj, false);
                 API_VIEW.loadBotData();
             });
         }
