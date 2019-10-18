@@ -13,7 +13,7 @@ var BLOCKS_VIEW = function () {
             var it = templateItem.clone();
             it.find("[did='block-operation-link']").attr("href", "/api/admin?view=operations&loadBy=blockId&key=" + op.block_id);
             it.find("[did='block-id']").html(op.block_id);
-            it.find("[did='signed-by']").html(op.signed_by);
+            it.find("[did='signed-by']").html(op.signed_by.toString());
             it.find("[did='block-hash']").attr('data-content', op.hash).html(smallHash(op.hash)).popover();
             it.find("[did='op-count']").html(op.operations_size);
             it.find("[did='block-date']").html(op.date.replace("T", " ").replace("+0000", " UTC"));
@@ -263,7 +263,7 @@ var OPERATION_VIEW = function () {
                 it.find("[did='op-type']").html(op.type);
                 it.find("[did='op-type-link']").attr("href", "/api/admin?view=objects&browse=type&type=" + op.type + "&subtype=all&limit=50");
                 it.find("[did='object-info']").html(objectInfo);
-                it.find("[did='signed-by']").html(op.signed_by);
+                it.find("[did='signed-by']").html(op.signed_by.toString());
                 it.find("[did='op-json']").html(JSON.stringify(op, null, 4));
                 items.append(it);
             }

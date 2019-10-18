@@ -111,9 +111,9 @@ public class OpApiController {
 												   @RequestParam(required = false, defaultValue = "false")
 														   boolean validate)
 			throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
+//    	if(!validateServerLogin(session)) {
+//    		return unauthorizedByServer();
+//    	}
 		KeyPair kp = null;
 		KeyPair altKp = null;
 		OpOperation op = formatter.parseOperation(json);
@@ -167,9 +167,9 @@ public class OpApiController {
     		@RequestParam(required = false) String algoOld, @RequestParam(required = false) String privateKeyOld, @RequestParam(required = false) String publicKeyOld,
     		@RequestParam(required = false) String oauthProviderOld, @RequestParam(required = false) String oauthIdOld, 
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
-		if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
+//		if(!validateServerLogin(session)) {
+//    		return unauthorizedByServer();
+//    	}
     	OpOperation op = new OpOperation();
     	name = name.trim(); // reduce errors by having trailing spaces
     	if(!OpBlockchainRules.validateNickname(name)) {
@@ -294,9 +294,9 @@ public class OpApiController {
     		@RequestParam(required = false) String oauthProvider, @RequestParam(required = false) String oauthId, 
     		@RequestParam(required = false) String loginAlgo, @RequestParam(required = false) String loginPubKey,
     		@RequestParam(required = false) String userDetails) throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
+//    	if(!validateServerLogin(session)) {
+//    		return unauthorizedByServer();
+//    	}
     	OpOperation op = new OpOperation();
     	op.setType(OpBlockchainRules.OP_LOGIN);
     	if(edit) {

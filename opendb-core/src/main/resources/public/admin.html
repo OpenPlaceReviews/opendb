@@ -910,62 +910,213 @@ Details: <b><span did="block-details"></span></b></pre>
     <!--REG TAB-->
     <div id="reg" class="tab-pane fade">
         <h3>Users</h3>
-        <div class="form-group panel panel-info">
+        <div id="login-account-div">
+            <div id="login-signup-account">
+                <div class="form-group" id="account-nav">
+                    <ul class="nav nav-pills" id="account-pills">
+                        <li class="active" id="new-user-pill"><a>New User</a></li>
+                        <li id="account-login-pill"><a>Profile login</a></li>
+                        <li id="app-login-pill"><a>App login</a></li>
+                    </ul>
+                </div>
+                <div class="form-group">
+                    <label class="text" for="account-username" id="login-account-msg">Signup to account for perform any action : </label>
+                    <label class="text hidden" for="account-username" id="signup-account-msg">Login to account for perform any action : </label>
+                    <label class="text hidden" for="account-username" id="signup-app-msg">Login to app for perform any action : </label>
+                </div>
+                <div class="form-group form-inline" >
+                    <input type="text" class="form-control" id="account-username" placeholder="Login">
+                    <input type="password" class="form-control" id="account-password" placeholder="Password">
+                    <input type="submit" value="Signup" id="signup-account" class="btn btn-primary form-control"/>
+                    <input type="submit" value="Login to Profile" id="login-account" class="btn btn-primary form-control hidden"/>
+                    <input type="submit" value="Login to App" id="login-app" class="btn btn-primary form-control hidden"/>
+                </div>
+            </div>
+        </div>
+
+        <div id="account-exist" class="hidden">
+            <div class="form-group">
+                <div class="form-inline hidden" id="account-info">
+                    <label class="control-label" for="account-username">User: <span id="username"></span><span id="app-name"></span></label>
+                    <input type="submit" value="Logout" id="logout" class="btn btn-primary form-control"/>
+                </div>
+            </div>
+            <div class="form-group" id="account-tabs">
+                <ul class="nav nav-pills" id="active-account-pills">
+                    <li class="active" id="access-application-pill"><a>Access Application</a></li>
+                    <li id="active-account-signup-pill"><a>Signup</a></li>
+                    <li id="active-account-login-pill"><a>Login</a></li>
+                    <li id="active-account-update-details-pill"><a>Update account details</a></li>
+                    <li id="active-account-update-account-pill" class="hidden"><a>Update account access</a></li>
+                    <li id="active-account-sign-operation-pill" class="hidden"><a>Add/Sign operations</a></li>
+                </ul>
+            </div>
+            <div class="form-group panel panel-info" id="access-application-div">
+                <div class="panel-heading"><b>Access Application</b></div>
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label class="text" id="access-application-msg">Enter App username and Private key : </label>
+                    </div>
+                    <div class="form-inline">
+                        <label class="control-label" for="app-username">App login: </label>
+                        <input type="text" class="form-control" id="app-username" placeholder="App name">
+                        <label class="control-label" for="app-private-key">App private key: </label>
+                        <input type="text" class="form-control" id="app-private-key" placeholder="Private Key">
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <input type="submit" value="Add Access to App" id="add-app-access" class="btn btn-primary form-control"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group panel panel-info hidden" id="update-account-details-div">
+                <div class="panel-heading"><b>Account details</b></div>
+                <div class="panel-body">
+                    <label class="control-label" for="update-account-password-field">New password: </label>
+                    <input type="text" class="form-control" id="update-account-password-field" placeholder="Password">
+                </div>
+                <div class="panel-footer">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <input type="submit" value="Update details" id="update-account-password-btn" class="btn btn-primary form-control"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden" id="update-app-access-div">
+
+                <div class="form-group panel panel-info" id="new-password-update-div">
+                    <div class="panel-heading"><b>Update account access</b></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <div class="form-group" id="update-access-radio">
+                                <label class="radio-inline"><input type="radio" name="updateAccess" value="password" checked>New Password</label>
+                                <label class="radio-inline"><input type="radio" name="updateAccess" value="private-key">New Private key</label>
+                                <label class="radio-inline"><input type="radio" name="updateAccess" value="oauth">New OAuth</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group form-horizontal">
+                            <label for="signup-name" class="control-label">1. Nickname: </label>
+                            <input type="text" id="update-account-name" class="form-control" placeholder="Nickname"/>
+                        </div>
+
+                        <div class="row" id="new-password-access">
+                            <div class="col-md-12 form-group">
+                                <label for="signup-pwd" class="control-label">2. Password: </label>
+                                <input type="password" id="update-user-pwd" class="form-control" placeholder="Password"/>
+                            </div>
+                        </div>
+
+                        <div class="row hidden" id="new-private-key-access">
+                            <div class="col-md-12 form-group">
+                                <label for="signup-user-prk" class="control-label">2. Private key: </label>
+                                <input type="password" id="update-account-prk" class="form-control" placeholder="Private key"/>
+                            </div>
+                        </div>
+
+                        <div class="row hidden" id="new-oauth-access">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-p" class="control-label">2. OAuth provider: </label>
+                                <input type="text" id="update-oauth-p" class="form-control" placeholder="Oauth provider"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-id" class="control-label">OAuth Id: </label>
+                                <input type="text" id="update-oauth-id" class="form-control" placeholder="Oauth Id"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-footer">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <input type="submit" value="Update account access" id="update-app-access-btn" class="btn btn-primary form-control"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        <div class="form-group" id="user-nav">
+            <ul class="nav nav-pills" id="user-pills">
+                <li class="active" id="signup-pill"><a>Signup</a></li>
+                <li id="login-pill"><a>Login</a></li>
+                <!--<li id="update-user-pill"><a>Update user</a></li>-->
+                <!--<li id="update-login-pill"><a>Update login</a></li>-->
+                <li class="disable" id="sign-pill"><a>Sign message</a></li>
+            </ul>
+        </div>
+        <div class="form-group panel panel-info" id="signup-panel">
             <div class="panel-heading"><b>Signup</b></div>
             <div class="panel-body">
                 <div class="form-group">
+                    <div class="form-group" id="signup-radio">
+                        <label class="radio-inline"><input type="radio" name="signup" value="password" checked>Password</label>
+                        <label class="radio-inline"><input type="radio" name="signup" value="private-key">Private key</label>
+                        <label class="radio-inline"><input type="radio" name="signup" value="oauth">OAuth</label>
+                    </div>
                     <div class="form-group form-horizontal">
                         <label for="signup-name" class="control-label">1. Nickname: </label>
                         <input type="text" id="signup-name" class="form-control" placeholder="Nickname"/>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="signup-pwd" class="control-label">2a. Password: </label>
+                    <div class="row" id="signup-password">
+                        <div class="col-md-12 form-group" id="signup-password-div">
+                            <label for="signup-pwd" class="control-label">2. Password: </label>
                             <input type="password" id="signup-pwd" class="form-control" placeholder="Password"/>
                         </div>
-                        <div class="col-md-6 form-group">
+                        <div class="col-md-6 form-group hidden" id="old-signup-password-div">
                             <label for="signup-pwd-old" class="control-label">Old Password: </label>
                             <input type="password" id="signup-pwd-old" class="form-control" placeholder="Old password"/>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="signup-user-prk" class="control-label">2b. Private key: </label>
-                            <input type="password" id="signup-user-prk" class="form-control" placeholder="Private key"/>
+                    <div class="form-group hidden" id="signup-private-key">
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-prk" class="control-label">2. Private key: </label>
+                                <input type="password" id="signup-user-prk" class="form-control" placeholder="Private key"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-pbk" class="control-label">Public key: </label>
+                                <input type="password" id="signup-user-pbk" class="form-control" placeholder="Public key"/>
+                            </div>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label for="signup-user-pbk" class="control-label">Public key: </label>
-                            <input type="password" id="signup-user-pbk" class="form-control" placeholder="Public key"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="signup-user-prk-old" class="control-label">Old private key: </label>
-                            <input type="password" id="signup-user-prk-old" class="form-control" placeholder="Old private key"/>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label for="signup-user-pbk-old" class="control-label">Old public key: </label>
-                            <input type="password" id="signup-user-pbk-old" class="form-control" placeholder="Old public key"/>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="signup-oauth-p" class="control-label">2c. OAuth provider: </label>
-                            <input type="text" id="signup-oauth-p" class="form-control" placeholder="Oauth provider"/>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label for="signup-oauth-id" class="control-label">OAuth Id: </label>
-                            <input type="text" id="signup-oauth-id" class="form-control" placeholder="Oauth Id"/>
+                        <div class="row form-group hidden" id="signup-old-private-key-div">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-prk-old" class="control-label">Old private key: </label>
+                                <input type="password" id="signup-user-prk-old" class="form-control" placeholder="Old private key"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-user-pbk-old" class="control-label">Old public key: </label>
+                                <input type="password" id="signup-user-pbk-old" class="form-control" placeholder="Old public key"/>
+                            </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="signup-oauth-p-old" class="control-label">Old OAuth provider: </label>
-                            <input type="text" id="signup-oauth-p-old" class="form-control" placeholder="Old OAuth provider"/>
+                    <div class="form-group hidden" id="signup-oauth">
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-p" class="control-label">2. OAuth provider: </label>
+                                <input type="text" id="signup-oauth-p" class="form-control" placeholder="Oauth provider"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-id" class="control-label">OAuth Id: </label>
+                                <input type="text" id="signup-oauth-id" class="form-control" placeholder="Oauth Id"/>
+                            </div>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label for="signup-oauth-id-old" class="control-label">Old OAuth Id: </label>
-                            <input type="text" id="signup-oauth-id-old" class="form-control" placeholder="Old OAuth Id"/>
+                        <div class="row form-group hidden" id="signup-oauth-old-div">
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-p-old" class="control-label">Old OAuth provider: </label>
+                                <input type="text" id="signup-oauth-p-old" class="form-control" placeholder="Old OAuth provider"/>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="signup-oauth-id-old" class="control-label">Old OAuth Id: </label>
+                                <input type="text" id="signup-oauth-id-old" class="form-control" placeholder="Old OAuth Id"/>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group form-horizontal">
@@ -981,31 +1132,41 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
 
-        <div class="form-group panel panel-info">
+        <div class="form-group panel panel-info hidden" id="login-panel">
             <div class="panel-heading"><b>Login</b></div>
             <div class="panel-body">
                 <div class="form-group">
-                    <div class="form-group form-horizontal">
-                        <label for="login-name" class="control-label">1. Nickname + purpose (format 'nickname:site') : </label>
-                        <input type="text" id="login-name" class="form-control" placeholder="Nickname"/>
+                    <div class="form-group" id="login-radio">
+                        <label class="radio-inline"><input type="radio" name="login" value="password" checked>Password</label>
+                        <label class="radio-inline"><input type="radio" name="login" value="private-key">Private key</label>
+                        <label class="radio-inline"><input type="radio" name="login" value="oauth">OAuth</label>
                     </div>
                     <div class="row">
                         <div class="col-md-6 form-group">
-                            <label for="login-pwd" class="control-label">2a. Signup Password: </label>
-                            <input type="password" id="login-pwd" class="form-control" placeholder="Signup Password"/>
+                            <label for="login-name" class="control-label">1. Nickname : </label>
+                            <input type="text" id="login-name" class="form-control" placeholder="Nickname"/>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label for="login-signup-key" class="control-label">2b. Signup or login private key: </label>
-                            <input type="password" id="login-signup-key" class="form-control" placeholder="Signup or login private key"/>
+                            <label for="login-name" class="control-label">Purpose : </label>
+                            <input type="text" id="purpose-name" class="form-control" placeholder="Purpose"/>
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="form-group" id="login-password">
+                        <label for="login-pwd" class="control-label">2. Signup Password: </label>
+                        <input type="password" id="login-pwd" class="form-control" placeholder="Signup Password"/>
+                    </div>
+                    <div class="form-group hidden" id="login-private-key">
+                        <label for="login-signup-key" class="control-label" id="login-key">2. Signup private key: </label>
+                        <label for="login-signup-key" class="control-label hidden" id="login-update-key">2. Login private key: </label>
+                        <input type="password" id="login-signup-key" class="form-control" placeholder="Signup or login private key"/>
+                    </div>
+                    <div class="row hidden" id="login-oauth">
                         <div class="col-md-6 form-group">
-                            <label for="login-oauth-p" class="control-label">2c. Signup OAuth provider: </label>
+                            <label for="login-oauth-p" class="control-label">2. Signup OAuth provider: </label>
                             <input type="text" id="login-oauth-p" class="form-control" placeholder="Signup OAuth provider"/>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label for="login-oauth-id" class="control-label">2d. Signup OAuth Id: </label>
+                            <label for="login-oauth-id" class="control-label">Signup OAuth Id: </label>
                             <input type="text" id="login-oauth-id" class="form-control" placeholder="Signup OAuth Id"/>
                         </div>
                     </div>
@@ -1026,37 +1187,75 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
 
-        <div class="form-group panel panel-info">
-            <div class="panel-heading"><b>Sign message</b></div>
-            <div class="panel-body">
-                <div class="form-group">
-                    <div class="form-group form-horizontal">
-                        <label for="sign-json" class="control-label">1. Json: </label>
-                        <textarea rows="1" id="sign-json" class="form-control resize-vertical" placeholder="Json"></textarea>
-                    </div>
-                    <div class="form-group form-horizontal">
-                        <label for="sign-name" class="control-label">2. Name (empty will be server): </label>
-                        <input type="text" id="sign-name" class="form-control" placeholder="Name"/>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label for="sign-pwd" class="control-label">3a. Password: </label>
-                            <input type="text" id="sign-pwd" class="form-control" placeholder="Password"/>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label for="sign-pk" class="control-label">3b. Signup private key: </label>
-                            <input type="text" id="sign-pk" class="form-control" placeholder="Signup private key"/>
-                        </div>
-                    </div>
 
-                    <div class="form-group form-inline">
-                        <label for="sign-by-server" class="control-label">4. Don't sign by server: </label>
-                        <input type="checkbox" id="sign-by-server" class="form-control"/>
+            <div class="hidden" id="sign-operation">
+                <div class="form-group panel panel-info">
+                    <div class="panel-heading"><b>Sign message</b></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <div class="form-group" id="sign-message-radio">
+                                <label class="radio-inline"><input type="radio" name="sign-message" value="password" checked id="sign-message-password-radio">Password</label>
+                                <label class="radio-inline"><input type="radio" name="sign-message" value="private-key" id="sign-message-private-key-radio">Private key</label>
+                            </div>
+                            <div class="form-group form-horizontal">
+                                <label for="sign-json" class="control-label">1. Json: </label>
+                                <textarea rows="1" id="sign-json" class="form-control resize-vertical" placeholder="Json"></textarea>
+                            </div>
+                            <div class="form-group form-horizontal">
+                                <label for="sign-name" class="control-label">2. Name (empty will be server): </label>
+                                <input type="text" id="sign-name" class="form-control" placeholder="Name"/>
+                            </div>
+                            <div class="form-group" id="sign-message-password">
+                                <label for="sign-pwd" class="control-label">3. Password: </label>
+                                <input type="text" id="sign-pwd" class="form-control" placeholder="Password"/>
+                            </div>
+                            <div class="form-group hidden" id="sign-message-private-key">
+                                <label for="sign-pk" class="control-label">3. Signup private key: </label>
+                                <input type="text" id="sign-pk" class="form-control" placeholder="Signup private key"/>
+                            </div>
+
+                            <div class="form-group form-inline">
+                                <label for="sign-by-server" class="control-label">4. Don't sign by server: </label>
+                                <input type="checkbox" id="sign-by-server" class="form-control"/>
+                            </div>
+                        </div>
+                        <div class="form-group form-inline">
+                        </div>
+                        <div class="form-group hidden" id="show-sign-json">
+                            <div class="row"></div>
+                            <div>
+                                <pre id="json-info" class="form-group"></pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-footer">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <input type="submit" value="Sign message" id="sign-btn" class="btn btn-primary form-control"/>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-inline">
-                    <input type="submit" value="Sign message" id="sign-btn" class="btn btn-primary form-control"/>
-                    <input type="submit" value="Sign operation and add to queue" id="sign-add-btn" class="btn btn-primary form-control"/>
+
+                <div class="form-group panel panel-info" id="add-operation">
+                    <div class="panel-heading"><b>Add operation</b></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <div class="form-group form-horizontal">
+                                <label for="sign-json" class="control-label">1. Json: </label>
+                                <textarea rows="1" id="json-op" class="form-control resize-vertical" placeholder="Json"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group form-inline">
+                        </div>
+                    </div>
+                    <div class="panel-footer">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <input type="submit" value="Add operation" id="add-op-btn" class="btn btn-primary form-control"/>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
