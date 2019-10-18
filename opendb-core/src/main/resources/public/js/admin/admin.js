@@ -98,7 +98,6 @@ var REGISTRATION = function () {
                     if (appName !== undefined) {
                         $("#app-name").html(": " + appName);
                         $("#active-account-sign-operation-pill").removeClass("hidden");
-                        $("#active-account-update-account-pill").removeClass("hidden");
                         $("#access-application-pill").addClass("hidden");
                         $("#active-account-signup-pill").addClass("hidden");
                         $("#active-account-login-pill").addClass("hidden");
