@@ -133,8 +133,10 @@ var API_VIEW = function () {
             if (botState.settings.enabled) {
                 $("#enable-bot-btn").addClass("hidden");
                 $("#disable-bot-btn").removeClass("hidden");
+                $("#update-bot-interval-btn").removeClass("hidden");
             } else {
                 $("#disable-bot-btn").addClass("hidden");
+                $("#update-bot-interval-btn").addClass("hidden");
                 $("#enable-bot-btn").removeClass("hidden");
             }
             $("#bot-timeout-header").html("Setting schedule for bot: " + bot);
@@ -235,6 +237,16 @@ var API_VIEW = function () {
             $("#disable-bot-btn").click(function () {
                 enableDisableBot($("#timeout-bot-name").val(), "disable");
                 $("#bot-timeout-modal .close").click();
+                API_VIEW.loadBotData();
+            });
+
+            $("#update-bot-interval-btn").click(function () {
+                var obj = {
+                    "botName": $("#timeout-bot-name").val(),
+                    "interval": $("#bot-interval").val()
+                };
+                $("#bot-timeout-modal .close").click();
+                postActionWithDataUpdating("/api/bot/enable", obj, false);
                 API_VIEW.loadBotData();
             });
         }
