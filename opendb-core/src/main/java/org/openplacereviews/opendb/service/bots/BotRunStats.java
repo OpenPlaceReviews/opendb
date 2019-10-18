@@ -9,7 +9,6 @@ import java.util.*;
 
 public class BotRunStats {
 
-	private static final int LOG_SIZE = 10;
 	public Deque<BotStats> botStats = new ArrayDeque<>();
 
 	private static long currentTime() {
@@ -20,8 +19,8 @@ public class BotRunStats {
 		return botStats.isEmpty() ? false : getCurrentBotState().running;
 	}
 
-	public void createNewState() {
-		if (botStats.size() >= LOG_SIZE) {
+	public void createNewState(int maxAmountLogs) {
+		while (botStats.size() >= maxAmountLogs) {
 			botStats.removeFirst();
 		}
 		botStats.addLast(new BotStats());
@@ -31,7 +30,6 @@ public class BotRunStats {
 	public BotStats getCurrentBotState() {
 		return botStats.getLast();
 	}
-
 	public enum FinishStatus {
 		FAILED, SUCCESS, INTERRUPTED
 	}

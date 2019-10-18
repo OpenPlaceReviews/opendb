@@ -95,8 +95,8 @@ public class ApiController {
 	@ResponseBody
 	public String queueList() throws FailedVerificationException {
 		OpBlock bl = new OpBlock();
-		for (OpOperation ob : manager.getBlockchain().getQueueOperations()) {
-			bl.addOperation(ob);
+		for(Iterator<OpOperation> descItr = manager.getBlockchain().getQueueOperations().descendingIterator();descItr.hasNext();) {
+			bl.addOperation(descItr.next());
 		}
 		return formatter.fullObjectToJson(bl);
 	}

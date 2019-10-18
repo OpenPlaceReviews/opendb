@@ -57,7 +57,9 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	
 	@Autowired
 	private LogOperationService logSystem;
-	
+
+	@Autowired
+	private SettingsManager settingsManager;
 
 	public GenericMultiThreadBot(OpObject botObject) {
 		this.botObject = botObject;
@@ -199,8 +201,13 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	}
 
 	public void addNewBotStat() {
-		botRunStats.createNewState();
+		botRunStats.createNewState(getMaxLogsAmount());
 	}
+
+	public Integer getMaxLogsAmount() {
+		return settingsManager.OPENDB_BOTS_MAX_LOGS_AMOUNT.get();
+	}
+
 
 	private void addLogEntry(String log, Exception e) {
 		botRunStats.getCurrentBotState().addLogEntry(log, e);
