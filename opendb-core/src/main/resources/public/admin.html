@@ -136,7 +136,7 @@
         </div>
         
         <div class="form-group">
-            <p>Blockchain status: <b><span id="blockchain-status"></span></b></p>
+            <p>Blockchain status: <b><span id="blockchain-status"></span><span id="status-description"></span></b></p>
             <p>Admin server user: <b><span id="admin-user"></span></b></p>
             <p>Admin logged in user: <b><span id="admin-login-user">not logged in</span></b></p>
             <p>Superblocks: <ol class="breadcrumb" id="blockchain-blocks"></ol></p>
@@ -458,7 +458,7 @@ Details: <b><span did="block-details"></span></b></pre>
                         <th>Task</th>
                         <th>Task description</th>
                         <th>Last launch</th>
-                        <th>System bot</th>
+                        <th>System</th>
                         <th>Interval</th>
                         <th>Progress</th>
                         <th>Actions</th>
@@ -473,12 +473,7 @@ Details: <b><span did="block-details"></span></b></pre>
                         <td did="task-description"></td>
                         <td did="last-launch"></td>
                         <td>
-                            <div class="btn-group" data-toggle="buttons">
-                                <label did="bot-status-active" class="btn radio-btn btn-success active disabled" aria-disabled="true">
-                                    <input type="radio" name="options" autocomplete="off">
-                                    <span class="glyphicon glyphicon-ok"></span>
-                                </label>
-                            </div>
+                            <span did="bot-system" class="glyphicon glyphicon-ok"></span>
                         </td>
                         <td did="interval"></td>
                         <td>

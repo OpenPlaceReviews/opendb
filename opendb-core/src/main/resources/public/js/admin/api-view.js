@@ -100,8 +100,8 @@ var API_VIEW = function () {
             if (update) {
                 getJsonAction("/api/bot", function (data) {
                     API_VIEW.botStats = data;
-                    var prevLastStat = $('#main-bot-history-table > tr:last').prev();
-                    var lastStat = $('#main-bot-history-table > tr').last();
+                    var prevLastStat = $('#main-bot-history-table > tr:first');
+                    var lastStat = $('#main-bot-history-table > tr:eq(1)');
                     var botStat = API_VIEW.botStats[bot];
                     fillTableBody(prevLastStat, botStat.botRunStats[botStat.botRunStats.length - 1], lastStat, update, botStat);
                 });
@@ -111,7 +111,7 @@ var API_VIEW = function () {
                 var template = $("#bot-history-template");
                 var colspan_template = $("#bot-history-colspan-template");
                 $("#bot-api").html(botStat.api);
-                for (var i = 0; i < botStat.botRunStats.length; i++) {
+                for (var i = botStat.botRunStats.length -1; i >= 0; i--) {
                     var obj = botStat.botRunStats[i];
                     var newTemplate = template.clone()
                         .appendTo(table)
@@ -189,7 +189,7 @@ var API_VIEW = function () {
                         newTemplate.find("[did='last-launch']").html("-");
                     }
                     if (!obj.systemBot) {
-                        newTemplate.find("[did='bot-status-active']").addClass("hidden");
+                        newTemplate.find("[did='bot-system']").addClass("hidden");
                     }
                     if(obj.settings && obj.settings.interval_sec && obj.settings.enabled) {
                         var tm = obj.settings.interval_sec + " seconds";

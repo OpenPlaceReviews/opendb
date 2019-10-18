@@ -642,6 +642,11 @@ var STATUS_VIEW = function () {
                 STATUS_VIEW.loginName = "";
             }
             $("#blockchain-status").html(data.status);
+            if (data.statusDescription !== "") {
+                $("#status-description").html(" : " + data.statusDescription);
+            } else {
+                $("#status-description").html("");
+            }
             items = "";
             for(var j = 0; j < data.sblocks.length; j++) {
                 var url = "admin?view=operations&load=queue";

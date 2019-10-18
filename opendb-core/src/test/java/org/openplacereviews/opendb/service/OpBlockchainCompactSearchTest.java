@@ -101,6 +101,7 @@ public class OpBlockchainCompactSearchTest {
 		ReflectionTestUtils.setField(dbSchemaManager, "settingsManager", settingsManager);
 		ReflectionTestUtils.setField(settingsManager, "dbSchemaManager", dbSchemaManager);
 		ReflectionTestUtils.setField(settingsManager, "jdbcTemplate", jdbcTemplate);
+		ReflectionTestUtils.setField(settingsManager, "jsonFormatter", formatter);
 		ReflectionTestUtils.setField(historyManager, "settingsManager", settingsManager);
 		ReflectionTestUtils.setField(dbConsensusManager, "settingsManager", settingsManager);
 		Mockito.doNothing().when(fileBackupManager).init();

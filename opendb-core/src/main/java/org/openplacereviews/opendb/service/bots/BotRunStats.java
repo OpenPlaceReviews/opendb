@@ -9,15 +9,18 @@ import java.util.*;
 
 public class BotRunStats {
 
-	private static final int LOG_SIZE = 10;
 	public Deque<BotStats> botStats = new ArrayDeque<>();
 
-	private static Long getCurrentTime() {
-		return new Date().getTime();
+	private static long currentTime() {
+		return System.currentTimeMillis();
+	}
+	
+	public boolean isRunning() {
+		return botStats.isEmpty() ? false : getCurrentBotState().running;
 	}
 
-	public void createNewState() {
-		if (botStats.size() >= LOG_SIZE) {
+	public void createNewState(int maxAmountLogs) {
+		while (botStats.size() >= maxAmountLogs) {
 			botStats.removeFirst();
 		}
 		botStats.addLast(new BotStats());
@@ -27,7 +30,6 @@ public class BotRunStats {
 	public BotStats getCurrentBotState() {
 		return botStats.getLast();
 	}
-
 	public enum FinishStatus {
 		FAILED, SUCCESS, INTERRUPTED
 	}
@@ -42,7 +44,7 @@ public class BotRunStats {
 		List<OperationInfo> addedOperations;
 
 		public BotStats() {
-			timeStarted = getCurrentTime();
+			timeStarted = currentTime();
 		}
 
 		public String addLogEntry(String msg, Exception e) {
@@ -60,7 +62,7 @@ public class BotRunStats {
 		public void setInterrupted() {
 			interrupted = true;
 			running = false;
-			timeFinished = getCurrentTime();
+			timeFinished = currentTime();
 			finishStatus = FinishStatus.INTERRUPTED;
 		}
 
@@ -70,7 +72,7 @@ public class BotRunStats {
 
 		private void saveState(FinishStatus finishStatus, int amountOfTasks) {
 			running = false;
-			timeFinished = getCurrentTime();
+			timeFinished = currentTime();
 			this.finishStatus = finishStatus;
 			this.amountOfTasks = amountOfTasks;
 		}
@@ -109,7 +111,7 @@ public class BotRunStats {
 				e.printStackTrace(new PrintWriter(errors));
 				exception = errors.toString();
 			}
-			date = getCurrentTime();
+			date = currentTime();
 		}
 	}
 

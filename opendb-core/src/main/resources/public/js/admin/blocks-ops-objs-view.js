@@ -106,18 +106,21 @@ var OPERATION_VIEW = function () {
                 });
             } else if (typeSearch === "id") {
                 getJsonAction("/api/ops-by-id?id=" + key, function (data) {
+                    loadOperationSearchField();
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
                 })
             } else if (typeSearch === "blockId") {
                 getJsonAction("/api/ops-by-block-id?blockId=" + key, function (data) {
+                    loadOperationSearchField();
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
                 });
             } else { //blockHash
                 getJsonAction("/api/ops-by-block-hash?hash=" + key, function (data) {
+                    loadOperationSearchField();
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");
 
@@ -137,19 +140,7 @@ var OPERATION_VIEW = function () {
         },
         onReady: function() {
             $("#operations-search").change(function () {
-                var type = $("#operations-search").val();
-                if (type === "queue") {
-                    $("#operations-search-fields").addClass("hidden");
-                } else {
-                    $("#operations-search-fields").removeClass("hidden");
-                    if (type === "id") {
-                        $("#input-search-operation-key").text("Object id:");
-                    } else if (type === "blockId") {
-                        $("#input-search-operation-key").text("Block id:");
-                    } else {
-                        $("#input-search-operation-key").text("Block hash:");
-                    }
-                }
+                loadOperationSearchField();
             });
 
             $("#operations-search-btn").click(function () {
@@ -168,6 +159,22 @@ var OPERATION_VIEW = function () {
             });
         }
     };
+
+    function loadOperationSearchField() {
+        var type = $("#operations-search").val();
+        if (type === "queue") {
+            $("#operations-search-fields").addClass("hidden");
+        } else {
+            $("#operations-search-fields").removeClass("hidden");
+            if (type === "id") {
+                $("#input-search-operation-key").text("Object id:");
+            } else if (type === "blockId") {
+                $("#input-search-operation-key").text("Block id:");
+            } else {
+                $("#input-search-operation-key").text("Block hash:");
+            }
+        }
+    }
 
     function generateOperationResponse(data) {
         var items = $("#operations-list");

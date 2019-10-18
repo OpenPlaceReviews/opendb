@@ -1,11 +1,9 @@
 package org.openplacereviews.opendb.util;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.SettingsManager;
 import org.springframework.stereotype.Component;
 
 import java.io.Reader;

@@ -1,31 +1,16 @@
 package org.openplacereviews.opendb.ops;
 
-import java.lang.reflect.Type;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-
+import com.google.gson.*;
 import org.openplacereviews.opendb.util.JsonObjectUtils;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.OpExprEvaluator;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class OpObject {
 	
@@ -168,18 +153,75 @@ public class OpObject {
 
 	public Object getFieldByExpr(String field) {
 		if (field.contains(".") || field.contains("[") || field.contains("]")) {
-			String[] fieldSequence = field.split("\\.");
-			return JsonObjectUtils.getField(this.fields, fieldSequence);
+			return JsonObjectUtils.getField(this.fields, generateFieldSequence(field));
 		}
 
 		return fields.get(field);
 	}
+	
+	/**
+	 * generateFieldSequence("a") - [a]
+	 * generateFieldSequence("a.b") - [a, b]
+	 * generateFieldSequence("a.b.c.de") - [a, b, c, de]
+	 * generateFieldSequence("a.bwerq.c") - [a, bwerq, c]
+	 * generateFieldSequence("a.bwerq...c") - [a, bwerq, c] 
+	 * generateFieldSequence("a.bwereq..c..") - [a, bwerq, c]
+	 * generateFieldSequence("a.{b}") - [a, b]
+	 * generateFieldSequence("a.{b.c.de}") - [a, b.c.de]
+	 * generateFieldSequence("a.{b.c.de}") - [a, b.c.de]
+	 * generateFieldSequence("a.{b{}}") - [a, b{}]
+	 * generateFieldSequence("a.{b{}d.q}") - [a, b{}d.q]
+	 */
+	private static List<String> generateFieldSequence(String field) {
+		int STATE_OPEN_BRACE = 1;
+		int STATE_OPEN = 0;
+		int state = STATE_OPEN;
+		int start = 0;
+		List<String> l = new ArrayList<String>();
+		for(int i = 0; i < field.length(); i++) {
+			boolean split = false;
+			if (i == field.length() - 1) {
+				if (state == STATE_OPEN_BRACE) {
+					if(field.charAt(i) == '}') {
+						split = true;
+					} else {
+						throw new IllegalArgumentException("Illegal field expression: " + field);
+					}
+				} else {
+					if(field.charAt(i) != '.') {
+						i++;
+					}
+					split = true;
+				}
+			} else {
+				if (field.charAt(i) == '.' && state == STATE_OPEN) {
+					split = true;
+				} else if (field.charAt(i) == '}' && field.charAt(i + 1) == '.' && state == STATE_OPEN_BRACE) {
+					split = true;
+				} else if (field.charAt(i) == '{' && state == STATE_OPEN) {
+					if(start != i) {
+						throw new IllegalArgumentException("Illegal field expression (wrap {} is necessary): " + field);
+					}
+					state = STATE_OPEN_BRACE;
+					start = i + 1;
+				}
+			}
+			if(split) {
+				if (i != start) {
+					l.add(field.substring(start, i));
+				}
+				start = i + 1;
+				state = STATE_OPEN;
+			}
+		}
+		return l;
+	}
 
 	public void setFieldByExpr(String field, Object object) {
 		if (field.contains(".") || field.contains("[") || field.contains("]")) {
-			String[] fieldSequence = field.split("\\.");
+			List<String> fieldSequence = generateFieldSequence(field);
 			if (object == null) {
-				JsonObjectUtils.deleteField(this.fields, Arrays.asList(fieldSequence));
+				JsonObjectUtils.deleteField(this.fields, fieldSequence);
 			} else {
 				JsonObjectUtils.setField(this.fields, fieldSequence, object);
 			}

@@ -35,21 +35,22 @@ public class SettingsManager {
 	
 	public static final PreferenceFamily USER = new PreferenceFamily(null, "User");
 	public static final PreferenceFamily DB_SCHEMA_OBJTABLES = new PreferenceFamily("opendb.db-schema.objtables", "DB Tables").
-			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded();
+			setIdProperties(OBJTABLE_TABLENAME).setDescription("DB config to store %s objects", OBJTABLE_TYPES).setRestartNeeded().canAdd().canEdit().canDelete();
 	public static final PreferenceFamily DB_SCHEMA_INDEXES = new PreferenceFamily("opendb.db-schema.indexes", "DB Indexes").
-			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).setEditable().setDeletable();
-	public static final PreferenceFamily DB_INDEX_STATE = new PreferenceFamily("opendb.state.indexes", "DB Index state").
-			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("State for index %s.%s ", INDEX_TABLENAME, INDEX_NAME);
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe index %s.%s ", INDEX_TABLENAME, INDEX_NAME).canAdd().canEdit().canDelete();
+	public static final PreferenceFamily DB_SCHEMA_INTERNAL_INDEXES = new PreferenceFamily("opendb.db-schema.internal-indexes", "Internal DB Indexes").
+			setIdProperties(INDEX_TABLENAME, INDEX_NAME).setDescription("DB config to describe actual index state %s.%s ", INDEX_TABLENAME, INDEX_NAME);
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
-			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID);
+			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).canEdit().canDelete();
 	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
-			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).setEditable();
+			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).canEdit();
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			USER,
 			DB_SCHEMA_OBJTABLES,
 			DB_SCHEMA_INDEXES,
-			OPENDB_BOTS_CONFIG
+			OPENDB_BOTS_CONFIG,
+			DB_SCHEMA_INTERNAL_INDEXES // could be disabled to be non-visible
 	};
 	
 	@Autowired
@@ -97,24 +98,8 @@ public class SettingsManager {
 			}
 			
 		}
-		saveCurrentDbIndexes();
 	}
 
-	@SuppressWarnings("unchecked")
-	public void saveCurrentDbIndexes() {
-		List<String> keysForRemoving = new ArrayList<>();
-		for (Map.Entry<String, CommonPreference<?>> preference : preferences.entrySet()) {
-			if (preference.getValue().family == DB_INDEX_STATE) {
-				keysForRemoving.add(preference.getKey());
-			}
-		}
-		for (String key: keysForRemoving) {
-			preferences.remove(key);
-		}
-		for (CommonPreference<Object> dbIndex : getPreferencesByPrefix(DB_SCHEMA_INDEXES)) {
-			registerMapPreferenceForFamily(DB_INDEX_STATE, (Map<String, Object>) dbIndex.getValue());
-		}
-	}
 
 	public Collection<CommonPreference<?>> getPreferences() {
 		return preferences.values();
@@ -144,12 +129,20 @@ public class SettingsManager {
 		return (CommonPreference<T>) preferences.get(keyPreference);
 	}
 
-	public boolean removePreference(CommonPreference preference) {
-		if (preference.family.deletable) {
-			preferences.remove(preference.getId());
-			if (dbSchemaManager.removeSetting(jdbcTemplate, preference) >= 1) {
-				return true;
-			}
+	public <T> boolean removePreference(CommonPreference<T> preference) {
+		if (preference.family.canDelete) {
+			return removePreferenceInternal(preference);
+		}
+		return false;
+	}
+
+
+	public <T> boolean removePreferenceInternal(CommonPreference<T> preference) {
+		if (dbSchemaManager.removeSetting(jdbcTemplate, preference.getId()) > 0) {
+			Map<String, CommonPreference<?>> nprefs = new TreeMap<>(preferences);
+			nprefs.remove(preference.getId());
+			preferences = nprefs;
+			return true;
 		}
 		return false;
 	}
@@ -160,15 +153,16 @@ public class SettingsManager {
 				return preferenceFamily;
 			}
 		}
-
 		return null;
 	}
 
 	public boolean addNewPreference(String family, String value) {
 		PreferenceFamily preferenceFamily = getPreferenceFamily(family);
-		CommonPreference commonPreference = registerMapPreferenceForFamily(preferenceFamily, jsonFormatter.fromJsonToTreeMap(value));
-		if (commonPreference != null) {
-			dbSchemaManager.setSetting(jdbcTemplate, commonPreference.getId(), jsonFormatter.fullObjectToJson(commonPreference.value));
+		if (preferenceFamily != null && preferenceFamily.canAdd) {
+			CommonPreference<Map<String, Object>> commonPreference = registerMapPreferenceForFamily(preferenceFamily,
+					jsonFormatter.fromJsonToTreeMap(value));
+			dbSchemaManager.setSetting(jdbcTemplate, commonPreference.getId(),
+					jsonFormatter.fullObjectToJson(commonPreference.value));
 			return true;
 		}
 
@@ -190,8 +184,9 @@ public class SettingsManager {
 		public String[] descProperties;
 		public String[] idProperties;
 		public boolean restartNeeded;
-		public boolean editable;
-		public boolean deletable;
+		public boolean canEdit;
+		public boolean canDelete;
+		public boolean canAdd;
 		
 		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
@@ -208,13 +203,18 @@ public class SettingsManager {
 			return this;
 		}
 		
-		public PreferenceFamily setEditable() {
-			this.editable = true;
+		public PreferenceFamily canEdit() {
+			this.canEdit = true;
 			return this;
 		}
 
-		public PreferenceFamily setDeletable() {
-			this.deletable = true;
+		public PreferenceFamily canDelete() {
+			this.canDelete = true;
+			return this;
+		}
+		
+		public PreferenceFamily canAdd() {
+			this.canAdd = true;
 			return this;
 		}
 		
@@ -294,9 +294,6 @@ public class SettingsManager {
 			return description;
 		}
 
-		public boolean isCanEdit() {
-			return canEdit;
-		}
 
 		public boolean restartIsNeeded() {
 			return restartIsNeeded;
@@ -304,10 +301,6 @@ public class SettingsManager {
 
 		public String getId() {
 			return id;
-		}
-
-		public T getValue() {
-			return value;
 		}
 
 		public boolean setString(String o) {
@@ -501,7 +494,7 @@ public class SettingsManager {
 		if(pf.restartNeeded) {
 			cp = cp.restartNeeded();
 		}
-		if(pf.editable) {
+		if(pf.canEdit) {
 			cp = cp.editable();
 		}
 		return regPreference(cp);
@@ -541,6 +534,7 @@ public class SettingsManager {
 
 	// BOTS
 	public final CommonPreference<Integer> OPENDB_BOTS_MIN_INTERVAL = registerIntPreference("opendb.bots.minInterval", 1800, "Min interval to start bots").editable();
+	public final CommonPreference<Integer> OPENDB_BOTS_MAX_LOGS_AMOUNT = registerIntPreference("opendb.bots.maxLogsSize", 10, "Max amount logs of bot launches").editable();
 
 	// OBJTABLES SETTINGS
 	
@@ -555,5 +549,7 @@ public class SettingsManager {
 		CREATE
 	}
 	public final CommonPreference<BlockSource> OPENDB_BLOCKCHAIN_STATUS = registerEnumPreference(BlockSource.class, "opendb.blockchain-status", BlockSource.NONE, "Block source (none, replicate, create)");
+
+	
 
 }
