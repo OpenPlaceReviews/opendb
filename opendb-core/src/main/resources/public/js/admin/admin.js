@@ -63,6 +63,11 @@ var REGISTRATION = function () {
                     $("#username").html(username);
                     $("#logout").removeClass("hidden");
                     $("#app-name").html("");
+                    $("#access-application-pill").removeClass("hidden");
+                    $("#active-account-signup-pill").removeClass("hidden");
+                    $("#active-account-login-pill").removeClass("hidden");
+                    $("#active-account-update-account-pill").addClass("hidden");
+                    $("#active-account-sign-operation-pill").addClass("hidden");
                     SIGNUP_VIEW.loadUserTab();
                 } else {
                     alert("User is already exist");
@@ -90,7 +95,21 @@ var REGISTRATION = function () {
                     allpills.removeClass("active");
                     $("#active-account-update-details-pill").addClass("active");
                     var appName = REGISTRATION.activeProfile.get("app-name");
-                    $("#app-name").html(": " + appName);
+                    if (appName !== undefined) {
+                        $("#app-name").html(": " + appName);
+                        $("#active-account-sign-operation-pill").removeClass("hidden");
+                        $("#active-account-update-account-pill").removeClass("hidden");
+                        $("#access-application-pill").addClass("hidden");
+                        $("#active-account-signup-pill").addClass("hidden");
+                        $("#active-account-login-pill").addClass("hidden");
+                        $("#active-account-update-account-pill").removeClass("hidden");
+                    } else {
+                        $("#active-account-sign-operation-pill").addClass("hidden");
+                        $("#access-application-pill").removeClass("hidden");
+                        $("#active-account-signup-pill").removeClass("hidden");
+                        $("#active-account-login-pill").removeClass("hidden");
+                        $("#active-account-update-account-pill").addClass("hidden");
+                    }
                 } else {
                     alert("Profile is not exist!")
                 }
