@@ -8,42 +8,34 @@ var REGISTRATION = function () {
                 let allpills = $("#account-pills").children();
                 allpills.removeClass("active");
                 $("#new-user-pill").addClass("active");
+                $("#login-signup-div").addClass("hidden");
                 $("#login-account-msg").removeClass("hidden");
-                $("#signup-account-msg").addClass("hidden");
-                $("#signup-app-msg").addClass("hidden");
-                $("#signup-account").removeClass("hidden");
-                $("#login-account").addClass("hidden");
-                $("#login-app").addClass("hidden");
-
+                $("#login-signup-input-account-div").removeClass("hidden");
             });
 
             $("#account-login-pill").click(function () {
                 let allpills = $("#account-pills").children();
                 allpills.removeClass("active");
                 $("#account-login-pill").addClass("active");
+                $("#login-signup-div").removeClass("hidden");
                 $("#login-account-msg").addClass("hidden");
-                $("#signup-account-msg").removeClass("hidden");
-                $("#signup-app-msg").addClass("hidden");
-                $("#signup-account").addClass("hidden");
-                $("#login-account").removeClass("hidden");
-                $("#login-app").addClass("hidden");
+                $("#login-signup-input-account-div").addClass("hidden");
             });
 
             $("#app-login-pill").click(function () {
                 let allpills = $("#account-pills").children();
                 allpills.removeClass("active");
                 $("#app-login-pill").addClass("active");
-                $("#login-account-msg").addClass("hidden");
-                $("#signup-account-msg").addClass("hidden");
-                $("#signup-app-msg").removeClass("hidden");
-                $("#signup-account").addClass("hidden");
-                $("#login-account").addClass("hidden");
-                $("#login-app").removeClass("hidden");
+                $("#login-account-msg").removeClass("hidden");
+                $("#login-signup-account-div").removeClass("hidden");
+                $("#login-signup-div").addClass("hidden");
+                $("#login-signup-input-account-div").removeClass("hidden");
             });
 
-            $("#signup-account").click(function () {
+            $("#login-signup-account").click(function () {
                 var username = $("#account-username").val();
                 var password = $("#account-password").val();
+
                 var entry = new Map();
                 entry.set("username", username);
                 entry.set("pwd", password);
@@ -53,46 +45,46 @@ var REGISTRATION = function () {
                     var obj = REGISTRATION.userAccount[i];
                     if (obj.get("username") === username) {
                         exist = true;
-                    }
-                }
-                if (!exist) {
-                    REGISTRATION.userAccount.push(entry);
-                    REGISTRATION.activeProfile = REGISTRATION.userAccount[REGISTRATION.userAccount.length - 1];
-                    $("#account-exist").removeClass("hidden");
-                    $("#login-account-div").addClass("hidden");
-                    $("#username").html(username);
-                    $("#logout").removeClass("hidden");
-                    $("#app-name").html("");
-                    SIGNUP_VIEW.loadUserTab();
-                } else {
-                    alert("User is already exist");
-                }
-            });
-
-            $("#login-account").click(function () {
-                var username = $("#account-username").val();
-                var password = $("#account-password").val();
-                var exist = false;
-                for (var i = 0; i < REGISTRATION.userAccount.length; i++) {
-                    var obj = REGISTRATION.userAccount[i];
-                    if (obj.get("username") === username) {
-                        exist = true;
                         REGISTRATION.activeProfile = obj;
                     }
                 }
-                if (exist) {
-                    $("#account-exist").removeClass("hidden");
-                    $("#login-account-div").addClass("hidden");
+
+                $("#start-user-nav-div").addClass("hidden");
+                $("#active-account-update-app-pill").addClass("hidden");
+                $("#account-div").removeClass("hidden");
+                $("#active-account-update-details-pill").removeClass("hidden");
+                let allpills = $("#active-account-pills").children();
+                allpills.removeClass("active");
+                $("#active-account-update-details-pill").addClass("active");
+                if (!exist) {
+                    REGISTRATION.userAccount.push(entry);
+                    REGISTRATION.activeProfile = REGISTRATION.userAccount[REGISTRATION.userAccount.length - 1];
+                    $("#access-application-div").removeClass("hidden");
                     $("#username").html(username);
-                    SIGNUP_VIEW.loadUserTab();
-                    $("#logout").removeClass("hidden");
+
                     let allpills = $("#active-account-pills").children();
                     allpills.removeClass("active");
-                    $("#active-account-update-details-pill").addClass("active");
-                    var appName = REGISTRATION.activeProfile.get("app-name");
-                    $("#app-name").html(": " + appName);
+                    $("#access-application-pill").addClass("active");
+                    $("#update-account-details-div").addClass("hidden");
                 } else {
-                    alert("Profile is not exist!")
+                    $("#login-account-div").addClass("hidden");
+                    $("#username").html(username);
+                    let allpills = $("#active-account-pills").children();
+                    allpills.removeClass("active");
+                    var appName = REGISTRATION.activeProfile.get("app-name");
+                    if (appName !== undefined) {
+                        $("#active-account-update-details-pill").addClass("active");
+                        $("#access-application-pill").addClass("hidden");
+                        $("#update-account-details-div").removeClass("hidden");
+                        $("#app-name").html(": " + appName);
+                        $("#active-account-update-account-pill").removeClass("hidden");
+                        $("#active-account-sign-operation-pill").removeClass("hidden");
+                    } else {
+                        $("#access-application-pill").addClass("active").removeClass("hidden");
+                        $("#access-application-div").removeClass("hidden");
+                        $("#active-account-update-account-pill").addClass("hidden");
+                        $("#active-account-sign-operation-pill").addClass("hidden");
+                    }
                 }
             });
 
@@ -111,32 +103,12 @@ var REGISTRATION = function () {
                 $("#update-account-details-div").addClass("hidden");
             });
 
-            $("#active-account-signup-pill").click(function () {
-                let allpills = $("#active-account-pills").children();
-                allpills.removeClass("active");
-                $("#active-account-signup-pill").addClass("active");
-                $("#access-application-div").addClass("hidden");
-                $("#signup-panel").removeClass("hidden");
-                $("#login-panel").addClass("hidden");
-                $("#update-account-details-div").addClass("hidden");
-            });
-
-            $("#active-account-login-pill").click(function () {
-                let allpills = $("#active-account-pills").children();
-                allpills.removeClass("active");
-                $("#active-account-login-pill").addClass("active");
-                $("#access-application-div").addClass("hidden");
-                $("#signup-panel").addClass("hidden");
-                $("#update-account-details-div").addClass("hidden");
-                $("#login-panel").removeClass("hidden");
-            });
-
             $("#add-app-access").click(function () {
                 var username = $("#app-username").val();
                 var key = $("#app-private-key").val();
 
                 REGISTRATION.activeProfile.set("app-name", username);
-                REGISTRATION.activeProfile.set("app-private-key", key);
+                REGISTRATION.activeProfile.set("app-key", key);
                 REGISTRATION.activeProfile.set("app-access-type", "app-access-prk");
 
                 $("#app-name").html(": " + username);
@@ -165,10 +137,8 @@ var REGISTRATION = function () {
                 $("#sign-message").addClass("hidden");
                 $("#update-account-details-div").removeClass("hidden");
                 $("#access-application-div").addClass("hidden");
-                $("#login-panel").addClass("hidden");
-                $("#signup-panel").addClass("hidden");
                 $("#update-app-access-div").addClass("hidden");
-                $("#sign-operation").addClass("hidden");
+                $("#add-sign-operation-div").addClass("hidden");
             });
 
             $("#active-account-update-account-pill").click(function () {
@@ -178,17 +148,22 @@ var REGISTRATION = function () {
                 $("#sign-message").addClass("hidden");
                 $("#update-account-details-div").addClass("hidden");
                 $("#update-app-access-div").removeClass("hidden");
-                $("#sign-operation").addClass("hidden");
+                $("#add-sign-operation-div").addClass("hidden");
+                $("#login-signup-div").addClass("hidden");
             });
 
             $("#active-account-sign-operation-pill").click(function () {
                 let allpills = $("#active-account-pills").children();
                 allpills.removeClass("active");
                 $("#active-account-sign-operation-pill").addClass("active");
+                $("#add-sign-operation-div").removeClass("hidden");
                 $("#update-account-details-div").addClass("hidden");
+                $("#access-application-div").addClass("hidden");
                 $("#update-app-access-div").addClass("hidden");
+                $("#login-signup-div").addClass("hidden");
+
                 $("#sign-name").val(REGISTRATION.activeProfile.get("app-name"));
-                $("#sign-pk").val(REGISTRATION.activeProfile.get("app-private-key"));
+                $("#sign-pk").val(REGISTRATION.activeProfile.get("app-key"));
                 $("#sign-operation").removeClass("hidden");
 
                 if (REGISTRATION.activeProfile.get("app-access-type") === "app-access-prk") {
@@ -206,7 +181,7 @@ var REGISTRATION = function () {
                 $("#update-app-access-div").addClass("hidden");
                 $("#sign-message").removeClass("hidden");
                 $("#sign-name").val(REGISTRATION.activeProfile.get("app-name"));
-                $("#sign-pk").val(REGISTRATION.activeProfile.get("app-private-key"));
+                $("#sign-pk").val(REGISTRATION.activeProfile.get("app-key"));
 
                 if (REGISTRATION.activeProfile.get("app-access-type") === "app-access-prk") {
                     document.getElementById('sign-message-private-key-radio').checked = true;
@@ -217,6 +192,57 @@ var REGISTRATION = function () {
                     $("#sign-message-private-key-radio-radio").prop('disabled', "disabled");
                     $('input[type=radio][name=sign-message]').change();
 
+                }
+
+            });
+
+            $("#active-account-update-app-pill").click(function () {
+                let allpills = $("#active-account-pills").children();
+                allpills.removeClass("active");
+                $("#update-account-details-div").addClass("hidden");
+                $("#active-account-update-app-pill").addClass("active");
+                $("#login-signup-div").removeClass("hidden");
+                $("#signup-panel").removeClass("hidden");
+                $("#login-panel").addClass("hidden");
+                $("#user-nav").addClass("hidden");
+                $("#add-sign-operation-div").addClass("hidden");
+                switch (REGISTRATION.activeProfile.get("app-access-type")) {
+                    case 'app-access-pwd' : {
+                        $("#old-signup-password-div").removeClass("hidden");
+                        document.getElementById('signup-password-radio').checked = true;
+                        $("#sinup-pk-radio").prop('disabled', "disabled");
+                        $("#signup-oauth-radio").prop('disabled', "disabled");
+                        $('input[type=radio][name=signup-radio]').change();
+                        $("#signup-pwd-old").val(REGISTRATION.activeProfile.get("app-key"));
+                        $("#signup-pwd").val("");
+                        break;
+                    }
+                    case 'app-access-prk' : {
+                        $("#signup-old-private-key-div").removeClass("hidden");
+                        document.getElementById('sinup-pk-radio').checked = true;
+                        $("#signup-password-radio").prop('disabled', "disabled");
+                        $("#sinup-pk-radio").removeProp('disabled', "disabled");
+                        $("#signup-oauth-radio").prop('disabled', "disabled");
+                        $('input[type=radio][name=signup-radio]').change();
+                        $("#signup-user-prk-old").val(REGISTRATION.activeProfile.get("app-key"));
+                        $("#signup-user-prk").val("");
+                        $("#signup-user-pbk-old").val(REGISTRATION.activeProfile.get("app-pb-key"));
+                        break;
+                    }
+                    case 'app-access-oauth' : {
+                        $("#signup-oauth-old-div").removeClass("hidden");
+                        document.getElementById('signup-oauth-radio').checked = true;
+                        $("#signup-password-radio").prop('disabled', "disabled");
+                        $("#sinup-pk-radio").prop('disabled', "disabled");
+                        $("#signup-oauth-radio").removeProp('disabled', "disabled");
+                        $('input[type=radio][name=signup-radio]').change();
+
+                        $("#signup-oauth-p-old").val(REGISTRATION.activeProfile.get("app-p-key"));
+                        $("#signup-oauth-p").val("");
+                        $("#signup-oauth-id-old").val(REGISTRATION.activeProfile.get("app-key"));
+                        $("#signup-oauth-id").val("");
+                        break;
+                    }
                 }
 
             });
@@ -248,21 +274,21 @@ var REGISTRATION = function () {
                     case 'password' : {
                         let key = $("#update-user-pwd").val();
                         obj.set("app-name", username);
-                        obj.set("app-private-key", key);
+                        obj.set("app-key", key);
                         obj.set("app-access-type", "app-access-pwd");
                         break;
                     }
                     case 'private-key' : {
                         let key = $("#update-account-prk").val();
                         obj.set("app-name", username);
-                        obj.set("app-private-key", key);
+                        obj.set("app-key", key);
                         obj.set("app-access-type", "app-access-prk");
                         break;
                     }
                     case 'oauth' : {
                         let oauthId = $("#update-oauth-id").val();
                         obj.set("app-name", username);
-                        obj.set("app-private-key", oauthId);
+                        obj.set("app-key", oauthId);
                         obj.set("app-access-type", "app-access-oauth");
                         break;
                     }
@@ -273,14 +299,20 @@ var REGISTRATION = function () {
             });
 
             $("#logout").click(function () {
-                REGISTRATION.activeProfile = new Map();
-                // $("#login-account-div").removeClass("hidden");
-                $("#account-exist").addClass("hidden");
-                $("#logout").addClass("hidden");
-                $("#sign-message").addClass("hidden");
-                $("#sign-operation").addClass("hidden");
+                let allpills = $("#account-pills").children();
+                allpills.removeClass("active");
+                $("#new-user-pill").addClass("active");
 
-                SIGNUP_VIEW.loadUserTab()
+                REGISTRATION.activeProfile = new Map();
+                $("#start-user-nav-div").removeClass("hidden");
+                $("#account-div").addClass("hidden");
+                $("#access-application-div").addClass("hidden");
+                $("#update-account-details-div").addClass("hidden");
+                $("#update-app-access-div").addClass("hidden");
+                $("#add-sign-operation-div").addClass("hidden");
+                $("#signup-password-radio").removeProp('disabled', "disabled");
+                $("#sinup-pk-radio").removeProp('disabled', "disabled");
+                $("#signup-oauth-radio").removeProp('disabled', "disabled");
             });
 
             $('input[type=radio][name=updateAccess]').change(function() {
@@ -316,22 +348,11 @@ var SIGNUP_VIEW = function () {
         },
         loadUserTab: function() {
             if (REGISTRATION.activeProfile.size === 0) {
-                $("#user-nav").addClass("hidden");
-                $("#signup-panel").addClass("hidden");
-                $("#account-info").addClass("hidden");
-                $("#login-signup-account").removeClass("hidden");
+                // $("#login-signup-account").removeClass("hidden");
                 $("#login-account-div").removeClass("hidden");
             } else {
-                $("#account-info").removeClass("hidden");
-                $("#login-signup-account").addClass("hidden");
+                // $("#login-signup-account").addClass("hidden");
                 $("#login-account-div").addClass("hidden");
-                // $("#user-nav").removeClass("hidden");
-                // $("#signup-panel").removeClass("hidden");
-                // if (STATUS_VIEW.loginName === "") {
-                //     $("#sign-pill").addClass("hidden");
-                // } else {
-                //     $("#sign-pill").removeClass("hidden");
-                // }
             }
         },
         onReady: function () {
@@ -424,10 +445,11 @@ var SIGNUP_VIEW = function () {
             });
 
             $("#signup-btn").click(function () {
+                var username = $("#signup-name").val();
                 var obj = {
                     "pwd": $("#signup-pwd").val(),
                     "pwdOld": $("#signup-pwd-old").val(),
-                    "name": $("#signup-name").val(),
+                    "name": username,
                     "oauthProvider": $("#signup-oauth-p").val(),
                     "oauthProviderOld": $("#signup-oauth-p-old").val(),
                     "oauthId": $("#signup-oauth-id").val(),
@@ -440,6 +462,42 @@ var SIGNUP_VIEW = function () {
                     "userDetails": $("#signup-details").val()
                 };
                 postActionWithDataUpdating("/api/auth/signup", obj, true);
+                REGISTRATION.activeProfile.set("app-name", username);
+                var rates = document.querySelector('input[name="signup"]:checked').value;
+                switch (rates) {
+                    case 'password' : {
+                        REGISTRATION.activeProfile.set("app-key",  $("#signup-pwd").val());
+                        REGISTRATION.activeProfile.set("app-access-type", "app-access-pwd");
+                        break;
+                    }
+                    case 'private-key' : {
+                        REGISTRATION.activeProfile.set("app-key", $("#signup-user-prk").val());
+                        REGISTRATION.activeProfile.set("app-pb-key", $("#signup-user-pbk").val());
+                        REGISTRATION.activeProfile.set("app-access-type", "app-access-prk");
+                        break;
+                    }
+                    case 'oauth' : {
+                        REGISTRATION.activeProfile.set("app-key", $("#signup-oauth-id").val());
+                        REGISTRATION.activeProfile.set("app-p-key", $("#signup-oauth-p").val());
+                        REGISTRATION.activeProfile.set("app-access-type", "app-access-oauth");
+                        break;
+                    }
+                }
+                $("#start-user-nav-div").addClass("hidden");
+                $("#login-signup-div").addClass("hidden");
+                $("#account-div").removeClass("hidden");
+                $("#username").html(username);
+                let allpills = $("#active-account-pills").children();
+                allpills.removeClass("active");
+                $("#active-account-sign-operation-pill").addClass("active");
+                $("#access-application-pill").addClass("hidden");
+                $("#add-sign-operation-div").removeClass("hidden");
+                $("#active-account-update-details-pill").addClass("hidden");
+                $("#update-account-details-div").addClass("hidden");
+                $("#app-name").html(": " + username);
+                $("#active-account-update-account-pill").addClass("hidden");
+                $("#active-account-sign-operation-pill").removeClass("hidden");
+                $("#active-account-update-app-pill").removeClass("hidden");
             });
 
             $('input[type=radio][name=sign-message]').change(function() {
