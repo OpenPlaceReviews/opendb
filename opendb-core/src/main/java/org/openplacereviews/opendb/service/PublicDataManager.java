@@ -9,6 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,15 +22,20 @@ public class PublicDataManager {
 	@Autowired
 	private SettingsManager settingsManager;
 	
+	@Autowired 
+	private AutowireCapableBeanFactory beanFactory;
+	
 	private Map<String, PublicAPIEndpoint> endpoints = new ConcurrentHashMap<>(); 
 	
-	private Map<String, PublicDataProvider> dataProviders = new ConcurrentHashMap<>();
+	private Map<String, Class<? extends PublicDataProvider>> dataProviders = new ConcurrentHashMap<>();
 
 	public void updateEndpoints() {
 		updateEndpoints(null);
 	}
+	
+	
 	public void updateEndpoints(String endpointFilter) {
-		List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.OPENDB_ENDPOINTS_CONFIG);
+   		List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.OPENDB_ENDPOINTS_CONFIG);
 		for(CommonPreference<Map<String, Object>> cpref : prefs) {
 			MapStringObjectPreference pref = (MapStringObjectPreference) cpref;
 			String id = pref.getStringValue(SettingsManager.ENDPOINT_ID, null);
@@ -41,21 +47,33 @@ public class PublicDataManager {
 				continue;
 			}
 			String providerDef = pref.getStringValue(ENDPOINT_PROVIDER, null);
-			PublicDataProvider provider = dataProviders.get(providerDef);
+			Class<? extends PublicDataProvider> providerClass = dataProviders.get(providerDef);
+			PublicDataProvider provider = null;
+			if(providerClass != null) {
+				try {
+					provider = providerClass.newInstance();
+					beanFactory.autowireBean(provider);
+				} catch (Exception e) {
+					LOGGER.error(e.getMessage(), e);
+				}
+			}
 			if(provider == null) {
 				LOGGER.error(String.format("Endpoint '%s' has invalid data provider '%s'", id, providerDef));
 				continue;
 			}
-			// TODO
 			PublicAPIEndpoint endpoint = new PublicAPIEndpoint(provider, pref.get());
 			endpoints.put(id, endpoint);
 		}
 	}
 
-	public void registerDataProvider(PublicDataProvider provider) {
-		dataProviders.put(provider.getClass().getName(), provider);
+	public void registerDataProvider(Class<? extends PublicDataProvider> provider) {
+		dataProviders.put(provider.getName(), provider);
 	}
 	
+	
+	public PublicAPIEndpoint getEndpoint(String path) {
+		return endpoints.get(path);
+	}
 	
 	public Map<String, PublicAPIEndpoint> getEndpoints() {
 		return endpoints;
@@ -71,9 +89,20 @@ public class PublicDataManager {
 			this.path = (String) map.get(ENDPOINT_PATH);
 		}
 		
+		
+		public String getPath() {
+			return path;
+		}
+		
+		public String getContent() {
+			return provider.getContent();
+		}
+		
 	}
 	
 	public static interface PublicDataProvider {
+
+		String getContent();
 		
 	}
 	

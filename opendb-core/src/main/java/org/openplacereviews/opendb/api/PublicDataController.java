@@ -3,11 +3,10 @@ package org.openplacereviews.opendb.api;
 import javax.servlet.http.HttpServletRequest;
 
 import org.openplacereviews.opendb.service.PublicDataManager;
-import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -17,8 +16,6 @@ import org.springframework.web.servlet.HandlerMapping;
 @RequestMapping("/data")
 public class PublicDataController {
 
-	@Autowired
-	private JsonFormatter jsonFormatter;
 
 	@Autowired
 	private PublicDataManager dataManager;
@@ -32,8 +29,12 @@ public class PublicDataController {
 //		String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
 //		AntPathMatcher apm = new AntPathMatcher();
 //		String finalPath = apm.extractPathWithinPattern(bestMatchPattern, path);
-		String s = "OK: " + fpath;
-		return ResponseEntity.ok().body(s);
+		
+		PublicAPIEndpoint apiEndpoint = dataManager.getEndpoint(fpath);
+		if(apiEndpoint != null) {
+			return ResponseEntity.ok(apiEndpoint.getContent());
+		}
+		return ResponseEntity.notFound().build();
 	}
 
 }
