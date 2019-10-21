@@ -167,7 +167,7 @@ var OPERATION_VIEW = function () {
         } else {
             $("#operations-search-fields").removeClass("hidden");
             if (type === "id") {
-                $("#input-search-operation-key").text("Object id:");
+                $("#input-search-operation-key").text("Operation hash:");
             } else if (type === "blockId") {
                 $("#input-search-operation-key").text("Block id:");
             } else {

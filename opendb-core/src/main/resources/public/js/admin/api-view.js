@@ -12,10 +12,10 @@ var API_VIEW = function () {
         };
         postActionWithDataUpdating("/api/bot/"+action, obj, false);
     }
-    function fillTableBody(newTemplate, obj, colspan, update, botStat) {
-        newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toISOString());
+    function fillTableBody(newTemplate, obj, logsColspan, update, botStat, opsColspan) {
+        newTemplate.find("[did='time-start']").html(new Date(obj.timeStarted).toLocaleString('en-US'));
         if (obj.timeFinished) {
-            newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toISOString());
+            newTemplate.find("[did='time-finish']").html(new Date(obj.timeFinished).toLocaleString('en-US'));
         }
         newTemplate.find("[did='amount-tasks']").html(obj.amountOfTasks);
         if (obj.running) {
@@ -35,7 +35,6 @@ var API_VIEW = function () {
         newTemplate.find("[did='added-ops']").html();
         if (obj.addedOperations) {
             var ops = "";
-            newTemplate.find("[did='ops-amount']").html("OPS (" + obj.addedOperations.length + ")");
             for (var l = 0; l < obj.addedOperations.length; l++) {
                 var opObj = obj.addedOperations[l];
                 var opInfo = " ( ";
@@ -49,46 +48,65 @@ var API_VIEW = function () {
                     opInfo += opInfo === " ( " ? opObj.deleted + " removed objects" : ", " + opObj.deleted + " removed objects";
                 }
                 opInfo += " )";
-                ops += "<a href='/api/admin?view=objects&browse=operation&key=" + opObj.hash + "'>" + smallHash(opObj.hash) + "</a><span>" + opInfo + "</span>" + "\n"
+                ops += (l + 1) + ")" + "<a href='/api/admin?view=objects&browse=operation&key=" + opObj.hash + "'>" + opObj.hash + "</a><span>" + opInfo + "</span>" + "\n"
             }
 
-            newTemplate.find("[did='ops-json']").html(ops);
+            opsColspan.find("[did='logs-json']").html(ops);
         }
         if (obj.logEntries) {
             var logs = "";
             for (var k = 0; k < obj.logEntries.length; k++) {
                 var logObj = obj.logEntries[k];
-                logs += new Date(logObj.date).toISOString() + ": " + logObj.msg + "\n";
+                logs += new Date(logObj.date).toLocaleString('en-US') + ": " + logObj.msg + "\n";
                 if (logObj.exception) {
                     logs += logObj.exception + "\n";
                 }
             }
-            colspan.find("[did='logs-json']").html(logs);
+            logsColspan.find("[did='logs-json']").html(logs);
         }
-        var logButton = newTemplate.find("[did='button-logs']");
+        var opsButton = newTemplate.find("[did='button-logs']");
+        var logButton = newTemplate.find("[did='button-ops']");
         if (!update) {
-            colspan.find("[did='logs']").addClass("hidden");
+            logsColspan.find("[did='logs']").addClass("hidden");
+            opsColspan.find("[did='logs']").addClass("hidden");
         } else {
             logButton.html("Show");
+            opsButton.html("Show");
         }
-        if (colspan.find("[did='logs']").hasClass("hidden")) {
+        if (logsColspan.find("[did='logs']").hasClass("hidden")) {
+            opsButton.html("Show");
+        } else {
+            opsButton.html("Hide");
+        }
+        if (opsColspan.find("[did='logs']").hasClass("hidden")) {
             logButton.html("Show");
         } else {
             logButton.html("Hide");
         }
 
         if (!update) {
-            logButton.click(function () {
-                showBotLogs(colspan, logButton);
+            opsButton.click(function () {
+                showBotLogs(logsColspan, opsButton);
             });
+            logButton.click(function () {
+                showBotLogs(opsColspan, logButton, true);
+            })
         }
-        function showBotLogs(colspan, logButton) {
+        function showBotLogs(colspan, button, showAmountOps) {
             if (colspan.find("[did='logs']").hasClass("hidden")) {
                 colspan.find("[did='logs']").removeClass("hidden");
-                logButton.html("Hide")
+                if (showAmountOps) {
+                    button.html("Hide");
+                } else {
+                    button.html("Hide");
+                }
             } else {
                 colspan.find("[did='logs']").addClass("hidden");
-                logButton.html("Show")
+                if (showAmountOps) {
+                    button.html("Show");
+                } else {
+                    button.html("Show");
+                }
             }
         }
     }
@@ -100,10 +118,11 @@ var API_VIEW = function () {
             if (update) {
                 getJsonAction("/api/bot", function (data) {
                     API_VIEW.botStats = data;
-                    var prevLastStat = $('#main-bot-history-table > tr:first');
-                    var lastStat = $('#main-bot-history-table > tr:eq(1)');
+                    var status = $('#main-bot-history-table > tr:first');
+                    var ops = $('#main-bot-history-table > tr:eq(1)');
+                    var logs = $('#main-bot-history-table > tr:eq(2)');
                     var botStat = API_VIEW.botStats[bot];
-                    fillTableBody(prevLastStat, botStat.botRunStats[botStat.botRunStats.length - 1], lastStat, update, botStat);
+                    fillTableBody(status, botStat.botRunStats[botStat.botRunStats.length - 1], logs, update, botStat, ops);
                 });
             } else {
                 var botStat = API_VIEW.botStats[bot];
@@ -117,11 +136,15 @@ var API_VIEW = function () {
                         .appendTo(table)
                         .removeClass("hidden")
                         .show();
-                    var colspan = colspan_template.clone()
+                    var ops = colspan_template.clone()
                         .appendTo(table)
                         .removeClass("hidden")
                         .show();
-                    fillTableBody(newTemplate, obj, colspan, update, botStat);
+                    var logs = colspan_template.clone()
+                        .appendTo(table)
+                        .removeClass("hidden")
+                        .show();
+                    fillTableBody(newTemplate, obj, logs, update, botStat, ops);
                 }
                 $("#history-bot-name").val(bot);
                 $("#bot-history-header").html("Bot stats for: " + bot);
@@ -133,8 +156,10 @@ var API_VIEW = function () {
             if (botState.settings.enabled) {
                 $("#enable-bot-btn").addClass("hidden");
                 $("#disable-bot-btn").removeClass("hidden");
+                $("#update-bot-interval-btn").removeClass("hidden");
             } else {
                 $("#disable-bot-btn").addClass("hidden");
+                $("#update-bot-interval-btn").addClass("hidden");
                 $("#enable-bot-btn").removeClass("hidden");
             }
             $("#bot-timeout-header").html("Setting schedule for bot: " + bot);
@@ -235,6 +260,16 @@ var API_VIEW = function () {
             $("#disable-bot-btn").click(function () {
                 enableDisableBot($("#timeout-bot-name").val(), "disable");
                 $("#bot-timeout-modal .close").click();
+                API_VIEW.loadBotData();
+            });
+
+            $("#update-bot-interval-btn").click(function () {
+                var obj = {
+                    "botName": $("#timeout-bot-name").val(),
+                    "interval": $("#bot-interval").val()
+                };
+                $("#bot-timeout-modal .close").click();
+                postActionWithDataUpdating("/api/bot/enable", obj, false);
                 API_VIEW.loadBotData();
             });
         }
