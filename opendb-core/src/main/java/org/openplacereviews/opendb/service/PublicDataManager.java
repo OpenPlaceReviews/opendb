@@ -95,21 +95,21 @@ public class PublicDataManager {
 			return path;
 		}
 		
-		public AbstractResource getContent() {
-			return provider.getContent();
+		public AbstractResource getContent(Map<String, String[]> params) {
+			return provider.getContent(params);
 		}
 		
-		public AbstractResource getPage() {
-			return provider.getPage();
+		public AbstractResource getPage(Map<String, String[]> params) {
+			return provider.getPage(params);
 		}
 		
 	}
 	
 	public static interface PublicDataProvider {
 
-		AbstractResource getContent();
+		AbstractResource getContent(Map<String, String[]> params);
 		
-		AbstractResource getPage();
+		AbstractResource getPage(Map<String, String[]> params);
 		
 	}
 	

@@ -1,5 +1,7 @@
 package org.openplacereviews.opendb.api;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import org.openplacereviews.opendb.service.PublicDataManager;
@@ -25,6 +27,7 @@ public class PublicDataController {
 	public ResponseEntity<?> processData(HttpServletRequest request) {
 		String path = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
 		String fpath = path.substring("/api/public/".length());
+		Map<String, String[]> params = request.getParameterMap();
 		// alternative method
 //		String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
 //		AntPathMatcher apm = new AntPathMatcher();
@@ -40,9 +43,9 @@ public class PublicDataController {
 		PublicAPIEndpoint apiEndpoint = dataManager.getEndpoint(id);
 		if(apiEndpoint != null) {
 			if(suffix.equals("index")) {
-				return ResponseEntity.ok(apiEndpoint.getPage());
+				return ResponseEntity.ok(apiEndpoint.getPage(params));
 			}
-			return ResponseEntity.ok(apiEndpoint.getContent());
+			return ResponseEntity.ok(apiEndpoint.getContent(params));
 		}
 		return ResponseEntity.notFound().build();
 	}
