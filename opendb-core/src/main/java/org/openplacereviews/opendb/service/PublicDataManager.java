@@ -10,6 +10,7 @@ import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.core.io.AbstractResource;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -94,15 +95,21 @@ public class PublicDataManager {
 			return path;
 		}
 		
-		public String getContent() {
+		public AbstractResource getContent() {
 			return provider.getContent();
+		}
+		
+		public AbstractResource getPage() {
+			return provider.getPage();
 		}
 		
 	}
 	
 	public static interface PublicDataProvider {
 
-		String getContent();
+		AbstractResource getContent();
+		
+		AbstractResource getPage();
 		
 	}
 	

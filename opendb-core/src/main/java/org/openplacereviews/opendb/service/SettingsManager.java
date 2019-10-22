@@ -43,7 +43,7 @@ public class SettingsManager {
 	public static final PreferenceFamily OPENDB_BOTS_CONFIG = new PreferenceFamily("opendb.bots", "Bots").
 			setIdProperties(BOT_ID).setDescription("Bot %s configuration", BOT_ID).canEdit().canDelete();
 	public static final PreferenceFamily OPENDB_ENDPOINTS_CONFIG = new PreferenceFamily("opendb.publicdata", "Data Endpoints").
-			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).canEdit();
+			setIdProperties(ENDPOINT_ID).setDescription("Data %s configuration", ENDPOINT_ID).canEdit().canAdd().canDelete();
 	
 	public static final PreferenceFamily[] SETTINGS_FAMILIES = new PreferenceFamily[] {
 			USER,

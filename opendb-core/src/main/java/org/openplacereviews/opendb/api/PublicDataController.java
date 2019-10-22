@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.HandlerMapping;
 
 @Controller
-@RequestMapping("/data")
+@RequestMapping("/api/public")
 public class PublicDataController {
 
 
@@ -24,14 +24,24 @@ public class PublicDataController {
 	@ResponseBody
 	public ResponseEntity<?> processData(HttpServletRequest request) {
 		String path = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
-		String fpath = path.substring("/data/".length());
+		String fpath = path.substring("/api/public/".length());
 		// alternative method
 //		String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
 //		AntPathMatcher apm = new AntPathMatcher();
 //		String finalPath = apm.extractPathWithinPattern(bestMatchPattern, path);
+		int i1 = fpath.indexOf("/");
+		String id = fpath;
+		String suffix = "";
+		if(i1 != -1) {
+			id = fpath.substring(0, i1);
+			suffix = fpath.substring(i1 + 1);
+		}
 		
-		PublicAPIEndpoint apiEndpoint = dataManager.getEndpoint(fpath);
+		PublicAPIEndpoint apiEndpoint = dataManager.getEndpoint(id);
 		if(apiEndpoint != null) {
+			if(suffix.equals("index")) {
+				return ResponseEntity.ok(apiEndpoint.getPage());
+			}
 			return ResponseEntity.ok(apiEndpoint.getContent());
 		}
 		return ResponseEntity.notFound().build();
