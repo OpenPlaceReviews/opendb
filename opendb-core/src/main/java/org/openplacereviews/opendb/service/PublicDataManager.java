@@ -6,6 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.ops.PerformanceMetrics;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
+import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,10 +87,14 @@ public class PublicDataManager {
 
 		private PublicDataProvider provider;
 		private String path;
+		private PerformanceMetric dataMetric;
+		private PerformanceMetric pageMetric;
 
 		public PublicAPIEndpoint(PublicDataProvider provider, Map<String, Object> map) {
 			this.provider = provider;
 			this.path = (String) map.get(ENDPOINT_PATH);
+			dataMetric = PerformanceMetrics.i().getMetric("public.data", path);
+			pageMetric = PerformanceMetrics.i().getMetric("public.page", path);
 		}
 		
 		
@@ -96,11 +103,21 @@ public class PublicDataManager {
 		}
 		
 		public AbstractResource getContent(Map<String, String[]> params) {
-			return provider.getContent(params);
+			Metric m = dataMetric.start();
+			try {
+				return provider.getContent(params);
+			} finally {
+				m.capture();
+			}
 		}
 		
 		public AbstractResource getPage(Map<String, String[]> params) {
-			return provider.getPage(params);
+			Metric m = pageMetric.start();
+			try {
+				return provider.getPage(params);
+			} finally {
+				m.capture();
+			}
 		}
 		
 	}
