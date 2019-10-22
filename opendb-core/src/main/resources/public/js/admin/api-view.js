@@ -33,6 +33,7 @@ var API_VIEW = function () {
             newTemplate.find("[did='finish-status']").html("RUNNING");
         }
         newTemplate.find("[did='added-ops']").html();
+        let opsCount = obj && obj.addedOperations? obj.addedOperations.length : 0;
         if (obj.addedOperations) {
             var ops = "";
             for (var l = 0; l < obj.addedOperations.length; l++) {
@@ -64,46 +65,42 @@ var API_VIEW = function () {
             }
             logsColspan.find("[did='logs-json']").html(logs);
         }
-        var opsButton = newTemplate.find("[did='button-logs']");
-        var logButton = newTemplate.find("[did='button-ops']");
+        var logsButton = newTemplate.find("[did='button-logs']");
+        var operationsButton = newTemplate.find("[did='button-ops']");
         if (!update) {
             logsColspan.find("[did='logs']").addClass("hidden");
             opsColspan.find("[did='logs']").addClass("hidden");
         } else {
-            logButton.html("Show");
-            opsButton.html("Show");
+            operationsButton.html("Show " + opsCount);
+            logsButton.html("Show");
         }
         if (logsColspan.find("[did='logs']").hasClass("hidden")) {
-            opsButton.html("Show");
+            logsButton.html("Show");
         } else {
-            opsButton.html("Hide");
+            logsButton.html("Hide");
         }
         if (opsColspan.find("[did='logs']").hasClass("hidden")) {
-            logButton.html("Show");
+            operationsButton.html("Show " + opsCount);
         } else {
-            logButton.html("Hide");
+            operationsButton.html("Hide");
         }
 
         if (!update) {
-            opsButton.click(function () {
-                showBotLogs(logsColspan, opsButton);
+            logsButton.click(function () {
+                showBotLogs(logsColspan, logsButton);
             });
-            logButton.click(function () {
-                showBotLogs(opsColspan, logButton, true);
+            operationsButton.click(function () {
+                showBotLogs(opsColspan, operationsButton, opsCount);
             })
         }
-        function showBotLogs(colspan, button, showAmountOps) {
+        function showBotLogs(colspan, button, opsCount) {
             if (colspan.find("[did='logs']").hasClass("hidden")) {
                 colspan.find("[did='logs']").removeClass("hidden");
-                if (showAmountOps) {
-                    button.html("Hide");
-                } else {
-                    button.html("Hide");
-                }
+                button.html("Hide");
             } else {
                 colspan.find("[did='logs']").addClass("hidden");
-                if (showAmountOps) {
-                    button.html("Show");
+                if (opsCount) {
+                    button.html("Show " + opsCount);
                 } else {
                     button.html("Show");
                 }
