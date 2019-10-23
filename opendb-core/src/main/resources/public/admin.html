@@ -916,27 +916,34 @@ Details: <b><span did="block-details"></span></b></pre>
             <div id="login-signup-account-div">
                 <div class="form-group" id="account-nav">
                     <ul class="nav nav-pills" id="account-pills">
-                        <li class="active" id="new-user-pill"><a>New User</a></li>
-                        <li id="account-login-pill"><a>Profile login</a></li>
+                        <li class="active" id="account-login-pill"><a>Profile login</a></li>
                         <li id="app-login-pill"><a>App login</a></li>
                     </ul>
                 </div>
-                <div class="form-group">
-                    <label class="text" for="account-username" id="login-account-msg">Signup or Login to account for perform any action : </label>
-                </div>
-                <div class="form-group form-inline" id="login-signup-input-account-div">
-                    <input type="text" class="form-control" id="account-username" placeholder="Login">
-                    <input type="password" class="form-control" id="account-password" placeholder="Password">
-                    <input type="submit" value="Login/Signup" id="login-signup-account" class="btn btn-primary form-control"/>
-                </div>
+                <!--<div class="form-group">-->
+                    <!--<label class="text" for="account-username" id="login-account-msg">Signup or Login to account for perform any action : </label>-->
+                <!--</div>-->
+                <!--<div class="form-group form-inline" id="login-signup-input-account-div">-->
+                    <!--<input type="text" class="form-control" id="account-username" placeholder="Login">-->
+                    <!--<input type="password" class="form-control" id="account-password" placeholder="Password">-->
+                    <!--<input type="submit" value="Login/Signup" id="login-signup-account" class="btn btn-primary form-control"/>-->
+                <!--</div>-->
             </div>
         </div>
 
         <div id="account-div" class="hidden">
             <div class="form-group">
-                <div class="form-inline" id="account-info">
-                    <label class="control-label" for="account-username">User: <span id="username"></span><span id="app-name"></span></label>
-                    <input type="submit" value="Logout" id="logout" class="btn btn-primary form-control"/>
+                <div id="account-info">
+                    <div class="form-group">
+                        <label class="control-label">Username: <span id="username"></span></label>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">App name: <span id="app-name"></span></label>
+                    </div>
+                    <div class="form-inline">
+                        <input type="submit" value="Logout App" id="logout-app" class="btn btn-primary form-control"/>
+                        <input type="submit" value="Logout Profile" id="logout-profile" class="btn btn-primary form-control"/>
+                    </div>
                 </div>
             </div>
             <div class="form-group" id="account-tabs">
@@ -948,6 +955,28 @@ Details: <b><span did="block-details"></span></b></pre>
                     <li id="active-account-sign-operation-pill" class="hidden"><a>Add/Sign operations</a></li>
                 </ul>
             </div>
+        </div>
+
+        <div id="app-login" class="hidden">
+            <ul class="list-group" id="app-login-list">
+            </ul>
+
+            <!--search info-->
+            <ul class="list-group" hidden="true">
+                <li class="panel panel-default" id="objects-app-login-item">
+                    <!--<p class="panel-heading">-->
+                    <!--</p>-->
+                    <div class="panel-body">
+                        <p did="appName">App Name: <b><span did="app-name"></span></b></p>
+                        <p did="appKey">App Key: <b><span did="app-key"></span></b></p>
+                    </div>
+                    <div class="panel-footer">
+                        <a type="button" did="regenerate-object" class="btn btn-primary btn-xs">Regenerate Login</a>
+                        <a type="button" did="delete-object" class="btn btn-primary btn-xs">Delete login key</a>
+                        <a type="button" did="access-object" class="btn btn-primary btn-xs">Access app</a>
+                    </div>
+                </li>
+            </ul>
         </div>
 
         <div class="form-group panel panel-info hidden" id="access-application-div">
@@ -1054,7 +1083,7 @@ Details: <b><span did="block-details"></span></b></pre>
                             <textarea rows="1" id="sign-json" class="form-control resize-vertical" placeholder="Json"></textarea>
                         </div>
                         <div class="form-group form-horizontal">
-                            <label for="sign-name" class="control-label">2. Name (empty will be server): </label>
+                            <label for="sign-name" class="control-label" id="sign-name-msg">2. Name (empty will be server): </label>
                             <input type="text" id="sign-name" class="form-control" placeholder="Name"/>
                         </div>
                         <div class="form-group" id="sign-message-password">
@@ -1066,10 +1095,10 @@ Details: <b><span did="block-details"></span></b></pre>
                             <input type="text" id="sign-pk" class="form-control" placeholder="Signup private key"/>
                         </div>
 
-                        <div class="form-group form-inline">
-                            <label for="sign-by-server" class="control-label">4. Don't sign by server: </label>
-                            <input type="checkbox" id="sign-by-server" class="form-control"/>
-                        </div>
+                        <!--<div class="form-group form-inline" id="dont-sign-by-server">-->
+                            <!--<label for="sign-by-server" class="control-label">4. Don't sign by server: </label>-->
+                            <!--<input type="checkbox" id="sign-by-server" class="form-control"/>-->
+                        <!--</div>-->
                     </div>
                     <div class="form-group hidden" id="show-sign-json">
                         <div class="row"></div>
@@ -1094,6 +1123,10 @@ Details: <b><span did="block-details"></span></b></pre>
                         <div class="form-group form-horizontal">
                             <label for="sign-json" class="control-label">1. Json: </label>
                             <textarea rows="1" id="json-op" class="form-control resize-vertical" placeholder="Json"></textarea>
+                        </div>
+                        <div class="form-group form-inline">
+                            <label for="sign-by-server" class="control-label">2. Don't sign by server: </label>
+                            <input type="checkbox" id="sign-by-server" class="form-control"/>
                         </div>
                     </div>
                     <div class="form-group form-inline">
