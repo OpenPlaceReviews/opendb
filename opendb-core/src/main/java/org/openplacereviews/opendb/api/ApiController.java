@@ -88,7 +88,7 @@ public class ApiController {
 	@GetMapping(path = "/admin", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public InputStreamResource testHarness() {
-		return new InputStreamResource(ApiController.class.getResourceAsStream("/public/admin.html"));
+		return new InputStreamResource(ApiController.class.getResourceAsStream("/public/api/admin.html"));
 	}
 
 	@GetMapping(path = "/queue", produces = "text/json;charset=UTF-8")
