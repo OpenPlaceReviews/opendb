@@ -95,8 +95,10 @@ public class PublicDataManager {
 		return endpoints;
 	}
 	
-	private static class CacheHolder<T> {
-		long evalTimeSeconds;
+	protected static class CacheHolder<T> {
+		long evalTime;
+		long accessTime;
+		long access;
 		T value;
 	}
 	
@@ -128,13 +130,16 @@ public class PublicDataManager {
 		
 		public AbstractResource getContent(Map<String, String[]> params) {
 			Metric m = reqMetric.start();
+			long now = (System.currentTimeMillis() / 1000l);
 			try {
 				P p = provider.formatParams(params);
 				CacheHolder<T> ch = null;
 				if (!cacheDisabled) {
 					ch = cacheObjects.get(p);
 					if (ch != null) {
-						long timePast = (System.currentTimeMillis() / 1000l) - ch.evalTimeSeconds;
+						ch.accessTime = now;
+						ch.access++;
+						long timePast = now - ch.evalTime;
 						long intWait = map.getLong(CACHE_TIME_SEC, DEFAULT_CACHE_TIME_SECONDS);
 						if (timePast > intWait) {
 							ch = null;
@@ -144,12 +149,12 @@ public class PublicDataManager {
 				if (ch == null) {
 					Metric mt = dataMetric.start();
 					ch = new CacheHolder<>();
-					T content = provider.getContent(p);
-					ch.value = content;
 					if(!cacheDisabled) {
-						ch.evalTimeSeconds = System.currentTimeMillis() / 1000l;
+						ch.accessTime = now;
+						ch.evalTime = now;
 						cacheObjects.put(p, ch);
 					}
+					ch.value = provider.getContent(p);
 					mt.capture();
 				}
 				return provider.formatContent(ch.value);
