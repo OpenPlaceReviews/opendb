@@ -10,14 +10,16 @@ import org.springframework.core.io.AbstractResource;
  * Manages how to cache and evaluate content
  * @param <T>
  */
-public interface IPublicDataProvider<T> {
+public interface IPublicDataProvider<Params, Value> {
 
-	List<Map<String, String[]>> getKeysToCache();
+	List<Params> getKeysToCache();
 
-	T getContent(Map<String, String[]> params);
+	Params formatParams(Map<String, String[]> params);
+	
+	Value getContent(Params params);
 
-	AbstractResource formatContent(T content);
+	AbstractResource formatContent(Value content);
 
-	AbstractResource getPage(Map<String, String[]> params);
+	AbstractResource getMetaPage(Map<String, String[]> params);
 
 }
