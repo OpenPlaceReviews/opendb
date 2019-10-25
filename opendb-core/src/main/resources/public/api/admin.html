@@ -124,8 +124,9 @@
     <li><a data-toggle="tab" href="#blocks" id="blocks-tab">Blocks</a></li>
     <li><a data-toggle="tab" href="#operations" id="operations-tab">Operations</a></li>
     <li><a data-toggle="tab" href="#objects" id="objects-tab">Objects</a></li>
-    <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
     <li><a data-toggle="tab" href="#api" id="api-tab">API</a></li>
+    <li><a data-toggle="tab" href="#errors" id="errors-tab">Errors</a></li>
+    <li><a data-toggle="tab" href="#bots" id="bots-tab">Bots</a></li>
     <li><a data-toggle="tab" href="#settings" id="settings-tab">Settings</a></li>
     <li><a data-toggle="tab" href="#metrics" id="metrics-tab">Metrics</a></li>
     <li><a data-toggle="tab" href="#ipfs" id="ipfs-tab">IPFS</a></li>
@@ -448,6 +449,42 @@ Details: <b><span did="block-details"></span></b></pre>
 
     <!--API TAB-->
     <div id="api" class="tab-pane fade">
+            <!--API state-->
+            <h3>Public API</h3>
+            <div class="form-group form-inline">
+                <button class="btn btn-primary form-control" id="refresh-api-table-btn"><span
+                        class="glyphicon glyphicon-refresh"></span> Refresh</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="api-table" class="table table-bordered table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Public API</th>
+                            <th>Path</th>
+                            <th>Description</th>
+                            <th>Cache</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+            
+                    <tbody id="main-api-table"></tbody>
+                    <tbody>
+                        <tr id="api-template" class="hidden">
+                            <td><b><a target="_blank" did="id" href=""></a></b></td>
+                            <td><a target="_blank" did="path" href=""></a></td>
+                            <td did="description"></td>
+                            <td did="cache"></td>
+                            <td did="actions"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!--API state-->
+        </div>
+
+    <!--BOTS TAB-->
+    <div id="bots" class="tab-pane fade">
         <!--BOT state-->
         <h3>Bots</h3>
         <div class="form-group form-inline">
@@ -621,7 +658,7 @@ Details: <b><span did="block-details"></span></b></pre>
             </div>
         </div>
     </div>
-        <!--BOTS MODALS-->
+    <!--BOTS MODALS-->
 
     <!--API MODALS VIEWS-->
 

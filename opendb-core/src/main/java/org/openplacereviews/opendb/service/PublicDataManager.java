@@ -99,24 +99,28 @@ public class PublicDataManager {
 		long evalTime;
 		long accessTime;
 		long access;
-		T value;
+		long size;
+		transient T value;
 	}
 	
 	public static class PublicAPIEndpoint<P, T> {
 
-		private IPublicDataProvider<P, T> provider;
-		private String path;
+		private transient IPublicDataProvider<P, T> provider;
+		private transient MapStringObjectPreference map;
+		
+		protected final String path;
+		protected final String id;
+		protected Map<Object, CacheHolder<T>> cacheObjects = new ConcurrentHashMap<Object, CacheHolder<T>>();
+		protected boolean cacheDisabled;
 		private PerformanceMetric dataMetric;
 		private PerformanceMetric pageMetric;
 		private PerformanceMetric reqMetric;
-		private Map<Object, CacheHolder<T>> cacheObjects = new ConcurrentHashMap<Object, CacheHolder<T>>();
-		private MapStringObjectPreference map;
-		private boolean cacheDisabled;
 
 		public PublicAPIEndpoint(IPublicDataProvider<P, T> provider, MapStringObjectPreference map) {
 			this.provider = provider;
 			this.map = map;
 			this.path = (String) map.get().get(ENDPOINT_PATH);
+			this.id = (String) map.get().get(SettingsManager.ENDPOINT_ID);
 			cacheDisabled = map.getLong(CACHE_TIME_SEC, DEFAULT_CACHE_TIME_SECONDS) <= 0;
 			dataMetric = PerformanceMetrics.i().getMetric("public.data", path);
 			reqMetric = PerformanceMetrics.i().getMetric("public.req", path);
@@ -149,12 +153,16 @@ public class PublicDataManager {
 				if (ch == null) {
 					Metric mt = dataMetric.start();
 					ch = new CacheHolder<>();
+					ch.value = provider.getContent(p);
 					if(!cacheDisabled) {
 						ch.accessTime = now;
 						ch.evalTime = now;
+						String serializeValue = provider.serializeValue(ch.value);
+						if(serializeValue != null) {
+							ch.size = serializeValue.length();
+						}
 						cacheObjects.put(p, ch);
 					}
-					ch.value = provider.getContent(p);
 					mt.capture();
 				}
 				return provider.formatContent(ch.value);

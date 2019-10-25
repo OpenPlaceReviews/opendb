@@ -247,6 +247,9 @@ var STATUS_VIEW = function () {
             $("#errors-tab").click(function () {
                 window.history.pushState(null, "State Errors", '/api/admin?view=errors');
             });
+            $("#bots-tab").click(function () {
+                window.history.pushState(null, "State Bots", '/api/admin?view=bots');
+            });
             $("#api-tab").click(function () {
                 window.history.pushState(null, "State API", '/api/admin?view=api');
             });
@@ -389,9 +392,10 @@ function loadData() {
         STATUS_VIEW.processStatusData(data);
         updateTabVisibility();
         OBJECTS_VIEW.loadObjectTypes();
+        API_VIEW.loadData();
         if (STATUS_VIEW.loginName != "") {
             METRIC_VIEW.loadMetricsData();
-            API_VIEW.loadBotData();
+            BOTS_VIEW.loadBotData();
             SETTINGS_VIEW.loadConfiguration();
             ERRORS_VIEW.loadErrorsData();
             IPFS_VIEW.loadIpfsStatusData();
@@ -408,7 +412,7 @@ function updateTabVisibility() {
         $("#reg").show();
         $("#errors-tab").show();
         $("#metrics-tab").show();
-        $("#api-tab").show();
+        $("#bots-tab").show();
         $("#settings-tab").show();
         $("#reg-tab").show();
         $("#ipfs-tab").show();
@@ -418,7 +422,7 @@ function updateTabVisibility() {
         $("#admin-login-div").show();
         $("#errors-tab").hide();
         $("#reg-tab").hide();
-        $("#api-tab").hide();
+        $("#bots-tab").hide();
         $("#settings-tab").hide();
         $("#metrics-tab").hide();
         $("#reg").hide();
@@ -443,6 +447,8 @@ function loadURLParams() {
     } else if (lhref.indexOf('api/admin?view=errors') > 1) {
         $(".nav-tabs a[href=\"#errors\"]").tab('show');
         ERRORS_VIEW.loadURLParams(url);
+    } else if (lhref.indexOf('api/admin?view=bots') > 1) {
+        $(".nav-tabs a[href=\"#bots\"]").tab('show');
     } else if (lhref.indexOf('api/admin?view=api') > 1) {
         $(".nav-tabs a[href=\"#api\"]").tab('show');
     } else if (lhref.indexOf('api/admin?view=settings') > 1) {
@@ -467,6 +473,7 @@ $(document).ready(function () {
     OPERATION_VIEW.onReady();
     OBJECTS_VIEW.onReady();
     API_VIEW.onReady();
+    BOTS_VIEW.onReady();
     METRIC_VIEW.onReady();
     IPFS_VIEW.onReady();
     SETTINGS_VIEW.onReady();

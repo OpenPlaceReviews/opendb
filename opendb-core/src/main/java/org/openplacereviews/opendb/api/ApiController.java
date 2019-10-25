@@ -12,6 +12,7 @@ import org.openplacereviews.opendb.service.HistoryManager;
 import org.openplacereviews.opendb.service.HistoryManager.HistoryObjectRequest;
 import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.service.LogOperationService.LogEntry;
+import org.openplacereviews.opendb.service.PublicDataManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -45,6 +46,9 @@ public class ApiController {
 
 	@Autowired
 	private OpenDBScheduledServices scheduledServices;
+	
+	@Autowired
+	private PublicDataManager publicDataManager;
 
 	@GetMapping(path = "/status", produces = "text/html;charset=UTF-8")
 	@ResponseBody
@@ -384,6 +388,13 @@ public class ApiController {
 	@ResponseBody
 	public String getIndexInfo() {
 		return formatter.fullObjectToJson(manager.getIndices());
+	}
+	
+	
+	@GetMapping(path = "/endpoints",  produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public String getApiEndpoints() {
+		return formatter.fullObjectToJson(publicDataManager.getEndpoints());
 	}
 
 }

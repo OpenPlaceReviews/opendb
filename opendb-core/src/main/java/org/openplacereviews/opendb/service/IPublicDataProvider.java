@@ -21,5 +21,15 @@ public interface IPublicDataProvider<Params, Value> {
 	AbstractResource formatContent(Value content);
 
 	AbstractResource getMetaPage(Map<String, String[]> params);
+	
+	default String serializeValue(Value v) {
+		// not serializable
+		return null;
+	};
+	
+	default Value deserializeValue(String key) {
+		// not serializable
+		return null;
+	};
 
 }

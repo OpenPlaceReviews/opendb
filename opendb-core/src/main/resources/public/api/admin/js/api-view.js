@@ -1,4 +1,4 @@
-var API_VIEW = function () {
+var BOTS_VIEW = function () {
     function startStopBot(bot, action="start") {
         var obj = {
             "botName": bot
@@ -114,15 +114,15 @@ var API_VIEW = function () {
             var table = $("#main-bot-history-table");
             if (update) {
                 getJsonAction("/api/bot", function (data) {
-                    API_VIEW.botStats = data;
+                    BOTS_VIEW.botStats = data;
                     var status = $('#main-bot-history-table > tr:first');
                     var ops = $('#main-bot-history-table > tr:eq(1)');
                     var logs = $('#main-bot-history-table > tr:eq(2)');
-                    var botStat = API_VIEW.botStats[bot];
+                    var botStat = BOTS_VIEW.botStats[bot];
                     fillTableBody(status, botStat.botRunStats[botStat.botRunStats.length - 1], logs, update, botStat, ops);
                 });
             } else {
-                var botStat = API_VIEW.botStats[bot];
+                var botStat = BOTS_VIEW.botStats[bot];
                 table.empty();
                 var template = $("#bot-history-template");
                 var colspan_template = $("#bot-history-colspan-template");
@@ -149,7 +149,7 @@ var API_VIEW = function () {
         },
 
         showBotScheduleSettings: function(bot) {
-            var botState = API_VIEW.botStats[bot];
+            var botState = BOTS_VIEW.botStats[bot];
             if (botState.settings.enabled) {
                 $("#enable-bot-btn").addClass("hidden");
                 $("#disable-bot-btn").removeClass("hidden");
@@ -167,7 +167,7 @@ var API_VIEW = function () {
         },
         loadBotData: function () {
             getJsonAction("/api/bot", function (data) {
-                API_VIEW.botStats = data;
+                BOTS_VIEW.botStats = data;
                 var table = $("#main-bot-table");
                 table.empty();
                 var template = $("#bot-template");
@@ -226,13 +226,13 @@ var API_VIEW = function () {
                     newTemplate.find("[did='bot-show-history-btn']")
                         .click(function () {
                             getJsonAction("/api/bot", function (data) {
-                                API_VIEW.botStats = data;
-                                API_VIEW.showBotHistory(obj.id, false);
+                                BOTS_VIEW.botStats = data;
+                                BOTS_VIEW.showBotHistory(obj.id, false);
                             });
                         });
                     newTemplate.find("[did='bot-schedule-btn']")
                         .click(function () {
-                            API_VIEW.showBotScheduleSettings(obj.id);
+                            BOTS_VIEW.showBotScheduleSettings(obj.id);
                         });
                     newTemplate.find("[did='actions']").html(action);
                 }
@@ -240,24 +240,24 @@ var API_VIEW = function () {
         },
         onReady: function () {
             $("#refresh-bot-table-btn").click(function () {
-                API_VIEW.loadBotData();
+                BOTS_VIEW.loadBotData();
             });
 
             $("#refresh-bot-history-btn").click(function () {
                 var botName = $(".modal-header #history-bot-name").val();
-                API_VIEW.showBotHistory(botName, true);
+                BOTS_VIEW.showBotHistory(botName, true);
             });
 
             $("#enable-bot-btn").click(function () {
                 enableDisableBot($("#timeout-bot-name").val(), "enable");
                 $("#bot-timeout-modal .close").click();
-                API_VIEW.loadBotData();
+                BOTS_VIEW.loadBotData();
             });
 
             $("#disable-bot-btn").click(function () {
                 enableDisableBot($("#timeout-bot-name").val(), "disable");
                 $("#bot-timeout-modal .close").click();
-                API_VIEW.loadBotData();
+                BOTS_VIEW.loadBotData();
             });
 
             $("#update-bot-interval-btn").click(function () {
@@ -267,7 +267,47 @@ var API_VIEW = function () {
                 };
                 $("#bot-timeout-modal .close").click();
                 postActionWithDataUpdating("/api/bot/enable", obj, false);
-                API_VIEW.loadBotData();
+                BOTS_VIEW.loadBotData();
+            });
+        }
+    };
+} ();
+
+
+var API_VIEW = function () {
+
+    return {
+        endpoints: {},
+        loadData: function () {
+            getJsonAction("/api/endpoints", function (data) {
+                API_VIEW.endpoints = data;
+                var table = $("#main-api-table");
+                table.empty();
+                var template = $("#api-template");
+                for (var key in data) {
+                    let obj = data[key];
+                    var newTemplate = template.clone()
+                        .appendTo(table)
+                        .removeClass("hidden")
+                        .show();
+                    newTemplate.find("[did='id']").
+                        attr("href", '/api/public/'+obj.path+'/index').html(obj.id);
+                    newTemplate.find("[did='path']").
+                        attr("href", '/api/public/'+obj.path).html(obj.path);
+                    var cacheSize = 0;
+                    var cacheItems = 0;
+                    for(var co in obj.cacheObjects) {
+                        cacheSize += obj.cacheObjects[co].size;
+                        cacheItems ++;
+                    }
+                    newTemplate.find("[did='cache']").html(
+                        cacheItems + " items (" + (cacheSize / 1024).toFixed(1) + " KB)" );
+                }
+            });
+        },
+        onReady: function () {
+            $("#refresh-api-table-btn").click(function () {
+                API_VIEW.loadData();
             });
         }
     };
