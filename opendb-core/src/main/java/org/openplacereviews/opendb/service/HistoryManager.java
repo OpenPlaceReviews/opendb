@@ -28,14 +28,14 @@ import static org.openplacereviews.opendb.service.DBSchemaManager.*;
 @Service
 public class HistoryManager {
 
-	protected static final String ASC_SORT = "ASC";
-	protected static final String DESC_SORT = "DESC";
+	public static final String ASC_SORT = "ASC";
+	public static final String DESC_SORT = "DESC";
 
-	protected static final String HISTORY_BY_USER = "user";
-	protected static final String HISTORY_BY_OBJECT = "object";
-	protected static final String HISTORY_BY_TYPE = "type";
-	protected static final String HISTORY_ALL = "all";
-	protected static final String HISTORY_BY_OPERATION_HASH = "operation";
+	public static final String HISTORY_BY_USER = "user";
+	public static final String HISTORY_BY_OBJECT = "object";
+	public static final String HISTORY_BY_TYPE = "type";
+	public static final String HISTORY_ALL = "all";
+	public static final String HISTORY_BY_OPERATION_HASH = "operation";
 
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(OpObject.DATE_FORMAT);
 
