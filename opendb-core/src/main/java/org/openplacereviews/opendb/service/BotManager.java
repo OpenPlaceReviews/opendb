@@ -7,18 +7,21 @@ import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
+import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
 import org.openplacereviews.opendb.service.bots.UpdateIndexesBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import javax.annotation.PostConstruct;
 
 @Service
 public class BotManager {
@@ -43,6 +46,13 @@ public class BotManager {
 	@PostConstruct
 	public void initSystemBots() {
 		regSystemBot(new UpdateIndexesBot("update-indexes"));
+		regSystemBotWithSettingsInterval(new PublicDataUpdateBot("update-api-cache"));
+	}
+
+	private void regSystemBotWithSettingsInterval(IOpenDBBot<?> bt) {
+		regSystemBot(bt);
+		initBotPreference(bt.getId());
+		enableBot(bt.getId(), settings.OPENDB_BOTS_MIN_INTERVAL.value);
 	}
 
 	public void regSystemBot(IOpenDBBot<?> bt) {

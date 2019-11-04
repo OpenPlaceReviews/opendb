@@ -1,9 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
@@ -16,12 +12,16 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.core.io.AbstractResource;
 import org.springframework.stereotype.Service;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Service
 public class PublicDataManager {
 	
 	public static final String ENDPOINT_PATH = "path";
 	public static final String CACHE_TIME_SEC = "cache_time_sec";
 	public static final int DEFAULT_CACHE_TIME_SECONDS = 3600;
+	public static final int MAX_INACTIVE_CACHE_TIME_SECONDS = 86400;
 	public static final String ENDPOINT_PROVIDER = "provider";
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
@@ -131,10 +131,32 @@ public class PublicDataManager {
 		public String getPath() {
 			return path;
 		}
-		
+
+		@SuppressWarnings("unchecked")
+		public Set<Object> getCacheKeys() {
+			long now = getNow();
+			List<Object> keysForRemoving = new ArrayList<>();
+			for (Object key : cacheObjects.keySet()) {
+				CacheHolder<T> cacheHolder = cacheObjects.get(key);
+				if (now - cacheHolder.accessTime > MAX_INACTIVE_CACHE_TIME_SECONDS) {
+					keysForRemoving.add(key);
+				} else {
+					cacheHolder.value = provider.getContent((P) key);
+				}
+			}
+			for (Object key : keysForRemoving) {
+				cacheObjects.remove(key);
+			}
+			return cacheObjects.keySet();
+		}
+
+		private long getNow() {
+			return System.currentTimeMillis() / 1000L;
+		}
+
 		public AbstractResource getContent(Map<String, String[]> params) {
 			Metric m = reqMetric.start();
-			long now = (System.currentTimeMillis() / 1000l);
+			long now = getNow();
 			try {
 				P p = provider.formatParams(params);
 				CacheHolder<T> ch = null;
