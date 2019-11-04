@@ -288,7 +288,7 @@ public class HistoryManager {
 	}
 
 	@SuppressWarnings("unchecked")
-	protected OpObject generateReverseEditObject(OpObject originObject, Map<String, Object> changes) {
+	public OpObject generateReverseEditObject(OpObject originObject, Map<String, Object> changes) {
 		Map<String, Object> changeEdit = (Map<String, Object>) changes.get(OpObject.F_CHANGE);
 		Map<String, Object> currentEdit = (Map<String, Object>) changes.get(OpObject.F_CURRENT);
 
