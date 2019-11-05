@@ -24,9 +24,6 @@ public class PublicDataManager {
 	public static final String ENDPOINT_PROVIDER = "provider";
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
-	// TODO refresh endpoints on setting change
-	// TODO optimistic lock in multithread to evaluate cache value
-	
 	@Autowired
 	private SettingsManager settingsManager;
 	
