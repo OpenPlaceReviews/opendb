@@ -1,20 +1,21 @@
 package org.openplacereviews.opendb.service.bots;
 
-import java.util.List;
-
 import org.openplacereviews.opendb.service.GenericMultiThreadBot;
 import org.openplacereviews.opendb.service.PublicDataManager;
 import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 
+import java.util.List;
+
 
 public class PublicDataUpdateBot<P, V> extends GenericMultiThreadBot<PublicDataUpdateBot<P, V>> {
 
+	public static final String PUBLIC_DATA_BOT_NAME_PREFIX = "update-api-cache-";
 	private int totalCnt = 1;
 	private int progress = 0;
 	private PublicAPIEndpoint<P, V> apiEndpoint;
 
 	public PublicDataUpdateBot(PublicDataManager.PublicAPIEndpoint<P, V> apiEndpoint) {
-		super("update-api-cache-" + apiEndpoint.getId());
+		super(PUBLIC_DATA_BOT_NAME_PREFIX + apiEndpoint.getId());
 		this.apiEndpoint = apiEndpoint;
 	}
 

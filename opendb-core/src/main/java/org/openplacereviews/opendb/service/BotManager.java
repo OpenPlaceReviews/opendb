@@ -26,6 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.openplacereviews.opendb.service.SettingsManager.*;
+import static org.openplacereviews.opendb.service.bots.PublicDataUpdateBot.PUBLIC_DATA_BOT_NAME_PREFIX;
 
 @Service
 public class BotManager {
@@ -88,6 +89,7 @@ public class BotManager {
 		Collection<PublicAPIEndpoint<?, ?>> endpoints = publicDataManager.getEndpoints().values();
 		for(PublicAPIEndpoint<?, ?> papi : endpoints) {
 			PublicDataUpdateBot<?, ?> bt = new PublicDataUpdateBot<>(papi);
+			beanFactory.autowireBean(bt);
 			if(!nbots.containsKey(bt.getId())) {
 				nbots.put(bt.getId(), bt);
 			}
@@ -137,7 +139,7 @@ public class BotManager {
 		futures.add(service.submit(botObj));
 		return true;
 	}
-	
+
 	public boolean stopBot(String botId) {
 		IOpenDBBot<?>  botObj = getBots().get(botId);
 		if (botObj == null) {
@@ -148,9 +150,11 @@ public class BotManager {
 	
 	
 	public MapStringObjectPreference getBotConfiguration(String botId) {
-		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(botId));
-		if (p == null) {
-			p = settings.getPreferenceByKey(OPENDB_ENDPOINTS_CONFIG.getId(botId));
+		CommonPreference<Map<String, Object>> p;
+		if (botId.startsWith(PUBLIC_DATA_BOT_NAME_PREFIX)) {
+			p = settings.getPreferenceByKey(OPENDB_ENDPOINTS_CONFIG.getId(botId.substring(PUBLIC_DATA_BOT_NAME_PREFIX.length())));
+		} else {
+			p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(botId));
 		}
 		return (MapStringObjectPreference) p;
 	}
