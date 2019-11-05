@@ -21,7 +21,6 @@ public class PublicDataManager {
 	public static final String ENDPOINT_PATH = "path";
 	public static final String CACHE_TIME_SEC = "cache_time_sec";
 	public static final int DEFAULT_CACHE_TIME_SECONDS = 3600;
-	public static final int MAX_INACTIVE_CACHE_TIME_SECONDS = 86400;
 	public static final String ENDPOINT_PROVIDER = "provider";
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
@@ -95,11 +94,11 @@ public class PublicDataManager {
 		return endpoints;
 	}
 	
-	protected static class CacheHolder<T> {
-		long evalTime;
-		long accessTime;
-		long access;
-		long size;
+	public static class CacheHolder<T> {
+		public long evalTime;
+		public long accessTime;
+		public long access;
+		public long size;
 		transient T value;
 	}
 	
@@ -127,27 +126,25 @@ public class PublicDataManager {
 			pageMetric = PerformanceMetrics.i().getMetric("public.page", path);
 		}
 		
-		
 		public String getPath() {
 			return path;
 		}
 
-		@SuppressWarnings("unchecked")
 		public Set<Object> getCacheKeys() {
-			long now = getNow();
-			List<Object> keysForRemoving = new ArrayList<>();
-			for (Object key : cacheObjects.keySet()) {
-				CacheHolder<T> cacheHolder = cacheObjects.get(key);
-				if (now - cacheHolder.accessTime > MAX_INACTIVE_CACHE_TIME_SECONDS) {
-					keysForRemoving.add(key);
-				} else {
-					cacheHolder.value = provider.getContent((P) key);
-				}
-			}
-			for (Object key : keysForRemoving) {
-				cacheObjects.remove(key);
-			}
 			return cacheObjects.keySet();
+		}
+
+		public CacheHolder<T> getCacheHolder(Object key) {
+			return cacheObjects.get(key);
+		}
+
+		public void removeCacheHolder(Object key) {
+			cacheObjects.remove(key);
+		}
+
+		public void updateCacheHolder(Object key) {
+			CacheHolder cacheHolder = cacheObjects.get(key);
+			cacheHolder.value = provider.getContent((P) key);
 		}
 
 		private long getNow() {

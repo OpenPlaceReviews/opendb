@@ -23,6 +23,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.openplacereviews.opendb.service.SettingsManager.*;
+
 @Service
 public class BotManager {
 
@@ -39,25 +41,22 @@ public class BotManager {
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
 	private Map<String, IOpenDBBot<?>> systemBots = new TreeMap<String, IOpenDBBot<?>>();
+	private Map<String, IOpenDBBot<?>> publicBots = new TreeMap<String, IOpenDBBot<?>>();
 	private List<Future<?>> futures = new ArrayList<>();
 	private ExecutorService service = Executors.newFixedThreadPool(5);
 	
 
 	@PostConstruct
 	public void initSystemBots() {
-		regSystemBot(new UpdateIndexesBot("update-indexes"));
-		regSystemBotWithSettingsInterval(new PublicDataUpdateBot("update-api-cache"));
+		regSystemBot(new UpdateIndexesBot("update-indexes"), systemBots);
+		regSystemBot(new PublicDataUpdateBot("geo"), publicBots);
+		regSystemBot(new PublicDataUpdateBot("geoall"), publicBots);
+		regSystemBot(new PublicDataUpdateBot("history"), publicBots);
 	}
 
-	private void regSystemBotWithSettingsInterval(IOpenDBBot<?> bt) {
-		regSystemBot(bt);
-		initBotPreference(bt.getId());
-		enableBot(bt.getId(), settings.OPENDB_BOTS_MIN_INTERVAL.value);
-	}
-
-	public void regSystemBot(IOpenDBBot<?> bt) {
+	public void regSystemBot(IOpenDBBot<?> bt, Map<String, IOpenDBBot<?>> bots) {
 		beanFactory.autowireBean(bt);
-		systemBots.put(bt.getId(), bt);
+		bots.put(bt.getId(), bt);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -80,6 +79,10 @@ public class BotManager {
 		nbots.putAll(this.systemBots);
 		for(String id : nbots.keySet()) {
 			initBotPreference(id);
+		}
+		nbots.putAll(this.publicBots);
+		for(String id : publicBots.keySet()) {
+			initPublicBotPreference(id);
 		}
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
@@ -104,16 +107,27 @@ public class BotManager {
 	}
 
 	private CommonPreference<Map<String, Object>> initBotPreference(String id) {
-		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
+		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(OPENDB_BOTS_CONFIG.getId(id));
 		if(p == null) {
 			TreeMap<String, Object> mp = new TreeMap<>();
 			mp.put(SettingsManager.BOT_ID, id);
-			mp.put(SettingsManager.BOT_ENABLED, false);
+			mp.put(BOT_ENABLED, false);
 			p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
 		}
 		return p;
 	}
 
+	private CommonPreference<Map<String, Object>> initPublicBotPreference(String id) {
+		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(OPENDB_ENDPOINTS_CONFIG.getId(id));
+		generateDefaultPublicBotValues(p);
+		return p;
+	}
+
+	private void generateDefaultPublicBotValues(CommonPreference<Map<String, Object>> p) {
+		p.get().computeIfAbsent(BOT_INTERVAL_SECONDS, k -> settings.OPENDB_BOTS_MIN_INTERVAL.value);
+		p.get().putIfAbsent(BOT_INACTIVE_CACHE_SECONDS, 86400);
+		p.get().putIfAbsent(BOT_ENABLED, true);
+	}
 
 
 	public boolean startBot(String botId) {
@@ -138,6 +152,9 @@ public class BotManager {
 	
 	public MapStringObjectPreference getBotConfiguration(String botId) {
 		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(botId));
+		if (p == null) {
+			p = settings.getPreferenceByKey(OPENDB_ENDPOINTS_CONFIG.getId(botId));
+		}
 		return (MapStringObjectPreference) p;
 	}
 	
@@ -147,8 +164,8 @@ public class BotManager {
 		if (p == null) {
 			return false;
 		}
-		p.setValue(SettingsManager.BOT_INTERVAL_SECONDS, intervalSeconds, false)
-		 .setValue(SettingsManager.BOT_ENABLED, true, true);
+		p.setValue(BOT_INTERVAL_SECONDS, intervalSeconds, false)
+		 .setValue(BOT_ENABLED, true, true);
 		return true;
 	}
 	
@@ -157,7 +174,7 @@ public class BotManager {
 		if (p == null) {
 			return false;
 		}
-		p.setValue(SettingsManager.BOT_ENABLED, false, true);
+		p.setValue(BOT_ENABLED, false, true);
 		return true;
 	}
 
@@ -167,9 +184,9 @@ public class BotManager {
 		long now = System.currentTimeMillis() / 1000;
 		for(String bid : bs.keySet()) {
 			MapStringObjectPreference p = getBotConfiguration(bid);
-			if(p.getBoolean(SettingsManager.BOT_ENABLED, false)) {
+			if(p.getBoolean(BOT_ENABLED, false)) {
 				long lastRun = p.getLong(SettingsManager.BOT_LAST_RUN, 0);
-				long l = p.getLong(SettingsManager.BOT_INTERVAL_SECONDS, 0);
+				long l = p.getLong(BOT_INTERVAL_SECONDS, 0);
 				if(now - lastRun > l) {
 					startBot(bid);
 				}
