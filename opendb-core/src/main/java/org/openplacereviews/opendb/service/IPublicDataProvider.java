@@ -3,6 +3,7 @@ package org.openplacereviews.opendb.service;
 import java.util.List;
 import java.util.Map;
 
+import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 import org.springframework.core.io.AbstractResource;
 
 /**
@@ -12,7 +13,7 @@ import org.springframework.core.io.AbstractResource;
  */
 public interface IPublicDataProvider<Params, Value> {
 
-	List<Params> getKeysToCache();
+	List<Params> getKeysToCache(PublicAPIEndpoint<Params, Value> api);
 
 	Params formatParams(Map<String, String[]> params);
 	
@@ -30,6 +31,6 @@ public interface IPublicDataProvider<Params, Value> {
 	default Value deserializeValue(String key) {
 		// not serializable
 		return null;
-	};
+	}
 
 }

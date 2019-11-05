@@ -26,7 +26,6 @@ public class SettingsManager {
 	
 	public static final String BOT_ID = "bot_id";
 	public static final String BOT_INTERVAL_SECONDS = "interval_sec";
-	public static final String BOT_INACTIVE_CACHE_SECONDS = "cache_sec";
 	public static final String BOT_ENABLED = "enabled";
 	public static final String BOT_LAST_RUN = "last_run";
 

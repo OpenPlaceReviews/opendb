@@ -1,78 +1,52 @@
 package org.openplacereviews.opendb.service.bots;
 
+import java.util.List;
+
 import org.openplacereviews.opendb.service.GenericMultiThreadBot;
 import org.openplacereviews.opendb.service.PublicDataManager;
-import org.openplacereviews.opendb.service.SettingsManager;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import static org.openplacereviews.opendb.service.SettingsManager.BOT_INACTIVE_CACHE_SECONDS;
+public class PublicDataUpdateBot<P, V> extends GenericMultiThreadBot<PublicDataUpdateBot<P, V>> {
 
-public class PublicDataUpdateBot extends GenericMultiThreadBot<PublicDataUpdateBot> {
-
-	@Autowired
-	private PublicDataManager publicDataManager;
-
-	@Autowired
-	private SettingsManager settingsManager;
-
-	private SettingsManager.CommonPreference p;
 	private int totalCnt = 1;
 	private int progress = 0;
+	private PublicAPIEndpoint<P, V> apiEndpoint;
 
-	public PublicDataUpdateBot(String id) {
-		super(id);
+	public PublicDataUpdateBot(PublicDataManager.PublicAPIEndpoint<P, V> apiEndpoint) {
+		super("update-api-cache-" + apiEndpoint.getId());
+		this.apiEndpoint = apiEndpoint;
 	}
 
 	@Override
 	public String getTaskDescription() {
-		return "Updating " + id + "-api cache";
+		return "Updating cache for API " + apiEndpoint.getId();
 	}
 
 	@Override
 	public String getTaskName() {
-		return "update-" + id + "-api-cache";
+		return id;
 	}
 
 	@Override
-	public PublicDataUpdateBot call() throws Exception {
-		SettingsManager.CommonPreference<Map<String, Object>> botPreference = settingsManager.getPreferenceByKey(SettingsManager.OPENDB_ENDPOINTS_CONFIG.getId(id));
-		long storeInactiveCacheSeconds = (long) botPreference.get().get(BOT_INACTIVE_CACHE_SECONDS);
+	public PublicDataUpdateBot<P, V> call() throws Exception {
+		totalCnt = 1;
+		progress = 0;
 		addNewBotStat();
 		info("Task 'Updating API cache' is started");
 		try {
-			PublicDataManager.PublicAPIEndpoint<?, ?> apiEndpoint = publicDataManager.getEndpoints().get(id);
-			info("Start calculating keys for updating");
-			Set<Object> cacheKeys = apiEndpoint.getCacheKeys();
-			List<Object> keysForRemoving = new ArrayList<>();
-			if (cacheKeys.size() > 0) {
-				for (Object key : cacheKeys) {
-					PublicDataManager.CacheHolder cacheHolder = apiEndpoint.getCacheHolder(key);
-					if (cacheHolder.accessTime - System.currentTimeMillis() / 1000L > storeInactiveCacheSeconds) {
-						keysForRemoving.add(key);
-					}
-				}
+			List<P> cacheKeys = apiEndpoint.retrieveKeysToReevaluate();
+			if (cacheKeys != null) {
 				totalCnt = cacheKeys.size();
-			}
-			info(String.format("%s keys to upgrade, %s of them to be deleted", totalCnt, keysForRemoving.size()));
+				info(String.format("%s keys to update", totalCnt));
 
-			info(String.format("Start updating cache for '%s' endpoint...", id));
-			for (Object key : cacheKeys) {
-				if (keysForRemoving.contains(key)) {
-					apiEndpoint.removeCacheHolder(key);
-					info("Cache key: " + key + " was removed");
-				} else {
+				info(String.format("Start updating cache for '%s' endpoint...", id));
+				for (P key : cacheKeys) {
 					apiEndpoint.updateCacheHolder(key);
-					info("Cache key: " + key + " was updated");
+					progress++;
 				}
-				progress++;
+				info(String.format("Finish updating cache for '%s' endpoint!", id));
 			}
-			info(String.format("Finish updating cache for '%s' endpoint!", id));
-
 			setSuccessState();
 			info("'Updating API cache' is finished");
 		} catch (Exception e) {

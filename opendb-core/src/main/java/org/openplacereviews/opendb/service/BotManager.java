@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
 import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -38,10 +40,12 @@ public class BotManager {
 	
 	@Autowired 
 	private SettingsManager settings;
+	
+	@Autowired
+	private PublicDataManager publicDataManager;
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
 	private Map<String, IOpenDBBot<?>> systemBots = new TreeMap<String, IOpenDBBot<?>>();
-	private Map<String, IOpenDBBot<?>> publicBots = new TreeMap<String, IOpenDBBot<?>>();
 	private List<Future<?>> futures = new ArrayList<>();
 	private ExecutorService service = Executors.newFixedThreadPool(5);
 	
@@ -49,9 +53,6 @@ public class BotManager {
 	@PostConstruct
 	public void initSystemBots() {
 		regSystemBot(new UpdateIndexesBot("update-indexes"), systemBots);
-		regSystemBot(new PublicDataUpdateBot("geo"), publicBots);
-		regSystemBot(new PublicDataUpdateBot("geoall"), publicBots);
-		regSystemBot(new PublicDataUpdateBot("history"), publicBots);
 	}
 
 	public void regSystemBot(IOpenDBBot<?> bt, Map<String, IOpenDBBot<?>> bots) {
@@ -80,9 +81,12 @@ public class BotManager {
 		for(String id : nbots.keySet()) {
 			initBotPreference(id);
 		}
-		nbots.putAll(this.publicBots);
-		for(String id : publicBots.keySet()) {
-			initPublicBotPreference(id);
+		Collection<PublicAPIEndpoint<?, ?>> endpoints = publicDataManager.getEndpoints().values();
+		for(PublicAPIEndpoint<?, ?> papi : endpoints) {
+			PublicDataUpdateBot<?, ?> bt = new PublicDataUpdateBot<>(papi);
+			if(!nbots.containsKey(bt.getId())) {
+				nbots.put(bt.getId(), bt);
+			}
 		}
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
@@ -117,17 +121,6 @@ public class BotManager {
 		return p;
 	}
 
-	private CommonPreference<Map<String, Object>> initPublicBotPreference(String id) {
-		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(OPENDB_ENDPOINTS_CONFIG.getId(id));
-		generateDefaultPublicBotValues(p);
-		return p;
-	}
-
-	private void generateDefaultPublicBotValues(CommonPreference<Map<String, Object>> p) {
-		p.get().computeIfAbsent(BOT_INTERVAL_SECONDS, k -> settings.OPENDB_BOTS_MIN_INTERVAL.value);
-		p.get().putIfAbsent(BOT_INACTIVE_CACHE_SECONDS, 86400);
-		p.get().putIfAbsent(BOT_ENABLED, true);
-	}
 
 
 	public boolean startBot(String botId) {

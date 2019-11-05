@@ -25,12 +25,7 @@ public class PublicDataManager {
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
 	// TODO refresh endpoints on setting change
-	// TODO reevaulate cache with bot each (automatically register bot)
 	// TODO optimistic lock in multithread to evaluate cache value
-	// TODO evaluate cache by specific keys
-	// TODO clean up not accessing data for long time
-	// TODO public api to check changes on blockchain and display on map
-	// TODO UI display (public end point list, cache size, requests count)
 	
 	@Autowired
 	private SettingsManager settingsManager;
@@ -104,12 +99,12 @@ public class PublicDataManager {
 	
 	public static class PublicAPIEndpoint<P, T> {
 
-		private transient IPublicDataProvider<P, T> provider;
-		private transient MapStringObjectPreference map;
+		protected transient IPublicDataProvider<P, T> provider;
+		protected transient MapStringObjectPreference map;
 		
 		protected final String path;
 		protected final String id;
-		protected Map<Object, CacheHolder<T>> cacheObjects = new ConcurrentHashMap<Object, CacheHolder<T>>();
+		protected Map<P, CacheHolder<T>> cacheObjects = new ConcurrentHashMap<P, CacheHolder<T>>();
 		protected boolean cacheDisabled;
 		private PerformanceMetric dataMetric;
 		private PerformanceMetric pageMetric;
@@ -129,25 +124,32 @@ public class PublicDataManager {
 		public String getPath() {
 			return path;
 		}
+		
+		public String getId() {
+			return id;
+		}
+		
+		public List<P> retrieveKeysToReevaluate() {
+			return provider.getKeysToCache(this);
+		}
 
-		public Set<Object> getCacheKeys() {
+		public Set<P> getCacheKeys() {
 			return cacheObjects.keySet();
 		}
 
-		public CacheHolder<T> getCacheHolder(Object key) {
+		public CacheHolder<T> getCacheHolder(P key) {
 			return cacheObjects.get(key);
 		}
 
-		public void removeCacheHolder(Object key) {
+		public void removeCacheHolder(P key) {
 			cacheObjects.remove(key);
 		}
 
-		public void updateCacheHolder(Object key) {
-			CacheHolder cacheHolder = cacheObjects.get(key);
-			cacheHolder.value = provider.getContent((P) key);
+		public void updateCacheHolder(P key) {
+			evalCacheValue(getNow(), key);
 		}
 
-		private long getNow() {
+		public long getNow() {
 			return System.currentTimeMillis() / 1000L;
 		}
 
@@ -170,24 +172,30 @@ public class PublicDataManager {
 					}
 				}
 				if (ch == null) {
-					Metric mt = dataMetric.start();
-					ch = new CacheHolder<>();
-					ch.value = provider.getContent(p);
-					if(!cacheDisabled) {
-						ch.accessTime = now;
-						ch.evalTime = now;
-						String serializeValue = provider.serializeValue(ch.value);
-						if(serializeValue != null) {
-							ch.size = serializeValue.length();
-						}
-						cacheObjects.put(p, ch);
-					}
-					mt.capture();
+					ch = evalCacheValue(now, p);
 				}
 				return provider.formatContent(ch.value);
 			} finally {
 				m.capture();
 			}
+		}
+
+		private CacheHolder<T> evalCacheValue(long now, P p) {
+			CacheHolder<T> ch;
+			Metric mt = dataMetric.start();
+			ch = new CacheHolder<>();
+			ch.value = provider.getContent(p);
+			if(!cacheDisabled) {
+				ch.accessTime = now;
+				ch.evalTime = now;
+				String serializeValue = provider.serializeValue(ch.value);
+				if(serializeValue != null) {
+					ch.size = serializeValue.length();
+				}
+				cacheObjects.put(p, ch);
+			}
+			mt.capture();
+			return ch;
 		}
 		
 		public AbstractResource getPage(Map<String, String[]> params) {
@@ -198,6 +206,8 @@ public class PublicDataManager {
 				m.capture();
 			}
 		}
+
+		
 		
 	}
 	
