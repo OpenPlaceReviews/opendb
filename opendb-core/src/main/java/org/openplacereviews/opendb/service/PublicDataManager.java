@@ -36,6 +36,8 @@ public class PublicDataManager {
 	private Map<String, PublicAPIEndpoint<?, ?>> endpoints = new ConcurrentHashMap<>(); 
 	
 	private Map<String, Class<? extends IPublicDataProvider<?, ?>>> dataProviders = new ConcurrentHashMap<>();
+	
+	private int localVersion = 0;
 
 	public void updateEndpoints() {
 		updateEndpoints(null);
@@ -43,7 +45,7 @@ public class PublicDataManager {
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void updateEndpoints(String endpointFilter) {
-
+		int v = SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get();
    		List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.OPENDB_ENDPOINTS_CONFIG);
 		for(CommonPreference<Map<String, Object>> cpref : prefs) {
 			MapStringObjectPreference pref = (MapStringObjectPreference) cpref;
@@ -74,18 +76,26 @@ public class PublicDataManager {
 			PublicAPIEndpoint<?, ?> endpoint = new PublicAPIEndpoint(provider, pref);
 			endpoints.put(id, endpoint);
 		}
+		localVersion = v;
 	}
 
 	public void registerDataProvider(Class<? extends IPublicDataProvider<?, ?>> provider) {
 		dataProviders.put(provider.getName(), provider);
 	}
 	
-	
 	public PublicAPIEndpoint<?, ?> getEndpoint(String path) {
+		checkIfApiUpdateNeeded();
 		return endpoints.get(path);
 	}
 	
+	private void checkIfApiUpdateNeeded() {
+		if(localVersion == SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get()) {
+			updateEndpoints();
+		}
+	}
+
 	public Map<String, PublicAPIEndpoint<?, ?>> getEndpoints() {
+		checkIfApiUpdateNeeded();
 		return endpoints;
 	}
 	
@@ -206,9 +216,10 @@ public class PublicDataManager {
 				m.capture();
 			}
 		}
+	}
 
-		
-		
+	public int getVersion() {
+		return localVersion;
 	}
 	
 

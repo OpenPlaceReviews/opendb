@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Service
@@ -139,6 +140,7 @@ public class SettingsManager {
 
 	public <T> boolean removePreferenceInternal(CommonPreference<T> preference) {
 		if (dbSchemaManager.removeSetting(jdbcTemplate, preference.getId()) > 0) {
+			preference.family.version.incrementAndGet();
 			Map<String, CommonPreference<?>> nprefs = new TreeMap<>(preferences);
 			nprefs.remove(preference.getId());
 			preferences = nprefs;
@@ -159,6 +161,7 @@ public class SettingsManager {
 	public boolean addNewPreference(String family, String value) {
 		PreferenceFamily preferenceFamily = getPreferenceFamily(family);
 		if (preferenceFamily != null && preferenceFamily.canAdd) {
+			preferenceFamily.version.incrementAndGet();
 			CommonPreference<Map<String, Object>> commonPreference = registerMapPreferenceForFamily(preferenceFamily,
 					jsonFormatter.fromJsonToTreeMap(value));
 			dbSchemaManager.setSetting(jdbcTemplate, commonPreference.getId(),
@@ -187,6 +190,7 @@ public class SettingsManager {
 		public boolean canEdit;
 		public boolean canDelete;
 		public boolean canAdd;
+		public AtomicInteger version = new AtomicInteger(); 
 		
 		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
@@ -377,6 +381,7 @@ public class SettingsManager {
 		
 		public MapStringObjectPreference setValue(String key, Object value, boolean save) {
 			this.value.put(key, value);
+			family.version.getAndIncrement();
 			if(save) {
 				set(this.value, true);
 			}

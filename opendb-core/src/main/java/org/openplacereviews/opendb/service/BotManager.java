@@ -43,11 +43,13 @@ public class BotManager {
 	
 	@Autowired
 	private PublicDataManager publicDataManager;
+	private int publicDataManagerVersion;
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
 	private Map<String, IOpenDBBot<?>> systemBots = new TreeMap<String, IOpenDBBot<?>>();
 	private List<Future<?>> futures = new ArrayList<>();
 	private ExecutorService service = Executors.newFixedThreadPool(5);
+
 	
 
 	@PostConstruct
@@ -66,9 +68,11 @@ public class BotManager {
 		req.requestCache = true;
 		OpBlockChain blc = blocksManager.getBlockchain();
 		blc.fetchAllObjects(OpBlockchainRules.OP_BOT, req);
-		if (req.cacheObject != null) {
+		int publicDataManagerVersion = publicDataManager.getVersion();
+		if (req.cacheObject != null && publicDataManagerVersion == this.publicDataManagerVersion) {
 			return (Map<String, IOpenDBBot<?>>) req.cacheObject;
 		}
+		this.publicDataManagerVersion = publicDataManagerVersion;
 		return recreateBots(req, blc);
 	}
 
