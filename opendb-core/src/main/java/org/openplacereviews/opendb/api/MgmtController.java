@@ -263,14 +263,9 @@ public class MgmtController {
 
 	@PostMapping(path = "/config/new", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public ResponseEntity<String> addNewPreference(HttpSession session, @RequestParam String family,
-			@RequestParam String key, @RequestParam String value) {
+	public ResponseEntity<String> addNewPreference(HttpSession session, @RequestParam String family, @RequestParam String value) {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
-		}
-		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
-		if (pref != null) {
-			return response.badRequest("Key is already defined");
 		}
 		if (settingsManager.addNewPreference(family, value)) {
 			return response.ok("New preference was added");

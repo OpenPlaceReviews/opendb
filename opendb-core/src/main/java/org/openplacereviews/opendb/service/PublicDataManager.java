@@ -54,24 +54,27 @@ public class PublicDataManager {
 			if(endpointFilter != null && !endpointFilter.equals(id)) {
 				continue;
 			}
+			PublicAPIEndpoint<?, ?> existingEndpoint = endpoints.get(id);
 			String providerDef = pref.getStringValue(ENDPOINT_PROVIDER, null);
-			Class<? extends IPublicDataProvider<?, ?>> providerClass = dataProviders.get(providerDef);
-			IPublicDataProvider<?, ?> provider = null;
-			if(providerClass != null) {
-				try {
-					provider = providerClass.newInstance();
-					beanFactory.autowireBean(provider);
-				} catch (Exception e) {
-					LOGGER.error(e.getMessage(), e);
+			if (existingEndpoint == null || !existingEndpoint.provider.getClass().getName().equals(providerDef)) {
+				Class<? extends IPublicDataProvider<?, ?>> providerClass = dataProviders.get(providerDef);
+				IPublicDataProvider<?, ?> provider = null;
+				if (providerClass != null) {
+					try {
+						provider = providerClass.newInstance();
+						beanFactory.autowireBean(provider);
+					} catch (Exception e) {
+						LOGGER.error(e.getMessage(), e);
+					}
 				}
+				if (provider == null) {
+					LOGGER.error(String.format("Endpoint '%s' has invalid data provider '%s'", id, providerDef));
+					continue;
+				}
+
+				PublicAPIEndpoint<?, ?> endpoint = new PublicAPIEndpoint(provider, pref);
+				endpoints.put(id, endpoint);
 			}
-			if(provider == null) {
-				LOGGER.error(String.format("Endpoint '%s' has invalid data provider '%s'", id, providerDef));
-				continue;
-			}
-			
-			PublicAPIEndpoint<?, ?> endpoint = new PublicAPIEndpoint(provider, pref);
-			endpoints.put(id, endpoint);
 		}
 		localVersion = v;
 	}
@@ -85,8 +88,13 @@ public class PublicDataManager {
 		return endpoints.get(path);
 	}
 	
+	public PublicAPIEndpoint<?, ?> getEndpointById(String id) {
+		checkIfApiUpdateNeeded();
+		return endpoints.get(id);
+	}
+	
 	private void checkIfApiUpdateNeeded() {
-		if(localVersion == SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get()) {
+		if(localVersion != SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get()) {
 			updateEndpoints();
 		}
 	}

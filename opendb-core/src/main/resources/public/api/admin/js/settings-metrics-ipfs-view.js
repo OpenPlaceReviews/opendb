@@ -66,15 +66,16 @@ var SETTINGS_VIEW = function () {
         for (var i = 0; i < data.length; i++) {
             let name = data[i].family.name;
             if (!(name in dt)) {
-                dt[name] = data[i].family.prefix;
+                dt[name] = data[i].family.id;
             }
         }
-        dt["All"] = null;
+        dt["All"] = "all";
         let pills = $("#settings-pills");
         pills.empty();
         var active = true;
         for (var nm in dt) {
-            let link = $("<li id='settings_" + nm.replace(/\s/g, '') +"'>");
+            //   + nm.replace(/\s/g, ''
+            let link = $("<li did='"+dt[nm]+"'>");
             if(active) {
                 link.addClass("active");
                 active = false;
@@ -93,12 +94,12 @@ var SETTINGS_VIEW = function () {
     function displaySettings() {
         var data = SETTINGS_VIEW.settingsData;
         var items = $("#settings-result-list");
-        let familyName = $("#settings-pills").children(".active").first().text();
+        let familyId = $("#settings-pills").children(".active").first().attr('did');
         items.empty();
         var templateItem = $("#settings-list-item");
         for (var i = 0; i < data.length; i++) {
             var obj = data[i];
-            if(familyName === "All" || obj.family.name === familyName) {
+            if(familyId === "all" || obj.family.id === familyId) {
                 items.append(renderSettingItem(obj, templateItem));
             }
         }
@@ -106,30 +107,29 @@ var SETTINGS_VIEW = function () {
     
     function addNewPreference() {
         var obj = {
-            family: $("#family-name").html(),
-            key:$("#add-preference-key").val(),
-            value:$("#add-preference-value").val()
+            family: $("#family-id").html(),
+            value: $("#add-preference-value").val()
         };
 
         postActionWithoutFailParam('/api/mgmt/config/new', obj, function (data) {
                 done(data, true);
                 loadAddPossibilityForTab();
-                let familyName = $("#settings-pills").children(".active").first().text();
-                if (familyName === "DB Indexes") {
+                let familyId = $("#settings-pills").children(".active").first().attr('did');
+                if (familyId === "opendb_db-schema_indexes") {
                     alert("Please run Bot: Update Indexes")
                 }
             }, false);
     }
 
     function loadAddPossibilityForTab() {
-        let familyName = $("#settings-pills").children(".active").first().text();
-        if (familyName === "All") {
+        let familyId = $("#settings-pills").children(".active").first().attr('did');
+        if (familyId === "all") {
             $("#add-settings-btn").attr('disabled', 'disabled');
         } else {
             var data = SETTINGS_VIEW.settingsData;
             for (var i = 0; i < data.length; i++) {
                 var obj = data[i];
-                if (obj.family.name === familyName) {
+                if (obj.family.id === familyId) {
                     if (obj.family.canAdd) {
                         $("#add-settings-btn").removeAttr('disabled');
                     } else {
@@ -140,7 +140,7 @@ var SETTINGS_VIEW = function () {
             }
         }
         displaySettings();
-        return familyName;
+        return familyId;
     }
 
     return {
@@ -150,7 +150,7 @@ var SETTINGS_VIEW = function () {
             if (window.location.href.toLowerCase().indexOf('api/admin?view=settings') > 1) {
                 var activeTab = url.searchParams.get('tab');
                 if (activeTab) {
-                    var test = $("#settings_" + activeTab);
+                    var test =  $("#settings-pills li[did=\"" + activeTab + '\"]');
                     let allpills = $("#settings-pills").children();
                     allpills.removeClass("active");
                     if (test) {
@@ -190,22 +190,15 @@ var SETTINGS_VIEW = function () {
             });
             
             $("#settings-pills").click(function () {
-                let familyName = loadAddPossibilityForTab();
-                var url = '/api/admin?view=settings&tab=' + familyName.replace(/\s/g, '');
+                let familyId = loadAddPossibilityForTab();
+                var url = '/api/admin?view=settings&tab=' + familyId;
                 window.history.pushState(null, "State Settings",  url);
             });
 
             $("#add-settings-btn").click(function () {
-                let familyName = $("#settings-pills").children(".active").first().text();
-                $("#family-name").html(familyName);
-                var data = SETTINGS_VIEW.settingsData;
-                for (var i = 0; i < data.length; i++) {
-                    var obj = data[i];
-                    if (obj.family.name === familyName) {
-                        $("#add-preference-key").val(obj.family.prefix + ".");
-                        break;
-                    }
-                }
+                var active =  $("#settings-pills").children(".active").first();
+                $("#family-name").html(active.html());
+                $("#family-id").html(active.attr('did'));
             });
             
             $("#add-new-settings-btn").click(function () {
