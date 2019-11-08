@@ -111,9 +111,6 @@ public class OpApiController {
 												   @RequestParam(required = false, defaultValue = "false")
 														   boolean validate)
 			throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
 		KeyPair kp = null;
 		KeyPair altKp = null;
 		OpOperation op = formatter.parseOperation(json);
