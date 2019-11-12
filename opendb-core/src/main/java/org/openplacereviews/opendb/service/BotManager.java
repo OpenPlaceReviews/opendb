@@ -55,12 +55,12 @@ public class BotManager {
 
 	@PostConstruct
 	public void initSystemBots() {
-		regSystemBot(new UpdateIndexesBot("update-indexes"), systemBots);
+		regSystemBot(new UpdateIndexesBot("update-indexes"));
 	}
 
-	public void regSystemBot(IOpenDBBot<?> bt, Map<String, IOpenDBBot<?>> bots) {
+	public void regSystemBot(IOpenDBBot<?> bt) {
 		beanFactory.autowireBean(bt);
-		bots.put(bt.getId(), bt);
+		systemBots.put(bt.getId(), bt);
 	}
 
 	@SuppressWarnings("unchecked")
