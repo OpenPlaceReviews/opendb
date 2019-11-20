@@ -737,20 +737,26 @@ public class OpBlockChain {
 		// capture parent results
 		Map<CompoundKey, OpObject> prres = parent.fetchObjectsInternal(type, request, col, args);
 		// HERE we need to check that newer version doesn't exist in current blockchain
-		prres.putAll(res);
+		Map<CompoundKey, OpObject> newestVersion = new LinkedHashMap<>(prres);
 		if (col != null) {
 			Iterator<Entry<CompoundKey, OpObject>> it = prres.entrySet().iterator();
 			while(it.hasNext()) {
 				Entry<CompoundKey, OpObject> entry = it.next();
 				CompoundKey c = entry.getKey();
-				OpObject i = o.getByKey(c);
-				if (i != null && !res.containsKey(c)) {
-					// object was overridden
-					it.remove();
+				if(res.containsKey(c)) {
+					newestVersion.put(c, res.get(c));
+				} else {
+					OpObject i = o.getByKey(c);
+					if (i != null) {
+						// object was overridden
+						newestVersion.remove(c);
+					}
 				}
 			}
+		} else {
+			newestVersion.putAll(res);
 		}
-		res = prres;
+		res = newestVersion;
 		return res;
 	}
 
