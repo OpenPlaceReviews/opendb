@@ -744,7 +744,7 @@ public class OpBlockChain {
 				Entry<CompoundKey, OpObject> entry = it.next();
 				CompoundKey c = entry.getKey();
 				if(!res.containsKey(c)) {
-					OpObject i = o.getByKey(c);
+					OpObject i = o.getByKey(c, false);
 					if (i != null) {
 						// object was overridden
 						it.remove();

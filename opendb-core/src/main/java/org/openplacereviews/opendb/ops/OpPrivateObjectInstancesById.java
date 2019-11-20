@@ -42,7 +42,7 @@ class OpPrivateObjectInstancesById {
 	 */
 	public OpObject getObjectById(List<String> key) throws DBStaleException {
 		CompoundKey k = new CompoundKey(0, key);
-		return getByKey(k);
+		return getByKey(k, true);
 	}
 	
 
@@ -83,10 +83,10 @@ class OpPrivateObjectInstancesById {
 		return stream;
 	}
 
-	OpObject getByKey(CompoundKey k) throws DBStaleException {
+	OpObject getByKey(CompoundKey k, boolean content) throws DBStaleException {
 		OpObject obj ;
 		if (dbAccess != null) {
-			obj = dbAccess.getObjectById(type, k, true);
+			obj = dbAccess.getObjectById(type, k, content);
 		} else {
 			obj = objects.get(k);
 		}
@@ -94,7 +94,7 @@ class OpPrivateObjectInstancesById {
 	}
 
 	public OpObject getObjectById(String primaryKey, String secondaryKey) throws DBStaleException {
-		return getByKey(new CompoundKey(primaryKey, secondaryKey));
+		return getByKey(new CompoundKey(primaryKey, secondaryKey), true);
 	}
 
 	void putObjects(OpPrivateObjectInstancesById prev, boolean overwrite) {
