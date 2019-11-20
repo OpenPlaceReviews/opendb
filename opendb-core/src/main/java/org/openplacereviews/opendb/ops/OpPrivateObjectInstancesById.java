@@ -86,7 +86,7 @@ class OpPrivateObjectInstancesById {
 	OpObject getByKey(CompoundKey k) throws DBStaleException {
 		OpObject obj ;
 		if (dbAccess != null) {
-			obj = dbAccess.getObjectById(type, k);
+			obj = dbAccess.getObjectById(type, k, true);
 		} else {
 			obj = objects.get(k);
 		}

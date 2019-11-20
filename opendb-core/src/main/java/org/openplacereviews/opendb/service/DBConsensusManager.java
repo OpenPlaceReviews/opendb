@@ -367,7 +367,7 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public OpObject getObjectById(String type, CompoundKey k) throws DBStaleException {
+		public OpObject getObjectById(String type, CompoundKey k, boolean content) throws DBStaleException {
 			readLock.lock();
 			try {
 				checkNotStale();
@@ -380,7 +380,7 @@ public class DBConsensusManager {
 				if (sz > dbSchema.getKeySizeByType(type)) {
 					throw new UnsupportedOperationException();
 				}
-				String s = "select content, type, ophash from " + table +
+				String s = "select type, ophash" + (content ? ", content" : "") + " from " + table +
 						" where superblock = ? and type = ? and " +
 						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) +
 						" order by sblockid desc";
@@ -391,14 +391,19 @@ public class DBConsensusManager {
 						if (!rs.next()) {
 							return null;
 						}
-						String cnt = rs.getString(1);
 						OpObject obj;
-						if(cnt == null) {
-							obj = new OpObject(true);
+						if (!content) {
+							// this is not 100% correct
+							obj = new OpObject(false);
 						} else {
-							obj = formatter.parseObject(cnt);
+							String cnt = rs.getString(3);
+							if (cnt == null) {
+								obj = new OpObject(true);
+							} else {
+								obj = formatter.parseObject(cnt);
+							}
 						}
-						obj.setParentOp(rs.getString(2), SecUtils.hexify(rs.getBytes(3)));
+						obj.setParentOp(rs.getString(1), SecUtils.hexify(rs.getBytes(2)));
 						return obj;
 					}
 				});
@@ -435,8 +440,8 @@ public class DBConsensusManager {
 				if(onlyKeys) {
 					 cntField = "case when content is null then true else false end";
 				}
-				String sql = "select "+cntField+", type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ")
-						+ "  from " + objTable + " where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond);
+				String sql = "select " + cntField + ", type, ophash, " + dbSchema.generatePKString(objTable, "p%1$d", ", ") + "  from " + objTable
+						+ " where superblock = ? and type = ? " + (cond == null ? "" : " and " + cond);
 				// so the result can simply override and get latest version
 				sql = sql + " order by sblockid asc";
 				if (limit > 0) {

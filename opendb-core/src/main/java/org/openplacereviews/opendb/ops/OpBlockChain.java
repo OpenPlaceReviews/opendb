@@ -1080,7 +1080,7 @@ public class OpBlockChain {
 
 	public interface BlockDbAccessInterface {
 
-		OpObject getObjectById(String type, CompoundKey k) throws DBStaleException ;
+		OpObject getObjectById(String type, CompoundKey k, boolean queryContent) throws DBStaleException ;
 
 		/**
 		 * extraParamsWithCondition[0] - extra and "sql condition"
