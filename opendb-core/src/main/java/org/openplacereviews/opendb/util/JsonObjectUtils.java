@@ -103,11 +103,10 @@ public class JsonObjectUtils {
 			boolean last = i == fieldSequence.length - 1;
 			fieldName = fieldSequence[i];
 			int indOpArray = fieldName.indexOf("[");
-			// remove quoting symbol when it is double '[['
-			while (indOpArray > 0 && indOpArray < fieldName.length() - 1 && 
-					fieldName.charAt(indOpArray + 1) == '[') {
-				fieldName = fieldName.substring(0, indOpArray) + fieldName.substring(indOpArray + 1);
-				// replace '[[' with '['
+			// remove quoting symbol when it is double '\['
+			while (indOpArray > 0 && fieldName.charAt(indOpArray - 1) == '\\') {
+				// replace '\[' with '['
+				fieldName = fieldName.substring(0, indOpArray - 1) + fieldName.substring(indOpArray);
 				indOpArray = fieldName.indexOf("[", indOpArray + 1);
 			}
 			jsonListLocal = null; // reset
