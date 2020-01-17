@@ -1052,7 +1052,7 @@ public class OpBlockChain {
 						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
-					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr);
+					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
 				}
 			}
 			newObject.parentHash = u.getRawHash();
