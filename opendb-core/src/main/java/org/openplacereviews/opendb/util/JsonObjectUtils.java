@@ -103,6 +103,10 @@ public class JsonObjectUtils {
 			boolean last = i == fieldSequence.length - 1;
 			fieldName = fieldSequence[i];
 			int indOpArray = fieldName.indexOf("[");
+			// quoting symbol
+			while (indOpArray > 0 && fieldName.charAt(indOpArray - 1) == '\\') {
+				indOpArray = fieldName.indexOf("[", indOpArray + 1);
+			}
 			jsonListLocal = null; // reset
 			if(indOpArray == -1) {
 				if(!last) {
