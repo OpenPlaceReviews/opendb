@@ -71,7 +71,7 @@ public class OpBlockchainRulesTest {
 
 		blc.removeAllQueueOperations();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -82,7 +82,7 @@ public class OpBlockchainRulesTest {
 	public void testAddOperationExpectError_OpHashIsDuplicated() {
 		OpOperation opOperation = blc.getQueueOperations().getFirst();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -113,7 +113,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -141,7 +141,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -170,7 +170,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -200,7 +200,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -223,7 +223,7 @@ public class OpBlockchainRulesTest {
 	public void testValidateBlockExpectError_BlockPrevHash() throws FailedVerificationException {
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.replicateBlock(opBlock);
 	}
 
@@ -256,7 +256,7 @@ public class OpBlockchainRulesTest {
 		}
 		block.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.replicateBlock(block);
 	}
 
@@ -289,7 +289,7 @@ public class OpBlockchainRulesTest {
 		}
 		block.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.replicateBlock(block);
 
 	}
@@ -303,7 +303,7 @@ public class OpBlockchainRulesTest {
 	public void testValidateBlockExpectError_BlockEmpty() throws FailedVerificationException {
 		assertNotNull(blc.createBlock(serverName, serverKeyPair));
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.createBlock(serverName, serverKeyPair);
 	}
 
@@ -336,7 +336,7 @@ public class OpBlockchainRulesTest {
 		}
 		block.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.replicateBlock(block);
 	}
 
@@ -369,7 +369,7 @@ public class OpBlockchainRulesTest {
 		}
 		block.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.replicateBlock(block);
 	}
 
@@ -380,7 +380,7 @@ public class OpBlockchainRulesTest {
 	 */
 	@Test
 	public void testValidateBlockExpectError_BlockSignatureFailed() throws FailedVerificationException {
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.createBlock(serverName + 1, serverKeyPair);
 	}
 
@@ -408,7 +408,7 @@ public class OpBlockchainRulesTest {
 		block.putStringValue(OpBlock.F_HASH, "");
 		block.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.replicateBlock(block);
 	}
 
@@ -456,7 +456,7 @@ public class OpBlockchainRulesTest {
 		opOperation.remove(OpOperation.F_SIGNATURE);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.validateOperation(opOperation);
 	}
 
@@ -483,7 +483,7 @@ public class OpBlockchainRulesTest {
 		opOperation.remove(OpOperation.F_SIGNATURE);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.validateOperation(opOperation);
 	}
 
@@ -531,7 +531,7 @@ public class OpBlockchainRulesTest {
 
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.validateOperation(opOperation);
 
 	}
@@ -547,7 +547,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -578,7 +578,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 
 	}
@@ -604,7 +604,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -632,7 +632,7 @@ public class OpBlockchainRulesTest {
 		generateHashAndSignForOperation(opOperation, blc, true, serverKeyPair);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
