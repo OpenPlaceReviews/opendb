@@ -159,6 +159,7 @@ public class OpObject {
 		return fields.get(field);
 	}
 	
+	
 	/**
 	 * generateFieldSequence("a") - [a]
 	 * generateFieldSequence("a.b") - [a, b]

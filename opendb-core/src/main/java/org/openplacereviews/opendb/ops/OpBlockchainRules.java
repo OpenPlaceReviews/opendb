@@ -639,12 +639,26 @@ public class OpBlockchainRules {
 		}
 	}
 	
+	public static class BlockchainValidationException extends RuntimeException {
+
+		public BlockchainValidationException(String msg) {
+			super(msg);
+		}
+		
+		public BlockchainValidationException(String msg, Exception cause) {
+			super(msg, cause);
+		}
+
+		private static final long serialVersionUID = -958883716606078529L;
+		
+	}
+	
 	public boolean error(OpObject o, ErrorType e, Object... args) {
 		String eMsg = e.getErrorFormat(args);
 		if(logValidation != null) {
 			logValidation.logError(o, e, eMsg, null);
 		}
-		throw new IllegalArgumentException(e.getErrorFormat(args));
+		throw new BlockchainValidationException(e.getErrorFormat(args));
 	}
 	
 	public boolean error(OpObject o, Exception cause, ErrorType e, Object... args) {
@@ -652,7 +666,7 @@ public class OpBlockchainRules {
 		if(logValidation != null) {
 			logValidation.logError(o, e, eMsg, null);
 		}
-		throw new IllegalArgumentException(e.getErrorFormat(args), cause);
+		throw new BlockchainValidationException(e.getErrorFormat(args), cause);
 	}
 	
 	public static enum ErrorType {
