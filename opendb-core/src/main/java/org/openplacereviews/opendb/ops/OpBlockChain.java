@@ -1043,13 +1043,13 @@ public class OpBlockChain {
 							return rules.error(u, ErrorType.EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS, fieldExpr, oldObject);
 						}
 					} else {
-						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, opId);
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, opId, fieldExpr, editObject);
 					}
 					boolean currentNotSpecified = currentExpectedFields == null || 
 							!currentExpectedFields.containsKey(fieldExpr);
 					if (checkCurrentFieldSpecified && currentNotSpecified &&
 							currentObject.getFieldByExpr(fieldExpr) != null) {
-						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr, editObject);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
 					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
