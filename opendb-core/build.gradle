@@ -79,6 +79,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
     testCompile "com.github.tomakehurst:wiremock-standalone:2.18.0"
-    testCompile "ru.yandex.qatools.embed:postgresql-embedded:2.9"
+    testCompile "ru.yandex.qatools.embed:postgresql-embedded:2.10"
     
 }
