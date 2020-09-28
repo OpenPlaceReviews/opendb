@@ -18,7 +18,6 @@ import org.springframework.web.servlet.HandlerMapping;
 @RequestMapping("/api/public")
 public class PublicDataController {
 
-
 	@Autowired
 	private PublicDataManager dataManager;
 
@@ -29,20 +28,20 @@ public class PublicDataController {
 		String fpath = path.substring("/api/public/".length());
 		Map<String, String[]> params = request.getParameterMap();
 		// alternative method
-//		String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-//		AntPathMatcher apm = new AntPathMatcher();
-//		String finalPath = apm.extractPathWithinPattern(bestMatchPattern, path);
+		// String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+		// AntPathMatcher apm = new AntPathMatcher();
+		// String finalPath = apm.extractPathWithinPattern(bestMatchPattern, path);
 		int i1 = fpath.indexOf("/");
 		String id = fpath;
 		String suffix = "";
-		if(i1 != -1) {
+		if (i1 != -1) {
 			id = fpath.substring(0, i1);
 			suffix = fpath.substring(i1 + 1);
 		}
-		
+
 		PublicAPIEndpoint apiEndpoint = dataManager.getEndpoint(id);
-		if(apiEndpoint != null) {
-			if(suffix.equals("index")) {
+		if (apiEndpoint != null) {
+			if (suffix.equals("index")) {
 				return ResponseEntity.ok(apiEndpoint.getPage(params));
 			}
 			return ResponseEntity.ok(apiEndpoint.getContent(params));

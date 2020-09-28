@@ -1,4 +1,4 @@
-package org.openplacereviews.opendb.api ;
+package org.openplacereviews.opendb.api;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,171 +24,168 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-
 @Controller
 @RequestMapping("/api/mgmt")
 public class MgmtController {
 
 	protected static final Log LOGGER = LogFactory.getLog(MgmtController.class);
 
-    @Autowired
-    private BlocksManager manager;
+	@Autowired
+	private BlocksManager manager;
 
-    @Autowired
-    private LogOperationService logService;
+	@Autowired
+	private LogOperationService logService;
 
-    @Autowired
+	@Autowired
 	private SettingsManager settingsManager;
 
-    @Autowired
-    private JsonFormatter formatter;
+	@Autowired
+	private JsonFormatter formatter;
 
-    @Autowired
+	@Autowired
 	private ResponseEntityUtils response;
 
-    public boolean validateServerLogin(HttpSession session) {
-    	String loginName = (String) session.getAttribute(OpApiController.ADMIN_LOGIN_NAME);
-    	return OUtils.equals(loginName, manager.getServerUser());
+	public boolean validateServerLogin(HttpSession session) {
+		String loginName = (String) session.getAttribute(OpApiController.ADMIN_LOGIN_NAME);
+		return OUtils.equals(loginName, manager.getServerUser());
 	}
 
-    private KeyPair getServerLoginKeyPair(HttpSession session) {
-    	return manager.getServerLoginKeyPair();
+	private KeyPair getServerLoginKeyPair(HttpSession session) {
+		return manager.getServerLoginKeyPair();
 	}
 
-    private String getServerUser(HttpSession session) {
-    	return manager.getServerUser();
+	private String getServerUser(HttpSession session) {
+		return manager.getServerUser();
 	}
 
-    private ResponseEntity<String> unauthorizedByServer() {
-    	return response.unauthorized("Unauthorized access");
+	private ResponseEntity<String> unauthorizedByServer() {
+		return response.unauthorized("Unauthorized access");
 	}
 
-    @PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> createBlock(HttpSession session) throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	OpBlock block = manager.createBlock();
-    	if(block == null) {
-    		return response.badRequest("Block creation failed");
-    	}
-    	return ResponseEntity.ok(formatter.fullObjectToJson(block));
-    }
+	@PostMapping(path = "/create", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> createBlock(HttpSession session) throws FailedVerificationException {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		OpBlock block = manager.createBlock();
+		if (block == null) {
+			return response.badRequest("Block creation failed");
+		}
+		return ResponseEntity.ok(formatter.fullObjectToJson(block));
+	}
 
-    @PostMapping(path = "/queue-clear")
-    @ResponseBody
-    public ResponseEntity<String> clearQueue(HttpSession session) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	manager.clearQueue();
-        return response.ok("Queue was cleared");
-    }
+	@PostMapping(path = "/queue-clear")
+	@ResponseBody
+	public ResponseEntity<String> clearQueue(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		manager.clearQueue();
+		return response.ok("Queue was cleared");
+	}
 
-    @PostMapping(path = "/logs-clear")
-    @ResponseBody
-    public ResponseEntity<String> logsClear(HttpSession session) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	logService.clearLogs();
-    	return response.ok("Logs was cleared");
-    }
+	@PostMapping(path = "/logs-clear")
+	@ResponseBody
+	public ResponseEntity<String> logsClear(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		logService.clearLogs();
+		return response.ok("Logs was cleared");
+	}
 
+	@PostMapping(path = "/revert-superblock", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> revertSuperblock(HttpSession session) throws FailedVerificationException {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		if (!manager.revertSuperblock()) {
+			return response.failed("Revert super block failed");
+		}
+		return response.ok("Blocks are reverted and operations added to the queue.");
+	}
 
-    @PostMapping(path = "/revert-superblock", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> revertSuperblock(HttpSession session) throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	if(!manager.revertSuperblock()) {
-    		return response.failed("Revert super block failed");
-    	}
-    	return response.ok("Blocks are reverted and operations added to the queue.");
-    }
+	@PostMapping(path = "/revert-1-block", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> revert1block(HttpSession session) throws FailedVerificationException {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		if (!manager.revertOneBlock()) {
+			return response.failed("Revert block failed");
+		}
+		return response.ok("Block is reverted and operations added to the queue.");
+	}
 
-    @PostMapping(path = "/revert-1-block", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> revert1block(HttpSession session) throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	if(!manager.revertOneBlock()) {
-    		return response.failed("Revert block failed");
-    	}
-    	return response.ok("Block is reverted and operations added to the queue.");
-    }
+	@PostMapping(path = "/compact", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> compact(HttpSession session) throws FailedVerificationException {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		if (!manager.compact()) {
+			return response.failed("Compacting blocks failed");
+		}
+		return response.ok("Blocks are compacted.");
+	}
 
-    @PostMapping(path = "/compact", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> compact(HttpSession session) throws FailedVerificationException {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	if(!manager.compact()) {
-    		return response.failed("Compacting blocks failed");
-    	}
-    	return response.ok("Blocks are compacted.");
-    }
-
-    @PostMapping(path = "/toggle-blockchain-pause", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> toggleOpsCreation(HttpSession session) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	if(manager.isBlockchainPaused()) {
-    		manager.unlockBlockchain();
-    	} else {
-    		manager.lockBlockchain("");
-    	}
-    	return response.ok();
-    }
-
-    @PostMapping(path = "/toggle-blocks-pause", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> toggleBlockCreation(HttpSession session) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	manager.setBlockCreationOn(!manager.isBlockCreationOn());
+	@PostMapping(path = "/toggle-blockchain-pause", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> toggleOpsCreation(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		if (manager.isBlockchainPaused()) {
+			manager.unlockBlockchain();
+		} else {
+			manager.lockBlockchain("");
+		}
 		return response.ok();
-    }
+	}
 
-    @PostMapping(path = "/toggle-replicate-pause", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> toggleReplicateCreation(HttpSession session) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	manager.setReplicateOn(!manager.isReplicateOn());
+	@PostMapping(path = "/toggle-blocks-pause", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> toggleBlockCreation(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		manager.setBlockCreationOn(!manager.isBlockCreationOn());
 		return response.ok();
-    }
+	}
 
-    @PostMapping(path = "/replicate", produces = "text/json;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> replicate(HttpSession session) {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	manager.replicate();
+	@PostMapping(path = "/toggle-replicate-pause", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> toggleReplicateCreation(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		manager.setReplicateOn(!manager.isReplicateOn());
 		return response.ok();
-    }
+	}
 
-    @PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
-    @ResponseBody
-    public ResponseEntity<String> bootstrap(HttpSession session) throws Exception {
-    	if(!validateServerLogin(session)) {
-    		return unauthorizedByServer();
-    	}
-    	String serverName = getServerUser(session);
-    	KeyPair serverLoginKeyPair = getServerLoginKeyPair(session);
-    	manager.bootstrap(serverName, serverLoginKeyPair);
+	@PostMapping(path = "/replicate", produces = "text/json;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> replicate(HttpSession session) {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		manager.replicate();
 		return response.ok();
-    }
+	}
 
+	@PostMapping(path = "/bootstrap", produces = "text/html;charset=UTF-8")
+	@ResponseBody
+	public ResponseEntity<String> bootstrap(HttpSession session) throws Exception {
+		if (!validateServerLogin(session)) {
+			return unauthorizedByServer();
+		}
+		String serverName = getServerUser(session);
+		KeyPair serverLoginKeyPair = getServerLoginKeyPair(session);
+		manager.bootstrap(serverName, serverLoginKeyPair);
+		return response.ok();
+	}
 
 	@PostMapping(path = "/delete-orphaned-blocks", produces = "text/html;charset=UTF-8")
 	@ResponseBody
@@ -225,7 +222,7 @@ public class MgmtController {
 			trimmedList = trimmedList.substring(1, trimmedList.length() - 1);
 		}
 		Set<String> toDelete = new TreeSet<String>();
-		for(String s : trimmedList.split(",")) {
+		for (String s : trimmedList.split(",")) {
 			toDelete.add(s);
 		}
 		Set<String> removeQueueOperations = manager.removeQueueOperations(toDelete);
@@ -243,15 +240,13 @@ public class MgmtController {
 
 	@PostMapping(path = "/config", produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public ResponseEntity<String> updatePreference(HttpSession session,
-												   @RequestParam String key,
-												   @RequestParam String value,
-												   @RequestParam(required = false) String type) {
+	public ResponseEntity<String> updatePreference(HttpSession session, @RequestParam String key,
+			@RequestParam String value, @RequestParam(required = false) String type) {
 		if (!validateServerLogin(session)) {
 			return unauthorizedByServer();
 		}
 		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(key);
-		if(pref == null) {
+		if (pref == null) {
 			return response.badRequest("Key is not defined");
 		}
 		if (pref.setString(value)) {
@@ -295,6 +290,5 @@ public class MgmtController {
 
 		return response.badRequest("Preference cannot be removed");
 	}
-
 
 }

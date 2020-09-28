@@ -26,7 +26,7 @@ public class BotController {
 
 	@Autowired
 	private ResponseEntityUtils response;
-	
+
 	public static class BotStats {
 		public String taskDescription;
 		public String taskName;
@@ -60,7 +60,7 @@ public class BotController {
 	public String getBots() {
 		Map<String, BotStats> mp = new TreeMap<>();
 		Map<String, IOpenDBBot<?>> bots = botManager.getBots();
-		for(String k : bots.keySet()) {
+		for (String k : bots.keySet()) {
 			BotStats bs = new BotStats(k, bots.get(k));
 			bs.settings = botManager.getBotConfiguration(k).get();
 			mp.put(k, bs);
@@ -77,8 +77,7 @@ public class BotController {
 			return response.error();
 		}
 	}
-	
-	
+
 	@PostMapping(path = "stop", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> stopBot(@RequestParam String botName) {
@@ -88,7 +87,7 @@ public class BotController {
 			return response.error();
 		}
 	}
-	
+
 	@PostMapping(path = "enable", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> enableBot(@RequestParam String botName, @RequestParam int interval) {
@@ -98,7 +97,7 @@ public class BotController {
 			return response.error();
 		}
 	}
-	
+
 	@PostMapping(path = "disable", produces = "text/html;charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity<String> disableBot(@RequestParam String botName) {
@@ -108,6 +107,5 @@ public class BotController {
 			return response.error();
 		}
 	}
-
 
 }

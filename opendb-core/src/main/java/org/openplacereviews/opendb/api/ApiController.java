@@ -29,7 +29,7 @@ import java.util.*;
 public class ApiController {
 
 	protected static final Log LOGGER = LogFactory.getLog(ApiController.class);
-	
+
 	public static final int LIMIT_RESULTS = 10000;
 
 	@Autowired
@@ -46,7 +46,7 @@ public class ApiController {
 
 	@Autowired
 	private OpenDBScheduledServices scheduledServices;
-	
+
 	@Autowired
 	private PublicDataManager publicDataManager;
 
@@ -68,7 +68,7 @@ public class ApiController {
 				if (o.isDbAccessed()) {
 					sz = "DB-" + sz;
 				}
-				res.sblocks.add(sz + "-"+hash);
+				res.sblocks.add(sz + "-" + hash);
 			}
 			o = o.getParent();
 		}
@@ -99,7 +99,8 @@ public class ApiController {
 	@ResponseBody
 	public String queueList() throws FailedVerificationException {
 		OpBlock bl = new OpBlock();
-		for(Iterator<OpOperation> descItr = manager.getBlockchain().getQueueOperations().descendingIterator();descItr.hasNext();) {
+		for (Iterator<OpOperation> descItr = manager.getBlockchain().getQueueOperations().descendingIterator(); descItr
+				.hasNext();) {
 			bl.addOperation(descItr.next());
 		}
 		return formatter.fullObjectToJson(bl);
@@ -127,21 +128,19 @@ public class ApiController {
 		public List<String> sblocks = new ArrayList<String>();
 	}
 
-	
-
 	protected static class ObjectsResult {
 		public Collection<OpObject> objects;
 		public int count;
 	}
-	
+
 	protected static class MetricResult {
 		public String id;
 		public int[] count;
 		public int[] totalSec;
 		public int[] avgMs;
-		
+
 	}
-	
+
 	protected static class MetricsResult {
 		public List<MetricResult> metrics = new ArrayList<>();
 	}
@@ -149,7 +148,8 @@ public class ApiController {
 	@GetMapping(path = "/blocks", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String blocksList(@RequestParam(required = false, defaultValue = "100") int depth,
-			@RequestParam(required = false) String from, @RequestParam(required = false) String to) throws FailedVerificationException {
+			@RequestParam(required = false) String from, @RequestParam(required = false) String to)
+			throws FailedVerificationException {
 		BlocksListResult br = new BlocksListResult();
 		OpBlockChain blc = manager.getBlockchain();
 		br.blockDepth = blc.getDepth();
@@ -169,25 +169,25 @@ public class ApiController {
 					}
 				}
 			}
-		} else if(!OUtils.isEmpty(to)) {
+		} else if (!OUtils.isEmpty(to)) {
 			OpBlock found = blc.getBlockHeaderByRawHash(to);
 			if (found != null) {
-				int ldepth = depth + (blc.getLastBlockId() - found.getBlockId()) ;
+				int ldepth = depth + (blc.getLastBlockId() - found.getBlockId());
 				br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(ldepth));
 				while (!br.blocks.isEmpty() && !OUtils.equals(br.blocks.get(0).getRawHash(), to)) {
 					br.blocks.remove(0);
 				}
-				while(br.blocks.size() > depth) {
+				while (br.blocks.size() > depth) {
 					br.blocks.removeLast();
 				}
 			}
 		} else {
 			br.blocks = new LinkedList<OpBlock>(blc.getBlockHeaders(depth));
-			while(br.blocks.size() > depth) {
+			while (br.blocks.size() > depth) {
 				br.blocks.removeLast();
 			}
 		}
-		
+
 		return formatter.fullObjectToJson(br);
 	}
 
@@ -200,7 +200,7 @@ public class ApiController {
 		}
 		return formatter.fullObjectToJson(blockHeader);
 	}
-	
+
 	@GetMapping(path = "/block-header-by-id", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getBlockHeaderById(@RequestParam(required = true) int blockId) {
@@ -233,7 +233,7 @@ public class ApiController {
 		return formatter.fullObjectToJson(opBlock);
 	}
 
-	@GetMapping(path = "/ops-by-block-id",  produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/ops-by-block-id", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getOperationsByBlockId(@RequestParam(required = true) int blockId) {
 		OpBlock opBlock = manager.getBlockchain().getFullBlockByBlockId(blockId);
@@ -248,7 +248,7 @@ public class ApiController {
 		}
 	}
 
-	@GetMapping(path = "/ops-by-block-hash",  produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/ops-by-block-hash", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getOperationsByBlockHash(@RequestParam(required = true) String hash) {
 		OpBlock opBlock = manager.getBlockchain().getFullBlockByRawHash(hash);
@@ -262,8 +262,7 @@ public class ApiController {
 
 		return "{}";
 	}
-	
-	
+
 	@PostMapping(path = "/metrics-reset", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String metricsReset(@RequestParam(required = true) int cnt) throws FailedVerificationException {
@@ -295,7 +294,7 @@ public class ApiController {
 		}
 		return formatter.fullObjectToJson(ms);
 	}
-	
+
 	@GetMapping(path = "/objects", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String objects(@RequestParam(required = true) String type,
@@ -303,7 +302,7 @@ public class ApiController {
 		OpBlockChain blc = manager.getBlockchain();
 		ObjectsResult res = new ObjectsResult();
 		ObjectsSearchRequest r = new ObjectsSearchRequest();
-		if(limit < 0 || limit > LIMIT_RESULTS) {
+		if (limit < 0 || limit > LIMIT_RESULTS) {
 			limit = LIMIT_RESULTS;
 		}
 		r.limit = limit;
@@ -311,7 +310,7 @@ public class ApiController {
 		res.objects = r.result;
 		return formatter.fullObjectToJson(res);
 	}
-	
+
 	@GetMapping(path = "/objects-count", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String objects(@RequestParam(required = true) String type) throws FailedVerificationException {
@@ -323,7 +322,8 @@ public class ApiController {
 
 	@GetMapping(path = "/objects-by-id", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String objects(@RequestParam(required = true) String type, @RequestParam(required = true) String key) throws FailedVerificationException {
+	public String objects(@RequestParam(required = true) String type, @RequestParam(required = true) String key)
+			throws FailedVerificationException {
 		OpBlockChain blc = manager.getBlockchain();
 		OpObject obj;
 		if (!key.contains(",")) {
@@ -347,11 +347,10 @@ public class ApiController {
 	@GetMapping(path = "/objects-by-index", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String objectsByIndex(@RequestParam(required = true) String type,
-								 @RequestParam(required = true) String index,
-								 @RequestParam(required = true) String key,
-								 @RequestParam(required = false, defaultValue = "100") int limit) {
+			@RequestParam(required = true) String index, @RequestParam(required = true) String key,
+			@RequestParam(required = false, defaultValue = "100") int limit) {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
-		if(limit < 0 || limit > LIMIT_RESULTS) {
+		if (limit < 0 || limit > LIMIT_RESULTS) {
 			limit = LIMIT_RESULTS;
 		}
 		req.limit = limit;
@@ -368,14 +367,13 @@ public class ApiController {
 
 	@GetMapping(path = "/history", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String history(@RequestParam(required = true) String type,
-						  @RequestParam(required = false) List<String> key,
-						  @RequestParam(required = false, defaultValue = "100") int limit,
-						  @RequestParam(required = true) String sort) {
+	public String history(@RequestParam(required = true) String type, @RequestParam(required = false) List<String> key,
+			@RequestParam(required = false, defaultValue = "100") int limit,
+			@RequestParam(required = true) String sort) {
 		if (!historyManager.isRunning()) {
 			return "{}";
 		}
-		if(limit < 0 || limit > LIMIT_RESULTS) {
+		if (limit < 0 || limit > LIMIT_RESULTS) {
 			limit = LIMIT_RESULTS;
 		}
 		HistoryObjectRequest historyObjectRequest = new HistoryObjectRequest(type, key, limit, sort);
@@ -384,14 +382,13 @@ public class ApiController {
 		return formatter.fullObjectToJson(historyObjectRequest.historySearchResult);
 	}
 
-	@GetMapping(path = "/index",  produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/index", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getIndexInfo() {
 		return formatter.fullObjectToJson(manager.getIndices());
 	}
-	
-	
-	@GetMapping(path = "/endpoints",  produces = "text/json;charset=UTF-8")
+
+	@GetMapping(path = "/endpoints", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String getApiEndpoints() {
 		return formatter.fullObjectToJson(publicDataManager.getEndpoints());
