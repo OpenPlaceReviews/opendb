@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mashape.unirest.http.exceptions.UnirestException;
 
 @Controller
 @RequestMapping("/api/ipfs")
@@ -81,7 +80,7 @@ public class IPFSController {
 	@ResponseBody
 	@GetMapping("status")
 	public ResponseEntity<String> loadIpfsStatus(@RequestParam(value = "full", required = false) boolean full)
-			throws IOException, UnirestException {
+			throws IOException {
 		IpfsStatusDTO ipfsStatusDTO;
 		if (!externalResourcesManager.isIPFSRunning()) {
 			ipfsStatusDTO = new IpfsStatusDTO().setStatus("NOT CONNECTED");

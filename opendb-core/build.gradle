@@ -66,7 +66,6 @@ dependencies {
     testCompile group: 'pl.pragmatists', name: 'JUnitParams', version: '1.0.4'
 
     implementation "com.github.ipfs:java-ipfs-api:v1.2.3"
-    implementation "com.mashape.unirest:unirest-java:1.4.9"
 
     implementation group: 'net.jodah', name: 'failsafe', version: '2.0.0'
     implementation group: 'commons-io', name: 'commons-io', version: '2.6'

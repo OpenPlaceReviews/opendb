@@ -3,9 +3,6 @@ package org.openplacereviews.opendb.service;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import io.ipfs.api.IPFS;
 import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
@@ -24,9 +21,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
@@ -86,10 +87,9 @@ public class IPFSService {
 	}
 
 	@SuppressWarnings("rawtypes")
-	public IpfsStatusDTO getIpfsNodeInfo() throws IOException, UnirestException {
-		HttpResponse<String> response = Unirest.get(String.format(BASE_URI + "api/v0/id", ipfs.protocol, ipfs.host, ipfs.port)).asString();
+	public IpfsStatusDTO getIpfsNodeInfo() throws IOException {
 		Gson gson = new Gson();
-		TreeMap objectTreeMap = gson.fromJson(response.getBody(), TreeMap.class);
+		TreeMap objectTreeMap = gson.fromJson(requestIPFSFromApi("api/v0/id"), TreeMap.class);
 		IpfsStatusDTO ipfsStatusDTO = new IpfsStatusDTO()
 				.setStatus("CONNECTED")
 				.setPeerId(ipfs.config.get("Identity.PeerID").toString())
@@ -99,16 +99,14 @@ public class IPFSService {
 				.setAddresses(objectTreeMap.get("Addresses").toString())
 				.setPublicKey(objectTreeMap.get("PublicKey").toString());
 
-		response = Unirest.get(String.format(BASE_URI + "api/v0/repo/stat", ipfs.protocol, ipfs.host, ipfs.port)).asString();
-		JsonObject jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+		JsonObject jsonObject = gson.fromJson(requestIPFSFromApi("api/v0/repo/stat"), JsonObject.class);
 		ipfsStatusDTO
 				.setRepoSize(jsonObject.get("RepoSize").getAsBigDecimal())
 				.setStorageMax(jsonObject.get("StorageMax").getAsBigDecimal())
 				.setAmountIpfsResources(jsonObject.get("NumObjects").getAsBigDecimal())
 				.setRepoPath(jsonObject.get("RepoPath").getAsString());
 
-		response = Unirest.get(String.format(BASE_URI + "api/v0/diag/sys", ipfs.protocol, ipfs.host, ipfs.port)).asString();
-		jsonObject = gson.fromJson(response.getBody(), JsonObject.class);
+		jsonObject = gson.fromJson(requestIPFSFromApi("api/v0/diag/sys"), JsonObject.class);
 		ipfsStatusDTO
 				.setDiskInfo(jsonObject.get("diskinfo").toString())
 				.setMemory(jsonObject.get("memory").toString())
@@ -116,8 +114,31 @@ public class IPFSService {
 				.setNetwork(jsonObject.get("net").toString());
 
 		ipfsStatusDTO.setAmountPinnedIpfsResources(ipfs.pin.ls(recursive).size());
-
 		return ipfsStatusDTO;
+	}
+
+	private String requestIPFSFromApi(String api) {
+		String s = "{}", line;
+		try {
+			String url = String.format(BASE_URI + api, ipfs.protocol, ipfs.host, ipfs.port);
+			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+			conn.setRequestMethod("POST");
+			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+			while ((line = in.readLine()) != null) {
+				if (s.length() == "{}".length()) {
+					s = line;
+				} else {
+					s += "\n" + line;
+				}
+			}
+			return s;
+		} catch (Exception e) {
+			s = String.format("{'error':'%s'}", e.getMessage());
+			LOGGER.error(e.getMessage(), e);
+			return s;
+		}
+
 	}
 
 	public String writeContent(InputStream content) {
