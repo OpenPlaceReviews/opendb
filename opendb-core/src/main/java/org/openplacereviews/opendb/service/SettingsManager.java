@@ -1,11 +1,13 @@
 package org.openplacereviews.opendb.service;
 
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Service
@@ -50,6 +52,7 @@ public class SettingsManager {
 			DB_SCHEMA_OBJTABLES,
 			DB_SCHEMA_INDEXES,
 			OPENDB_BOTS_CONFIG,
+			OPENDB_ENDPOINTS_CONFIG,
 			DB_SCHEMA_INTERNAL_INDEXES // could be disabled to be non-visible
 	};
 	
@@ -139,6 +142,7 @@ public class SettingsManager {
 
 	public <T> boolean removePreferenceInternal(CommonPreference<T> preference) {
 		if (dbSchemaManager.removeSetting(jdbcTemplate, preference.getId()) > 0) {
+			preference.family.version.incrementAndGet();
 			Map<String, CommonPreference<?>> nprefs = new TreeMap<>(preferences);
 			nprefs.remove(preference.getId());
 			preferences = nprefs;
@@ -147,20 +151,22 @@ public class SettingsManager {
 		return false;
 	}
 
-	private PreferenceFamily getPreferenceFamily(String name) {
+	private PreferenceFamily getPreferenceFamily(String id) {
 		for (PreferenceFamily preferenceFamily : SETTINGS_FAMILIES) {
-			if (preferenceFamily.name.equals(name)) {
+			if (OUtils.equalsStringValue(preferenceFamily.id, id)) {
 				return preferenceFamily;
 			}
 		}
 		return null;
 	}
 
-	public boolean addNewPreference(String family, String value) {
-		PreferenceFamily preferenceFamily = getPreferenceFamily(family);
+	public boolean addNewPreference(String familyId, String value) {
+		PreferenceFamily preferenceFamily = getPreferenceFamily(familyId);
 		if (preferenceFamily != null && preferenceFamily.canAdd) {
+			preferenceFamily.version.incrementAndGet();
 			CommonPreference<Map<String, Object>> commonPreference = registerMapPreferenceForFamily(preferenceFamily,
 					jsonFormatter.fromJsonToTreeMap(value));
+			commonPreference.setSource(CommonPreferenceSource.DB);
 			dbSchemaManager.setSetting(jdbcTemplate, commonPreference.getId(),
 					jsonFormatter.fullObjectToJson(commonPreference.value));
 			return true;
@@ -178,6 +184,7 @@ public class SettingsManager {
 	/////////////// PREFERENCES classes ////////////////
 	
 	public static class PreferenceFamily {
+		public String id;
 		public String prefix;
 		public String name;
 		public String descriptionFormat;
@@ -187,9 +194,11 @@ public class SettingsManager {
 		public boolean canEdit;
 		public boolean canDelete;
 		public boolean canAdd;
+		public AtomicInteger version = new AtomicInteger(); 
 		
 		public PreferenceFamily(String prefix, String name) {
 			this.prefix = prefix;
+			this.id = prefix == null ? "" : prefix.replace('.', '_');
 			this.name = name;
 		}
 		
@@ -377,6 +386,7 @@ public class SettingsManager {
 		
 		public MapStringObjectPreference setValue(String key, Object value, boolean save) {
 			this.value.put(key, value);
+			family.version.getAndIncrement();
 			if(save) {
 				set(this.value, true);
 			}

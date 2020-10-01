@@ -38,10 +38,10 @@ public class PublicDataController {
 			id = fpath.substring(0, i1);
 			suffix = fpath.substring(i1 + 1);
 		}
-
-		PublicAPIEndpoint apiEndpoint = dataManager.getEndpoint(id);
-		if (apiEndpoint != null) {
-			if (suffix.equals("index")) {
+		
+		PublicAPIEndpoint<?, ?> apiEndpoint = dataManager.getEndpoint(id);
+		if(apiEndpoint != null) {
+			if(suffix.equals("index")) {
 				return ResponseEntity.ok(apiEndpoint.getPage(params));
 			}
 			return ResponseEntity.ok(apiEndpoint.getContent(params));

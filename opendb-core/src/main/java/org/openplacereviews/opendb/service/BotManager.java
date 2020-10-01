@@ -5,20 +5,28 @@ import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
+import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
 import org.openplacereviews.opendb.service.bots.UpdateIndexesBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import javax.annotation.PostConstruct;
+import static org.openplacereviews.opendb.service.SettingsManager.*;
+import static org.openplacereviews.opendb.service.bots.PublicDataUpdateBot.PUBLIC_DATA_BOT_NAME_PREFIX;
 
 @Service
 public class BotManager {
@@ -33,11 +41,16 @@ public class BotManager {
 	
 	@Autowired 
 	private SettingsManager settings;
+	
+	@Autowired
+	private PublicDataManager publicDataManager;
+	private int publicDataManagerVersion;
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
 	private Map<String, IOpenDBBot<?>> systemBots = new TreeMap<String, IOpenDBBot<?>>();
 	private List<Future<?>> futures = new ArrayList<>();
 	private ExecutorService service = Executors.newFixedThreadPool(5);
+
 	
 
 	@PostConstruct
@@ -56,9 +69,11 @@ public class BotManager {
 		req.requestCache = true;
 		OpBlockChain blc = blocksManager.getBlockchain();
 		blc.fetchAllObjects(OpBlockchainRules.OP_BOT, req);
-		if (req.cacheObject != null) {
+		int publicDataManagerVersion = publicDataManager.getVersion();
+		if (req.cacheObject != null && publicDataManagerVersion == this.publicDataManagerVersion) {
 			return (Map<String, IOpenDBBot<?>>) req.cacheObject;
 		}
+		this.publicDataManagerVersion = publicDataManagerVersion;
 		return recreateBots(req, blc);
 	}
 
@@ -70,6 +85,14 @@ public class BotManager {
 		nbots.putAll(this.systemBots);
 		for(String id : nbots.keySet()) {
 			initBotPreference(id);
+		}
+		Collection<PublicAPIEndpoint<?, ?>> endpoints = publicDataManager.getEndpoints().values();
+		for(PublicAPIEndpoint<?, ?> papi : endpoints) {
+			PublicDataUpdateBot<?, ?> bt = new PublicDataUpdateBot<>(papi);
+			beanFactory.autowireBean(bt);
+			if(!nbots.containsKey(bt.getId())) {
+				nbots.put(bt.getId(), bt);
+			}
 		}
 		this.bots = nbots;
 		blc.setCacheAfterSearch(req, nbots);
@@ -94,11 +117,11 @@ public class BotManager {
 	}
 
 	private CommonPreference<Map<String, Object>> initBotPreference(String id) {
-		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(id));
+		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(OPENDB_BOTS_CONFIG.getId(id));
 		if(p == null) {
 			TreeMap<String, Object> mp = new TreeMap<>();
 			mp.put(SettingsManager.BOT_ID, id);
-			mp.put(SettingsManager.BOT_ENABLED, false);
+			mp.put(BOT_ENABLED, false);
 			p = settings.registerMapPreferenceForFamily(SettingsManager.OPENDB_BOTS_CONFIG, mp);
 		}
 		return p;
@@ -116,7 +139,7 @@ public class BotManager {
 		futures.add(service.submit(botObj));
 		return true;
 	}
-	
+
 	public boolean stopBot(String botId) {
 		IOpenDBBot<?>  botObj = getBots().get(botId);
 		if (botObj == null) {
@@ -127,7 +150,12 @@ public class BotManager {
 	
 	
 	public MapStringObjectPreference getBotConfiguration(String botId) {
-		CommonPreference<Map<String, Object>> p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(botId));
+		CommonPreference<Map<String, Object>> p;
+		if (botId.startsWith(PUBLIC_DATA_BOT_NAME_PREFIX)) {
+			p = settings.getPreferenceByKey(OPENDB_ENDPOINTS_CONFIG.getId(botId.substring(PUBLIC_DATA_BOT_NAME_PREFIX.length())));
+		} else {
+			p = settings.getPreferenceByKey(SettingsManager.OPENDB_BOTS_CONFIG.getId(botId));
+		}
 		return (MapStringObjectPreference) p;
 	}
 	
@@ -137,8 +165,8 @@ public class BotManager {
 		if (p == null) {
 			return false;
 		}
-		p.setValue(SettingsManager.BOT_INTERVAL_SECONDS, intervalSeconds, false)
-		 .setValue(SettingsManager.BOT_ENABLED, true, true);
+		p.setValue(BOT_INTERVAL_SECONDS, intervalSeconds, false)
+		 .setValue(BOT_ENABLED, true, true);
 		return true;
 	}
 	
@@ -147,7 +175,7 @@ public class BotManager {
 		if (p == null) {
 			return false;
 		}
-		p.setValue(SettingsManager.BOT_ENABLED, false, true);
+		p.setValue(BOT_ENABLED, false, true);
 		return true;
 	}
 
@@ -157,9 +185,9 @@ public class BotManager {
 		long now = System.currentTimeMillis() / 1000;
 		for(String bid : bs.keySet()) {
 			MapStringObjectPreference p = getBotConfiguration(bid);
-			if(p.getBoolean(SettingsManager.BOT_ENABLED, false)) {
+			if(p.getBoolean(BOT_ENABLED, false)) {
 				long lastRun = p.getLong(SettingsManager.BOT_LAST_RUN, 0);
-				long l = p.getLong(SettingsManager.BOT_INTERVAL_SECONDS, 0);
+				long l = p.getLong(BOT_INTERVAL_SECONDS, 0);
 				if(now - lastRun > l) {
 					startBot(bid);
 				}

@@ -104,9 +104,6 @@ public class OpApiController {
 			@RequestParam(required = false, defaultValue = "false") boolean addToQueue,
 			@RequestParam(required = false, defaultValue = "false") boolean validate)
 			throws FailedVerificationException {
-		if (!validateServerLogin(session)) {
-			return unauthorizedByServer();
-		}
 		KeyPair kp = null;
 		KeyPair altKp = null;
 		OpOperation op = formatter.parseOperation(json);
@@ -127,6 +124,9 @@ public class OpApiController {
 			op.setSignedBy(name);
 		}
 		if (!OUtils.isEmpty(getServerUser(session)) && !dontSignByServer) {
+      if (!validateServerLogin(session)) {
+			    return unauthorizedByServer();
+		  }
 			if (!OUtils.isEmpty(name)) {
 				op.addOtherSignedBy(getServerUser(session));
 				altKp = getServerLoginKeyPair(session);

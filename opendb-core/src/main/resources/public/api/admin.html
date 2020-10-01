@@ -497,7 +497,7 @@ Details: <b><span did="block-details"></span></b></pre>
                 <thead>
                     <tr>
                         <th>Bot Id</th>
-                        <th>Task</th>
+                        <th class="hidden">Task</th>
                         <th>Task description</th>
                         <th>Last launch</th>
                         <th>System</th>
@@ -511,7 +511,7 @@ Details: <b><span did="block-details"></span></b></pre>
                 <tbody>
                     <tr id="bot-template" class="hidden">
                         <td did="id"></td>
-                        <td did="task-name"></td>
+                        <td did="task-name" class="hidden"></td>
                         <td did="task-description"></td>
                         <td did="last-launch"></td>
                         <td>
@@ -720,17 +720,12 @@ Details: <b><span did="block-details"></span></b></pre>
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal">&times;</button>
                         <h4 class="modal-title" id="settings-add-header">Adding new preference</h4>
+                        
                     </div>
                     <div class="modal-body">
+                        <h4 class="modal-title" id="add-family">Family: <span id="family-name"></span> <span id="family-id" class="hidden"></span></h4>
+
                         <div class="container">
-                            <h4 class="modal-title" id="add-family">Family: <span id="family-name"></span></h4>
-                        </div>
-                        <hr>
-                        <div class="container">
-                            <div class="col-md-8">
-                                <label for="add-preference-key">Preference key:</label>
-                                <input type="text" id="add-preference-key" class="form-control">
-                            </div>
                             <div class="col-md-8">
                                 <label for="add-preference-value">Preference value:</label>
                                 <textarea class="form-control" rows="1" id="add-preference-value"></textarea>

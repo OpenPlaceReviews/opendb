@@ -1,9 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
@@ -16,6 +12,9 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.core.io.AbstractResource;
 import org.springframework.stereotype.Service;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Service
 public class PublicDataManager {
 	
@@ -24,14 +23,6 @@ public class PublicDataManager {
 	public static final int DEFAULT_CACHE_TIME_SECONDS = 3600;
 	public static final String ENDPOINT_PROVIDER = "provider";
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
-	
-	// TODO refresh endpoints on setting change
-	// TODO reevaulate cache with bot each (automatically register bot)
-	// TODO optimistic lock in multithread to evaluate cache value
-	// TODO evaluate cache by specific keys
-	// TODO clean up not accessing data for long time
-	// TODO public api to check changes on blockchain and display on map
-	// TODO UI display (public end point list, cache size, requests count)
 	
 	@Autowired
 	private SettingsManager settingsManager;
@@ -42,6 +33,8 @@ public class PublicDataManager {
 	private Map<String, PublicAPIEndpoint<?, ?>> endpoints = new ConcurrentHashMap<>(); 
 	
 	private Map<String, Class<? extends IPublicDataProvider<?, ?>>> dataProviders = new ConcurrentHashMap<>();
+	
+	private int localVersion = 0;
 
 	public void updateEndpoints() {
 		updateEndpoints(null);
@@ -49,7 +42,7 @@ public class PublicDataManager {
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void updateEndpoints(String endpointFilter) {
-
+		int v = SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get();
    		List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.OPENDB_ENDPOINTS_CONFIG);
 		for(CommonPreference<Map<String, Object>> cpref : prefs) {
 			MapStringObjectPreference pref = (MapStringObjectPreference) cpref;
@@ -61,56 +54,72 @@ public class PublicDataManager {
 			if(endpointFilter != null && !endpointFilter.equals(id)) {
 				continue;
 			}
+			PublicAPIEndpoint<?, ?> existingEndpoint = endpoints.get(id);
 			String providerDef = pref.getStringValue(ENDPOINT_PROVIDER, null);
-			Class<? extends IPublicDataProvider<?, ?>> providerClass = dataProviders.get(providerDef);
-			IPublicDataProvider<?, ?> provider = null;
-			if(providerClass != null) {
-				try {
-					provider = providerClass.newInstance();
-					beanFactory.autowireBean(provider);
-				} catch (Exception e) {
-					LOGGER.error(e.getMessage(), e);
+			if (existingEndpoint == null || !existingEndpoint.provider.getClass().getName().equals(providerDef)) {
+				Class<? extends IPublicDataProvider<?, ?>> providerClass = dataProviders.get(providerDef);
+				IPublicDataProvider<?, ?> provider = null;
+				if (providerClass != null) {
+					try {
+						provider = providerClass.newInstance();
+						beanFactory.autowireBean(provider);
+					} catch (Exception e) {
+						LOGGER.error(e.getMessage(), e);
+					}
 				}
+				if (provider == null) {
+					LOGGER.error(String.format("Endpoint '%s' has invalid data provider '%s'", id, providerDef));
+					continue;
+				}
+
+				PublicAPIEndpoint<?, ?> endpoint = new PublicAPIEndpoint(provider, pref);
+				endpoints.put(id, endpoint);
 			}
-			if(provider == null) {
-				LOGGER.error(String.format("Endpoint '%s' has invalid data provider '%s'", id, providerDef));
-				continue;
-			}
-			
-			PublicAPIEndpoint<?, ?> endpoint = new PublicAPIEndpoint(provider, pref);
-			endpoints.put(id, endpoint);
 		}
+		localVersion = v;
 	}
 
 	public void registerDataProvider(Class<? extends IPublicDataProvider<?, ?>> provider) {
 		dataProviders.put(provider.getName(), provider);
 	}
 	
-	
 	public PublicAPIEndpoint<?, ?> getEndpoint(String path) {
+		checkIfApiUpdateNeeded();
 		return endpoints.get(path);
 	}
 	
+	public PublicAPIEndpoint<?, ?> getEndpointById(String id) {
+		checkIfApiUpdateNeeded();
+		return endpoints.get(id);
+	}
+	
+	private void checkIfApiUpdateNeeded() {
+		if(localVersion != SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get()) {
+			updateEndpoints();
+		}
+	}
+
 	public Map<String, PublicAPIEndpoint<?, ?>> getEndpoints() {
+		checkIfApiUpdateNeeded();
 		return endpoints;
 	}
 	
-	protected static class CacheHolder<T> {
-		long evalTime;
-		long accessTime;
-		long access;
-		long size;
+	public static class CacheHolder<T> {
+		public long evalTime;
+		public long accessTime;
+		public long access;
+		public long size;
 		transient T value;
 	}
 	
 	public static class PublicAPIEndpoint<P, T> {
 
-		private transient IPublicDataProvider<P, T> provider;
-		private transient MapStringObjectPreference map;
+		protected transient IPublicDataProvider<P, T> provider;
+		protected transient MapStringObjectPreference map;
 		
 		protected final String path;
 		protected final String id;
-		protected Map<Object, CacheHolder<T>> cacheObjects = new ConcurrentHashMap<Object, CacheHolder<T>>();
+		protected Map<P, CacheHolder<T>> cacheObjects = new ConcurrentHashMap<P, CacheHolder<T>>();
 		protected boolean cacheDisabled;
 		private PerformanceMetric dataMetric;
 		private PerformanceMetric pageMetric;
@@ -127,14 +136,41 @@ public class PublicDataManager {
 			pageMetric = PerformanceMetrics.i().getMetric("public.page", path);
 		}
 		
-		
 		public String getPath() {
 			return path;
 		}
 		
+		public String getId() {
+			return id;
+		}
+		
+		public List<P> retrieveKeysToReevaluate() {
+			return provider.getKeysToCache(this);
+		}
+
+		public Set<P> getCacheKeys() {
+			return cacheObjects.keySet();
+		}
+
+		public CacheHolder<T> getCacheHolder(P key) {
+			return cacheObjects.get(key);
+		}
+
+		public void removeCacheHolder(P key) {
+			cacheObjects.remove(key);
+		}
+
+		public void updateCacheHolder(P key) {
+			evalCacheValue(getNow(), key);
+		}
+
+		public long getNow() {
+			return System.currentTimeMillis() / 1000L;
+		}
+
 		public AbstractResource getContent(Map<String, String[]> params) {
 			Metric m = reqMetric.start();
-			long now = (System.currentTimeMillis() / 1000l);
+			long now = getNow();
 			try {
 				P p = provider.formatParams(params);
 				CacheHolder<T> ch = null;
@@ -151,24 +187,30 @@ public class PublicDataManager {
 					}
 				}
 				if (ch == null) {
-					Metric mt = dataMetric.start();
-					ch = new CacheHolder<>();
-					ch.value = provider.getContent(p);
-					if(!cacheDisabled) {
-						ch.accessTime = now;
-						ch.evalTime = now;
-						String serializeValue = provider.serializeValue(ch.value);
-						if(serializeValue != null) {
-							ch.size = serializeValue.length();
-						}
-						cacheObjects.put(p, ch);
-					}
-					mt.capture();
+					ch = evalCacheValue(now, p);
 				}
 				return provider.formatContent(ch.value);
 			} finally {
 				m.capture();
 			}
+		}
+
+		private CacheHolder<T> evalCacheValue(long now, P p) {
+			CacheHolder<T> ch;
+			Metric mt = dataMetric.start();
+			ch = new CacheHolder<>();
+			ch.value = provider.getContent(p);
+			if(!cacheDisabled) {
+				ch.accessTime = now;
+				ch.evalTime = now;
+				String serializeValue = provider.serializeValue(ch.value);
+				if(serializeValue != null) {
+					ch.size = serializeValue.length();
+				}
+				cacheObjects.put(p, ch);
+			}
+			mt.capture();
+			return ch;
 		}
 		
 		public AbstractResource getPage(Map<String, String[]> params) {
@@ -179,7 +221,10 @@ public class PublicDataManager {
 				m.capture();
 			}
 		}
-		
+	}
+
+	public int getVersion() {
+		return localVersion;
 	}
 	
 
