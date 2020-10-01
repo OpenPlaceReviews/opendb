@@ -743,10 +743,12 @@ public class OpBlockChain {
 			while(it.hasNext()) {
 				Entry<CompoundKey, OpObject> entry = it.next();
 				CompoundKey c = entry.getKey();
-				OpObject i = o.getByKey(c);
-				if (i != null && !res.containsKey(c)) {
-					// object was overridden
-					it.remove();
+				if(!res.containsKey(c)) {
+					OpObject i = o.getByKey(c, false);
+					if (i != null) {
+						// object was overridden
+						it.remove();
+					}
 				}
 			}
 		}
@@ -1041,16 +1043,16 @@ public class OpBlockChain {
 							return rules.error(u, ErrorType.EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS, fieldExpr, oldObject);
 						}
 					} else {
-						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, opId);
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, opId, fieldExpr, editObject);
 					}
 					boolean currentNotSpecified = currentExpectedFields == null || 
 							!currentExpectedFields.containsKey(fieldExpr);
 					if (checkCurrentFieldSpecified && currentNotSpecified &&
 							currentObject.getFieldByExpr(fieldExpr) != null) {
-						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr);
+						return rules.error(u, ErrorType.EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE, u.getHash(), fieldExpr, editObject);
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
-					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr);
+					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
 				}
 			}
 			newObject.parentHash = u.getRawHash();
@@ -1080,7 +1082,7 @@ public class OpBlockChain {
 
 	public interface BlockDbAccessInterface {
 
-		OpObject getObjectById(String type, CompoundKey k) throws DBStaleException ;
+		OpObject getObjectById(String type, CompoundKey k, boolean queryContent) throws DBStaleException ;
 
 		/**
 		 * extraParamsWithCondition[0] - extra and "sql condition"

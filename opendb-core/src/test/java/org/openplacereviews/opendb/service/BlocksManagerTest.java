@@ -174,7 +174,7 @@ public class BlocksManagerTest {
 
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testFinishingVotingProcessWithNotValidRef() throws FailedVerificationException {
 		testVotingProcessForVoteOperation();
 
@@ -186,7 +186,7 @@ public class BlocksManagerTest {
 		blocksManager.addOperation(finalOp);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testVoteForFinishedVoteOp() throws FailedVerificationException {
 		testFinishingVotingProcess();
 
@@ -196,7 +196,7 @@ public class BlocksManagerTest {
 
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testAddFinishVoteOperationWithNotSameEditOp() throws FailedVerificationException {
 		testVotingProcessForVoteOperation();
 
@@ -223,7 +223,7 @@ public class BlocksManagerTest {
 		assertNull(object);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testRemovingNotExistingObject() throws FailedVerificationException {
 		for (OpOperation op : generateStartOperationAndObject()) {
 			assertTrue(blocksManager.addOperation(op));

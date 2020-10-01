@@ -102,7 +102,19 @@ public class JsonObjectUtils {
 		for(int i = 0; i < fieldSequence.length; i++) {
 			boolean last = i == fieldSequence.length - 1;
 			fieldName = fieldSequence[i];
-			int indOpArray = fieldName.indexOf("[");
+			int indOpArray = -1;
+			for(int ic = 0; ic < fieldName.length(); ) {
+				if(ic > 0 && (fieldName.charAt(ic) == '[' || fieldName.charAt(ic) == ']') && 
+						fieldName.charAt(ic - 1) == '\\') {
+					// replace '\[' with '['
+					fieldName = fieldName.substring(0, ic - 1) + fieldName.substring(ic);
+				} else if(fieldName.charAt(ic) == '[') {
+					indOpArray = ic;
+					break;
+				} else {
+					ic++;
+				}
+			}
 			jsonListLocal = null; // reset
 			if(indOpArray == -1) {
 				if(!last) {

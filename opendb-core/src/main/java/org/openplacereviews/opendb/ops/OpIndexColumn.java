@@ -122,6 +122,17 @@ public class OpIndexColumn {
 		Stream<Entry<CompoundKey, OpObject>> stream;
 		if(oi.getDbAccess() != null){
 			stream = oi.getDbAccess().streamObjects(type, limit, request.requestOnlyKeys, getDbCondition(request, args));
+			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {
+
+				@Override
+				public boolean test(Entry<CompoundKey, OpObject> t) {
+					OpObject obj = oi.getDbAccess().getObjectById(type, t.getKey(), false);
+					if(obj == null || t.getValue() == null || !OUtils.equals(obj.getParentHash(), t.getValue().getParentHash())) {
+						return false;
+					}
+					return true;
+				}
+			});
 		} else {
 			stream = oi.getRawObjects();
 			stream = stream.filter(new Predicate<Entry<CompoundKey, OpObject>>() {

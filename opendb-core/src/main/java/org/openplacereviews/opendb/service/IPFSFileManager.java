@@ -1,6 +1,5 @@
 package org.openplacereviews.opendb.service;
 
-import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
@@ -92,7 +91,7 @@ public class IPFSFileManager {
 	}
 
 
-	public IpfsStatusDTO getCurrentStatus(boolean full) throws IOException, UnirestException {
+	public IpfsStatusDTO getCurrentStatus(boolean full) throws IOException {
 		IpfsStatusDTO stat = ipfsService.getIpfsNodeInfo();
 
 		if (full) {

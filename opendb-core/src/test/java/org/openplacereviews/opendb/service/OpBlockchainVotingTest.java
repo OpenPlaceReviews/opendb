@@ -51,7 +51,7 @@ public class OpBlockchainVotingTest {
 		blc.createBlock(serverName, serverKeyPair);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testCreatingSysVoteOpWithNotGrantedRoleAdministrator() throws FailedVerificationException {
 		int amountOp = 2;
 		for (OpOperation voteOp : getVotingOperations(jsonFormatter, blc, amountOp)) {
@@ -64,7 +64,7 @@ public class OpBlockchainVotingTest {
 		blc.addOperation(generateCreateVoteOpWithUser(username));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testVotingWithNotValidStateForVote() throws FailedVerificationException {
 		int amountOp = 3;
 		for (OpOperation voteOp : getVotingOperations(jsonFormatter, blc, amountOp)) {
@@ -90,7 +90,7 @@ public class OpBlockchainVotingTest {
 		blc.addOperation(generateVoteOpWithVoteState(username, username, 1));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testVotingWithNotValidSignedAndVote() throws FailedVerificationException {
 		int amountOp = 3;
 		for (OpOperation voteOp : getVotingOperations(jsonFormatter, blc, amountOp)) {
@@ -103,7 +103,7 @@ public class OpBlockchainVotingTest {
 		blc.addOperation(generateVoteOpWithVoteState(username, username + 1, 1));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testFinishVoteOpWithWhenSumVotesLess0() throws FailedVerificationException {
 		int amountOp = 3;
 		for (OpOperation voteOp : getVotingOperations(jsonFormatter, blc, amountOp)) {

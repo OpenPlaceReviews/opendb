@@ -18,7 +18,6 @@ import org.springframework.web.servlet.HandlerMapping;
 @RequestMapping("/api/public")
 public class PublicDataController {
 
-
 	@Autowired
 	private PublicDataManager dataManager;
 
@@ -29,13 +28,13 @@ public class PublicDataController {
 		String fpath = path.substring("/api/public/".length());
 		Map<String, String[]> params = request.getParameterMap();
 		// alternative method
-//		String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-//		AntPathMatcher apm = new AntPathMatcher();
-//		String finalPath = apm.extractPathWithinPattern(bestMatchPattern, path);
+		// String bestMatchPattern = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+		// AntPathMatcher apm = new AntPathMatcher();
+		// String finalPath = apm.extractPathWithinPattern(bestMatchPattern, path);
 		int i1 = fpath.indexOf("/");
 		String id = fpath;
 		String suffix = "";
-		if(i1 != -1) {
+		if (i1 != -1) {
 			id = fpath.substring(0, i1);
 			suffix = fpath.substring(i1 + 1);
 		}

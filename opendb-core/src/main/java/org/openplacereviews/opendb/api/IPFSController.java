@@ -30,8 +30,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mashape.unirest.http.exceptions.UnirestException;
-
 @Controller
 @RequestMapping("/api/ipfs")
 public class IPFSController {
@@ -43,28 +41,27 @@ public class IPFSController {
 
 	@Autowired
 	private JsonFormatter formatter;
-	
+
 	private void checkIPFSRunning() {
-		if(!externalResourcesManager.isIPFSRunning()) {
+		if (!externalResourcesManager.isIPFSRunning()) {
 			throw new ConnectionException("IPFS service is not running.");
 		}
 	}
 
 	@PostMapping(value = "/image", consumes = MULTIPART_FORM_DATA_VALUE, produces = "text/html;charset=UTF-8")
 	@ResponseBody
-	public ResponseEntity<String> uploadImage(
-			@RequestPart(name = "file") @Valid @NotNull @NotEmpty MultipartFile file) throws IOException {
+	public ResponseEntity<String> uploadImage(@RequestPart(name = "file") @Valid @NotNull @NotEmpty MultipartFile file)
+			throws IOException {
 		checkIPFSRunning();
 		ResourceDTO resourceDTO = ResourceDTO.of(file);
 		resourceDTO = externalResourcesManager.addFile(resourceDTO);
 		return ResponseEntity.ok(formatter.fullObjectToJson(resourceDTO));
 	}
 
-
 	@GetMapping(value = "/image")
 	@ResponseBody
-	public ResponseEntity<FileSystemResource> getFile(@RequestParam("hash") String hash, 
-			@RequestParam(value="ext", required=false) String ext) throws IOException {
+	public ResponseEntity<FileSystemResource> getFile(@RequestParam("hash") String hash,
+			@RequestParam(value = "ext", required = false) String ext) throws IOException {
 		checkIPFSRunning();
 		File file = externalResourcesManager.getFileByHash(hash, ext);
 
@@ -72,16 +69,14 @@ public class IPFSController {
 		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());
 		httpHeaders.add("Content-Length", String.valueOf(file.length()));
 
-		return ResponseEntity.ok()
-				.contentType(APPLICATION_OCTET_STREAM)
-				.headers(httpHeaders)
+		return ResponseEntity.ok().contentType(APPLICATION_OCTET_STREAM).headers(httpHeaders)
 				.body(new FileSystemResource(file));
 	}
-	
+
 	@ResponseBody
 	@GetMapping("status")
 	public ResponseEntity<String> loadIpfsStatus(@RequestParam(value = "full", required = false) boolean full)
-			throws IOException, UnirestException {
+			throws IOException {
 		IpfsStatusDTO ipfsStatusDTO;
 		if (!externalResourcesManager.isIPFSRunning()) {
 			ipfsStatusDTO = new IpfsStatusDTO().setStatus("NOT CONNECTED");
@@ -90,7 +85,6 @@ public class IPFSController {
 		}
 		return ResponseEntity.ok(formatter.fullObjectToJson(ipfsStatusDTO));
 	}
-	
 
 	@PostMapping(value = "/mgmt/ipfs-maintenance")
 	@ResponseBody
@@ -103,7 +97,8 @@ public class IPFSController {
 	@ResponseBody
 	public ResponseEntity<String> removeUnactivatedAndTimeoutImages() throws IOException {
 		checkIPFSRunning();
-		return ResponseEntity.ok(formatter.fullObjectToJson(externalResourcesManager.removeUnusedImageObjectsFromSystemAndUnpinningThem()));
+		return ResponseEntity.ok(formatter
+				.fullObjectToJson(externalResourcesManager.removeUnusedImageObjectsFromSystemAndUnpinningThem()));
 	}
 
 }

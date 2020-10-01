@@ -1,21 +1,22 @@
 package org.openplacereviews.opendb.ops;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.TreeMap;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.TreeMap;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.BlockchainValidationException;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
 public class OpBlockchainEditOpTest {
 
@@ -135,7 +136,7 @@ public class OpBlockchainEditOpTest {
 		assertNull(opObject.getFieldByExpr("lat"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testEditDeleteOpWithoutCurrentField() throws FailedVerificationException {
 		OpOperation editOp = new OpOperation();
 		editOp.setType(OP_ID);
@@ -195,7 +196,7 @@ public class OpBlockchainEditOpTest {
 		assertEquals(123, opObject.getFieldByExpr("def"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = BlockchainValidationException.class)
 	public void testEditSetOpWithoutExistedCurrentValue() throws FailedVerificationException {
 		OpOperation editOp = new OpOperation();
 		editOp.setType(OP_ID);

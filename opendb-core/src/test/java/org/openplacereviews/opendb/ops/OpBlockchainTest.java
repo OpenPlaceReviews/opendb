@@ -1,21 +1,31 @@
 package org.openplacereviews.opendb.ops;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.BlockchainValidationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
-import java.util.*;
-
-import static org.junit.Assert.*;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 
 @RunWith(JUnitParamsRunner.class)
 public class OpBlockchainTest {
@@ -154,7 +164,7 @@ public class OpBlockchainTest {
 	public void testCreateBlockWithEmptyQueueWithException() throws FailedVerificationException {
 		testRemoveAllQueueOperationsIfQueueNotEmpty();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.createBlock(serverName, serverKeyPair);
 	}
 
@@ -299,7 +309,7 @@ public class OpBlockchainTest {
 		OpOperation opOperation = new OpOperation(loadedOperation, true);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.addOperation(opOperation);
 	}
 
@@ -348,7 +358,7 @@ public class OpBlockchainTest {
 		OpOperation opOperation = new OpOperation(loadedOperation, true);
 		opOperation.makeImmutable();
 
-		exceptionRule.expect(IllegalArgumentException.class);
+		exceptionRule.expect(BlockchainValidationException.class);
 		blc.validateOperation(opOperation);
 	}
 
