@@ -68,6 +68,7 @@ public class IPFSController {
 	public void getFile(HttpServletResponse response,
 			@RequestParam(value = "cid") String cid) throws IOException {
 		checkIPFSRunning();
+		response.setContentType(APPLICATION_OCTET_STREAM.getType());
 		ipfsService.read(cid, response.getOutputStream());
 	}
 
