@@ -224,7 +224,11 @@ public class IPFSFileManager {
 		if (ext != null) {
 			File dir = new File(folder, fPath.toString());
 			dir.mkdirs();
-			fPath.append(hash).append(".").append(ext);
+			fPath.append(hash);
+			if(!ext.startsWith(".")) {
+				fPath.append(".");	
+			}
+			fPath.append(ext);
 		}
 		return fPath.toString();
 	}

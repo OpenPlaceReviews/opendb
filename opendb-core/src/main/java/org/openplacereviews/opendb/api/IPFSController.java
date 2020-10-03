@@ -66,8 +66,10 @@ public class IPFSController {
 	@GetMapping(value = "/image-ipfs")
 	@ResponseBody
 	public void getFile(HttpServletResponse response,
-			@RequestParam(value = "cid") String cid) throws IOException {
+			@RequestParam(value = "cid") String cid, 
+			@RequestParam(value = "ext", required = false, defaultValue = ".jpeg") String ext) throws IOException {
 		checkIPFSRunning();
+		response.setHeader("Content-Disposition", "attachment; filename=" + cid + ext);
 		response.setContentType(APPLICATION_OCTET_STREAM.getType());
 		ipfsService.read(cid, response.getOutputStream());
 	}
