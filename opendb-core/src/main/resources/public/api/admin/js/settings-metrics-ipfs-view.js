@@ -398,6 +398,10 @@ var IPFS_VIEW = function () {
                 $("#image-link").attr("href", "/api/ipfs/image?hash=" + $("#get-image").val());
                 $("#image-link").click();
             });
+            $("#get-image-btn-cid").click(function () {
+                $("#image-link").attr("href", "/api/ipfs/image-ipfs?cid=" + $("#get-image").val());
+                $("#image-link").click();
+            });
 
             $("#fix-ipfs-missing-images-btn").click(function () {
                 postActionWithoutFailParam("/api/ipfs/mgmt/ipfs-maintenance", {},

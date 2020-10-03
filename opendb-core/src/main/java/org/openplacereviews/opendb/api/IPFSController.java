@@ -6,6 +6,7 @@ import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 import java.io.File;
 import java.io.IOException;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -14,6 +15,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.IPFSFileManager;
 import org.openplacereviews.opendb.service.IPFSFileManager.IpfsStatusDTO;
+import org.openplacereviews.opendb.service.IPFSService;
 import org.openplacereviews.opendb.service.IPFSService.ResourceDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
@@ -38,6 +40,9 @@ public class IPFSController {
 
 	@Autowired
 	private IPFSFileManager externalResourcesManager;
+	
+	@Autowired
+	private IPFSService ipfsService;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -57,14 +62,21 @@ public class IPFSController {
 		resourceDTO = externalResourcesManager.addFile(resourceDTO);
 		return ResponseEntity.ok(formatter.fullObjectToJson(resourceDTO));
 	}
+	
+	@GetMapping(value = "/image-ipfs")
+	@ResponseBody
+	public void getFile(HttpServletResponse response,
+			@RequestParam(value = "cid") String cid) throws IOException {
+		checkIPFSRunning();
+		ipfsService.read(cid, response.getOutputStream());
+	}
 
 	@GetMapping(value = "/image")
 	@ResponseBody
-	public ResponseEntity<FileSystemResource> getFile(@RequestParam("hash") String hash,
+	public ResponseEntity<FileSystemResource> getFile(
+			@RequestParam(value = "hash") String hash,
 			@RequestParam(value = "ext", required = false) String ext) throws IOException {
-		checkIPFSRunning();
 		File file = externalResourcesManager.getFileByHash(hash, ext);
-
 		HttpHeaders httpHeaders = new HttpHeaders();
 		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());
 		httpHeaders.add("Content-Length", String.valueOf(file.length()));

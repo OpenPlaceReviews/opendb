@@ -76,8 +76,8 @@ public class IPFSFileManager {
 	public File getFileByHash(String hash, String extension) throws FileNotFoundException {
 		return getFileByHashImpl(hash, extension);
 	}
-
-
+	
+	
 	public List<ResourceDTO> getMissingImagesInIPFS() {
 		List<String> pinnedImagesOnIPFS = ipfsService.getPinnedResources();
 		List<ResourceDTO> activeResources = dbManager.getResources(true, 0);
@@ -198,7 +198,6 @@ public class IPFSFileManager {
 		File file = new File(folder, fileName);
 		if (extension == null) {
 			File[] listOfFiles = file.listFiles();
-
 			if (listOfFiles != null) {
 				for (File listOfFile : listOfFiles) {
 					if (FilenameUtils.getBaseName(listOfFile.getName()).equals(hash)) {
@@ -206,7 +205,6 @@ public class IPFSFileManager {
 					}
 				}
 			}
-
 			throw new FileNotFoundException("File with hash: " + hash + " was not found");
 		} else {
 			return file;
