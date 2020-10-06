@@ -549,7 +549,7 @@ public class OpBlockchainRules {
 	public OpObject getLoginKeyObj(OpBlockChain ctx, String signedByName) {
 		OpObject keyObj;
 		int n = signedByName.indexOf(USER_LOGIN_CHAR);
-		if(n == -1) {
+		if (n == -1) {
 			keyObj = ctx.getObjectByName(OpBlockchainRules.OP_SIGNUP, signedByName);
 		} else  {
 			keyObj = ctx.getObjectByName(OpBlockchainRules.OP_LOGIN, signedByName.substring(0, n),

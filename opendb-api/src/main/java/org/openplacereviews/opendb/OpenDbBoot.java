@@ -1,12 +1,14 @@
 package org.openplacereviews.opendb;
 
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.openplacereviews.opendb.service.BlocksManager;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import java.util.Arrays;
-import java.util.List;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 
 @SpringBootApplication
 public class OpenDbBoot extends OpenDBServer {
