@@ -1,9 +1,24 @@
 package org.openplacereviews.opendb.service;
 
 
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.OpenDBServer.MetadataColumnSpec;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
@@ -24,12 +39,6 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.*;
-
 @Service
 public class DBSchemaManager {
 
@@ -46,7 +55,7 @@ public class DBSchemaManager {
 	protected static final String EXT_RESOURCE_TABLE = "resources";
 	protected static final String OP_OBJ_HISTORY_TABLE = "op_obj_history";
 
-	private static Map<String, List<ColumnDef>> schema = new HashMap<String, List<ColumnDef>>();
+	private static DBSchemaHelper dbschema = new DBSchemaHelper(SETTINGS_TABLE);
 	protected static final int MAX_KEY_SIZE = 5;
 	public static final String[] INDEX_P = new String[MAX_KEY_SIZE];
 	{
@@ -95,80 +104,62 @@ public class DBSchemaManager {
 	}
 	
 
-	private static void registerColumn(String tableName, String colName, String colType, IndexType basicIndexType) {
-		ColumnDef cd = new ColumnDef(tableName, colName, colType, basicIndexType);
-		registerColumn(tableName, cd);
-	}
-
-	private static ColumnDef registerColumn(String tableName, ColumnDef cd) {
-		List<ColumnDef> lst = schema.get(tableName);
-		if (lst == null) {
-			lst = new ArrayList<ColumnDef>();
-			schema.put(tableName, lst);
-		}
-
-		lst.add(cd);
-		return cd;
-	}
 
 	static {
-		registerColumn(SETTINGS_TABLE, "key", "text PRIMARY KEY", INDEXED);
-		registerColumn(SETTINGS_TABLE, "value", "text", NOT_INDEXED);
-		registerColumn(SETTINGS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
-		registerColumn(BLOCKS_TABLE, "phash", "bytea", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "blockid", "int", INDEXED);
-		registerColumn(BLOCKS_TABLE, "superblock", "bytea", INDEXED);
-		registerColumn(BLOCKS_TABLE, "opcount", "int", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "objdeleted", "int", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "objedited", "int", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "objadded", "int", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "blocksize", "int", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "header", "jsonb", NOT_INDEXED);
-		registerColumn(BLOCKS_TABLE, "content", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "phash", "bytea", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "blockid", "int", INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "superblock", "bytea", INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "opcount", "int", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "objdeleted", "int", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "objedited", "int", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "objadded", "int", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "blocksize", "int", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "header", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
-		registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", NOT_INDEXED);
-		registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", INDEXED);
-		registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
-		registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TRASH_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		dbschema.registerColumn(BLOCKS_TRASH_TABLE, "phash", "bytea", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TRASH_TABLE, "blockid", "int", INDEXED);
+		dbschema.registerColumn(BLOCKS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
+		dbschema.registerColumn(BLOCKS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", NOT_INDEXED);
-		registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
-		registerColumn(OPERATIONS_TABLE, "type", "text", INDEXED);
-		registerColumn(OPERATIONS_TABLE, "superblock", "bytea", INDEXED);
-		registerColumn(OPERATIONS_TABLE, "sblockid", "int", INDEXED);
-		registerColumn(OPERATIONS_TABLE, "sorder", "int", INDEXED);
-		registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", NOT_INDEXED);
-		registerColumn(OPERATIONS_TABLE, "content", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "dbid", "serial not null", NOT_INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "type", "text", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "superblock", "bytea", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "sblockid", "int", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "sorder", "int", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "blocks", "bytea[]", NOT_INDEXED);
+		dbschema.registerColumn(OPERATIONS_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(OP_OBJ_HISTORY_TABLE, "sorder", "serial not null", NOT_INDEXED);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", INDEXED);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", INDEXED);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "sorder", "serial not null", NOT_INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "blockhash", "bytea", INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "ophash", "bytea", INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "type", "text", INDEXED);
 		for (int i = 1; i <= HISTORY_USERS_SIZE; i++) {
-			registerColumn(OP_OBJ_HISTORY_TABLE, "usr_" + i, "text", INDEXED);
-			registerColumn(OP_OBJ_HISTORY_TABLE, "login_" + i, "text", INDEXED);
+			dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "usr_" + i, "text", INDEXED);
+			dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "login_" + i, "text", INDEXED);
 		}
 		for (int i = 1; i <= MAX_KEY_SIZE; i++) {
-			registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", INDEXED);
+			dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "p" + i, "text", INDEXED);
 		}
-		registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", NOT_INDEXED);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", NOT_INDEXED);
-		registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", NOT_INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "time", "timestamp", NOT_INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "obj", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(OP_OBJ_HISTORY_TABLE, "status", "int", NOT_INDEXED);
 
-		registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", INDEXED);
-		registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", INDEXED);
-		registerColumn(OPERATIONS_TRASH_TABLE, "type", "text", INDEXED);
-		registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
-		registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(OPERATIONS_TRASH_TABLE, "id", "int", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TRASH_TABLE, "hash", "bytea", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TRASH_TABLE, "type", "text", INDEXED);
+		dbschema.registerColumn(OPERATIONS_TRASH_TABLE, "time", "timestamp", NOT_INDEXED);
+		dbschema.registerColumn(OPERATIONS_TRASH_TABLE, "content", "jsonb", NOT_INDEXED);
 
-		registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
-		registerColumn(EXT_RESOURCE_TABLE, "extension", "text", NOT_INDEXED);
-		registerColumn(EXT_RESOURCE_TABLE, "cid", "text", NOT_INDEXED);
-		registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
-		registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
+		dbschema.registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
+		dbschema.registerColumn(EXT_RESOURCE_TABLE, "extension", "text", NOT_INDEXED);
+		dbschema.registerColumn(EXT_RESOURCE_TABLE, "cid", "text", NOT_INDEXED);
+		dbschema.registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
+		dbschema.registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
 
 
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
@@ -176,15 +167,15 @@ public class DBSchemaManager {
 	}
 
 	private static void registerObjTable(String tbName, int maxKeySize) {
-		registerColumn(tbName, "type", "text", INDEXED);
+		dbschema.registerColumn(tbName, "type", "text", INDEXED);
 		for (int i = 1; i <= maxKeySize; i++) {
-			registerColumn(tbName, "p" + i, "text", INDEXED);
+			dbschema.registerColumn(tbName, "p" + i, "text", INDEXED);
 		}
-		registerColumn(tbName, "ophash", "bytea", INDEXED);
-		registerColumn(tbName, "superblock", "bytea", INDEXED);
-		registerColumn(tbName, "sblockid", "int",  INDEXED);
-		registerColumn(tbName, "sorder", "int", INDEXED);
-		registerColumn(tbName, "content", "jsonb", NOT_INDEXED);
+		dbschema.registerColumn(tbName, "ophash", "bytea", INDEXED);
+		dbschema.registerColumn(tbName, "superblock", "bytea", INDEXED);
+		dbschema.registerColumn(tbName, "sblockid", "int",  INDEXED);
+		dbschema.registerColumn(tbName, "sorder", "int", INDEXED);
+		dbschema.registerColumn(tbName, "content", "jsonb", NOT_INDEXED);
 	}
 
 	public Map<String, Map<String, Object>> getObjtables() {
@@ -253,7 +244,7 @@ public class DBSchemaManager {
 	}
 
 	private void migrateDBSchema(JdbcTemplate jdbcTemplate) {
-		int dbVersion = getIntSetting(jdbcTemplate, "opendb.version");
+		int dbVersion = dbschema.getIntSetting(jdbcTemplate, "opendb.version");
 		if(dbVersion < OPENDB_SCHEMA_VERSION) {
 			if(dbVersion <= 1) {
 				setOperationsType(jdbcTemplate, OPERATIONS_TABLE);
@@ -337,18 +328,11 @@ public class DBSchemaManager {
 	}
 
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
-		createTable(metadataDB, jdbcTemplate, SETTINGS_TABLE, schema.get(SETTINGS_TABLE));
+		dbschema.initSettingsTable(metadataDB, jdbcTemplate);
 		prepareObjTableMapping();
 		prepareCustomIndices(jdbcTemplate);
-		for (String tableName : schema.keySet()) {
-			if(tableName.equals(SETTINGS_TABLE))  {
-				 continue;
-			}
-			List<ColumnDef> cls = schema.get(tableName);
-			createTable(metadataDB, jdbcTemplate, tableName, cls);
-		}
+		dbschema.createTablesIfNeeded(metadataDB, jdbcTemplate);
 		migrateDBSchema(jdbcTemplate);
-		
 		migrateObjMappingIfNeeded(jdbcTemplate);
 	}
 
@@ -463,7 +447,7 @@ public class DBSchemaManager {
 				addIndexCol(indexColumn);
 			}
 		}
-		return registerColumn(tableName, cd);
+		return dbschema.registerColumn(tableName, cd);
 	}
 
 
@@ -482,7 +466,7 @@ public class DBSchemaManager {
 				for(String type : tps) {
 					typeToTables.put(type, tableName);
 					ott.types.add(type);
-					for(ColumnDef c : schema.get(tableName)) {
+					for(ColumnDef c : dbschema.schema.get(tableName)) {
 						for(int indId = 0 ; indId < MAX_KEY_SIZE; indId++) {
 							if(c.getColName().equals(INDEX_P[indId])) {
 								addIndexCol(new OpIndexColumn(type, INDEX_P[indId], indId, c));
@@ -507,7 +491,7 @@ public class DBSchemaManager {
 			// potentially concurrent modification exception
 			indexesByType.remove(index);
 		}
-		jdbcTemplate.execute("DROP INDEX " + generateIndexName(it, tableName, colName));
+		jdbcTemplate.execute("DROP INDEX " + dbschema.generateIndexName(it, tableName, colName));
 		CommonPreference<Object> pref = settingsManager.getPreferenceByKey(SettingsManager.DB_SCHEMA_INTERNAL_INDEXES.getId(tableName + "." + colName));
 		if(pref != null) {
 			settingsManager.removePreferenceInternal(pref);
@@ -522,119 +506,23 @@ public class DBSchemaManager {
 	}
 
 
-	private void createTable(MetadataDb metadataDB, JdbcTemplate jdbcTemplate, String tableName, List<ColumnDef> cls) {
-		List<MetadataColumnSpec> list = metadataDB.tablesSpec.get(tableName);
-		if (list == null) {
-			StringBuilder clb = new StringBuilder();
-			List<String> indx = new ArrayList<String>();
-			for (ColumnDef c : cls) {
-				if (clb.length() > 0) {
-					clb.append(", ");
-				}
-				clb.append(c.getColName()).append(" ").append(c.getColType());
-				if(c.getIndex() != NOT_INDEXED) {
-					indx.add(generateIndexQuery(c));
-				}
-			}
-			String createTable = String.format("create table %s (%s)", tableName, clb.toString());
-			jdbcTemplate.execute(createTable);
-			for (String ind : indx) {
-				jdbcTemplate.execute(ind);
-			}
-		} else {
-			for (ColumnDef c : cls) {
-				boolean found = false;
-				for (MetadataColumnSpec m : list) {
-					if (c.getColName().equals(m.columnName)) {
-						found = true;
-						break;
-						
-					}
-				}
-				if (!found) {
-					alterTableNewColumn(jdbcTemplate, c);
-				}
-			}
-		}
-	}
-
-	public void alterTableNewColumn(JdbcTemplate jdbcTemplate, ColumnDef c) {
-		String alterTable = String.format("alter table %s add column %s %s", c.getTableName(), 
-				c.getColName(), c.getColType());
-		jdbcTemplate.execute(alterTable);
-		if(c.getIndex() != NOT_INDEXED) {
-			jdbcTemplate.execute(generateIndexQuery(c));
-		}
-	}
 	
-	private String generateIndexName(IndexType indexType, String tableName, String colName) {
-		switch (indexType) {
-			case INDEXED: {
-				return String.format("%s_%s_ind", tableName, colName);
-			}
-			case GIN: {
-				return String.format("%s_%s_gin_ind", tableName, colName);
-			}
-			case GIST: {
-				return String.format("%s_%s_gist_ind", tableName, colName);
-			}
-			default: {
-				throw new UnsupportedOperationException();
-			}
-		}
-	}
-
-	private String generateIndexQuery(ColumnDef c) {
-		String indName = generateIndexName(c.getIndex(), c.getTableName(), c.getColName());
-		if (c.getIndex() == INDEXED) {
-			return String.format("create index %s on %s (%s);\n", indName,
-					c.getTableName(), c.getColName());
-		} else if (c.getIndex() == GIN) {
-			return String.format("create index %s on %s using gin (%s);\n", indName,
-					c.getTableName(), c.getColName());
-		} else if (c.getIndex() == GIST) {
-			return String.format("create index %s on %s using gist (tsvector(%s));\n", indName,
-					c.getTableName(), c.getColName());
-		}
-		return null;
-	}
-
 
 	public boolean setSetting(JdbcTemplate jdbcTemplate, String key, String v) {
-		return jdbcTemplate.update("insert into  " + SETTINGS_TABLE + "(key,value) values (?, ?) "
-				+ " ON CONFLICT (key) DO UPDATE SET value = ? ", key, v, v) != 0;
+		return dbschema.setSetting(jdbcTemplate, key, v);
 	}
 	
-	private int getIntSetting(JdbcTemplate jdbcTemplate, String key) {
-		String s = getSetting(jdbcTemplate, key);
-		if(s == null) {
-			return 0;
-		}
-		return Integer.parseInt(s);
-	}
-
-	protected int removeSetting(JdbcTemplate jdbcTemplate, String key) {
-		return jdbcTemplate.update("DELETE FROM " + SETTINGS_TABLE + " WHERE key = ?", key);
+	public int removeSetting(JdbcTemplate jdbcTemplate, String key) {
+		return dbschema.removeSetting(jdbcTemplate, key);
 	}
 
 	public String getSetting(JdbcTemplate jdbcTemplate, String key) {
-		String s = null;
-		try {
-			s = jdbcTemplate.query("select value from " + SETTINGS_TABLE + " where key = ?", new ResultSetExtractor<String>() {
-				@Override
-				public String extractData(ResultSet rs) throws SQLException, DataAccessException {
-					boolean next = rs.next();
-					if (next) {
-						return rs.getString(1);
-					}
-					return null;
-				}
-			}, key);
-		} catch (DataAccessException e) {
-		}
-		return s;
+		return dbschema.getSetting(jdbcTemplate, key);
 	}
 	
+	public void alterTableNewColumn(JdbcTemplate jdbcTemplate, ColumnDef col) {
+		dbschema.alterTableNewColumn(jdbcTemplate, col);
+	}
 	
 	public Map<String, String> getSettings(JdbcTemplate jdbcTemplate) {
 		Map<String, String> r = new TreeMap<>();
@@ -696,37 +584,6 @@ public class DBSchemaManager {
 				generatePKString(table, "?", ",", HISTORY_USERS_SIZE * 2 + MAX_KEY_SIZE + 6 ) + ")", args);
 	}
 
-	// Query / insert values
-	// select encode(b::bytea, 'hex') from test where b like (E'\\x39')::bytea||'%';
-	// insert into test(b) values (decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
-	// UPDATE blocks SET superblocks = array_remove(superblocks,
-	// decode('39556d070fd95f54b554010207d42605a8d0adfbb3b8b8e134df7df0689d78ab', 'hex'));
-
-	public static void main(String[] args) {
-
-		for (String tableName : schema.keySet()) {
-			List<ColumnDef> cls = schema.get(tableName);
-			StringBuilder clb = new StringBuilder();
-			StringBuilder indx = new StringBuilder();
-			for (ColumnDef c : cls) {
-				if (clb.length() > 0) {
-					clb.append(", ");
-				}
-				clb.append(c.getColName()).append(" ").append(c.getColType());
-				if (c.getIndex() == INDEXED) {
-					indx.append(String.format("create index %s_%s_ind on %s (%s);\n", c.getTableName(), c.getColName(),
-							c.getTableName(), c.getColName()));
-				}
-			}
-			System.out.println(String.format("create table %s (%s);", tableName, clb.toString()));
-			System.out.println(indx.toString());
-		}
-
-	}
-
-	
-
-	
 	
 
 

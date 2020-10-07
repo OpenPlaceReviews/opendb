@@ -57,7 +57,7 @@ public class OpenDBServer {
 	public void preStartApplication() throws IOException, IllegalAccessException {
 	}
 
-	public MetadataDb loadMetadata() {
+	public static MetadataDb loadMetadata(JdbcTemplate jdbcTemplate) {
 		MetadataDb d = new MetadataDb();
 		try {
 			DatabaseMetaData mt = jdbcTemplate.getDataSource().getConnection().getMetaData();
@@ -87,7 +87,7 @@ public class OpenDBServer {
 			try {
 				LOGGER.info("Application starting...");
 				preStartApplication();
-				MetadataDb metadataDB = loadMetadata();
+				MetadataDb metadataDB = loadMetadata(jdbcTemplate);
 				OpBlockChain blockchain = dbDataManager.init(metadataDB);
 				blocksManager.init(metadataDB, blockchain);
 				externalResourcesService.init();

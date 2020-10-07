@@ -2,8 +2,13 @@ package org.openplacereviews.opendb.ops;
 
 import com.google.gson.*;
 
+import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
+import static org.openplacereviews.opendb.ops.OpObject.F_CURRENT;
+
 import java.lang.reflect.Type;
 import java.util.*;
+
+import org.openplacereviews.opendb.util.OUtils;
 
 public class OpOperation extends OpObject {
 
@@ -205,6 +210,51 @@ public class OpOperation extends OpObject {
 		} else if (!type.equals(other.type))
 			return false;
 		return true;
+	}
+	
+	public static OpObjectDiffBuilder createDiffOperation(OpObject o) {
+		return new OpObjectDiffBuilder(o);
+	}
+	
+	private static Object diffSet(Object vl) {
+		Map<String, Object> set = new TreeMap<String, Object>();
+		set.put(OpBlockChain.OP_CHANGE_SET, vl);
+		return set;
+	}
+	
+	public static class OpObjectDiffBuilder {
+		
+		final OpObject obj;
+		final TreeMap<String, Object> changeTagMap = new TreeMap<>();
+		final TreeMap<String, Object> currentTagMap = new TreeMap<>();
+
+		public OpObjectDiffBuilder(OpObject obj) {
+			this.obj = obj;
+		}
+		
+		public void setNewTag(String tag, Object value) {
+			// not suitable for increment
+			Object o = obj.getFieldByExpr(tag);
+			if (!OUtils.equals(o, value)) {
+				changeTagMap.put(tag, diffSet(value));
+				if (o != null) {
+					currentTagMap.put(tag, o);
+				}
+			}
+		}
+		
+		public OpOperation build() {
+			OpOperation op = new OpOperation();
+			op.setType(obj.getParentType());
+			OpObject editObj = new OpObject();
+			for (String s : obj.getId()) {
+				editObj.addOrSetStringValue(OpObject.F_ID, s);
+			}
+			editObj.putObjectValue(F_CHANGE, changeTagMap);
+			editObj.putObjectValue(F_CURRENT, currentTagMap);
+			op.addEdited(editObj);
+			return op;
+		}
 	}
 
 
