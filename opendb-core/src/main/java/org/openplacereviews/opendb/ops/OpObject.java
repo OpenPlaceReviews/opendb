@@ -139,7 +139,7 @@ public class OpObject {
 	}
 	
 	public void setId(String id) {
-		addOrSetStringValue(F_ID, id);;
+		addOrSetStringValue(F_ID, id);
 	}
 	
 	public boolean isImmutable() {

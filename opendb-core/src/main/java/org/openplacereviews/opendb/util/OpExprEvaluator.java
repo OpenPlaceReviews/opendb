@@ -23,6 +23,8 @@ import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
 import static org.openplacereviews.opendb.ops.OpOperation.*;
 
 public class OpExprEvaluator {
+	
+	public static boolean TRACE_EXPRESSIONS = false;
 
 	public static final String FUNCTION_STR_FIRST = "str:first";
 	public static final String FUNCTION_STR_SECOND = "str:second";
@@ -59,8 +61,6 @@ public class OpExprEvaluator {
 	public static final String F_NEW = "new";
 	public static final String F_OLD = "old";
 	public static final String F_REF = "ref";
-
-	public static boolean TRACE_EXPRESSIONS = false;
 
 	private ExpressionContext ectx;
 
