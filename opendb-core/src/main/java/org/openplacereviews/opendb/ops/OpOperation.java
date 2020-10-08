@@ -2,8 +2,6 @@ package org.openplacereviews.opendb.ops;
 
 import com.google.gson.*;
 
-import static org.openplacereviews.opendb.ops.OpObject.F_CHANGE;
-import static org.openplacereviews.opendb.ops.OpObject.F_CURRENT;
 
 import java.lang.reflect.Type;
 import java.util.*;
