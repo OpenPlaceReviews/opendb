@@ -122,6 +122,10 @@ public class JsonFormatter {
 	public <T> T fromJson(Reader json, Class<T> classOfT) throws JsonSyntaxException {
 		return gson.fromJson(json, classOfT);
 	}
+	
+	public <T> T fromJson(Reader json, Type typeOfT) throws JsonSyntaxException {
+		return gson.fromJson(json, typeOfT);
+	}
 
 	public String fullObjectToJson(Object o) {
 		return gsonFullOutput.toJson(o);
