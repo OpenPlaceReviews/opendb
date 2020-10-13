@@ -22,8 +22,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_ROLES;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_GRANT;
 
 @Controller
 @RequestMapping("/api/auth")
@@ -58,14 +56,6 @@ public class OpApiController {
 		if (OUtils.equals(manager.getServerUser(), name) && OUtils.equals(manager.getServerPrivateKey(), pwd)) {
 			updateSessionObject(session, name, pwd);
 			return responseUtils.ok();
-		} else {
-			OpObject userGrantObject = manager.getBlockchain().getObjectByName(OP_GRANT, name);
-			if (userGrantObject != null) {
-				if (userGrantObject.getStringList(F_ROLES).contains(ROLE_ADMINISTRATOR)) {
-					updateSessionObject(session, name, pwd);
-					return responseUtils.ok();
-				}
-			}
 		}
 		return responseUtils.error();
 	}
@@ -74,7 +64,6 @@ public class OpApiController {
 		session.setAttribute(ADMIN_LOGIN_NAME, name);
 		session.setAttribute(ADMIN_LOGIN_PWD, pwd);
 		session.setMaxInactiveInterval(-1);
-		// TODO get admin key pair, not server!
 		keyPairs.put(name, manager.getServerLoginKeyPair());
 	}
 
@@ -124,9 +113,9 @@ public class OpApiController {
 			op.setSignedBy(name);
 		}
 		if (!OUtils.isEmpty(getServerUser(session)) && !dontSignByServer) {
-      if (!validateServerLogin(session)) {
-			    return unauthorizedByServer();
-		  }
+			if (!validateServerLogin(session)) {
+				return unauthorizedByServer();
+			}
 			if (!OUtils.isEmpty(name)) {
 				op.addOtherSignedBy(getServerUser(session));
 				altKp = getServerLoginKeyPair(session);
