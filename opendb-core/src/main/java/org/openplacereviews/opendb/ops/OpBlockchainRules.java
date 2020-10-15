@@ -478,8 +478,11 @@ public class OpBlockchainRules {
 	public boolean validateSignatures(OpBlockChain ctx, OpOperation ob) {
 		List<String> sigs = ob.getSignatureList();
 		List<String> signedBy = ob.getSignedBy();
+		if (signedBy.size() == 0) {
+			return error(ob, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), signedBy);
+		}
 		if (signedBy.size() != sigs.size()) {
-			return error(ob, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs);
+			return error(ob, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), signedBy);
 		}
 		byte[] txHash = SecUtils.getHashBytes(ob.getHash());
 		boolean signByItself = false;
