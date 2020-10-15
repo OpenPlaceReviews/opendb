@@ -498,9 +498,9 @@ public class OpBlockchainRules {
 		for (int i = 0; i < sigs.size(); i++) {
 			Exception cause = null;
 			boolean validate = false;
+			String sig = sigs.get(i);
+			String signedByName = signedBy.get(i);
 			try {
-				String sig = sigs.get(i);
-				String signedByName = signedBy.get(i);
 				OpObject keyObj;
 				if(signByItself && signedByName.equals(signupName)) {
 					keyObj = ob.getCreated().get(0);
@@ -513,7 +513,7 @@ public class OpBlockchainRules {
 				cause = e;
 			}
 			if (!validate) {
-				return error(ob, cause, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), sigs.get(i));
+				return error(ob, cause, ErrorType.OP_SIGNATURE_FAILED, ob.getHash(), signedByName);
 			}
 		}
 		return true;
@@ -687,7 +687,7 @@ public class OpBlockchainRules {
 		OP_HASH_IS_DUPLICATED("Operation '%s' hash is duplicated in block '%s'"),
 		OP_HASH_IS_NOT_CORRECT("Operation hash is not correct '%s' != '%s'"),
 		OP_EMPTY("Empty operation '%s' is not allowed in block %s"),
-		OP_SIGNATURE_FAILED("Operation '%s': signature by '%s' could not be validated"),
+		OP_SIGNATURE_FAILED("Operation '%s': signed by '%s' could not be validated"),
 
 		LIMIT_OF_CREATED_OBJ_FOR_OP_WAS_EXCEEDED("Operation '%s': exceeded amount of created objects"),
 		
