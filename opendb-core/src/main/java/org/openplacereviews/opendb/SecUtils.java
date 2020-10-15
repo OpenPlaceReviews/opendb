@@ -69,10 +69,7 @@ public class SecUtils {
 
 		KeyPair nk = getKeyPair(algo, pr, pk);
 		// validate
-		pr = Base64.getEncoder().encodeToString(nk.getPrivate().getEncoded());
-		pk = Base64.getEncoder().encodeToString(nk.getPublic().getEncoded());
-		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", nk.getPrivate().getFormat(), pr, nk
-				.getPublic().getFormat(), pk));
+		printKeyPair(nk);
 		System.out.println(validateSignature(nk, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, signature));
 		
 		JsonFormatter formatter = new JsonFormatter();
@@ -100,6 +97,15 @@ public class SecUtils {
 		System.out.println(signatureTxt);
 
 
+	}
+
+	private static void printKeyPair(KeyPair nk) {
+		String pr;
+		String pk;
+		pr = Base64.getEncoder().encodeToString(nk.getPrivate().getEncoded());
+		pk = Base64.getEncoder().encodeToString(nk.getPublic().getEncoded());
+		System.out.println(String.format("Private key: 'base64:%s:%s'\nPublic key: 'base64:%s:%s'", nk.getPrivate().getFormat(), pr, nk
+				.getPublic().getFormat(), pk));
 	}
 
 	public static EncodedKeySpec decodeKey(String key) {
