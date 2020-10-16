@@ -245,7 +245,8 @@ public class BlocksManager {
 		}
 		m.capture();
 		compact();
-		logSystem.logSuccessBlock(opBlock,
+		OpBlock header = OpBlock.createHeader(opBlock, blockchain.getRules());
+		logSystem.logSuccessBlock(header,
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		pm.capture();
