@@ -121,7 +121,7 @@ public class SecUtils {
 		System.out.println("Sign operation hash: " + hash);
 		String signatureOp = signMessageWithKeyBase64(kp, hashBytes, SecUtils.SIG_ALGO_ECDSA, null);
 		System.out.println("Validate signature !!!" + validateSignature(kp, hashBytes, signatureOp) + "!!! " + signatureOp);
-		String androidSignatureOp = "ECDSA:base64:MEUCIQC8lOJps4EjZbJiyZsnFsKJZqP574jlT8MmDxg4TNltwwIgTKB6f9oh7QnBmBUgaGvOcg5UDqGTc1+s5TJVDUM6F3U=";
+		String androidSignatureOp = "ECDSA:base64:MEQCIAsbxOH6M/UjnNk/o4CsE5/FfYuops5HtHAuTXk3+7VgAiAIOBI8Z8+gHnkAJEsqEBzlgHPhYvpwR/TM6uHssvX6ZQ==";
 		System.out.println("Android Validate signature !!!" + validateSignature(kp, hashBytes, androidSignatureOp) +"!!! '" + androidSignatureOp+"'");
 
 
