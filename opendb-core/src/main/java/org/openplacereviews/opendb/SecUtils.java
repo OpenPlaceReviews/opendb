@@ -11,8 +11,10 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.ECGenParameterSpec;
@@ -28,6 +30,7 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.crypto.prng.FixedSecureRandom;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
@@ -38,6 +41,10 @@ public class SecUtils {
 	
 	public static final String SIG_ALGO_ECDSA = "ECDSA";
 	public static final String ALGO_EC = "EC";
+	public static final String ALGO_PROVIDER = "BC";
+//	public static final String ALGO_PROVIDER = "SunEC";
+	
+	
 	public static final String EC_256SPEC_K1 = "secp256k1";
 
 	public static final String KEYGEN_PWD_METHOD_1 = "EC256K1_S17R8";
@@ -46,32 +53,52 @@ public class SecUtils {
 	public static final String HASH_SHA1 = "sha1";
 
 	public static final String KEY_BASE64 = DECODE_BASE64;
+	
+	static {
+		Security.addProvider(new BouncyCastleProvider());
+	}
 
-	public static void main(String[] args) throws FailedVerificationException {
-		
+	public static void main(String[] args) throws FailedVerificationException, NoSuchAlgorithmException, NoSuchProviderException {
+//		try {
+//			Provider p[] = Security.getProviders();
+//			for (int i = 0; i < p.length; i++) {
+//				System.out.println(p[i]);
+//				for (Enumeration e = p[i].keys(); e.hasMoreElements();)
+//					System.out.println("\t" + e.nextElement());
+//			}
+//		} catch (Exception e) {
+//			System.out.println(e);
+//		}
+		KeyFactory keyFactory = KeyFactory.getInstance(ALGO_EC, ALGO_PROVIDER);
+		System.out.println("0. Provider/Algorithm: '" + keyFactory.getProvider() + "' '" + keyFactory.getAlgorithm()+"'");
 		KeyPair kp = SecUtils.getKeyPair(ALGO_EC,
 				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
 				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
 //		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
 //		KeyPair kp = generateRandomEC256K1KeyPair();
-		System.out.println(kp.getPrivate().getFormat());
-		System.out.println(kp.getPrivate().getAlgorithm());
-		System.out.println(SecUtils.validateKeyPair(ALGO_EC, kp.getPrivate(), kp.getPublic()));
+		
+		
+		System.out.println("Validate key pair " + SecUtils.validateKeyPair(ALGO_EC, kp.getPrivate(), kp.getPublic()));
 		String pr = encodeKey(KEY_BASE64, kp.getPrivate());
 		String pk = encodeKey(KEY_BASE64, kp.getPublic());
-		String algo = kp.getPrivate().getAlgorithm();
-		System.out.println(String.format("Private key: %s %s\nPublic key: %s %s", kp.getPrivate().getFormat(), pr, kp
-				.getPublic().getFormat(), pk));
-		String signMessageTest = "Hello this is a registration message test";
-		byte[] signature = signMessageWithKey(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC);
-		System.out.println(String.format("Signed message: %s %s", Base64.getEncoder().encodeToString(signature),
-				signMessageTest));
-
-		KeyPair nk = getKeyPair(algo, pr, pk);
-		// validate
+		KeyPair nk = getKeyPair(ALGO_EC, pr, pk);
+		System.out.println();
+		System.out.println("1. Test write / read private / public key");
+		printKeyPair(kp);
 		printKeyPair(nk);
-		System.out.println(validateSignature(nk, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, signature));
 		
+		System.out.println();
+		System.out.println("2. Test signature for simple message");
+		
+		String signMessageTest = "Hello this is a registration message test";
+		String signatureText = signMessageWithKeyBase64(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, null);
+		System.out.println("Validate signature !!!" + validateSignature(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, decodeSignature(signatureText)) +"!!! '" + signatureText +"'");
+		String androidSignatureText = "SHA1withECDSA:base64:MEYCIQC/0s6wNB0YA0GRFNLHpqQCkWH5EvvdJz6wWocCfTmHJwIhAM8eeKXbr0mx4N+VVRosUBodZtDVc2cnmdGdgQo9+UA4";
+		System.out.println("Android Validate signature !!!" + validateSignature(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, decodeSignature(androidSignatureText)) +"!!! '" + androidSignatureText+"'");
+
+		
+		System.out.println();
+		System.out.println("3. Create hash for operation / sign / validate signature");
 		JsonFormatter formatter = new JsonFormatter();
 		String msg = "{\n" + 
 				"		\"type\" : \"sys.signup\",\n" + 
@@ -91,10 +118,9 @@ public class SecUtils {
 				formatter.opToJsonNoHash(opOperation));
 
 		byte[] hashBytes = SecUtils.getHashBytes(hash);
-		String signatureTxt = SecUtils.signMessageWithKeyBase64(kp, hashBytes, SecUtils.SIG_ALGO_ECDSA, null);
-		System.out.println(formatter.opToJsonNoHash(opOperation));
-		System.out.println(hash);
-		System.out.println(signatureTxt);
+		System.out.println("Sign operation hash: " + hash);
+		String signatureOp = signMessageWithKeyBase64(kp, hashBytes, SecUtils.SIG_ALGO_ECDSA, null);
+		System.out.println("Validate signature !!!" + validateSignature(kp, hashBytes, signatureOp) + "!!! " + signatureOp);
 
 
 	}
@@ -159,7 +185,7 @@ public class SecUtils {
 
 		try {
 			// sign using the private key
-			Signature sig = Signature.getInstance(SIG_ALGO_SHA1_EC);
+			Signature sig = Signature.getInstance(SIG_ALGO_SHA1_EC, ALGO_PROVIDER);
 			sig.initSign(privateKey);
 			sig.update(challenge);
 			byte[] signature = sig.sign();
@@ -176,12 +202,14 @@ public class SecUtils {
 			throw new FailedVerificationException(e);
 		} catch (SignatureException e) {
 			throw new FailedVerificationException(e);
+		} catch (NoSuchProviderException e) {
+			throw new FailedVerificationException(e);
 		}
 	}
 
 	public static KeyPair getKeyPair(String algo, String prKey, String pbKey) throws FailedVerificationException {
 		try {
-			KeyFactory keyFactory = KeyFactory.getInstance(algo);
+			KeyFactory keyFactory = KeyFactory.getInstance(algo, ALGO_PROVIDER);
 			PublicKey pb = null;
 			PrivateKey pr = null;
 			if (pbKey != null) {
@@ -194,6 +222,8 @@ public class SecUtils {
 		} catch (NoSuchAlgorithmException e) {
 			throw new FailedVerificationException(e);
 		} catch (InvalidKeySpecException e) {
+			throw new FailedVerificationException(e);
+		} catch (NoSuchProviderException e) {
 			throw new FailedVerificationException(e);
 		}
 	}
@@ -218,7 +248,7 @@ public class SecUtils {
 	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd)
 			throws FailedVerificationException {
 		try {
-			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC);
+			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC, ALGO_PROVIDER);
 			ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
 			if (pwd.length() < 10) {
 				throw new IllegalArgumentException("Less than 10 characters produces only 50 bit entropy");
@@ -233,18 +263,22 @@ public class SecUtils {
 			throw new FailedVerificationException(e);
 		} catch (InvalidAlgorithmParameterException e) {
 			throw new FailedVerificationException(e);
+		} catch (NoSuchProviderException e) {
+			throw new FailedVerificationException(e);
 		}
 	}
 
 	public static KeyPair generateRandomEC256K1KeyPair() throws FailedVerificationException {
 		try {
-			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC);
+			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC, ALGO_PROVIDER);
 			ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
 			kpg.initialize(ecSpec);
 			return kpg.genKeyPair();
 		} catch (NoSuchAlgorithmException e) {
 			throw new FailedVerificationException(e);
 		} catch (InvalidAlgorithmParameterException e) {
+			throw new FailedVerificationException(e);
+		} catch (NoSuchProviderException e) {
 			throw new FailedVerificationException(e);
 		}
 	}
@@ -266,7 +300,7 @@ public class SecUtils {
 	public static byte[] signMessageWithKey(KeyPair keyPair, byte[] msg, String signAlgo)
 			throws FailedVerificationException {
 		try {
-			Signature sig = Signature.getInstance(getInternalSigAlgo(signAlgo));
+			Signature sig = Signature.getInstance(getInternalSigAlgo(signAlgo), ALGO_PROVIDER);
 			sig.initSign(keyPair.getPrivate());
 			sig.update(msg);
 			byte[] signatureBytes = sig.sign();
@@ -276,6 +310,8 @@ public class SecUtils {
 		} catch (InvalidKeyException e) {
 			throw new FailedVerificationException(e);
 		} catch (SignatureException e) {
+			throw new FailedVerificationException(e);
+		} catch (NoSuchProviderException e) {
 			throw new FailedVerificationException(e);
 		}
 	}
@@ -296,7 +332,7 @@ public class SecUtils {
 			return false;
 		}
 		try {
-			Signature sig = Signature.getInstance(getInternalSigAlgo(sigAlgo));
+			Signature sig = Signature.getInstance(getInternalSigAlgo(sigAlgo), ALGO_PROVIDER);
 			sig.initVerify(keyPair.getPublic());
 			sig.update(msg);
 			return sig.verify(signature);
@@ -305,6 +341,8 @@ public class SecUtils {
 		} catch (InvalidKeyException e) {
 			throw new FailedVerificationException(e);
 		} catch (SignatureException e) {
+			throw new FailedVerificationException(e);
+		} catch (NoSuchProviderException e) {
 			throw new FailedVerificationException(e);
 		}
 	}
