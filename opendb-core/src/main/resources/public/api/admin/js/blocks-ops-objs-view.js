@@ -496,8 +496,12 @@ var OBJECTS_VIEW = function () {
             $("#add-edit-op-btn").addClass("hidden");
             if (browse === "operation") {
                 setObjectsHistoryItems("operation", key);
+            } else if (browse === "objid") {
+            	//var typeIds = [type];
+            	// typeIds = typeIds.concat(key.split(','));
+                setObjectsHistoryItems("object", type + "," + key);
             } else if (browse === "userid") {
-                setObjectsHistoryItems("user", key);
+                setObjectsHistoryItems("userid", key);
             } else if (browse === "history") {
                 if(type == "all") {
                     setObjectsHistoryItems("all", null);
@@ -562,6 +566,9 @@ var OBJECTS_VIEW = function () {
                     $("#search-key-input").removeClass("hidden");
                     if (selected === "operation") {
                         $("#name-key-field").text("Operation hash:");
+                    } else if (selected === "objid") {
+                    	$("#type-list-select").removeClass("hidden");
+                        $("#name-key-field").text("Object id:");
                     } else {
                         $("#name-key-field").text("User id:");
                     }
