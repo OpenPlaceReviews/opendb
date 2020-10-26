@@ -288,29 +288,29 @@ public class BlocksManager {
 		return new InputStreamReader(new URL(url).openStream());
 	}
 	
-	public synchronized boolean replicate() {
-		if(isReplicateOn()) {
+	public boolean replicate() {
+		if (isReplicateOn()) {
 			try {
 				String from = blockchain.getLastBlockRawHash();
-				BlocksListResult replicateBlockHeaders = formatter.fromJson(
-						readerFromUrl(getReplicateUrl() + "blocks?from=" + from),
-								BlocksListResult.class);
+				BlocksListResult replicateBlockHeaders = formatter
+						.fromJson(readerFromUrl(getReplicateUrl() + "blocks?from=" + from), BlocksListResult.class);
 				LinkedList<OpBlock> headersToReplicate = replicateBlockHeaders.blocks;
-				if(!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
-					if(!OUtils.equals(headersToReplicate.peekFirst().getRawHash(), from)) {
-						logSystem.logError(headersToReplicate.peekFirst(), ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS, 
-								ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS.getErrorFormat(
-										headersToReplicate.peekFirst().getRawHash(), from, headersToReplicate), null);
+				if (!OUtils.isEmpty(from) && headersToReplicate.size() > 0) {
+					if (!OUtils.equals(headersToReplicate.peekFirst().getRawHash(), from)) {
+						logSystem.logError(headersToReplicate.peekFirst(), ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS,
+									ErrorType.MGMT_REPLICATION_BLOCK_CONFLICTS.getErrorFormat(headersToReplicate.peekFirst().getRawHash(), from, headersToReplicate),
+										null);
 						return false;
 					} else {
-						headersToReplicate.removeFirst();	
+						headersToReplicate.removeFirst();
 					}
 				}
-				for(OpBlock header : headersToReplicate) {
+				for (OpBlock header : headersToReplicate) {
 					OpBlock fullBlock = downloadBlock(header);
-					if(fullBlock == null) {
-						logSystem.logError(header, ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED, 
-								ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED.getErrorFormat(header.getRawHash()), null);
+					if (fullBlock == null) {
+						logSystem.logError(header, ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED,
+								ErrorType.MGMT_REPLICATION_BLOCK_DOWNLOAD_FAILED.getErrorFormat(header.getRawHash()),
+								null);
 						return false;
 					}
 					fullBlock.makeImmutable();
@@ -320,11 +320,15 @@ public class BlocksManager {
 						}
 					}
 					replicateOneBlock(fullBlock);
+					if (!isReplicateOn()) {
+						break;
+					}
 				}
 				return true;
 			} catch (IOException e) {
 				LOGGER.error(e.getMessage(), e);
-				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED, "Failed to replicate from " + getReplicateUrl(), e);
+				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED,
+						"Failed to replicate from " + getReplicateUrl(), e);
 			}
 		}
 		return false;

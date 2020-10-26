@@ -39,7 +39,7 @@ public class OpenDBScheduledServices {
 	
 	@Scheduled(fixedRate = BLOCK_CREATION_PULSE_INTERVAL_SECONDS * SECOND)
 	public void replicateBlock() {
-		if(blocksManager.isReplicateOn()) {
+		if (blocksManager.isReplicateOn()) {
 			try {
 				long now = System.currentTimeMillis() / 1000;
 				if (now - previousReplicateCheck > getReplicateInterval()) {
@@ -48,9 +48,9 @@ public class OpenDBScheduledServices {
 					// ignore if replication was successful or not
 					// exception would mean network failure and conflicts will need to be resolved manually
 					previousReplicateCheck = now;
-					if(blocksManager.getBlockchain().getDepth() != d) {
-						LOGGER.info(String.format("Replication successful %s", new Date())); 
-							//now, previousReplicateCheck, replicateInterval));
+					if (blocksManager.getBlockchain().getDepth() != d) {
+						LOGGER.info(String.format("Replication successful %s", new Date()));
+						// now, previousReplicateCheck, replicateInterval));
 					}
 				}
 			} catch (Exception e) {
