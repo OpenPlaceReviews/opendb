@@ -597,23 +597,23 @@ public class OpBlockChain {
 	}
 
 	public OpOperation getOperationByHash(String rawHash) throws DBStaleException {
-		if(nullObject) {
+		if (nullObject) {
 			return null;
 		}
 		OpOperation o;
-		if(dbAccess != null) {
+		if (dbAccess != null) {
 			o = dbAccess.getOperation(rawHash);
 		} else {
 			o = blockOperations.get(rawHash);
-			if(o == null) {
-				for(OpOperation ops : queueOperations) {
-					if(ops.getRawHash().equals(rawHash)) {
+			if (o == null) {
+				for (OpOperation ops : queueOperations) {
+					if (ops.getRawHash().equals(rawHash)) {
 						return ops;
 					}
 				}
 			}
 		}
-		if(o != null) {
+		if (o != null) {
 			return o;
 		}
 		return parent.getOperationByHash(rawHash);
@@ -633,7 +633,7 @@ public class OpBlockChain {
 			OpObject obj = ot.getObjectById(key, secondary);
 			m.capture();
 			if (obj != null) {
-				if(obj.isDeleted()) {
+				if (obj.isDeleted()) {
 					return null;
 				}
 				return obj;
@@ -652,7 +652,7 @@ public class OpBlockChain {
 			OpObject obj = ot.getObjectById(o);
 			m.capture();
 			if (obj != null) {
-				if(obj.isDeleted()) {
+				if (obj.isDeleted()) {
 					return null;
 				}
 				return obj;
