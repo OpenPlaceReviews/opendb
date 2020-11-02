@@ -13,6 +13,7 @@ import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.KeyPair;
 import java.sql.DatabaseMetaData;
@@ -29,17 +30,17 @@ import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 public class ObjectGeneratorTest {
 
 	public static String[] BOOTSTRAP_LIST =
-			new String[]{"opr-0-test-user", "history-test", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
+			new String[] {"opr-0-test-user", "history-test", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
 					"opr-0-test-grant", "std-validations"};
 
 	public static String[] BLOCKCHAIN_LIST =
-			new String[]{"opr-0-test-user", "std-roles", "opr-0-test-grant", "std-ops-defintions", "opr-0-test-user-test","std-validations", "voting-process"};
+			new String[] {"opr-0-test-user", "std-roles", "opr-0-test-grant", "std-ops-defintions", "opr-0-test-user-test", "std-validations", "voting-process"};
 
 	public static String[] USER_LIST =
-			new String[]{"opr-0-test-user"};
+			new String[] {"opr-0-test-user"};
 
 	public static String[] VOTING_LIST =
-			new String[]{"opr-0-test-user", "std-roles", "opr-0-test-grant", "voting-validation"};
+			new String[] {"opr-0-test-user", "std-roles", "opr-0-test-grant", "voting-validation"};
 
 	public static void generateUserOperations(JsonFormatter formatter, OpBlockChain blc) throws
 			FailedVerificationException {
@@ -56,11 +57,11 @@ public class ObjectGeneratorTest {
 		addOperationFromList(formatter, blc, listNames);
 	}
 
-	public static List<OpOperation> getVotingOperations(JsonFormatter formatter,  OpBlockChain blc, int amount) throws FailedVerificationException {
+	public static List<OpOperation> getVotingOperations(JsonFormatter formatter, OpBlockChain blc, int amount) throws FailedVerificationException {
 		OpOperation[] lst = formatter.fromJson(
 				new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/voting-process.json")),
 				OpOperation[].class);
-		for (int i = 0 ; i < amount; i++) {
+		for (int i = 0; i < amount; i++) {
 			if (!OUtils.isEmpty(serverName) && lst[i].getSignedBy().isEmpty()) {
 				lst[i].setSignedBy(serverName);
 				lst[i] = blc.getRules().generateHashAndSign(lst[i], serverKeyPair);
@@ -111,7 +112,7 @@ public class ObjectGeneratorTest {
 	}
 
 	public static void generateMore30Blocks(JsonFormatter formatter, OpBlockChain blc,
-											DBConsensusManager dbConsensusManager, String[] name_list) throws FailedVerificationException {
+	                                        DBConsensusManager dbConsensusManager, String[] name_list) throws FailedVerificationException {
 		int i = 0;
 		for (String f : name_list) {
 			OpOperation[] lst = formatter.fromJson(
@@ -136,7 +137,7 @@ public class ObjectGeneratorTest {
 	}
 
 	public static void generateHashAndSignForOperation(OpOperation opOperation, OpBlockChain blc, boolean signedBy,
-													   KeyPair... keyPair) throws FailedVerificationException {
+	                                                   KeyPair... keyPair) throws FailedVerificationException {
 		if (signedBy) {
 			opOperation.setSignedBy(serverName);
 		}

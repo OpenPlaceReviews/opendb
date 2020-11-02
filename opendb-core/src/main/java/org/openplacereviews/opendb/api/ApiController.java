@@ -128,7 +128,7 @@ public class ApiController {
 		public List<String> sblocks = new ArrayList<String>();
 	}
 
-	protected static class ObjectsResult {
+	public static class ObjectsResult {
 		public Collection<OpObject> objects;
 		public int count;
 	}

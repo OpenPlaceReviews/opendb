@@ -377,15 +377,16 @@ public class DBConsensusManager {
 				o[1] = type;
 				k.toArray(o, 2);
 				String table = dbSchema.getTableByType(type);
-				if (sz != dbSchema.getKeySizeByType(type)) {
-					return null;
-					//throw new UnsupportedOperationException();
+				if (sz > dbSchema.getKeySizeByType(type)) {
+					//return new OpObject(true);
+					throw new UnsupportedOperationException();
+					//return null;
 				}
 				String s = "select type, ophash" + (content ? ", content" : "") + " from " + table +
 						" where superblock = ? and type = ? and " +
 						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) +
 						" order by sblockid desc";
-				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject>() {
+				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject	>() {
 
 					@Override
 					public OpObject extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -852,17 +853,18 @@ public class DBConsensusManager {
 
 				insertBatch.add(args);
 			}
-			conn.close();
+			//conn.close();
 		} catch (SQLException e) {
 			throw new IllegalArgumentException();
 		} finally {
-			if(conn != null) {
+			/*if(conn != null) {
 				try {
-					conn.close();
+					//conn.close();
+					throw new SQLException();
 				} catch (SQLException e) {
 					throw new IllegalArgumentException(e);
 				}
-			}
+			}*/
 		}
 
 		return insertBatch;

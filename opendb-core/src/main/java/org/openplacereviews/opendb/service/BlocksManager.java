@@ -211,7 +211,7 @@ public class BlocksManager {
 		}
 		m.capture();
 		m = mBlockCreateExtResources.start();
-		extResourceService.processOperations(candidates);
+		//extResourceService.processOperations(candidates);
 		m.capture();
 		
 		m = mBlockCreateValidate.start();
@@ -234,7 +234,7 @@ public class BlocksManager {
 
 		
 		m = mBlockSaveHistory.start();
-		historyManager.saveHistoryForBlockOperations(opBlock, hctx);
+		//historyManager.saveHistoryForBlockOperations(opBlock, hctx);
 		m.capture();
 		
 		// change only after block is inserted into db
@@ -246,9 +246,9 @@ public class BlocksManager {
 		m.capture();
 		compact();
 		OpBlock header = OpBlock.createHeader(opBlock, blockchain.getRules());
-		logSystem.logSuccessBlock(header,
-				String.format("New block '%s':%d  is created on top of '%s'. ",
-						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
+		//logSystem.logSuccessBlock(header,
+		//		String.format("New block '%s':%d  is created on top of '%s'. ",
+		//				opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		pm.capture();
 		return opBlock;
 	}
