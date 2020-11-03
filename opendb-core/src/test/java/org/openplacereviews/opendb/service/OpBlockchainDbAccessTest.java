@@ -124,7 +124,7 @@ public class OpBlockchainDbAccessTest {
 		try {
 			databaseServer.wipeDatabase();		
 		}
-		catch(Exception e) {
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -236,6 +236,7 @@ public class OpBlockchainDbAccessTest {
 	@Test
 	public void testRequestOpFromDb() throws FailedVerificationException {
 		String key = OBJ_ID_P1;// + "," + OBJ_ID_P2;
+		settingsManager.OPENDB_SUPERBLOCK_SIZE.set(2);
 		testAddEditOpToDb();
 		BlocksManager blcManager = new BlocksManager();
 		blcManager.init(metadataDb,databaseBlockChain);

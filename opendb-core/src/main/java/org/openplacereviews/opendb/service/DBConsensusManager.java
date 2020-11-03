@@ -378,9 +378,7 @@ public class DBConsensusManager {
 				k.toArray(o, 2);
 				String table = dbSchema.getTableByType(type);
 				if (sz > dbSchema.getKeySizeByType(type)) {
-					//return new OpObject(true);
-					throw new UnsupportedOperationException();
-					//return null;
+					return null;
 				}
 				String s = "select type, ophash" + (content ? ", content" : "") + " from " + table +
 						" where superblock = ? and type = ? and " +
