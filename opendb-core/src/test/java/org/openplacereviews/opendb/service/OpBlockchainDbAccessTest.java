@@ -2,7 +2,10 @@ package org.openplacereviews.opendb.service;
 
 import org.junit.*;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
+import org.mockito.Matchers;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -58,10 +61,19 @@ public class OpBlockchainDbAccessTest {
 	@Spy
 	@InjectMocks
 	private DBSchemaManager dbSchemaManager;
+	
+	@Mock
+	private LogOperationService logSystem;
+	
+	@Mock
+	private HistoryManager historyManager;
 
 	@Spy
 	private JsonFormatter formatter;
 
+	@Mock
+	private IPFSFileManager extResourceService;
+	
 	@Spy
 	@InjectMocks
 	private FileBackupManager fileBackupManager;
@@ -192,13 +204,13 @@ public class OpBlockchainDbAccessTest {
 		//databaseBlockChain = blockChain;
 		
 		OpBlockChain blockChain = databaseBlockChain;
-		BlocksManager blcManager = new BlocksManager();
-		blcManager.init(metadataDb,databaseBlockChain);
+		BlocksManager blcManager = createBlocksManager();
 		JsonFormatter formatter = new JsonFormatter();
 		ReflectionTestUtils.setField(blcManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blcManager, "formatter", formatter);
 		ReflectionTestUtils.setField(blcManager, "serverKeyPair", serverKeyPair);
 		ReflectionTestUtils.setField(blcManager, "serverUser", serverName);
+		
 		List<String> bootstrapList =
 			    Arrays.asList("opr-0-test-user", BlocksManager.BOOT_STD_OPS_DEFINTIONS, BlocksManager.BOOT_STD_ROLES,
 			      "opr-0-test-grant", BlocksManager.BOOT_STD_VALIDATION);
@@ -210,6 +222,7 @@ public class OpBlockchainDbAccessTest {
 
 		//ObjectGeneratorTest.generateOperations(new JsonFormatter(),databaseBlockChain);
 
+        Mockito.doNothing().when(extResourceService).processOperations(ArgumentMatchers.anyList());
 		blcManager.createBlock();
 		OpOperation placeOp = createPlaceOperation(blockChain);
 		blcManager.addOperation(placeOp);
@@ -230,7 +243,7 @@ public class OpBlockchainDbAccessTest {
 		}
 //		OpBlock blockMain = blcManager.createBlock();
 
-		blcManager = new BlocksManager();
+		blcManager = createBlocksManager();
 		blcManager.init(metadataDb,databaseBlockChain);
 		ReflectionTestUtils.setField(blcManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blcManager, "formatter", formatter);
@@ -244,6 +257,15 @@ public class OpBlockchainDbAccessTest {
 		ObjectsSearchRequest req = new ObjectsSearchRequest();
 		blockChain.fetchAllObjects(OP_ID, req);
 		//assertEquals(1, req.result.size());
+	}
+	
+	private BlocksManager createBlocksManager() {
+		BlocksManager blcManager = new BlocksManager();
+		ReflectionTestUtils.setField(blcManager, "extResourceService", extResourceService);
+		ReflectionTestUtils.setField(blcManager, "historyManager", historyManager);
+		ReflectionTestUtils.setField(blcManager, "logSystem", logSystem);
+		blcManager.init(metadataDb,databaseBlockChain);
+		return blcManager;
 	}
 
 	private static List<OpOperation> addOperationFromList(JsonFormatter formatter, BlocksManager blc, String[] userList) throws FailedVerificationException {
@@ -295,6 +317,7 @@ public class OpBlockchainDbAccessTest {
 		}
 		ApiController.ObjectsResult res = new ApiController.ObjectsResult();
 		res.objects = obj == null ? Collections.emptyList() : Collections.singletonList(obj);
+		//Failure there
 		assertEquals(0, res.objects.size());
 	}
 
