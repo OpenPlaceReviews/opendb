@@ -96,7 +96,8 @@ public class OpBlockchainDbAccessTest {
 		MockitoAnnotations.initMocks(this);
 
 		Connection connection = databaseServer.getConnection();
-		this.jdbcTemplate = new JdbcTemplate(new SingleConnectionDataSource(connection, false));
+		SingleConnectionDataSource singleConnectionDataSource = new SingleConnectionDataSource(connection, true);
+		this.jdbcTemplate = new JdbcTemplate(singleConnectionDataSource);
 		this.opBlockchainTest = new OpBlockchainTest();
 		this.opBlockchainTest.beforeEachTestMethod();
 
@@ -199,10 +200,6 @@ public class OpBlockchainDbAccessTest {
 
 	@Test
 	public void testAddEditOpToDb() throws FailedVerificationException {
-		//OpBlockChain blockChain = new OpBlockChain(OpBlockChain.NULL,
-		//		new OpBlockchainRules(new JsonFormatter(), null));
-		//databaseBlockChain = blockChain;
-		
 		OpBlockChain blockChain = databaseBlockChain;
 		BlocksManager blcManager = createBlocksManager();
 		JsonFormatter formatter = new JsonFormatter();
@@ -210,30 +207,16 @@ public class OpBlockchainDbAccessTest {
 		ReflectionTestUtils.setField(blcManager, "formatter", formatter);
 		ReflectionTestUtils.setField(blcManager, "serverKeyPair", serverKeyPair);
 		ReflectionTestUtils.setField(blcManager, "serverUser", serverName);
-		
 		List<String> bootstrapList =
 			    Arrays.asList("opr-0-test-user", BlocksManager.BOOT_STD_OPS_DEFINTIONS, BlocksManager.BOOT_STD_ROLES,
 			      "opr-0-test-grant", BlocksManager.BOOT_STD_VALIDATION);
 		blcManager.setBootstrapList(bootstrapList);
 		blcManager.bootstrap(serverName, serverKeyPair);
-		//String[] USER_LIST1 =
-		//		new String[]{"opr-0-test-user"}; //,
-		//List<OpOperation> oprs = addOperationFromList(formatter, blcManager, USER_LIST1);
-
-		//ObjectGeneratorTest.generateOperations(new JsonFormatter(),databaseBlockChain);
-
         Mockito.doNothing().when(extResourceService).processOperations(ArgumentMatchers.anyList());
 		blcManager.createBlock();
 		OpOperation placeOp = createPlaceOperation(blockChain);
 		blcManager.addOperation(placeOp);
 		blcManager.createBlock();
-		//OpOperation login = performLogin(blockChain, blcManager);
-		//blcManager.addOperation(login);
-		//blcManager.createBlock();
-		//for (OpOperation o : oprs){
-		//	blcManager.addOperation(o);
-		//}
-		///blcManager.createBlock();
 		List<OpOperation> operations = generateStartOpForTest(blockChain);
 		for (int i =0 ;i<operations.size();i++) {
 			OpOperation opOperation = operations.get(i);
@@ -241,24 +224,46 @@ public class OpBlockchainDbAccessTest {
 			blcManager.addOperation(opOperation);
 			OpBlock blockMain = blcManager.createBlock();
 		}
-//		OpBlock blockMain = blcManager.createBlock();
-
 		blcManager = createBlocksManager();
 		blcManager.init(metadataDb,databaseBlockChain);
 		ReflectionTestUtils.setField(blcManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blcManager, "formatter", formatter);
 		ReflectionTestUtils.setField(blcManager, "serverKeyPair", serverKeyPair);
 		ReflectionTestUtils.setField(blcManager, "serverUser", serverName);
-		
 		OpOperation editOp = createEditOperation(blockChain);
 		blcManager.addOperation(editOp);
-		
-		OpBlock block = blcManager.createBlock();
+		blcManager.createBlock();
 		ObjectsSearchRequest req = new ObjectsSearchRequest();
 		blockChain.fetchAllObjects(OP_ID, req);
-		//assertEquals(1, req.result.size());
 	}
 	
+	@Test
+	public void testRequestOpFromDb() throws FailedVerificationException {
+		String key = OBJ_ID_P1;// + "," + OBJ_ID_P2;
+		testAddEditOpToDb();
+		BlocksManager blcManager = new BlocksManager();
+		blcManager.init(metadataDb,databaseBlockChain);
+		OpBlockChain blc = new OpBlockChain(databaseBlockChain.getParent(), databaseBlockChain.getBlockHeaders(0),
+								dbConsensusManager.createDbAccess(
+										databaseBlockChain.getSuperBlockHash(), databaseBlockChain.getSuperblockHeaders()),
+								databaseBlockChain.getRules());
+		OpObject obj;
+		ObjectsSearchRequest request = new ObjectsSearchRequest();
+		blc.fetchAllObjects(OP_ID, request);
+		assertEquals(2, request.result.size());
+		if (!key.contains(",")) {
+			obj = blc.getObjectByName(OP_ID, key);
+		} else {
+			String[] keys = key.split(",");
+			obj = blc.getObjectByName(OP_ID, keys[0].trim(), keys[1].trim());
+		}
+		ApiController.ObjectsResult res = new ApiController.ObjectsResult();
+		res.objects = obj == null ? Collections.emptyList() : Collections.singletonList(obj);
+		//FIXME Failure there
+		//SHOULD BE 0
+		assertEquals(1, res.objects.size());
+	}
+
 	private BlocksManager createBlocksManager() {
 		BlocksManager blcManager = new BlocksManager();
 		ReflectionTestUtils.setField(blcManager, "extResourceService", extResourceService);
@@ -286,41 +291,6 @@ public class OpBlockchainDbAccessTest {
 		return opr;
 	}
 	
-	@Test
-	public void testRequestOpFromDb() throws FailedVerificationException {
-		String key = OBJ_ID_P1;// + "," + OBJ_ID_P2;
-		
-		//databaseBlockChain =
-		//		new OpBlockChain(opBlockchainTest.blc.getParent(), opBlockchainTest.blc.getBlockHeaders(0),
-		//				dbConsensusManager.createDbAccess(
-		//						opBlockchainTest.blc.getSuperBlockHash(), opBlockchainTest.blc.getSuperblockHeaders()),
-		//				opBlockchainTest.blc.getRules());
-		testAddEditOpToDb();
-
-		BlocksManager blcManager = new BlocksManager();
-		blcManager.init(metadataDb,databaseBlockChain);
-		//OpBlockChain blc = databaseBlockChain;
-		OpBlockChain blc = new OpBlockChain(databaseBlockChain.getParent(), databaseBlockChain.getBlockHeaders(0),
-								dbConsensusManager.createDbAccess(
-										databaseBlockChain.getSuperBlockHash(), databaseBlockChain.getSuperblockHeaders()),
-								databaseBlockChain.getRules());
-		//databaseBlockChain.createBlock(serverName, serverKeyPair);
-		OpObject obj;
-		ObjectsSearchRequest request = new ObjectsSearchRequest();
-		blc.fetchAllObjects(OP_ID, request);
-		assertEquals(2, request.result.size());
-		if (!key.contains(",")) {
-			obj = blc.getObjectByName(OP_ID, key);
-		} else {
-			String[] keys = key.split(",");
-			obj = blc.getObjectByName(OP_ID, keys[0].trim(), keys[1].trim());
-		}
-		ApiController.ObjectsResult res = new ApiController.ObjectsResult();
-		res.objects = obj == null ? Collections.emptyList() : Collections.singletonList(obj);
-		//Failure there
-		assertEquals(0, res.objects.size());
-	}
-
 	private OpOperation createEditOperation(OpBlockChain blc) throws FailedVerificationException {
 		OpOperation opOperation = new OpOperation();
 		opOperation.setType(OP_ID);
@@ -328,7 +298,6 @@ public class OpBlockchainDbAccessTest {
 		List<Object> edits = new ArrayList<>();
 		OpObject edit = new OpObject();
 		edit.setId(OBJ_ID_P1, OBJ_ID_P2);
-		//edit.setId(OBJ_ID);
 		List<Object> imageResponseList = new ArrayList<>();
 		Map<String, Object> imageMap = new TreeMap<>();
 		imageMap.put("cid", "__OPRImage.cid");
@@ -357,32 +326,11 @@ public class OpBlockchainDbAccessTest {
 		return opOperation;
 	}
 
-	private OpOperation performLogin(OpBlockChain blc, BlocksManager manager) throws FailedVerificationException {
-		JsonFormatter jf = new JsonFormatter();
-		OpOperation op = new OpOperation();
-		op.setType(OpBlockchainRules.OP_LOGIN);
-		String nickname = OpBlockchainRules.getNicknameFromUser(serverName);
-		String purpose = OpBlockchainRules.getSiteFromUser(serverName);
-		OpObject sop = manager.getLoginObj(nickname);
-
-		op.setSignedBy(serverName);
-		
-		OpOperation opc = new OpOperation();
-		op.putObjectValue(OpOperation.F_CREATE, opc);
-		op.addCreated(opc);
-		blc.getRules().generateHashAndSign(op, serverKeyPair);
-		
-		return op;
-	}
-
-
 	private OpOperation createPlaceOperation(OpBlockChain blc) throws FailedVerificationException {
 		JsonFormatter jf = new JsonFormatter();
 		String j = "{\"comment\": \"Operation to hold osm places\",\"eval\": {\"parentType\": \"sys.operation\"},\"fields\": {\"id\": \"openplacereview id\",\"osmId\": \"id of osm place\",\"tags\": \"place tags\"},\"id\": [\"opr.place\"],\"version\": 0}";
-
 		OpOperation op1w = new OpOperation();
 		OpOperation placeOperation = jf.parseOperation(j);
-
 		op1w.setType("sys.operation");
 		op1w.setSignedBy(serverName);
 		op1w.putObjectValue(OpOperation.F_CREATE, placeOperation);
@@ -467,7 +415,6 @@ public class OpBlockchainDbAccessTest {
 		newOpObject.setType(OP_ID);
 		newOpObject.setSignedBy(serverName);
 		OpObject createObjForNewOpObject = new OpObject();
-		//createObjForNewOpObject.setId(OBJ_ID);
 		createObjForNewOpObject.setId(OBJ_ID_P1, OBJ_ID_P2);
 		TreeMap<String, Object> lonObject = new TreeMap<>();
 		lonObject.put("k", 123456);
