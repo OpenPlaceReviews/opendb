@@ -245,7 +245,6 @@ public class OpBlockchainDbAccessTest {
 	
 	@Test
 	public void testRequestOpFromDb() throws FailedVerificationException {
-		String key = OBJ_ID_P1;// + "," + OBJ_ID_P2;
 		settingsManager.OPENDB_SUPERBLOCK_SIZE.set(2);
 		testAddEditOpToDb();
 		BlocksManager blcManager = new BlocksManager();
@@ -257,14 +256,22 @@ public class OpBlockchainDbAccessTest {
 		ObjectsSearchRequest request = new ObjectsSearchRequest();
 		blc.fetchAllObjects(OP_ID, request);
 		assertEquals(2, request.result.size());
-		OpObject obj;
-		if (!key.contains(",")) {
-			obj = blc.getObjectByName(OP_ID, key);
-		} else {
-			String[] keys = key.split(",");
-			obj = blc.getObjectByName(OP_ID, keys[0].trim(), keys[1].trim());
-		}
+		OpObject obj = blc.getObjectByName(OP_ID, OBJ_ID_P1);
 		Assert.assertNull(obj);
+	}
+	
+	@Test
+	public void testRequestOpFromDbNotNull() throws FailedVerificationException {
+		settingsManager.OPENDB_SUPERBLOCK_SIZE.set(2);
+		testAddEditOpToDb();
+		BlocksManager blcManager = new BlocksManager();
+		blcManager.init(metadataDb,databaseBlockChain);
+		OpBlockChain blc = new OpBlockChain(databaseBlockChain.getParent(), databaseBlockChain.getBlockHeaders(0),
+								dbConsensusManager.createDbAccess(
+										databaseBlockChain.getSuperBlockHash(), databaseBlockChain.getSuperblockHeaders()),
+								databaseBlockChain.getRules());
+		OpObject obj = blc.getObjectByName(OP_ID, OBJ_ID_P1, OBJ_ID_P2);
+		Assert.assertNotNull(obj);
 	}
 
 	private BlocksManager createBlocksManager() {
