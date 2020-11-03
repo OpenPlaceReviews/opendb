@@ -377,12 +377,17 @@ public class DBConsensusManager {
 				o[1] = type;
 				k.toArray(o, 2);
 				String table = dbSchema.getTableByType(type);
-				if (sz > dbSchema.getKeySizeByType(type)) {
-					return null;
+				int keySizeByTable = dbSchema.getKeySizeByTable(type);
+				if (sz > keySizeByTable) {
+					throw new UnsupportedOperationException();
+				}
+				String nullFields = "";
+				for (int i = sz; i < keySizeByTable; i++) {
+					nullFields += " and p" + (i + 1) + " is null ";
 				}
 				String s = "select type, ophash" + (content ? ", content" : "") + " from " + table +
 						" where superblock = ? and type = ? and " +
-						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) +
+						dbSchema.generatePKString(table, "p%1$d = ?", " and ", sz) + nullFields +
 						" order by sblockid desc";
 				return jdbcTemplate.query(s, o, new ResultSetExtractor<OpObject	>() {
 
@@ -435,7 +440,7 @@ public class DBConsensusManager {
 					}
 				}
 				String objTable = dbSchema.getTableByType(type);
-				final int keySize = dbSchema.getKeySizeByType(type);
+				final int keySize = dbSchema.getKeySizeByTable(objTable);
 				String cntField = "content";
 				if(onlyKeys) {
 					 cntField = "case when content is null then true else false end";
@@ -795,7 +800,8 @@ public class DBConsensusManager {
 												   byte[] superBlockHash, Map<String, Long> opsId, Collection<OpIndexColumn> indexes) {
 
 		List<Object[]> insertBatch = new ArrayList<>();
-		int ksize = dbSchema.getKeySizeByType(type);
+		String tableByType = dbSchema.getTableByType(type);
+		int ksize = dbSchema.getKeySizeByTable(tableByType);
 		Iterator<Entry<CompoundKey, OpObject>> it = objects.iterator();
 		Connection conn = null;
 		try {

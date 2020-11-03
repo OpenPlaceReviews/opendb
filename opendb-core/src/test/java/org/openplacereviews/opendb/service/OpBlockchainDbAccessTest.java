@@ -1,6 +1,27 @@
 package org.openplacereviews.opendb.service;
 
-import org.junit.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
@@ -9,31 +30,20 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.openplacereviews.opendb.OpenDBServer;
-import org.openplacereviews.opendb.api.ApiController;
-import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
+import org.openplacereviews.opendb.ops.OpBlockchainTest;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import java.io.InputStreamReader;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
-import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
 public class OpBlockchainDbAccessTest {
 
@@ -244,21 +254,17 @@ public class OpBlockchainDbAccessTest {
 								dbConsensusManager.createDbAccess(
 										databaseBlockChain.getSuperBlockHash(), databaseBlockChain.getSuperblockHeaders()),
 								databaseBlockChain.getRules());
-		OpObject obj;
 		ObjectsSearchRequest request = new ObjectsSearchRequest();
 		blc.fetchAllObjects(OP_ID, request);
 		assertEquals(2, request.result.size());
+		OpObject obj;
 		if (!key.contains(",")) {
 			obj = blc.getObjectByName(OP_ID, key);
 		} else {
 			String[] keys = key.split(",");
 			obj = blc.getObjectByName(OP_ID, keys[0].trim(), keys[1].trim());
 		}
-		ApiController.ObjectsResult res = new ApiController.ObjectsResult();
-		res.objects = obj == null ? Collections.emptyList() : Collections.singletonList(obj);
-		//FIXME Failure there
-		//SHOULD BE 0
-		assertEquals(1, res.objects.size());
+		Assert.assertNull(obj);
 	}
 
 	private BlocksManager createBlocksManager() {
