@@ -1,22 +1,20 @@
 package org.openplacereviews.opendb.ops;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
-import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.TreeMap;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.BlockchainValidationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+
+import java.util.*;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
 
 public class OpBlockchainEditOpTest {
 
@@ -221,6 +219,42 @@ public class OpBlockchainEditOpTest {
 		blc.getRules().generateHashAndSign(editOp, serverKeyPair);
 		editOp.makeImmutable();
 		blc.addOperation(editOp);
+	}
+
+	@Test
+	public void testEditImagesOp() throws FailedVerificationException {
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType("osm.testplace");
+		opOperation.setSignedBy(serverName);
+		List<Object> edits = new ArrayList<>();
+		OpObject edit = new OpObject();
+		edit.setId(OBJ_ID);
+		List<Object> imageResponseList = new ArrayList<>();
+		Map<String, Object> imageMap = new TreeMap<>();
+		imageMap.put("cid", "__OPRImage.cid");
+		imageMap.put("hash", "__OPRImage.hash");
+		imageMap.put("extension", "__OPRImage.extension");
+		imageMap.put("type", "__OPRImage.type");
+		imageResponseList.add(imageMap);
+		List<String> ids = new ArrayList<>(Arrays.asList("__placeId"));
+		Map<String, Object> change = new TreeMap<>();
+		Map<String, Object> images = new TreeMap<>();
+		Map<String, Object> outdoor = new TreeMap<>();
+		outdoor.put("outdoor", imageResponseList);
+		images.put("append", outdoor);
+		change.put("version", "increment");
+		change.put("images", images);
+		TreeMap<String, Object> setAlreadyExist = new TreeMap<>();
+		setAlreadyExist.put("images", new ArrayList<>());
+		TreeMap<String, Object> current = new TreeMap<>();
+		edit.putObjectValue(OpObject.F_CHANGE, change);
+		edit.putObjectValue(OpObject.F_CURRENT, current);
+		edits.add(edit);
+		opOperation.putObjectValue(OpOperation.F_EDIT, edit);
+		opOperation.addEdited(edit);
+		blc.getRules().generateHashAndSign(opOperation, serverKeyPair);
+		opOperation.makeImmutable();
+		assertTrue(blc.addOperation(opOperation));
 	}
 
 	private List<OpOperation> generateStartOpForTest() throws FailedVerificationException {

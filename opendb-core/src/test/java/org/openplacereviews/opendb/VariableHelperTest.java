@@ -1,10 +1,10 @@
 package org.openplacereviews.opendb;
 
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
 public class VariableHelperTest {
 
@@ -18,7 +18,7 @@ public class VariableHelperTest {
 		try {
 			serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverKey, serverPublicKey);
 		} catch (FailedVerificationException e) {
-			e.printStackTrace();
+			throw new Error(e);
 		}
 	}
 

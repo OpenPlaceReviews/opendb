@@ -139,7 +139,7 @@ public class OpOperation extends OpObject {
 	public void addCreated(OpObject o) {
 		checkNotImmutable();
 		createdObjects.add(o);
-		if(type != null) {
+		if (type != null) {
 			o.setParentOp(this);
 		}
 	}

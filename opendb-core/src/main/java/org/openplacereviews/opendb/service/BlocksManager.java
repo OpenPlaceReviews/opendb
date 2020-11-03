@@ -114,7 +114,9 @@ public class BlocksManager {
 
 	public synchronized void init(MetadataDb metadataDB, OpBlockChain initBlockchain) {
 		try {
-			this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
+			if (this.serverKeyPair == null) {
+				this.serverKeyPair = SecUtils.getKeyPair(SecUtils.ALGO_EC, serverPrivateKey, serverPublicKey);
+			}
 		} catch (FailedVerificationException e) {
 			LOGGER.error("Error validating server private / public key: " + e.getMessage(), e);
 			throw new RuntimeException(e);

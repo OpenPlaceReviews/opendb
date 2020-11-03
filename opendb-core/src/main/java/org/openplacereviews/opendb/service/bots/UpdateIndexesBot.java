@@ -138,7 +138,8 @@ public class UpdateIndexesBot extends GenericMultiThreadBot<UpdateIndexesBot> {
 	
 	private List<Object[]> prepareInsertIndexObjBatch(Stream<Map.Entry<CompoundKey, OpObject>> objects, String type, OpIndexColumn index) {
 		List<Object[]> updateList = new ArrayList<>();
-		int ksize = dbSchemaManager.getKeySizeByType(type);
+		String table = dbSchemaManager.getTableByType(type);
+		int ksize = dbSchemaManager.getKeySizeByTable(table);
 		Iterator<Map.Entry<CompoundKey, OpObject>> it = objects.iterator();
 		Connection conn = null;
 		try {

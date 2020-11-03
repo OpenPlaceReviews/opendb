@@ -216,9 +216,10 @@ public class DBSchemaManager {
 		return types;
 	}
 	
-	public int getKeySizeByType(String type) {
-		return getKeySizeByTable(getTableByType(type));
-	}
+	// this is confusing method and it is incorrect cause we don't know precise key length for type
+//	public int getKeySizeByType(String type) {
+//		return getKeySizeByTable(getTableByType(type));
+//	}
 	
 	public int getKeySizeByTable(String table) {
 		return objTableDefs.get(table).keySize;
