@@ -4,18 +4,15 @@ import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
-import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.openplacereviews.opendb.ObjectGeneratorTest;
 import org.openplacereviews.opendb.OpenDBServer;
 import org.openplacereviews.opendb.api.ApiController;
 import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.OpBlockChain.ObjectsSearchRequest;
-import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.psql.PostgreSQLServer;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
@@ -26,7 +23,6 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -38,7 +34,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_OPERATION;
 
 public class OpBlockchainDbAccessTest {
 
@@ -235,6 +230,7 @@ public class OpBlockchainDbAccessTest {
 		blcManager.createBlock();
 		ObjectsSearchRequest req = new ObjectsSearchRequest();
 		blockChain.fetchAllObjects(OP_ID, req);
+		assertEquals(2, req.result.size());
 	}
 	
 	@Test
@@ -430,4 +426,8 @@ public class OpBlockchainDbAccessTest {
 		blc.getRules().generateHashAndSign(newOpObject, serverKeyPair);
 		return Arrays.asList(initOp, newOpObject, op1w, op2w, op3w, op4w, op5w, opaw);
 	}
+	
+
+
+
 }

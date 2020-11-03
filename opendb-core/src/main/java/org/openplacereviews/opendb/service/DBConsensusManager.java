@@ -853,19 +853,19 @@ public class DBConsensusManager {
 
 				insertBatch.add(args);
 			}
-			//FIXME commented for test
-			//conn.close();
+			conn.close();
 		} catch (SQLException e) {
 			throw new IllegalArgumentException();
 		} finally {
-			/*if(conn != null) {
+			if(conn != null) {
 				try {
 					conn.close();
-					throw new SQLException();
+					//FIXME
+					//throw new SQLException();
 				} catch (SQLException e) {
 					throw new IllegalArgumentException(e);
 				}
-			}*/
+			}
 		}
 
 		return insertBatch;
