@@ -860,8 +860,6 @@ public class DBConsensusManager {
 			if(conn != null) {
 				try {
 					conn.close();
-					//FIXME
-					//throw new SQLException();
 				} catch (SQLException e) {
 					throw new IllegalArgumentException(e);
 				}

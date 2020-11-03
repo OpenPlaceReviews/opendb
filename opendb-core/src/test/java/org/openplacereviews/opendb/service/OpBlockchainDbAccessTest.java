@@ -269,23 +269,6 @@ public class OpBlockchainDbAccessTest {
 		return blcManager;
 	}
 
-	private static List<OpOperation> addOperationFromList(JsonFormatter formatter, BlocksManager blc, String[] userList) throws FailedVerificationException {
-		List<OpOperation> opr = new ArrayList<>();
-		for (String f : userList) {
-			OpOperation[] lst = formatter.fromJson(
-					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
-					OpOperation[].class);
-			for (OpOperation o : lst) {
-				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
-					o.setSignedBy(serverName);
-					o = blc.getBlockchain().getRules().generateHashAndSign(o, serverKeyPair);
-				}
-				o.makeImmutable();
-				opr.add(o);
-			}
-		}
-		return opr;
-	}
 	
 	private OpOperation createEditOperation(OpBlockChain blc) throws FailedVerificationException {
 		OpOperation opOperation = new OpOperation();
@@ -323,15 +306,18 @@ public class OpBlockchainDbAccessTest {
 	}
 
 	private OpOperation createPlaceOperation(OpBlockChain blc) throws FailedVerificationException {
-		JsonFormatter jf = new JsonFormatter();
 		String j = "{\"comment\": \"Operation to hold osm places\",\"eval\": {\"parentType\": \"sys.operation\"},\"fields\": {\"id\": \"openplacereview id\",\"osmId\": \"id of osm place\",\"tags\": \"place tags\"},\"id\": [\"opr.place\"],\"version\": 0}";
-		OpOperation op1w = new OpOperation();
-		OpOperation placeOperation = jf.parseOperation(j);
-		op1w.setType("sys.operation");
-		op1w.setSignedBy(serverName);
-		op1w.putObjectValue(OpOperation.F_CREATE, placeOperation);
-		op1w.addCreated(placeOperation);
+		return createOpFromJson(blc, j, "sys.operation");
+	}
 	
+	private OpOperation createOpFromJson(OpBlockChain blc, String json, String type) throws FailedVerificationException {
+		JsonFormatter jf = new JsonFormatter();
+		OpOperation op1 = jf.parseOperation(json);
+		OpOperation op1w = new OpOperation();
+		op1w.setType(type);
+		op1w.setSignedBy(serverName);
+		op1w.putObjectValue(OpOperation.F_CREATE, op1);
+		op1w.addCreated(op1);
 		blc.getRules().generateHashAndSign(op1w, serverKeyPair);
 		return op1w;
 	}
@@ -344,59 +330,13 @@ public class OpBlockchainDbAccessTest {
 		String version15 = "{\"id\": [\"9G2GCG\",\"wlkomu\"],\"source\": {\"osm\": [{\"id\": 43383147,\"lat\": 50.44494543216025,\"lon\": 30.508777081059165,\"tags\": {\"name\": \"Володимирський собор\",\"amenity\": \"place_of_worship\",\"name:de\": \"Wladimirkathedrale\",\"name:en\": \"St. Vladimir's Cathedral\",\"name:et\": \"Püha Volodõmõri katedraal\",\"name:fr\": \"Cathédrale Saint-Vladimir\",\"name:it\": \"Cattedrale di San Vladimiro\",\"name:nl\": \"Vladimirkathedraal\",\"name:ru\": \"Владимирский cобор\",\"name:uk\": \"Володимирський собор\",\"website\": \"http://www.katedral.org.ua/\",\"building\": \"cathedral\",\"religion\": \"christian\",\"wikidata\": \"Q1417441\",\"wikipedia\": \"uk:Володимирський собор (Київ)\",\"denomination\": \"ukrainian_orthodox\",\"addr:housenumber\": \"20\"},\"type\": \"way\",\"osm_tag\": \"amenity\",\"version\": \"15\",\"changeset\": \"75113080\",\"osm_value\": \"place_of_worship\",\"timestamp\": \"2019-09-30T17:17:23Z\"}],\"old-osm-ids\": []},\"placetype\": \"place_of_worship\"}";
 		String version7 = "{\"id\": [\"9G2GCG\",\"wlkomu\"],\"images\": [{\"outdoor\": [{\"cid\": \"QmTkxczJ6q9XRYz8TTgRiEEZYMMaMvAC2LHMaNkkkKJH96\",\"hash\": \"601141910fd5eff18ac11fb49e402cc4d514c83820001c7fbc84dbc52df93f69\",\"type\": \"#image\",\"extension\": \"\"}]}],\"source\": {\"osm\": [{\"id\": 43383147,\"lat\": 50.44494543216025,\"lon\": 30.508777081059165,\"tags\": {\"name\": \"Володимирський собор\",\"amenity\": \"place_of_worship\",\"name:de\": \"Wladimirkathedrale\",\"name:en\": \"St. Vladimir's Cathedral\",\"name:et\": \"Püha Volodõmõri katedraal\",\"name:fr\": \"Cathédrale Saint-Vladimir\",\"name:it\": \"Cattedrale di San Vladimiro\",\"name:nl\": \"Vladimirkathedraal\",\"name:ru\": \"Владимирский cобор\",\"name:uk\": \"Володимирський собор\",\"website\": \"http://www.katedral.org.ua/\",\"building\": \"cathedral\",\"religion\": \"christian\",\"wikidata\": \"Q1417441\",\"wikipedia\": \"uk:Володимирський собор (Київ)\",\"denomination\": \"ukrainian_orthodox\",\"addr:housenumber\": \"20\"},\"type\": \"way\",\"osm_tag\": \"amenity\",\"version\": \"15\",\"changeset\": \"75113080\",\"osm_value\": \"place_of_worship\",\"timestamp\": \"2019-09-30T17:17:23Z\"}],\"old-osm-ids\": []},\"version\": 7,\"placetype\": \"place_of_worship\"}";
 		String version151 ="{\"id\": [\"9G2GCG\",\"wlkomu\"],\"source\": {\"osm\": [{\"id\": 43383147,\"lat\": 50.44494543216025,\"lon\": 30.508777081059165,\"tags\": {\"name\": \"Володимирський собор\",\"amenity\": \"place_of_worship\",\"name:de\": \"Wladimirkathedrale\",\"name:en\": \"St. Vladimir's Cathedral\",\"name:et\": \"Püha Volodõmõri katedraal\",\"name:fr\": \"Cathédrale Saint-Vladimir\",\"name:it\": \"Cattedrale di San Vladimiro\",\"name:nl\": \"Vladimirkathedraal\",\"name:ru\": \"Владимирский cобор\",\"name:uk\": \"Володимирський собор\",\"website\": \"http://www.katedral.org.ua/\",\"building\": \"cathedral\",\"religion\": \"christian\",\"wikidata\": \"Q1417441\",\"wikipedia\": \"uk:Володимирський собор (Київ)\",\"denomination\": \"ukrainian_orthodox\",\"addr:housenumber\": \"20\"},\"type\": \"way\",\"osm_tag\": \"amenity\",\"version\": \"15\",\"changeset\": \"75113080\",\"osm_value\": \"place_of_worship\",\"timestamp\": \"2019-09-30T17:17:23Z\"}],\"old-osm-ids\": []}}";
-
 		String v14actual = "{\"id\": [\"9G2GCG\",\"wlkomu\"],\"images\": {\"outdoor\": [{\"cid\": \"QmRsY14xMsnwN31Ao6rvTHHsiiPdvaKb17z8W1nwBrpyep\",\"extension\": \"\",\"hash\": \"3b9de9df3d704d50a3f093555637e9992e7618dca798b8256d96de7fa8ac6b8d\",\"type\": \"#image\"}]},\"placetype\": \"place_of_worship\",\"source\": {\"old-osm-ids\": [],\"osm\": [{\"changeset\": \"75113080\",\"id\": 43383147,\"lat\": 50.44494543216025,\"lon\": 30.508777081059165,\"osm_tag\": \"amenity\",\"osm_value\": \"place_of_worship\",\"tags\": {\"addr:housenumber\": \"20\",\"amenity\": \"place_of_worship\",\"building\": \"cathedral\",\"denomination\": \"ukrainian_orthodox\",\"name\": \"Володимирський собор\",\"name:de\": \"Wladimirkathedrale\",\"name:en\": \"St. Vladimir's Cathedral\",\"name:et\": \"Püha Volodõmõri katedraal\",\"name:fr\": \"Cathédrale Saint-Vladimir\",\"name:it\": \"Cattedrale di San Vladimiro\",\"name:nl\": \"Vladimirkathedraal\",\"name:ru\": \"Владимирский cобор\",\"name:uk\": \"Володимирський собор\",\"religion\": \"christian\",\"website\": \"http://www.katedral.org.ua/\",\"wikidata\": \"Q1417441\",\"wikipedia\": \"uk:Володимирський собор (Київ)\"},\"timestamp\": \"2019-09-30T17:17:23Z\",\"type\": \"way\",\"version\": \"15\"}]},\"version\": 14}";
 		
-		OpOperation op1 = jf.parseOperation(version4);
-		OpOperation op2 = jf.parseOperation(version1);
-		OpOperation op3 = jf.parseOperation(version15);
-		OpOperation op4 = jf.parseOperation(version7);
-		OpOperation op5 = jf.parseOperation(version151);
-		OpOperation opa = jf.parseOperation(v14actual);
-		
-		OpOperation op1w = new OpOperation();
-		OpOperation op2w = new OpOperation();
-		OpOperation op3w = new OpOperation();
-		OpOperation op4w = new OpOperation();
-		OpOperation op5w = new OpOperation();		
-		OpOperation opaw = new OpOperation();
-
-		op1w.setType(OP_ID);
-		op1w.setSignedBy(serverName);
-		op1w.putObjectValue(OpOperation.F_CREATE, op1);
-		op1w.addCreated(op1);
-
-		op2w.setType(OP_ID);
-		op2w.setSignedBy(serverName);
-		op2w.putObjectValue(OpOperation.F_CREATE, op2);
-		op2w.addCreated(op2);
-
-		op3w.setType(OP_ID);
-		op3w.setSignedBy(serverName);
-		op3w.putObjectValue(OpOperation.F_CREATE, op3);
-		op3w.addCreated(op3);
-
-		op4w.setType(OP_ID);
-		op4w.setSignedBy(serverName);
-		op4w.putObjectValue(OpOperation.F_CREATE, op4);
-		op4w.addCreated(op4);
-
-		op5w.setType(OP_ID);
-		op5w.setSignedBy(serverName);
-		op5w.putObjectValue(OpOperation.F_CREATE, op5);
-		op5w.addCreated(op5);
-
-		opaw.setType(OP_ID);
-		opaw.setSignedBy(serverName);
-		opaw.putObjectValue(OpOperation.F_CREATE, opa);
-		opaw.addCreated(opa);
-		
-		blc.getRules().generateHashAndSign(opaw, serverKeyPair);
-		blc.getRules().generateHashAndSign(op1w, serverKeyPair);
-		blc.getRules().generateHashAndSign(op2w, serverKeyPair);
-		blc.getRules().generateHashAndSign(op3w, serverKeyPair);
-		blc.getRules().generateHashAndSign(op4w, serverKeyPair);
-		blc.getRules().generateHashAndSign(op5w, serverKeyPair);
+		String[] startOperationsJson = { version4, version1, version15, version7, version151 };
+		List<OpOperation> startOps = new ArrayList<>();
+		for (String s : startOperationsJson) {
+			startOps.add(createOpFromJson(blc, s, OP_ID));
+		}
 
 		OpOperation initOp = new OpOperation();
 		initOp.setType(OP_ID);
@@ -424,7 +364,8 @@ public class OpBlockchainDbAccessTest {
 		newOpObject.putObjectValue(OpOperation.F_CREATE, createObjForNewOpObject);
 		newOpObject.addCreated(createObjForNewOpObject);
 		blc.getRules().generateHashAndSign(newOpObject, serverKeyPair);
-		return Arrays.asList(initOp, newOpObject, op1w, op2w, op3w, op4w, op5w, opaw);
+		startOps.addAll(0, Arrays.asList(initOp, newOpObject));
+		return startOps;
 	}
 	
 
