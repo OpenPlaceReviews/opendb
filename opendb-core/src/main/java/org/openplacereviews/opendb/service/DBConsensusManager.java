@@ -852,7 +852,6 @@ public class DBConsensusManager {
 
 				insertBatch.add(args);
 			}
-			conn.close();
 		} catch (SQLException e) {
 			throw new IllegalArgumentException();
 		} finally {

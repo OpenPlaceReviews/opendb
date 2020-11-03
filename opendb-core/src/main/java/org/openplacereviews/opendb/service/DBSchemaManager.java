@@ -455,7 +455,7 @@ public class DBSchemaManager {
 	private void prepareObjTableMapping() {
 		for(String tableName : getObjtables().keySet()) {
 			Number i = ((Number) getObjtables().get(tableName).get("keysize"));
-			if(i == null) {
+			if (i == null) {
 				i = MAX_KEY_SIZE;
 			}
 			registerObjTable(tableName, i.intValue());

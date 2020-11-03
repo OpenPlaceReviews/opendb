@@ -116,7 +116,7 @@ public class OpIndexColumn {
 				keys = buildCacheKeys(oi, type);
 			}
 		}
-		if(keys != null && !keys.contains(toNativeType(args[0]))) {
+		if (keys != null && !keys.contains(toNativeType(args[0]))) {
 			return Stream.empty();
 		}
 		Stream<Entry<CompoundKey, OpObject>> stream;
@@ -178,7 +178,7 @@ public class OpIndexColumn {
 		Set<Object> keys;
 		List<Object> array = new ArrayList<Object>();
 		keys = new HashSet<Object>();
-		while(it.hasNext()) {
+		while (it.hasNext()) {
 			Entry<CompoundKey, OpObject> e = it.next();
 			OpObject o = e.getValue();
 			array.clear();
