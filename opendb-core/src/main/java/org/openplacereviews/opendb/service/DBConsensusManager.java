@@ -377,7 +377,7 @@ public class DBConsensusManager {
 				o[1] = type;
 				k.toArray(o, 2);
 				String table = dbSchema.getTableByType(type);
-				int keySizeByTable = dbSchema.getKeySizeByTable(type);
+				int keySizeByTable = dbSchema.getKeySizeByTable(table);
 				if (sz > keySizeByTable) {
 					throw new UnsupportedOperationException();
 				}
