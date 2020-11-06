@@ -845,7 +845,7 @@ public class OpBlockChain {
 		if(!valid) {
 			return valid;
 		}
-		if(u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {
+		if (u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {
 			u.putCacheObject(OpObject.F_TIMESTAMP_ADDED, System.currentTimeMillis());
 		}
 		return true;

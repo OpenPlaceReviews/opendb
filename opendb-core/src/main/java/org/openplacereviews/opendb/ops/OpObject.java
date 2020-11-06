@@ -242,12 +242,10 @@ public class OpObject {
 	}
 	
 	public void putCacheObject(String f, Object o) {
-		if (isImmutable()) {
-			if (cacheFields == null) {
-				cacheFields = new ConcurrentHashMap<String, Object>();
-			}
-			cacheFields.put(f, o);
+		if (cacheFields == null) {
+			cacheFields = new ConcurrentHashMap<String, Object>();
 		}
+		cacheFields.put(f, o);
 	}
 	
 	public void setId(String id, String id2) {
