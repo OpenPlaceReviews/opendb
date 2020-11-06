@@ -5,8 +5,6 @@ import static org.openplacereviews.opendb.ops.OpBlockchainRules.JSON_MSG_TYPE;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -239,30 +237,30 @@ public class SecUtils {
 		}
 	}
 
-	public static KeyPair generateKeyPairFromPassword(String algo, String keygenMethod, String salt, String pwd)
+	public static KeyPair generateKeyPairFromPassword(String algo, String keygenMethod, String salt, String pwd, boolean validateEntropy)
 			throws FailedVerificationException {
 		if (algo.equals(ALGO_EC)) {
-			return generateECKeyPairFromPassword(keygenMethod, salt, pwd);
+			return generateECKeyPairFromPassword(keygenMethod, salt, pwd, validateEntropy);
 		}
 		throw new UnsupportedOperationException("Unsupported algo keygen method: " + algo);
 	}
 
-	public static KeyPair generateECKeyPairFromPassword(String keygenMethod, String salt, String pwd)
+	public static KeyPair generateECKeyPairFromPassword(String keygenMethod, String salt, String pwd, boolean validateEntropy)
 			throws FailedVerificationException {
 		if (keygenMethod.equals(KEYGEN_PWD_METHOD_1)) {
-			return generateEC256K1KeyPairFromPassword(salt, pwd);
+			return generateEC256K1KeyPairFromPassword(salt, pwd, validateEntropy);
 		}
 		throw new UnsupportedOperationException("Unsupported keygen method: " + keygenMethod);
 	}
 
 	// "EC:secp256k1:scrypt(salt,N:17,r:8,p:1,len:256)" algorithm - EC256K1_S17R8
-	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd)
+	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd, boolean validateEntropy)
 			throws FailedVerificationException {
 		try {
 			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC, ALGO_PROVIDER);
 			ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
-			if (pwd.length() < 10) {
-				throw new IllegalArgumentException("Less than 10 characters produces only 50 bit entropy");
+			if (pwd.length() < 10 && validateEntropy) {
+				throw new FailedVerificationException("Less than 10 characters produces only 50 bit entropy");
 			}
 			byte[] bytes = pwd.getBytes("UTF-8");
 			byte[] scrypt = SCrypt.generate(bytes, salt.getBytes("UTF-8"), 1 << 17, 8, 1, 256);

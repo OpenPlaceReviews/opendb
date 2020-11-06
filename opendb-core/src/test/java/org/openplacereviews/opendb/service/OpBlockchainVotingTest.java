@@ -120,7 +120,7 @@ public class OpBlockchainVotingTest {
 	private OpOperation generateVoteOpWithVoteState(String signed, String vote, Integer state) throws FailedVerificationException {
 		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
 		String password = "149814981498a";
-		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, username, password);
+		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, username, password, false);
 
 		OpOperation voteOp = new OpOperation();
 		voteOp.setType(OP_VOTE);
@@ -145,7 +145,7 @@ public class OpBlockchainVotingTest {
 	private OpOperation generateCreateVoteOpWithUser(String username) throws FailedVerificationException {
 		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
 		String password = "149814981498a";
-		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, username, password);
+		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, username, password, false);
 
 		OpOperation voteOp = new OpOperation();
 		voteOp.setType(OP_VOTE);
@@ -190,7 +190,7 @@ public class OpBlockchainVotingTest {
 		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
 		String password = "149814981498a";
 
-		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, username, password);
+		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, username, password, false);
 
 		OpObject opObject = new OpObject();
 		opObject.setId(username);

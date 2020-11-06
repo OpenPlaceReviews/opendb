@@ -571,7 +571,7 @@ public class OpBlockchainRules {
 		}
 		String algo = op.getStringValue(F_ALGO);
 		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(algo, op.getStringValue(F_KEYGEN_METHOD),
-				op.getStringValue(F_SALT), pwd);
+				op.getStringValue(F_SALT), pwd, true);
 		KeyPair kp = SecUtils.getKeyPair(algo, null, op.getStringValue(F_PUBKEY));
 		if (SecUtils.validateKeyPair(algo, keyPair.getPrivate(), kp.getPublic())) {
 			return keyPair;

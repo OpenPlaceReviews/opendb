@@ -104,7 +104,7 @@ public class OpBlockchainRulesSysValidationTest {
 		String password = "149814981498a";
 
 		KeyPair keyPair =
-				SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, SecUtils.KEYGEN_PWD_METHOD_1, name, password);
+				SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, SecUtils.KEYGEN_PWD_METHOD_1, name, password, true);
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
@@ -221,7 +221,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
 		opOperation.addCreated(opObject);
 
-		keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password);
+		keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password, false);
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair, serverKeyPair);
 		opOperation.makeImmutable();
 
@@ -256,7 +256,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.setType(OpBlockchainRules.OP_LOGIN);
 		opOperation.addCreated(opObject);
 
-		keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password);
+		keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password, false);
 		generateHashAndSignForOperation(opOperation, blc, false, keyPair);
 		opOperation.makeImmutable();
 
@@ -867,7 +867,7 @@ public class OpBlockchainRulesSysValidationTest {
 		String name = "test";
 		String password = "149814981498a";
 
-		KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password);
+		KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password, true);
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
@@ -985,7 +985,7 @@ public class OpBlockchainRulesSysValidationTest {
 		String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
 		String password = "149814981498a";
 
-		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, name, password);
+		KeyPair keyPair = SecUtils.generateKeyPairFromPassword(SecUtils.ALGO_EC, keyGen, name, password, true);
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
@@ -1014,7 +1014,7 @@ public class OpBlockchainRulesSysValidationTest {
 		String name = "openplace";
 		String password = "149814981498a";
 
-		KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password);
+		KeyPair keyPair = SecUtils.generateEC256K1KeyPairFromPassword(name, password, true);
 
 		OpObject opObject = new OpObject();
 		opObject.setId(name);
