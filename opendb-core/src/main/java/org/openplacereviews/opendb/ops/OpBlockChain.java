@@ -1023,7 +1023,7 @@ public class OpBlockChain {
 							((List<Object>) oldObject).add(opValue);
 							checkCurrentFieldSpecified = false;
 						} else if (oldObject instanceof Map) {
-							TreeMap<String, Object> value = (TreeMap<String, Object>) opValue;
+							Map<String, Object> value = (Map<String, Object>) opValue;
 							if (value != null) {
 								((Map<String, Object>) oldObject).putAll(value);
 								checkCurrentFieldSpecified = false;
