@@ -5,6 +5,8 @@ import static org.openplacereviews.opendb.ops.OpBlockchainRules.JSON_MSG_TYPE;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -71,9 +73,16 @@ public class SecUtils {
 //		}
 		KeyFactory keyFactory = KeyFactory.getInstance(ALGO_EC, ALGO_PROVIDER);
 		System.out.println("0. Provider/Algorithm: '" + keyFactory.getProvider() + "' '" + keyFactory.getAlgorithm()+"'");
+//		KeyPair kp = SecUtils.getKeyPair(ALGO_EC,
+//				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
+//				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
+		// System.out.println(URLEncoder.encode("base64:PKCS#8:MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgeXgkCr4xUUgzBQw2k0gsqbG0fgh2lZlrUrSjLHNdy+CgBwYFK4EEAAqhRANCAARSM534q9xZXzK8W3o3ehQF4r9vRCm2JBErU1koIAUDtQoMjElctelzh8GvqVmusGK4kIF1En3YPRbBmQqeDL+5"));
 		KeyPair kp = SecUtils.getKeyPair(ALGO_EC,
-				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
-				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
+				"base64:PKCS#8:MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgeXgkCr4xUUgzBQw2k0gsqbG0fgh2lZlrUrSjLHNdy+CgBwYFK4EEAAqhRANCAARSM534q9xZXzK8W3o3ehQF4r9vRCm2JBErU1koIAUDtQoMjElctelzh8GvqVmusGK4kIF1En3YPRbBmQqeDL+5"
+//				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEUjOd+KvcWV8yvFt6N3oUBeK/b0QptiQRK1NZKCAFA7UKDIxJXLXpc4fBr6lZrrBiuJCBdRJ92D0WwZkKngy/uQ=="
+				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEUjOd+KvcWV8yvFt6N3oUBeK/b0QptiQRK1NZKCAFA7UKDIxJXLXpc4fBr6lZrrBiuJCBdRJ92D0WwZkKngy/uQ=="
+//				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQ4xuycvus0e0qggdaeYJstMHpn025COnttRcup93L+VCS1ryv0iPSXeyBEnhgV0GdeAQ6GRHQB057ccZn/yzpQ=="
+				);
 //		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
 //		KeyPair kp = generateRandomEC256K1KeyPair();
 		
