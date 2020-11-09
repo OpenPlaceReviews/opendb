@@ -2,9 +2,9 @@ package org.openplacereviews.opendb;
 
 import static org.openplacereviews.opendb.ops.OpBlockchainRules.JSON_MSG_TYPE;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -22,7 +22,7 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.codec.DecoderException;
@@ -58,7 +58,7 @@ public class SecUtils {
 		Security.addProvider(new BouncyCastleProvider());
 	}
 
-	public static void main(String[] args) throws FailedVerificationException, NoSuchAlgorithmException, NoSuchProviderException {
+	public static void main1(String[] args) throws FailedVerificationException, NoSuchAlgorithmException, NoSuchProviderException {
 //		try {
 //			Provider p[] = Security.getProviders();
 //			for (int i = 0; i < p.length; i++) {
@@ -126,6 +126,88 @@ public class SecUtils {
 
 
 	}
+
+	public static void main(String[] args) throws FailedVerificationException, NoSuchAlgorithmException, NoSuchProviderException {
+		System.out.println("UPLOAD IMAGE 1");
+		String pkey = "base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCAOpUDyGrTPRPDQRCIRXysxC6gCgSTiNQ5nVEjhvsFITA==";
+		String uname = "openplacereviews:test_1";
+		//uploadImage(pkey, uname);
+		System.out.println("END IMAGE 1");
+		
+		System.out.println("UPLOAD IMAGE 2");
+		pkey = "base64:PKCS#8:MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgvSSAiSI8dPR9PAoFtytzde7Dbex3WJEgxUSFHsPCwbygBwYFK4EEAAqhRANCAATPJHtVbGC3ICQVOw/RpaBIa8Af3vdo52ulM1hCnLqmeCsvqncSvjds8cDGlxBVRgSafUO0NTXcXd07L+eFmlw9";
+		uname = "test123456789:opr_web";
+		uploadImage(pkey, uname);
+		System.out.println("END IMAGE 2");
+	}
+	
+	//priv = 
+	//
+	public static int uploadImage(String privateKey, String username) throws FailedVerificationException {
+		String[] placeId = new String[] { "9G2GCG", "wlkomu" };
+		String image = "{\"type\":\"#image\",\"hash\":\"7d5c8838689bf4e3e8dd8d392112b2cc8bf8eae2fdd5e5a47c41014b3804660c\",\"extension\":\"\",\"cid\":\"QmRJJH5RGLqWDKMjLFRXuWKWARW8zpoNJfcvxm6iUqg482\"}";
+		KeyPair kp = SecUtils.getKeyPair(ALGO_EC, privateKey, null);
+		String signed = username;// + ":opr-web";
+		JsonFormatter formatter = new JsonFormatter();
+
+		OpOperation opOperation = new OpOperation();
+		opOperation.setType("opr.place");
+		List<Object> edits = new ArrayList<>();
+		Map<String, Object> edit = new TreeMap<>();
+		List<String> imageResponseList = new ArrayList<>();
+		imageResponseList.add(image);
+		List<String> ids = new ArrayList<>(Arrays.asList(placeId));
+		Map<String, Object> change = new TreeMap<>();
+		Map<String, Object> images = new TreeMap<>();
+		Map<String, Object> outdoor = new TreeMap<>();
+		outdoor.put("outdoor", imageResponseList);
+		images.put("append", outdoor);
+		change.put("version", "increment");
+		change.put("images", images);
+		edit.put("id", ids);
+		edit.put("change", change);
+		edit.put("current", new Object());
+		edits.add(edit);
+		opOperation.putObjectValue(OpOperation.F_EDIT, edits);
+		opOperation.setSignedBy(signed);
+		String hash = JSON_MSG_TYPE + ":"
+				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null,
+				formatter.opToJsonNoHash(opOperation));
+		byte[] hashBytes = SecUtils.getHashBytes(hash);
+		String signature = signMessageWithKeyBase64(kp, hashBytes, SecUtils.SIG_ALGO_SHA1_EC, null);
+		opOperation.addOrSetStringValue("hash", hash);
+		opOperation.addOrSetStringValue("signature", signature);
+		String url = "https://test.openplacereviews.org/" + "api/auth/process-operation?addToQueue=true&dontSignByServer=false";
+		String json = formatter.opToJson(opOperation);
+		System.out.println("JSON: " + json);
+		HttpURLConnection connection;
+		try {
+			connection = (HttpURLConnection) new URL(url).openConnection();
+			connection.setRequestProperty("Content-Type", "application/json");
+			connection.setConnectTimeout(10000);
+			connection.setRequestMethod("POST");
+			connection.setDoOutput(true);
+			try {
+				DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+				wr.write(json.getBytes());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			int rc = connection.getResponseCode();
+			if (rc != 200) {
+				BufferedReader br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+				String strCurrentLine;
+				while ((strCurrentLine = br.readLine()) != null) {
+					System.out.println(strCurrentLine);
+				}
+			}
+			return rc;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return -1;
+	}
+
 
 	private static void printKeyPair(KeyPair nk) {
 		String pr;
