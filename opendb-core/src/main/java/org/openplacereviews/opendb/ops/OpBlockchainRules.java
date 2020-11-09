@@ -502,7 +502,7 @@ public class OpBlockchainRules {
 			String signedByName = signedBy.get(i);
 			try {
 				OpObject keyObj;
-				if(signByItself && signedByName.equals(signupName)) {
+				if (signByItself && signedByName.equals(signupName)) {
 					keyObj = ob.getCreated().get(0);
 				} else {
 					keyObj = getLoginKeyObj(ctx, signedByName);
