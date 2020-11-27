@@ -597,17 +597,21 @@ public class OpBlockChain {
 	}
 
 	public OpOperation getOperationByHash(String rawHash) throws DBStaleException {
+		return getOperationByHash(rawHash, true);
+	}
+	
+	public OpOperation getOperationByHash(String rawHash, boolean strict) throws DBStaleException {
 		if (nullObject) {
 			return null;
 		}
 		OpOperation o;
 		if (dbAccess != null) {
-			o = dbAccess.getOperation(rawHash);
+			o = dbAccess.getOperation(rawHash, strict);
 		} else {
 			o = blockOperations.get(rawHash);
 			if (o == null) {
 				for (OpOperation ops : queueOperations) {
-					if (ops.getRawHash().equals(rawHash)) {
+					if (ops.getRawHash().equals(rawHash) || ops.getRawHash().startsWith(rawHash)) {
 						return ops;
 					}
 				}
@@ -616,7 +620,7 @@ public class OpBlockChain {
 		if (o != null) {
 			return o;
 		}
-		return parent.getOperationByHash(rawHash);
+		return parent.getOperationByHash(rawHash, strict);
 	}
 
 	public OpObject getObjectByName(String type, String key) throws DBStaleException {
@@ -1092,7 +1096,7 @@ public class OpBlockChain {
 		
 		int countObjects(String type, Object... extraParamsWithCondition) throws DBStaleException;
 
-		OpOperation getOperation(String rawHash) throws DBStaleException ;
+		OpOperation getOperation(String rawHash, boolean strict) throws DBStaleException ;
 
 		// Very memory consuming operation
 		Deque<OpBlock> getAllBlocks(Collection<OpBlock> blockHeaders) throws DBStaleException ;

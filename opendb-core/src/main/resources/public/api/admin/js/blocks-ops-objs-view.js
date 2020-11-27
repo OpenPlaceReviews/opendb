@@ -105,7 +105,7 @@ var OPERATION_VIEW = function () {
                     $("#amount-operations").addClass("hidden");
                 });
             } else if (typeSearch === "id") {
-                getJsonAction("/api/ops-by-id?id=" + key, function (data) {
+                getJsonAction("/api/op-by-hash-in-block=" + key, function (data) {
                     loadOperationSearchField();
                     generateOperationResponse(data);
                     $("#amount-operations").removeClass("hidden");

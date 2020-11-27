@@ -488,20 +488,24 @@ public class DBConsensusManager {
 		}
 
 		@Override
-		public OpOperation getOperation(String rawHash) throws DBStaleException {
+		public OpOperation getOperation(String rawHash, boolean strict) throws DBStaleException {
 			readLock.lock();
 			try {
 				checkNotStale();
 				OpOperation[] op = new OpOperation[1];
-//				final byte[] ophash = SecUtils.getHashBytes(rawHash); // hash = ?
-				String ophash = rawHash;
-				jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where superblock = ? and encode(hash, 'hex') like (? || '%') ", new RowCallbackHandler() {
-
+				Object ophash; 
+				String sqlCond = "";
+				if (strict) {
+					ophash = SecUtils.getHashBytes(rawHash);
+					sqlCond = "hash = ?";
+				} else {
+					ophash = rawHash;
+					sqlCond = "encode(hash, 'hex') like (? || '%')";
+				}
+				jdbcTemplate.query("SELECT content from " + OPERATIONS_TABLE + " where superblock = ? and " + sqlCond, new RowCallbackHandler() {
 					@Override
 					public void processRow(ResultSet rs) throws SQLException {
-						if (rs.next()) {
-							op[0] = formatter.parseOperation(rs.getString(1));
-						}
+						op[0] = formatter.parseOperation(rs.getString(1));
 					}
 				}, sbhash, ophash);
 				return op[0];
