@@ -119,4 +119,12 @@ public class OUtils {
 		}
 		return def;
 	}
+	
+	public static String capitalizeFirstLetter(String s) {
+		if (s != null && s.length() > 0) {
+			return Character.toUpperCase(s.charAt(0)) + (s.length() > 1 ? s.substring(1) : "");
+		} else {
+			return s;
+		}
+	}
 }

@@ -160,11 +160,13 @@ public class BlocksManager {
 		return false;
 	}
 
-	public synchronized boolean addOperation(OpOperation op) {
+	public synchronized boolean addOperation(OpOperation originalOp) {
 		if (blockchain == null) {
 			return false;
 		}
 		Metric m = mBlockAddOpp.start();
+		// copy operation so it's not possible to insert even cache fields
+		OpOperation op = new OpOperation(originalOp, false);
 		op.makeImmutable();
 		boolean existing = dataManager.validateExistingOperation(op);
 		if (!existing) {

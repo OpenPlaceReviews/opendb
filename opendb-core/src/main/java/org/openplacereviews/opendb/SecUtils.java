@@ -71,9 +71,16 @@ public class SecUtils {
 //		}
 		KeyFactory keyFactory = KeyFactory.getInstance(ALGO_EC, ALGO_PROVIDER);
 		System.out.println("0. Provider/Algorithm: '" + keyFactory.getProvider() + "' '" + keyFactory.getAlgorithm()+"'");
+//		KeyPair kp = SecUtils.getKeyPair(ALGO_EC,
+//				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
+//				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
+		// System.out.println(URLEncoder.encode("base64:PKCS#8:MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgeXgkCr4xUUgzBQw2k0gsqbG0fgh2lZlrUrSjLHNdy+CgBwYFK4EEAAqhRANCAARSM534q9xZXzK8W3o3ehQF4r9vRCm2JBErU1koIAUDtQoMjElctelzh8GvqVmusGK4kIF1En3YPRbBmQqeDL+5"));
 		KeyPair kp = SecUtils.getKeyPair(ALGO_EC,
-				"base64:PKCS#8:MD4CAQAwEAYHKoZIzj0CAQYFK4EEAAoEJzAlAgEBBCDR+/ByIjTHZgfdnMfP9Ab5s14mMzFX+8DYqUiGmf/3rw=="
-				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEOMUiRZwU7wW8L3A1qaJPwhAZy250VaSxJmKCiWdn9EMeubXQgWNT8XUWLV5Nvg7O3sD+1AAQLG5kHY8nOc/AyA==");
+				"base64:PKCS#8:MIGNAgEAMBAGByqGSM49AgEGBSuBBAAKBHYwdAIBAQQgeXgkCr4xUUgzBQw2k0gsqbG0fgh2lZlrUrSjLHNdy+CgBwYFK4EEAAqhRANCAARSM534q9xZXzK8W3o3ehQF4r9vRCm2JBErU1koIAUDtQoMjElctelzh8GvqVmusGK4kIF1En3YPRbBmQqeDL+5"
+//				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEUjOd+KvcWV8yvFt6N3oUBeK/b0QptiQRK1NZKCAFA7UKDIxJXLXpc4fBr6lZrrBiuJCBdRJ92D0WwZkKngy/uQ=="
+				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEUjOd+KvcWV8yvFt6N3oUBeK/b0QptiQRK1NZKCAFA7UKDIxJXLXpc4fBr6lZrrBiuJCBdRJ92D0WwZkKngy/uQ=="
+//				, "base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQ4xuycvus0e0qggdaeYJstMHpn025COnttRcup93L+VCS1ryv0iPSXeyBEnhgV0GdeAQ6GRHQB057ccZn/yzpQ=="
+				);
 //		KeyPair kp = generateECKeyPairFromPassword(KEYGEN_PWD_METHOD_1, "openplacereviews", "");
 //		KeyPair kp = generateRandomEC256K1KeyPair();
 		
@@ -230,30 +237,30 @@ public class SecUtils {
 		}
 	}
 
-	public static KeyPair generateKeyPairFromPassword(String algo, String keygenMethod, String salt, String pwd)
+	public static KeyPair generateKeyPairFromPassword(String algo, String keygenMethod, String salt, String pwd, boolean validateEntropy)
 			throws FailedVerificationException {
 		if (algo.equals(ALGO_EC)) {
-			return generateECKeyPairFromPassword(keygenMethod, salt, pwd);
+			return generateECKeyPairFromPassword(keygenMethod, salt, pwd, validateEntropy);
 		}
 		throw new UnsupportedOperationException("Unsupported algo keygen method: " + algo);
 	}
 
-	public static KeyPair generateECKeyPairFromPassword(String keygenMethod, String salt, String pwd)
+	public static KeyPair generateECKeyPairFromPassword(String keygenMethod, String salt, String pwd, boolean validateEntropy)
 			throws FailedVerificationException {
 		if (keygenMethod.equals(KEYGEN_PWD_METHOD_1)) {
-			return generateEC256K1KeyPairFromPassword(salt, pwd);
+			return generateEC256K1KeyPairFromPassword(salt, pwd, validateEntropy);
 		}
 		throw new UnsupportedOperationException("Unsupported keygen method: " + keygenMethod);
 	}
 
 	// "EC:secp256k1:scrypt(salt,N:17,r:8,p:1,len:256)" algorithm - EC256K1_S17R8
-	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd)
+	public static KeyPair generateEC256K1KeyPairFromPassword(String salt, String pwd, boolean validateEntropy)
 			throws FailedVerificationException {
 		try {
 			KeyPairGenerator kpg = KeyPairGenerator.getInstance(ALGO_EC, ALGO_PROVIDER);
 			ECGenParameterSpec ecSpec = new ECGenParameterSpec(EC_256SPEC_K1);
-			if (pwd.length() < 10) {
-				throw new IllegalArgumentException("Less than 10 characters produces only 50 bit entropy");
+			if (pwd.length() < 10 && validateEntropy) {
+				throw new FailedVerificationException("Less than 10 characters produces only 50 bit entropy");
 			}
 			byte[] bytes = pwd.getBytes("UTF-8");
 			byte[] scrypt = SCrypt.generate(bytes, salt.getBytes("UTF-8"), 1 << 17, 8, 1, 256);

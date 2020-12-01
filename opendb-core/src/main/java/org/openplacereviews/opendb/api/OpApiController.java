@@ -183,7 +183,7 @@ public class OpApiController {
 				if (OpBlockchainRules.METHOD_PWD.equals(authMethod)) {
 					signKeyPair = SecUtils.generateKeyPairFromPassword(algoOld,
 							loginObj.getStringValue(OpBlockchainRules.F_KEYGEN_METHOD),
-							loginObj.getStringValue(OpBlockchainRules.F_SALT), pwdOld);
+							loginObj.getStringValue(OpBlockchainRules.F_SALT), pwdOld, true);
 				} else if (OpBlockchainRules.METHOD_OAUTH.equals(authMethod)) {
 					String phash = SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256,
 							loginObj.getStringValue(OpBlockchainRules.F_SALT), oauthIdOld);
@@ -213,7 +213,7 @@ public class OpApiController {
 			algo = SecUtils.ALGO_EC;
 			String salt = name;
 			String keyGen = SecUtils.KEYGEN_PWD_METHOD_1;
-			newKeyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd);
+			newKeyPair = SecUtils.generateKeyPairFromPassword(algo, keyGen, salt, pwd, true);
 			obj.putStringValue(OpBlockchainRules.F_SALT, salt);
 			obj.putStringValue(OpBlockchainRules.F_KEYGEN_METHOD, keyGen);
 			if (signKeyPair == null) {

@@ -221,13 +221,12 @@ public class ApiController {
 		return formatter.fullObjectToJson(Collections.singletonList(op));
 	}
 
-	@GetMapping(path = "/ops-by-id", produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/op-by-hash-in-block", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String getOperationByObjectId(@RequestParam(required = true) String id) {
-		List<String> keys = Arrays.asList(id.split(","));
+	public String getOperationByHashInBlock(@RequestParam(required = true) String hash) {
 		OpBlock opBlock = new OpBlock();
-		for (String k : keys) {
-			OpOperation op = manager.getBlockchain().getOperationByHash(k);
+		OpOperation op = manager.getBlockchain().getOperationByHash(OpBlockchainRules.getRawHash(hash), false);
+		if (op != null) {
 			opBlock.addOperation(op);
 		}
 		return formatter.fullObjectToJson(opBlock);
