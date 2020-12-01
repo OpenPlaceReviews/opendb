@@ -63,8 +63,6 @@ public class IPFSController {
 	@ResponseBody
 	public ResponseEntity<String> uploadImage(@RequestPart(name = "file") @Valid @NotNull @NotEmpty MultipartFile file)
 			throws IOException {
-		logOpsService.logError(new OpObject(), ErrorType.BLOCK_EMPTY, String.format("Size %d = %d %s", 
-				file.getSize(), file.getBytes().length, file.getName()), null);
 		checkIPFSRunning();
 		ResourceDTO resourceDTO = ResourceDTO.of(file);
 		resourceDTO = externalResourcesManager.addFile(resourceDTO);
