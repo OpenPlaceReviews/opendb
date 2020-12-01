@@ -46,6 +46,8 @@ logging:
 
 server:
   tomcat.max-threads: 50
+  tomcat.max-http-post-size=100000000
+  tomcat.max-swallow-size=100000000
   address: ${SERVER_ADDRESS:127.0.0.1} #keep it behind proxy
   tomcat:
     protocol_header: x-forwarded-proto
