@@ -680,9 +680,9 @@ public class OpBlockChain {
 		return sz + parent.countAllObjects(type);
 	}
 
-	public void fetchAllObjects(String type, ObjectsSearchRequest request) throws DBStaleException {
+	public ObjectsSearchRequest fetchAllObjects(String type, ObjectsSearchRequest request) throws DBStaleException {
 		if(isNullBlock()) {
-			return;
+			return request;
 		}
 		Metric m = PerformanceMetrics.i().getMetric("blc.fetch.all.total").start();
 		OpPrivateObjectInstancesById oi = getOrCreateObjectsByIdMap(type);
@@ -696,13 +696,14 @@ public class OpBlockChain {
 				if (co != null && co.cacheVersion == request.editVersion) {
 					request.cacheObject = co.cacheObject;
 					request.cacheVersion = co.cacheVersion;
-					return;
+					return request;
 				}
 			}
 			Map<CompoundKey, OpObject> res = fetchObjectsInternal(type, request, null);
 			request.setResult(res);
 		}
 		m.capture();
+		return request;
 	}
 	
 	

@@ -95,6 +95,31 @@ public class ApiController {
 		return new InputStreamResource(ApiController.class.getResourceAsStream("/public/api/admin.html"));
 	}
 
+
+	@GetMapping(path = "/ops.js", produces = "text/javascript;charset=UTF-8")
+	@ResponseBody
+	public String opsjs() throws FailedVerificationException {
+		ObjectsSearchRequest req = manager.getBlockchain().fetchAllObjects("sys.operation", new ObjectsSearchRequest());
+		StringBuilder s = new StringBuilder();
+		List<String> types = new ArrayList<String>();
+		JavascriptFormatter.genSysOperationJsFunction(s, null);
+		s.append("\n\n");
+		for (OpObject r : req.result) {
+			types.add(JavascriptFormatter.genSysOperationJsFunction(s, r));
+			s.append("\n\n");
+		}
+		s.append("let OP_SYS_TYPES = [");
+		for (int i = 0; i < types.size(); i++) {
+			if (i > 0) {
+				s.append(", ");
+			}
+			s.append(types.get(i));
+		}
+		s.append("];");
+		return s.toString();
+	}
+
+
 	@GetMapping(path = "/queue", produces = "text/json;charset=UTF-8")
 	@ResponseBody
 	public String queueList() throws FailedVerificationException {
