@@ -611,8 +611,7 @@ public class OpBlockChain {
 			o = blockOperations.get(rawHash);
 			if (o == null) {
 				for (OpOperation ops : queueOperations) {
-					if (ops.getRawHash().equals(rawHash) || 
-							(!strict && ops.getRawHash().startsWith(rawHash))) {
+					if (ops.getRawHash().equals(rawHash) || (!strict && ops.getRawHash().startsWith(rawHash))) {
 						return ops;
 					}
 				}
