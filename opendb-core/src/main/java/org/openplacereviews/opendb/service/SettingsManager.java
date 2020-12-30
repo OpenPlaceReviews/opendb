@@ -544,7 +544,7 @@ public class SettingsManager {
 	public final CommonPreference<Double> OPENDB_BLOCK_CREATE_MIN_CAPACITY = registerDoublePreference("opendb.block-create.minCapacity", 0.7, "Min capacity for blocks").editable();
 
 	// BOTS
-	public final CommonPreference<Integer> OPENDB_BOTS_MIN_INTERVAL = registerIntPreference("opendb.bots.minInterval", 1800, "Min interval to start bots").editable();
+	public final CommonPreference<Integer> OPENDB_BOTS_MIN_INTERVAL = registerIntPreference("opendb.bots.minInterval", 60, "Min interval to start bots").editable();
 	public final CommonPreference<Integer> OPENDB_BOTS_MAX_LOGS_AMOUNT = registerIntPreference("opendb.bots.maxLogsSize", 10, "Max amount logs of bot launches").editable();
 
 	// OBJTABLES SETTINGS
