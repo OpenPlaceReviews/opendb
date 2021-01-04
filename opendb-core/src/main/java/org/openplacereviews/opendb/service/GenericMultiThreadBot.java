@@ -156,7 +156,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 				op.getCreated().size() > sz || op.getDeleted().size() > sz) {
 			generateHashAndSignAndAdd(op);
 			op = initOpOperation(op.getType());
-			if(blockCreateNeeded(1)) {
+			if (blockCreateNeeded(1)) {
 				blocksManager.createBlock(blockCapacity);
 			}
 		}

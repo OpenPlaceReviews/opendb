@@ -155,6 +155,16 @@ public class OpOperation extends OpObject {
 			o.setParentOp(this);
 		}
 	}
+	
+	public void removeEdited(OpObject o) {
+		checkNotImmutable();
+		editedObjects.remove(o);
+	}
+	
+	public void removeCreated(OpObject o) {
+		checkNotImmutable();
+		createdObjects.remove(o);
+	}
 
 	public List<OpObject> getEdited() {
 		return editedObjects;
