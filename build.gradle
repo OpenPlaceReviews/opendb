@@ -33,8 +33,11 @@ subprojects {
 
     group 'org.openplacereviews'
     version '1.0'
-    // targetCompatibility = JavaVersion.VERSION_11
-    // sourceCompatibility = JavaVersion.VERSION_11
+    
+    compileJava {
+      targetCompatibility = JavaVersion.VERSION_11
+      sourceCompatibility = JavaVersion.VERSION_11
+    }
 
 
     dependencyManagement {
