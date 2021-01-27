@@ -200,11 +200,11 @@ public class PublicDataManager {
 			Metric mt = dataMetric.start();
 			ch = new CacheHolder<>();
 			ch.value = provider.getContent(p);
-			if(!cacheDisabled) {
+			if (!cacheDisabled) {
 				ch.accessTime = now;
 				ch.evalTime = now;
 				String serializeValue = provider.serializeValue(ch.value);
-				if(serializeValue != null) {
+				if (serializeValue != null) {
 					ch.size = serializeValue.length();
 				}
 				cacheObjects.put(p, ch);
