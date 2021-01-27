@@ -9,20 +9,45 @@ import org.springframework.core.io.AbstractResource;
 /**
  * Data provider for public api. 
  * Manages how to cache and evaluate content
- * @param <T>
+ * @param <Params>
  */
 public interface IPublicDataProvider<Params, Value> {
 
+	
+	/**
+	 * Keys to be reevaluated by cache
+	 * In this method provider could decide whether cache needs to be cleaned or maintained
+	 * @return keys 
+	 */
 	List<Params> getKeysToCache(PublicAPIEndpoint<Params, Value> api);
 
+	/**
+	 * Parse object params from HTTP params 
+	 * @param params
+	 * @return object params
+	 */
 	Params formatParams(Map<String, String[]> params);
 	
+	/**
+	 * Gets API content as an object
+	 * @param params
+	 * @return any object that will be stored in the cache
+	 */
 	Value getContent(Params params);
 
+	/**
+	 * Formats returned object from {@literal #getContent(Object)} into a HTTP resource (for example JSON)
+	 */
 	AbstractResource formatContent(Value content);
 
+	/**
+	 * Returns index html page for API to test 
+	 */
 	AbstractResource getMetaPage(Map<String, String[]> params);
 	
+	/**
+	 * Serialize methods could be used to store cache in database
+	 */
 	default String serializeValue(Value v) {
 		// not serializable
 		return null;
