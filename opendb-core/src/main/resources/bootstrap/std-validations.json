@@ -5,25 +5,9 @@
 			"id" : ["all_op_type_registered"],
 			"type" : ["*"],
 			"comment" : "Validate that operation is registered",
-			"role" : "owner",
+			"owner_role" : "owner",
 			"validate" : [
 				"std:eq(.ref.op.id.0,.type)"
-			]
-		}]
-	},
-	{
-		"type" : "sys.validate",
-		"create" : [{
-			"id" : ["all_op_arity_new_del"],
-			"type" : ["*"],
-			"comment" : "Validate operation arity",
-			"role" : "none",
-			"if" : [
-				"std:eq(.ref.op.arity, 0)"
-			],
-			"validate" : [
-				"std:leq(std:size(.new),1)",
-				"std:leq(std:size(.old),1)"
 			]
 		}]
 	},
@@ -33,7 +17,7 @@
 			"id" : ["all_op_arity_same_type_and_id"],
 			"type" : ["*"],
 			"comment" : "Validate operation arity their types and ids",
-			"role" : "none",
+			"owner_role" : "none",
 			"if" : [
 				"std:eq(.ref.op.arity, 0)",
 				"std:eq(std:size(.new),1)",
@@ -51,7 +35,7 @@
 			"id" : ["operation_with_arity_1_allowed_only_1_edit_1_create_or_1_delete_object"],
 			"type" : ["*"],
 			"comment" : "Validate operation with arity=1 on amount old, edit and new objects",
-			"role" : "none",
+			"owner_role" : "none",
 			"if" : [
 				"std:eq(.ref.op.arity, 0)"
 			],
@@ -67,7 +51,7 @@
 			"id" : ["operation_std_arity_always_0"],
 			"type" : ["sys.operation"],
 			"comment" : "Validate that for all standard operation arity is always 0 and nobody could change it",
-			"role" : "none",
+			"owner_role" : "none",
 			"if" : [
 				"set:in(.id.0, set:all('sys.operation','sys.validate','sys.role','sys.bot','sys.grant', 'sys.login', 'sys.signup'))",
 				"std:eq(std:size(.new),1)"
@@ -83,12 +67,12 @@
 			"id" : ["sys_validate_check_previous_role_for_change"],
 			"type" : ["sys.validate"],
 			"comment" : "Validate validation changes. Check previous role. It is strict and nobody could change it",
-			"role" : "none",
+			"owner_role" : "none",
 			"if" : [
 				"std:eq(std:size(.old), 1)"
 			],
 			"validate" : [
-				"auth:has_sig_roles(this, .old.0.role)"
+				"auth:has_sig_roles(this, .old.0.owner_role)"
 			]
 		}]
 	},
@@ -98,7 +82,7 @@
 			"id" : ["role_none_could_not_be_created"],
 			"type" : ["sys.role"],
 			"comment" : "Check that role none could not be created. Couldn't be changed!",
-			"role" : "none",
+			"owner_role" : "none",
 			"validate" : [
 				"std:neq(.new.id.0, 'none')"
 			]
@@ -110,7 +94,7 @@
 			"id" : ["role_could_be_deleted_only_by_owner"],
 			"type" : ["sys.role"],
 			"comment" : "Check that role could be changed only by owner. Role couldn't be deleted cause it will require revoking all grant access!",
-			"role" : "none",
+			"owner_role" : "none",
 			"if" : [
 				"std:eq(std:size(.old), 1)"
 			],
@@ -125,7 +109,7 @@
 			"id" : ["check_vote_and_signed_by_for_vote_op"],
 			"type" : ["sys.vote"],
 			"comment" : "",
-			"role" : "none",
+			"owner_role" : "none",
 			"if" : [
 				"std:eq(op:op_type(this), 'edit')"
 			],
@@ -265,7 +249,7 @@
 				"std:or(std:eq(.new.auth_method,'pwd'),std:eq(.old.auth_method,'pwd'))"
 			],
 			"validate" : [
-				"set:in(.new.id.0, .signed_by)"
+				"std:or(set:in(.new.id.0, .signed_by),set:in(.old.id.0, .signed_by))"
 			]
 		}]
 	}

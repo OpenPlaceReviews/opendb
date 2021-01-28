@@ -98,16 +98,16 @@ public class SecUtils {
 		System.out.println("2. Test signature for simple message");
 		
 		String signMessageTest = "Hello this is a registration message test";
-		String signatureText = signMessageWithKeyBase64(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, null);
-		System.out.println("Validate signature !!!" + validateSignature(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, decodeSignature(signatureText)) +"!!! '" + signatureText +"'");
-		String androidSignatureText = "SHA1withECDSA:base64:MEYCIQC/0s6wNB0YA0GRFNLHpqQCkWH5EvvdJz6wWocCfTmHJwIhAM8eeKXbr0mx4N+VVRosUBodZtDVc2cnmdGdgQo9+UA4";
-		System.out.println("Android Validate signature !!!" + validateSignature(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, decodeSignature(androidSignatureText)) +"!!! '" + androidSignatureText+"'");
+		String generatedSignature = signMessageWithKeyBase64(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, null);
+		System.out.println("Validate generated signature !!!" + validateSignature(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, decodeSignature(generatedSignature)) +"!!! '" + generatedSignature +"'");
+		String providedSignatureText = "SHA1withECDSA:base64:MEQCIBjkVEyFp8UZI/ecU/ZZ40q14FughZOniOTs0pD7Rt/OAiBOT8pkSsQmLAl08mk8g3rcvph7O3lVAFnbfpovfX85OA==";
+		System.out.println("Validate provided signature !!!" + validateSignature(kp, signMessageTest.getBytes(), SIG_ALGO_SHA1_EC, decodeSignature(providedSignatureText)) +"!!! '" + providedSignatureText+"'");
 
 		
 		System.out.println();
 		System.out.println("3. Create hash for operation / sign / validate signature");
 		JsonFormatter formatter = new JsonFormatter();
-		String msg = "{\n" + 
+		String operation = "{\n" + 
 				"		\"type\" : \"sys.signup\",\n" + 
 				"		\"signed_by\": \"openplacereviews\",\n" + 
 				"		\"create\": [{\n" + 
@@ -118,18 +118,18 @@ public class SecUtils {
 				"			\"pubkey\": \"base64:X.509:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEn6GkOTN3SYc+OyCYCpqPzKPALvUgfUVNDJ+6eyBlCHI1/gKcVqzHLwaO90ksb29RYBiF4fW/PqHcECNzwJB+QA==\"\n" + 
 				"		}]\n" + 
 				"	}";
-
-		OpOperation opOperation = formatter.parseOperation(msg);
+		
+		String providedSignatureOp = "ECDSA:base64:MEQCIAsbxOH6M/UjnNk/o4CsE5/FfYuops5HtHAuTXk3+7VgAiAIOBI8Z8+gHnkAJEsqEBzlgHPhYvpwR/TM6uHssvX6ZQ==";
+		
+		OpOperation opOperation = formatter.parseOperation(operation);
 		String hash = JSON_MSG_TYPE + ":"
 				+ SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, null,
 				formatter.opToJsonNoHash(opOperation));
-
 		byte[] hashBytes = SecUtils.getHashBytes(hash);
 		System.out.println("Sign operation hash: " + hash);
 		String signatureOp = signMessageWithKeyBase64(kp, hashBytes, SecUtils.SIG_ALGO_ECDSA, null);
-		System.out.println("Validate signature !!!" + validateSignature(kp, hashBytes, signatureOp) + "!!! " + signatureOp);
-		String androidSignatureOp = "ECDSA:base64:MEQCIAsbxOH6M/UjnNk/o4CsE5/FfYuops5HtHAuTXk3+7VgAiAIOBI8Z8+gHnkAJEsqEBzlgHPhYvpwR/TM6uHssvX6ZQ==";
-		System.out.println("Android Validate signature !!!" + validateSignature(kp, hashBytes, androidSignatureOp) +"!!! '" + androidSignatureOp+"'");
+		System.out.println("Validate generated op signature !!!" + validateSignature(kp, hashBytes, signatureOp) + "!!! " + signatureOp);
+		System.out.println("Validate provided op signature !!!" + validateSignature(kp, hashBytes, providedSignatureOp) +"!!! '" + providedSignatureOp+"'");
 
 
 	}
