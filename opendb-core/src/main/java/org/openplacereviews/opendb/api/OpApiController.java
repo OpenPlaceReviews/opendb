@@ -111,7 +111,12 @@ public class OpApiController {
 			@RequestParam(required = false, defaultValue = "false") boolean validate)
 			throws FailedVerificationException {
 		if (userNameProcessor != null) {
-			name = userNameProcessor.getOprName(name);
+			String[] s = name.split(":");
+			if (s.length > 1) {
+				name = userNameProcessor.getOprName(s[0]) + ":" + s[1];
+			} else {
+				name = userNameProcessor.getOprName(name);
+			}
 		}
 		KeyPair kp = null;
 		KeyPair altKp = null;
