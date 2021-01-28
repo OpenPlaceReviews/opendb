@@ -229,8 +229,8 @@ public class OpBlockchainRules {
 			// validate expression
 			for(OpObject obj : o.getCreated()) {
 				try {
-					getValidateExpresions(F_IF, obj);
-					getValidateExpresions(F_VALIDATE, obj);
+					getValidateExpresions(obj.getId(), F_IF, obj);
+					getValidateExpresions(obj.getId(), F_VALIDATE, obj);
 				} catch(RuntimeException e) {
 					return error(o, e, ErrorType.OP_INVALID_VALIDATE_EXPRESSION, o.getHash(), e.getMessage());
 				}
@@ -326,11 +326,12 @@ public class OpBlockchainRules {
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<OpExprEvaluator> getValidateExpresions(String field, OpObject rule) {
+	private List<OpExprEvaluator> getValidateExpresions(List<String> validateId, String field, OpObject rule) {
 		List<OpExprEvaluator> validate = (List<OpExprEvaluator>) rule.getCacheObject(field);
 		if(validate == null) {
 			validate = new ArrayList<OpExprEvaluator>();
 			for (String expr : rule.getStringList(field)) {
+				expr = checkValidationException(validateId, expr);
 				validate.add(OpExprEvaluator.parseExpression(expr));
 			}
 			rule.putCacheObject(field, validate);
@@ -339,6 +340,20 @@ public class OpBlockchainRules {
 	}
 	
 	
+	private String checkValidationException(List<String> validateId, String expr) {
+		// WARNING: sometimes it's impossible to change wrong validation:
+		// it's owner_role='none' and everything depends on it.
+		// These exceptions should be maintained properly with DB version and consensus
+		// CRITICAL: 28/01/2020 (problem with sys_validate_check_previous_role_for_change)
+		if ("sys_validate_check_previous_role_for_change".equals(validateId.get(0))) {
+			if ("auth:has_sig_roles(this, .old.0.role)".equals(expr)) {
+				return "auth:has_sig_roles(this, .old.0.owner_role)";
+			}
+		}
+		return expr;
+	}
+
+
 	@SuppressWarnings("unchecked")
 	public Map<String, Set<String>> getRoles(OpBlockChain blockchain) {
 		OpBlockChain.ObjectsSearchRequest req = new OpBlockChain.ObjectsSearchRequest();
