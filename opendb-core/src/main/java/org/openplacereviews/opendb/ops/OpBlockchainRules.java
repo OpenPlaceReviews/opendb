@@ -229,8 +229,8 @@ public class OpBlockchainRules {
 			// validate expression
 			for(OpObject obj : o.getCreated()) {
 				try {
-					getValidateExpresions(obj.getId(), F_IF, obj);
-					getValidateExpresions(obj.getId(), F_VALIDATE, obj);
+					getValidateExpresions(F_IF, obj);
+					getValidateExpresions(F_VALIDATE, obj);
 				} catch(RuntimeException e) {
 					return error(o, e, ErrorType.OP_INVALID_VALIDATE_EXPRESSION, o.getHash(), e.getMessage());
 				}
@@ -326,12 +326,12 @@ public class OpBlockchainRules {
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<OpExprEvaluator> getValidateExpresions(List<String> validateId, String field, OpObject rule) {
+	private List<OpExprEvaluator> getValidateExpresions(String field, OpObject rule) {
 		List<OpExprEvaluator> validate = (List<OpExprEvaluator>) rule.getCacheObject(field);
 		if(validate == null) {
 			validate = new ArrayList<OpExprEvaluator>();
 			for (String expr : rule.getStringList(field)) {
-				expr = checkValidationException(validateId, expr);
+				expr = checkValidationException(rule.getId(), expr);
 				validate.add(OpExprEvaluator.parseExpression(expr));
 			}
 			rule.putCacheObject(field, validate);
