@@ -110,7 +110,7 @@ public class OpApiController {
 			@RequestParam(required = false, defaultValue = "false") boolean addToQueue,
 			@RequestParam(required = false, defaultValue = "false") boolean validate)
 			throws FailedVerificationException {
-		if (userNameProcessor != null) {
+		if (userNameProcessor != null && name != null) {
 			String[] s = name.split(":");
 			if (s.length > 1) {
 				name = userNameProcessor.getOprName(s[0]) + ":" + s[1];
