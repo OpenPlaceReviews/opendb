@@ -127,7 +127,7 @@ public class ObjectGeneratorTest {
 				o.makeImmutable();
 				blc.addOperation(o);
 				dbConsensusManager.insertOperation(o);
-				if (i >= 3) {
+				if (i >= 2) {
 					OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 					dbConsensusManager.insertBlock(opBlock);
 				}
