@@ -1,5 +1,13 @@
 package org.openplacereviews.opendb.api;
 
+import java.security.KeyPair;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpObject;
@@ -13,14 +21,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import java.security.KeyPair;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.TreeMap;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 
 @Controller
@@ -41,7 +47,18 @@ public class OpApiController {
 
 	@Autowired
 	private ResponseEntityUtils responseUtils;
-
+	
+	UserNameProcessor userNameProcessor;
+	
+	public interface UserNameProcessor {
+		
+		public String getOprName(String username);
+	}
+	
+	public void setUserNameProcessor(UserNameProcessor userNameProcessor) {
+		this.userNameProcessor = userNameProcessor;
+	}
+	
 	@GetMapping(path = "/admin-status")
 	public ResponseEntity<String> serverLogin(HttpSession session) {
 		String serverUser = getServerUser(session);
@@ -93,6 +110,9 @@ public class OpApiController {
 			@RequestParam(required = false, defaultValue = "false") boolean addToQueue,
 			@RequestParam(required = false, defaultValue = "false") boolean validate)
 			throws FailedVerificationException {
+		if (userNameProcessor != null) {
+			name = userNameProcessor.getOprName(name);
+		}
 		KeyPair kp = null;
 		KeyPair altKp = null;
 		OpOperation op = formatter.parseOperation(json);
