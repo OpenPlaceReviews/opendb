@@ -517,7 +517,7 @@ public class SettingsManager {
 
 	// REPLICA
 	public final CommonPreference<Integer> OPENDB_REPLICATE_INTERVAL = registerIntPreference(USER, "opendb.replicate.interval", 15, "Time interval to replicate blocks").editable();
-	public final CommonPreference<String> OPENDB_REPLICATE_URL = registerStringPreference(USER, "opendb.replicate.url", "https://dev.openplacereviews.org/api/", "Main source to replicate blocks").editable();
+	public final CommonPreference<String> OPENDB_REPLICATE_URL = registerStringPreference(USER, "opendb.replicate.url", "https://test.openplacereviews.org/api/", "Main source to replicate blocks").editable();
 
 	// BLOCK AND HISTORY
 	public final CommonPreference<Boolean> OPENDB_STORE_HISTORY = registerBooleanPreference("opendb.db.store-history", true, "Store history of operations").editable().restartNeeded();
