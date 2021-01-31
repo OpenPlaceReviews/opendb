@@ -23,6 +23,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
@@ -82,7 +83,7 @@ public class IPFSController {
 		File file = externalResourcesManager.getFileByHash(hash, ext);
 		if (!file.exists() && !OUtils.isEmpty(cid)) {
 			checkIPFSRunning();
-			file = externalResourcesManager.downloadFile(cid, hash, ext);
+			ipfsService.read(cid, new FileOutputStream(file));
 		}
 		HttpHeaders httpHeaders = new HttpHeaders();
 		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());

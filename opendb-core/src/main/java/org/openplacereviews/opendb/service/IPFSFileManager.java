@@ -69,19 +69,10 @@ public class IPFSFileManager {
 		return resourceDTO;
 	}
 
-	public File downloadFile(String cid, String hash, String ext) throws IOException {
-		String fileName = generateFileDirAndName(hash, ext);
-		File file = new File(folder, fileName);
-		ipfsService.read(cid, new FileOutputStream(file));
-		return file;
-	}
-
-
 	public File getFileByHash(String hash, String extension) throws FileNotFoundException {
 		return getFileByHashImpl(hash, extension);
 	}
-	
-	
+
 	public List<ResourceDTO> getMissingImagesInIPFS() {
 		List<String> pinnedImagesOnIPFS = ipfsService.getPinnedResources();
 		List<ResourceDTO> activeResources = dbManager.getResources(true, 0);
