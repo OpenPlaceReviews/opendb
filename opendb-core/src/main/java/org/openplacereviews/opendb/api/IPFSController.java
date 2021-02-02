@@ -1,16 +1,5 @@
 package org.openplacereviews.opendb.api;
 
-import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
-import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
-
-import java.io.File;
-import java.io.IOException;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.service.IPFSFileManager;
@@ -18,19 +7,26 @@ import org.openplacereviews.opendb.service.IPFSFileManager.IpfsStatusDTO;
 import org.openplacereviews.opendb.service.IPFSService;
 import org.openplacereviews.opendb.service.IPFSService.ResourceDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @Controller
 @RequestMapping("/api/ipfs")
@@ -77,9 +73,14 @@ public class IPFSController {
 	@GetMapping(value = "/image")
 	@ResponseBody
 	public ResponseEntity<FileSystemResource> getFile(
+			@RequestParam(value = "cid") String cid,
 			@RequestParam(value = "hash") String hash,
-			@RequestParam(value = "ext", required = false) String ext) throws IOException {
+			@RequestParam(value = "ext", required = false, defaultValue = ".jpeg") String ext) throws IOException {
 		File file = externalResourcesManager.getFileByHash(hash, ext);
+		if (!file.exists() && !OUtils.isEmpty(cid)) {
+			checkIPFSRunning();
+			ipfsService.read(cid, new FileOutputStream(file));
+		}
 		HttpHeaders httpHeaders = new HttpHeaders();
 		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());
 		httpHeaders.add("Content-Length", String.valueOf(file.length()));

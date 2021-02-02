@@ -72,12 +72,10 @@ public class IPFSFileManager {
 		return resourceDTO;
 	}
 
-
 	public File getFileByHash(String hash, String extension) throws FileNotFoundException {
 		return getFileByHashImpl(hash, extension);
 	}
-	
-	
+
 	public List<ResourceDTO> getMissingImagesInIPFS() {
 		List<String> pinnedImagesOnIPFS = ipfsService.getPinnedResources();
 		List<ResourceDTO> activeResources = dbManager.getResources(true, 0);
