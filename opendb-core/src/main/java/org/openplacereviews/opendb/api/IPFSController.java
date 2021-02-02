@@ -13,13 +13,10 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.OpObject;
-import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.service.IPFSFileManager;
 import org.openplacereviews.opendb.service.IPFSFileManager.IpfsStatusDTO;
 import org.openplacereviews.opendb.service.IPFSService;
 import org.openplacereviews.opendb.service.IPFSService.ResourceDTO;
-import org.openplacereviews.opendb.service.LogOperationService;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,9 +44,6 @@ public class IPFSController {
 	@Autowired
 	private IPFSService ipfsService;
 	
-	@Autowired
-	private LogOperationService logOpsService;
-
 	@Autowired
 	private JsonFormatter formatter;
 
