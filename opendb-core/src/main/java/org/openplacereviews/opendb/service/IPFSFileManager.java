@@ -12,10 +12,7 @@ import org.openplacereviews.opendb.util.OUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +67,23 @@ public class IPFSFileManager {
 		FileUtils.writeByteArrayToFile(f, resourceDTO.getMultipartFile().getBytes());
 		dbManager.storeResourceObject(resourceDTO);
 		return resourceDTO;
+	}
+
+	public File addFile(String cid, File file) throws IOException {
+		if (isIPFSRunning()) {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			ipfsService.read(cid, out);
+			if (out.size() == 0) {
+				throw new IOException("Cannot read file from IPFS");
+			}
+			String ext = FilenameUtils.getExtension(file.getName());
+			byte[] bytes = out.toByteArray();
+			FileUtils.writeByteArrayToFile(file, bytes);
+			dbManager.storeResourceObject(ext, cid, bytes);
+		} else {
+			throw new IOException("Cannot read file from IPFS");
+		}
+		return file;
 	}
 
 	public File getFileByHash(String hash, String extension) throws FileNotFoundException {

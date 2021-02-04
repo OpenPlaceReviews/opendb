@@ -78,8 +78,7 @@ public class IPFSController {
 			@RequestParam(value = "ext", required = false, defaultValue = ".jpeg") String ext) throws IOException {
 		File file = externalResourcesManager.getFileByHash(hash, ext);
 		if (!file.exists() && !OUtils.isEmpty(cid)) {
-			checkIPFSRunning();
-			ipfsService.read(cid, new FileOutputStream(file));
+			file = externalResourcesManager.addFile(cid, file);
 		}
 		HttpHeaders httpHeaders = new HttpHeaders();
 		httpHeaders.add("Content-Disposition", "attachment; filename=" + file.getName());
