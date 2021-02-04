@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.service;
 
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,6 +26,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -1010,13 +1012,22 @@ public class DBConsensusManager {
 
 	public ResourceDTO storeResourceObject(ResourceDTO imageDTO) throws IOException {
 		imageDTO.setHash(SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, imageDTO.getMultipartFile().getBytes()));
-
 		if (getResourceObjectIfExists(imageDTO) == null) {
 			imageDTO.setAdded(new Date());
 			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
 					SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
 		}
+		return imageDTO;
+	}
 
+	public ResourceDTO storeResourceObject(String ext, String cid, byte[] bytes) throws IOException {
+		String hash = SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, bytes);
+		ResourceDTO imageDTO = ResourceDTO.of(hash, ext, cid);
+		if (getResourceObjectIfExists(imageDTO) == null) {
+			imageDTO.setAdded(new Date());
+			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
+					SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
+		}
 		return imageDTO;
 	}
 
