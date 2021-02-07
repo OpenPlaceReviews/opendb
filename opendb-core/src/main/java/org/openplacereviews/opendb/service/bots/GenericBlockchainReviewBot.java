@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
@@ -43,7 +44,7 @@ public abstract class GenericBlockchainReviewBot<T> extends GenericMultiThreadBo
 	
 	public abstract String objectType();
 	
-	public abstract boolean processSingleObject(OpObject value, OpOperation op);
+	public abstract boolean processSingleObject(OpObject value, OpOperation op, OpBlock lastBlockHeader);
 	
 	@SuppressWarnings("unchecked")
 	@Override
@@ -62,6 +63,7 @@ public abstract class GenericBlockchainReviewBot<T> extends GenericMultiThreadBo
 			Set<CompoundKey> keys = new HashSet<CompoundKey>();
 			boolean blockExist = blc.getBlockHeaderByRawHash(wrapNull(lastScannedBlockHash)) != null;
 			while (blc != null && !blc.isNullBlock()) {
+				OpBlock lastBlockHeader = blc.getLastBlockHeader();
 				Iterator<Entry<CompoundKey, OpObject>> it = blc.getRawSuperblockObjects("opr.place").iterator();
 				while (it.hasNext()) {
 					Entry<CompoundKey, OpObject> e = it.next();
@@ -69,7 +71,7 @@ public abstract class GenericBlockchainReviewBot<T> extends GenericMultiThreadBo
 						continue;
 					}
 					progress++;
-					boolean proc = processSingleObject(e.getValue(), op);
+					boolean proc = processSingleObject(e.getValue(), op, lastBlockHeader);
 					if (proc) {
 						op = addOpIfNeeded(op, false);
 						changed++;
