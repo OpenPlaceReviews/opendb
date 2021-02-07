@@ -88,7 +88,7 @@ public abstract class GenericBlockchainReviewBot<T> extends GenericMultiThreadBo
 			}
 			op = addOpIfNeeded(op, true);
 			String lastBlockRawHash = init.getLastBlockRawHash();
-			if (changed > 0 &&
+			if ((changed > 0 || lastScannedBlockHash == null) &&
 					!OUtils.equals(lastBlockRawHash, lastScannedBlockHash)) {
 				op = initOpOperation(botObject.getParentType());
 				generateSetOperation(op, botObject.getId(),
