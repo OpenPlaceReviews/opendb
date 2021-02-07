@@ -1,8 +1,8 @@
 package org.openplacereviews.opendb.api;
 
 import org.openplacereviews.opendb.service.BotManager;
-import org.openplacereviews.opendb.service.IOpenDBBot;
 import org.openplacereviews.opendb.service.bots.BotRunStats;
+import org.openplacereviews.opendb.service.bots.IOpenDBBot;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.ResponseEntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;

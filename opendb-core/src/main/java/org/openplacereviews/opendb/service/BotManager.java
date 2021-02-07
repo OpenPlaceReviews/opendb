@@ -8,6 +8,7 @@ import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
+import org.openplacereviews.opendb.service.bots.IOpenDBBot;
 import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
 import org.openplacereviews.opendb.service.bots.UpdateIndexesBot;
 import org.springframework.beans.factory.annotation.Autowired;

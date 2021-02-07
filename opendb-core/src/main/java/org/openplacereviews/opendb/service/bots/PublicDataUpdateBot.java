@@ -1,6 +1,5 @@
 package org.openplacereviews.opendb.service.bots;
 
-import org.openplacereviews.opendb.service.GenericMultiThreadBot;
 import org.openplacereviews.opendb.service.PublicDataManager;
 import org.openplacereviews.opendb.service.PublicDataManager.PublicAPIEndpoint;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,26 +1,34 @@
-package org.openplacereviews.opendb.service;
+package org.openplacereviews.opendb.service.bots;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
+
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
-import org.openplacereviews.opendb.service.bots.BotRunStats;
+import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.LogOperationService;
+import org.openplacereviews.opendb.service.SettingsManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.concurrent.*;
-
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.F_TYPE;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 

@@ -100,6 +100,7 @@ public class BotRunStats {
 	}
 
 	public static class LogEntry implements Serializable {
+		private static final long serialVersionUID = -8226300775770347363L;
 		public String msg;
 		public String exception;
 		public Long date;
