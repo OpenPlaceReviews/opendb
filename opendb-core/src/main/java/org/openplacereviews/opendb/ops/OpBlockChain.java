@@ -510,9 +510,8 @@ public class OpBlockChain {
 		return blocks.getAllBlocks();
 	}
 
-	
 	public Collection<String> getRawSuperblockTypes() {
-		if(dbAccess != null) {
+		if (dbAccess != null) {
 			return dbAccess.getObjectTypes();
 		}
 		return objByName.keySet();
@@ -530,14 +529,14 @@ public class OpBlockChain {
 	}
 
 	public OpBlock getBlockHeadersById(int id) {
-		if(nullObject) {
+		if (nullObject) {
 			return null;
 		}
-		if(parent.getLastBlockId() >= id) {
+		if (parent.getLastBlockId() >= id) {
 			return parent.getBlockHeadersById(id);
 		}
-		for(OpBlock o : blocks.getAllBlockHeaders()) {
-			if(o.getBlockId() == id) {
+		for (OpBlock o : blocks.getAllBlockHeaders()) {
+			if (o.getBlockId() == id) {
 				return o;
 			}
 		}
@@ -561,36 +560,34 @@ public class OpBlockChain {
 		return blocks.size();
 	}
 
-
 	public int getBlockDepth(OpBlock block) {
-		if(nullObject) {
+		if (nullObject) {
 			return -1;
 		}
 		OpBlock n = blocks.getBlockHeaderByHash(block.getRawHash());
-		if(n != null) {
+		if (n != null) {
 			return n.getBlockId();
 		}
 		return parent.getBlockDepth(block);
 	}
 
-
 	public OpBlock getBlockHeaderByRawHash(String hash) {
-		if(nullObject) {
+		if (nullObject) {
 			return null;
 		}
 		OpBlock n = blocks.getBlockHeaderByHash(hash);
-		if(n != null) {
+		if (n != null) {
 			return n;
 		}
 		return parent.getBlockHeaderByRawHash(hash);
 	}
 
 	public OpBlock getFullBlockByRawHash(String hash) throws DBStaleException {
-		if(nullObject) {
+		if (nullObject) {
 			return null;
 		}
 		OpBlock n = blocks.getFullBlockByHash(hash);
-		if(n != null) {
+		if (n != null) {
 			return n;
 		}
 		return parent.getFullBlockByRawHash(hash);

@@ -27,7 +27,7 @@ public abstract class GenericBlockchainReviewBot<T> extends GenericMultiThreadBo
 	private static final String F_BLOCK_HASH = "lastblock";
 	
 	@Autowired
-	private BlocksManager blocksManager;
+	protected BlocksManager blocksManager;
 
 	private int totalCnt = 1;
 	private int progress = 0;
