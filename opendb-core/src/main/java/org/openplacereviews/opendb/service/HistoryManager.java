@@ -306,7 +306,22 @@ public class HistoryManager {
 				Object previousObj = getValueForField(fieldExpr, currentEdit);
 				prevObj.setFieldByExpr(fieldExpr, previousObj);
 			} else if (OP_CHANGE_APPENDMANY.equals(opId)) {
-				// TODO Alexey
+				Object o = prevObj.getFieldByExpr(fieldExpr);
+				if (o instanceof List) {
+					List<Object> currentObj = (List<Object>) o;
+					List<Object> appendObjs = (List<Object>) getValueForField(fieldExpr, changeEdit);
+					currentObj.removeAll(appendObjs);
+					prevObj.setFieldByExpr(fieldExpr, currentObj);
+				} else if (o instanceof Map) {
+					Map<Object, Object> currentObj = (Map<Object, Object>) o;
+					List<Map<Object, Object>> appendObjs = (List<Map<Object, Object>>) getValueForField(fieldExpr, changeEdit);
+					for (Map<Object, Object> appendObj : appendObjs) {
+						for (Object key : appendObj.keySet()) {
+							currentObj.remove(appendObj.get(key));
+						}
+					}
+					prevObj.setFieldByExpr(fieldExpr, currentObj);
+				}
 			} else if (OP_CHANGE_APPEND.equals(opId)) {
 				Object o = prevObj.getFieldByExpr(fieldExpr);
 				if (o instanceof List) {
@@ -329,9 +344,7 @@ public class HistoryManager {
 				Object currentValue = prevObj.getFieldByExpr(fieldExpr);
 				prevObj.setFieldByExpr(fieldExpr, ((Number) currentValue).longValue() - 1);
 			}
-
 		}
-
 		return prevObj;
 	}
 
