@@ -305,6 +305,8 @@ public class HistoryManager {
 			if (OP_CHANGE_DELETE.equals(opId)) {
 				Object previousObj = getValueForField(fieldExpr, currentEdit);
 				prevObj.setFieldByExpr(fieldExpr, previousObj);
+			} else if (OP_CHANGE_APPENDMANY.equals(opId)) {
+				// TODO Alexey
 			} else if (OP_CHANGE_APPEND.equals(opId)) {
 				Object o = prevObj.getFieldByExpr(fieldExpr);
 				if (o instanceof List) {

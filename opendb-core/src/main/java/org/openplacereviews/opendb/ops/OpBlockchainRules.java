@@ -715,6 +715,7 @@ public class OpBlockchainRules {
 		EDIT_OP_NOT_SUPPORTED("Edit obj operation '%s' is not supported yet"),
 		EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS("Operation increment only supported for numbers: field '%s', value '%s'"),
 		EDIT_OP_APPEND_ONLY_FOR_LIST_MAP("Operation append only supported for list and map: field '%s', value '%s'"),
+		EDIT_OP_APPENDMANY_ONLY_FOR_LIST_MAP("Operation appendmany only supported for list : field '%s', value '%s'"),
 		REF_OBJ_NOT_FOUND("Operation '%s': object to reference wasn't found '%s'"),
 
 		VOTE_VOTING_OBJ_IS_FINAL("Operation '%s': ref obj '%s' is already final and cannot to be a changed"),

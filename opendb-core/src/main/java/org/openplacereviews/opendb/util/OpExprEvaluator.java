@@ -305,6 +305,8 @@ public class OpExprEvaluator {
 						for(Map.Entry<String, JsonElement> ee : ((JsonObject) op).entrySet()) {
 							if(ee.getKey().equals(OpBlockChain.OP_CHANGE_APPEND)) {
 								arrayChangedFields.add(fieldExpr);
+							} else if(ee.getKey().equals(OpBlockChain.OP_CHANGE_APPENDMANY)) {
+								arrayChangedFields.add(fieldExpr);
 							} else if(ee.getKey().equals(OpBlockChain.OP_CHANGE_SET)) {
 								arrayChangedFields.add(fieldExpr);
 							} else {

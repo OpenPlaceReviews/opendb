@@ -50,6 +50,7 @@ public class OpBlockChain {
 	public static final String OP_CHANGE_DELETE = "delete";
 	public static final String OP_CHANGE_INCREMENT = "increment";
 	public static final String OP_CHANGE_APPEND = "append";
+	public static final String OP_CHANGE_APPENDMANY = "appendmany";
 	public static final String OP_CHANGE_SET = "set";
 	
 	
@@ -1014,6 +1015,20 @@ public class OpBlockChain {
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
 						checkCurrentFieldSpecified = true;
+					} else if (OP_CHANGE_APPENDMANY.equals(opId)) {
+						Object oldObject = newObject.getFieldByExpr(fieldExpr);
+						if(!(opValue instanceof List)) {
+							return rules.error(u, ErrorType.EDIT_OP_APPENDMANY_ONLY_FOR_LIST_MAP, fieldExpr, opValue);
+						}
+						if (oldObject == null) {
+							newObject.setFieldByExpr(fieldExpr, opValue);
+							checkCurrentFieldSpecified = false;
+						} else if (oldObject instanceof List) {
+							((List<Object>) oldObject).addAll((List<? extends Object>) opValue);
+							checkCurrentFieldSpecified = false;
+						} else {
+							return rules.error(u, ErrorType.EDIT_OP_APPENDMANY_ONLY_FOR_LIST_MAP, fieldExpr, oldObject);
+						}
 					} else if (OP_CHANGE_APPEND.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);
 						if (oldObject == null) {
@@ -1031,7 +1046,7 @@ public class OpBlockChain {
 								checkCurrentFieldSpecified = false;
 							}
 						} else {
-							return rules.error(u, ErrorType.EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS, fieldExpr, oldObject);
+							return rules.error(u, ErrorType.EDIT_OP_APPEND_ONLY_FOR_LIST_MAP, fieldExpr, oldObject);
 						}
 					} else if (OP_CHANGE_INCREMENT.equals(opId)) {
 						Object oldObject = newObject.getFieldByExpr(fieldExpr);

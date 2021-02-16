@@ -184,12 +184,12 @@ public class BotManager {
 	public void runBotsBySchedule() {
 		Map<String, IOpenDBBot<?>> bs = this.bots;
 		long now = System.currentTimeMillis() / 1000;
-		for(String bid : bs.keySet()) {
+		for (String bid : bs.keySet()) {
 			MapStringObjectPreference p = getBotConfiguration(bid);
-			if(p.getBoolean(BOT_ENABLED, false)) {
+			if (p.getBoolean(BOT_ENABLED, false)) {
 				long lastRun = p.getLong(SettingsManager.BOT_LAST_RUN, 0);
 				long l = p.getLong(BOT_INTERVAL_SECONDS, 0);
-				if(now - lastRun > l) {
+				if (now - lastRun > l) {
 					startBot(bid);
 				}
 			}
