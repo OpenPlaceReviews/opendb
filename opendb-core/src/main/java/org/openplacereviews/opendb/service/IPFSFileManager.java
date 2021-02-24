@@ -5,6 +5,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.SecUtils;
+import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.service.IPFSService.ResourceDTO;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -162,15 +164,21 @@ public class IPFSFileManager {
 		}
 	}
 
-	public void processOperations(List<OpOperation> candidates) {
+	public void processOperations(OpBlock block) {
 		List<ResourceDTO> array = new ArrayList<ResourceDTO>();
-		candidates.forEach(operation -> {
-			List<OpObject> nw = operation.getCreated();
+		block.getOperations().forEach(operation -> {
+			List<OpObject> nw = operation.getEdited();
 			for (OpObject o : nw) {
 				array.clear();
 				getImageObject(o.getRawOtherFields(), array);
 				array.forEach(resDTO -> {
-					dbManager.updateResourceActiveStatus(resDTO, true);
+					if (resDTO.getAdded() == null) {
+						long dateMs = block.getDate(OpBlock.F_DATE);
+						if (dateMs > 0) {
+							resDTO.setAdded(new Date(dateMs));
+						}
+					}
+					dbManager.updateResourceBlock(resDTO, block);
 					ipfsService.pin(resDTO.getCid());
 				});
 			}

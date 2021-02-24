@@ -1,22 +1,6 @@
 package org.openplacereviews.opendb.service;
 
 
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
@@ -39,11 +23,18 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
+
 @Service
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 5;
+	private static final int OPENDB_SCHEMA_VERSION = 6;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -71,7 +62,9 @@ public class DBSchemaManager {
 	private TreeMap<String, ObjectTypeTable> objTableDefs = new TreeMap<String, ObjectTypeTable>();
 	private TreeMap<String, String> typeToTables = new TreeMap<String, String>();
 	private TreeMap<String, Map<String, OpIndexColumn>> indexes = new TreeMap<>();
-	
+
+	@Autowired
+	private IPFSFileManager externalResourceService;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -158,8 +151,8 @@ public class DBSchemaManager {
 		dbschema.registerColumn(EXT_RESOURCE_TABLE, "hash", "bytea PRIMARY KEY", INDEXED);
 		dbschema.registerColumn(EXT_RESOURCE_TABLE, "extension", "text", NOT_INDEXED);
 		dbschema.registerColumn(EXT_RESOURCE_TABLE, "cid", "text", NOT_INDEXED);
-		dbschema.registerColumn(EXT_RESOURCE_TABLE, "active", "bool", NOT_INDEXED);
 		dbschema.registerColumn(EXT_RESOURCE_TABLE, "added", "timestamp", NOT_INDEXED);
+		dbschema.registerColumn(EXT_RESOURCE_TABLE, "blocks", "bytea[]", NOT_INDEXED);
 
 
 		registerObjTable(OBJS_TABLE, MAX_KEY_SIZE);
@@ -246,8 +239,8 @@ public class DBSchemaManager {
 
 	private void migrateDBSchema(JdbcTemplate jdbcTemplate) {
 		int dbVersion = dbschema.getIntSetting(jdbcTemplate, "opendb.version");
-		if(dbVersion < OPENDB_SCHEMA_VERSION) {
-			if(dbVersion <= 1) {
+		if (dbVersion < OPENDB_SCHEMA_VERSION) {
+			if (dbVersion <= 1) {
 				setOperationsType(jdbcTemplate, OPERATIONS_TABLE);
 				setOperationsType(jdbcTemplate, OPERATIONS_TRASH_TABLE);
 			}
@@ -261,8 +254,11 @@ public class DBSchemaManager {
 					ps.set(p.get());
 				}
 			}
+			if (dbVersion < 6) {
+				updateExternalResources(jdbcTemplate);
+			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
-		} else if(dbVersion > OPENDB_SCHEMA_VERSION) {
+		} else if (dbVersion > OPENDB_SCHEMA_VERSION) {
 			throw new UnsupportedOperationException();
 		}
 	}
@@ -274,8 +270,26 @@ public class DBSchemaManager {
 		}
 	}
 
+	private void updateExternalResources(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Adding new columns: 'blocks' for table: " + EXT_RESOURCE_TABLE);
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
+		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
+			@Override
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				int i = 0;
+				while (rs.next()) {
+					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
+					externalResourceService.processOperations(opBlock);
+					i++;
+				}
+				LOGGER.info("Updated " + i + " blocks");
+				return i;
+			}
+		});
+	}
+
 	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
-		LOGGER.info("Adding new columns : 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
+		LOGGER.info("Adding new columns: 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
 		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
 		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
 			@Override
