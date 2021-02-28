@@ -293,7 +293,7 @@ public class OpBlockchainDbAccessTest {
 				BlocksManager.BOOT_STD_ROLES, "opr-0-test-grant", BlocksManager.BOOT_STD_VALIDATION);
 		databaseBlocksManager.setBootstrapList(bootstrapList);
 		databaseBlocksManager.bootstrap(serverName, serverKeyPair);
-		Mockito.doNothing().when(extResourceService).processOperations(ArgumentMatchers.anyList());
+		Mockito.doNothing().when(extResourceService).processOperations(any());
 		databaseBlocksManager.createBlock();
 		
 		addOpAndBlock(createPlaceOperation());

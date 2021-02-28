@@ -1,7 +1,6 @@
 package org.openplacereviews.opendb.service;
 
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,8 +25,8 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.io.File;
 import java.io.IOException;
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -1014,8 +1013,8 @@ public class DBConsensusManager {
 		imageDTO.setHash(SecUtils.calculateHashWithAlgo(SecUtils.HASH_SHA256, imageDTO.getMultipartFile().getBytes()));
 		if (getResourceObjectIfExists(imageDTO) == null) {
 			imageDTO.setAdded(new Date());
-			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
-					SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
+			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, added) VALUES (?, ?, ?, ?)",
+					SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.getAdded());
 		}
 		return imageDTO;
 	}
@@ -1025,14 +1024,14 @@ public class DBConsensusManager {
 		ResourceDTO imageDTO = ResourceDTO.of(hash, ext, cid);
 		if (getResourceObjectIfExists(imageDTO) == null) {
 			imageDTO.setAdded(new Date());
-			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, active, added) VALUES (?, ?, ?, ?, ?)",
-					SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.isActive(), imageDTO.getAdded());
+			jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + "(hash, extension, cid, added) VALUES (?, ?, ?, ?)",
+					SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.getAdded());
 		}
 		return imageDTO;
 	}
 
 	public ResourceDTO getResourceObjectIfExists(ResourceDTO imageDTO) {
-		return jdbcTemplate.query("SELECT hash, extension, cid, active, added FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
+		return jdbcTemplate.query("SELECT hash, extension, cid, cardinality(blocks), added FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
 
 			@Override
 			public ResourceDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -1041,7 +1040,7 @@ public class DBConsensusManager {
 					imageDTO.setHash(SecUtils.hexify(rs.getBytes(1)));
 					imageDTO.setExtension(rs.getString(2));
 					imageDTO.setCid(rs.getString(3));
-					imageDTO.setActive(rs.getBoolean(4));
+					imageDTO.setActive(rs.getInt(4) > 0);
 					imageDTO.setAdded(rs.getTimestamp(5));
 					return imageDTO;
 				}
@@ -1050,8 +1049,9 @@ public class DBConsensusManager {
 		}, new Object[]{SecUtils.getHashBytes(imageDTO.getHash())});
 	}
 
-	public List<ResourceDTO> getResources(boolean status, int addedMoreThanSecondsAgo) {
-		return jdbcTemplate.query("SELECT cid, hash, extension FROM " + EXT_RESOURCE_TABLE + " WHERE active = ? AND added < ?", new ResultSetExtractor<List<ResourceDTO>>() {
+	public List<ResourceDTO> getResources(boolean active, int addedMoreThanSecondsAgo) {
+		String isActiveSql = active ? "(blocks <> '{}' AND blocks is not null)" : "(blocks = '{}' OR blocks is null)";
+		return jdbcTemplate.query("SELECT cid, hash, extension FROM " + EXT_RESOURCE_TABLE + " WHERE " + isActiveSql + " AND added < ?", new ResultSetExtractor<List<ResourceDTO>>() {
 			@Override
 			public List<ResourceDTO> extractData(ResultSet rs) throws SQLException, DataAccessException {
 				List<ResourceDTO> resources = new LinkedList<>();
@@ -1064,15 +1064,18 @@ public class DBConsensusManager {
 				}
 				return resources;
 			}
-		}, status, DateUtils.addSeconds(new Date(), -addedMoreThanSecondsAgo));
+		}, DateUtils.addSeconds(new Date(), -addedMoreThanSecondsAgo));
 	}
 
 	public void removeResource(ResourceDTO resDTO) {
 		jdbcTemplate.update("DELETE FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new Object[]{SecUtils.getHashBytes(resDTO.getHash())});
 	}
 
-	public void updateResourceActiveStatus(ResourceDTO imageDTO, boolean status) {
-		jdbcTemplate.update("UPDATE " + EXT_RESOURCE_TABLE + " SET active = ? WHERE hash = ?", status, SecUtils.getHashBytes(imageDTO.getHash()));
+	public void updateResourceBlock(ResourceDTO imageDTO, OpBlock block) {
+		jdbcTemplate.update("INSERT INTO " + EXT_RESOURCE_TABLE + " (hash, extension, cid, added, blocks) VALUES (?, ?, ?, ?, array[?]) " +
+						"ON CONFLICT (hash) DO UPDATE SET blocks = ARRAY(SELECT DISTINCT UNNEST(" + EXT_RESOURCE_TABLE + ".blocks || EXCLUDED.blocks))",
+				SecUtils.getHashBytes(imageDTO.getHash()), imageDTO.getExtension(), imageDTO.getCid(), imageDTO.getAdded(),
+				SecUtils.getHashBytes(block.getRawHash()));
 	}
 
 	public Long getAmountResourcesInDB() {

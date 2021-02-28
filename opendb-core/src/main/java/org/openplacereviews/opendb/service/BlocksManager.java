@@ -214,16 +214,16 @@ public class BlocksManager {
 			}
 		}
 		m.capture();
-		m = mBlockCreateExtResources.start();
-		extResourceService.processOperations(candidates);
-		m.capture();
-		
+
 		m = mBlockCreateValidate.start();
 		OpBlock opBlock = blc.createBlock(serverUser, serverKeyPair);
 		m.capture();
 		if(opBlock == null) {
 			return null;
 		}
+		m = mBlockCreateExtResources.start();
+		extResourceService.processOperations(opBlock);
+		m.capture();
 
 		mt.capture();
 		return replicateValidBlock(blc, opBlock, hctx);
@@ -357,6 +357,7 @@ public class BlocksManager {
 		if(res == null) {
 			return false;
 		}
+		extResourceService.processOperations(block);
 		res = replicateValidBlock(blc, res, hctx);
 		if(res == null) {
 			return false;
