@@ -274,7 +274,6 @@ public class IPFSService {
 		private String hash;
 		private String extension;
 		private String cid;
-		private transient boolean active = false;
 		private transient Date added;
 
 		private transient MultipartFile multipartFile;
@@ -326,14 +325,6 @@ public class IPFSService {
 
 		public void setCid(String cid) {
 			this.cid = cid;
-		}
-
-		public boolean isActive() {
-			return active;
-		}
-
-		public void setActive(boolean active) {
-			this.active = active;
 		}
 
 		public Date getAdded() {
