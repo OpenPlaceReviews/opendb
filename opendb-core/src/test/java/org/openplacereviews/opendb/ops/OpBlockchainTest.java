@@ -417,7 +417,7 @@ public class OpBlockchainTest {
 		OpObject opObject = blc.getObjectByName("osm.place","8FW97P", "wdhpik");
 		int countEl = opObject.getFieldByExpr("images.review").toString().split("},").length;
 
-		assertEquals( 4, countEl);
+		assertEquals( 3, countEl);
 	}
 
 	private OpObject generateTestOpObject() {

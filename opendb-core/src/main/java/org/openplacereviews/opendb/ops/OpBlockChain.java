@@ -1018,7 +1018,6 @@ public class OpBlockChain {
 							if (m.find()) {
 								int newNumber = Integer.parseInt(m.group(1)) - deleteCount;
 								newObject.setFieldByExpr(fieldExpr.substring(0, m.start(1)) + newNumber + fieldExpr.substring(m.end(1)), null);
-								deleteCount++;
 							}
 						} else {
 							newObject.setFieldByExpr(fieldExpr, null);
