@@ -444,8 +444,14 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById pid = parent.objByName.get(type);
 			nid.putObjects(pid, true);
 			nid.putObjects(cid, true);
-
 		}
+
+		// 3. add blockOperations and queueOperations
+		blockOperations.putAll(copy.blockOperations);
+		blockOperations.putAll(parent.blockOperations);
+
+		queueOperations.addAll(copy.queueOperations);
+		queueOperations.addAll(parent.queueOperations);
 	}
 
 	public Deque<OpOperation> getQueueOperations() {
