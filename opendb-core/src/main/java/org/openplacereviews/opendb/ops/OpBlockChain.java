@@ -14,6 +14,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.openplacereviews.opendb.ops.OpBlock.*;
@@ -995,6 +997,7 @@ public class OpBlockChain {
 					}
 				}
 			}
+			int deleteCount=0;
 			Map<String, Object> changedMap = editObject.getChangedEditFields();
 			for (Map.Entry<String, Object> e : changedMap.entrySet()) {
 				// evaluate changes for new object
@@ -1010,7 +1013,17 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						newObject.setFieldByExpr(fieldExpr, null);
+						if (deleteCount >= 1) {
+							Matcher m = Pattern.compile("\\[(\\d+)\\]").matcher(fieldExpr);
+							if (m.find()) {
+								int newNumber = Integer.parseInt(m.group(1)) - deleteCount;
+								newObject.setFieldByExpr(fieldExpr.substring(0, m.start(1)) + newNumber + fieldExpr.substring(m.end(1)), null);
+								deleteCount++;
+							}
+						} else {
+							newObject.setFieldByExpr(fieldExpr, null);
+						}
+						deleteCount++;
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
