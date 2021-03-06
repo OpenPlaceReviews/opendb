@@ -10,10 +10,6 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -415,9 +411,9 @@ public class OpBlockchainTest {
 	}
 
 	@Test
-	public void testMultipleDelete() throws FailedVerificationException {
+	public void testCreateAndEditObject() throws FailedVerificationException {
 		JsonFormatter formatter = new JsonFormatter();
-		getOperationsByJson(formatter, blc, EDIT_LIST);
+		generateOperationsByList(formatter, blc, MULTIPLE_DELETE_LIST);
 		OpObject opObject = blc.getObjectByName("osm.place","8FW97P", "wdhpik");
 		int countEl = opObject.getFieldByExpr("images.review").toString().split("},").length;
 
