@@ -19,10 +19,7 @@ import java.security.KeyPair;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
@@ -41,6 +38,9 @@ public class ObjectGeneratorTest {
 
 	public static String[] VOTING_LIST =
 			new String[] {"opr-0-test-user", "std-roles", "opr-0-test-grant", "voting-validation"};
+
+	public static String[] EDIT_LIST =
+			new String[] {"ops-test"};
 
 	public static void generateUserOperations(JsonFormatter formatter, OpBlockChain blc) throws
 			FailedVerificationException {
@@ -68,6 +68,26 @@ public class ObjectGeneratorTest {
 			}
 		}
 		return Arrays.asList(lst).subList(0, amount);
+	}
+
+	public static void getOperationsByJson(JsonFormatter formatter, OpBlockChain blc, String[] operationsList) throws FailedVerificationException {
+		for (String f : operationsList) {
+			OpOperation[] lst = formatter.fromJson(
+					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
+					OpOperation[].class);
+
+			Collections.reverse(Arrays.asList(lst));
+
+			for (OpOperation o : lst) {
+				o.setType("osm.place");
+				if (!OUtils.isEmpty(serverName) && o.getSignedBy().isEmpty()) {
+					o.setSignedBy(serverName);
+					o = blc.getRules().generateHashAndSign(o, serverKeyPair);
+				}
+				o.makeImmutable();
+				blc.addOperation(o);
+			}
+		}
 	}
 
 	private static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {

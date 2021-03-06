@@ -1,0 +1,384 @@
+[
+  {
+    "edit": [
+      {
+        "change": {
+          "images.outdoor": {
+            "appendmany": [
+              {
+                "cid": "Qme35CpDmPGdgjHyS5b5cvaNUMG35T24eXPna8veEpLY48",
+                "extension": "jpeg",
+                "hash": "6ec6c4a14fd80c787c85da1b25ba615ff3b283c4c9edd91d5e497e1446f5ea59",
+                "type": "#image"
+              },
+              {
+                "cid": "QmfVSSREh75SyFDekRUBLaLEHf9Ps1U8oocy54CjEHfbke",
+                "extension": "jpeg",
+                "hash": "14758ea58ca56c43a867ef781a4027368d688d922eec4c0ea530196c6991a9d3",
+                "type": "#image"
+              },
+              {
+                "cid": "QmViByYWYqiohmNm7Wu7doyumZJ6rjWojR2Ufg45uDbsVq",
+                "extension": "jpeg",
+                "hash": "2bb71424b3352d58570d6b5267a1e87b40501ac0002639ac366e11d66d7f9ba6",
+                "type": "#image"
+              },
+              {
+                "cid": "QmVQ6ZzprLYHQvwDLdUf74554eahaFEigwpqsGSShYRpbn",
+                "extension": "jpeg",
+                "hash": "d9db1b05d719d35f3a4696fb879dfd56d0d94a67a9c457412d16092e7fcab437",
+                "type": "#image"
+              },
+              {
+                "cid": "QmWFcCsjkRgEcVZ9yJySNPXhUc5WH5iC8dCpAdtGUKekQk",
+                "extension": "jpeg",
+                "hash": "efcce7eaf9858773d68b0b7863ece65bbbfcdc4b719eacbfb2ac8b96d6925ba4",
+                "type": "#image"
+              },
+              {
+                "cid": "QmYbBhDg1Wx3CEazewcXqPAYjkhbsC12BswewoVxGQNnQE",
+                "extension": "jpeg",
+                "hash": "903ab7822393db008cd3e0417c87c49b49de04278c99e4e2ef44850d3ae2fd74",
+                "type": "#image"
+              }
+            ]
+          },
+          "images.review[0]": "delete",
+          "images.review[1]": "delete",
+          "images.review[5]": "delete",
+          "images.review[6]": "delete",
+          "images.review[7]": "delete",
+          "images.review[8]": "delete",
+          "version": "increment"
+        },
+        "current": {
+          "images.review[0]": {
+            "cid": "Qme35CpDmPGdgjHyS5b5cvaNUMG35T24eXPna8veEpLY48",
+            "extension": "jpeg",
+            "hash": "6ec6c4a14fd80c787c85da1b25ba615ff3b283c4c9edd91d5e497e1446f5ea59",
+            "type": "#image"
+          },
+          "images.review[1]": {
+            "cid": "QmfVSSREh75SyFDekRUBLaLEHf9Ps1U8oocy54CjEHfbke",
+            "extension": "jpeg",
+            "hash": "14758ea58ca56c43a867ef781a4027368d688d922eec4c0ea530196c6991a9d3",
+            "type": "#image"
+          },
+          "images.review[5]": {
+            "cid": "QmViByYWYqiohmNm7Wu7doyumZJ6rjWojR2Ufg45uDbsVq",
+            "extension": "jpeg",
+            "hash": "2bb71424b3352d58570d6b5267a1e87b40501ac0002639ac366e11d66d7f9ba6",
+            "type": "#image"
+          },
+          "images.review[6]": {
+            "cid": "QmVQ6ZzprLYHQvwDLdUf74554eahaFEigwpqsGSShYRpbn",
+            "extension": "jpeg",
+            "hash": "d9db1b05d719d35f3a4696fb879dfd56d0d94a67a9c457412d16092e7fcab437",
+            "type": "#image"
+          },
+          "images.review[7]": {
+            "cid": "QmWFcCsjkRgEcVZ9yJySNPXhUc5WH5iC8dCpAdtGUKekQk",
+            "extension": "jpeg",
+            "hash": "efcce7eaf9858773d68b0b7863ece65bbbfcdc4b719eacbfb2ac8b96d6925ba4",
+            "type": "#image"
+          },
+          "images.review[8]": {
+            "cid": "QmYbBhDg1Wx3CEazewcXqPAYjkhbsC12BswewoVxGQNnQE",
+            "extension": "jpeg",
+            "hash": "903ab7822393db008cd3e0417c87c49b49de04278c99e4e2ef44850d3ae2fd74",
+            "type": "#image"
+          }
+        },
+        "eval": {
+          "parentHash": "4d81f08d4a407227e10b46febbf47957756eaf09193cdb756afc82d837f844ba",
+          "parentType": "opr.place"
+        },
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review[4]": "delete",
+          "version": "increment"
+        },
+        "current": {
+          "images.review[4]": {
+            "cid": "QmNzAP9wbkHFarJqMiQX6JkNWhR3pDrEfvBEskHppHBeeg",
+            "extension": "jpeg",
+            "hash": "ff1cffc4cceb8174d3a4d700b6ea4215f9b1bbac004d2f5849c62de6d3d24f09",
+            "type": "#image"
+          }
+        },
+        "eval": {
+          "parentHash": "854fc03a7492fb6611c54608d45fda8a5366b1bb06e35efb4721dc171662c88b",
+          "parentType": "opr.place"
+        },
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ],
+    "eval": {
+      "timestamp": 1614529265822
+    }
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmYbBhDg1Wx3CEazewcXqPAYjkhbsC12BswewoVxGQNnQE",
+              "extension": "jpeg",
+              "hash": "903ab7822393db008cd3e0417c87c49b49de04278c99e4e2ef44850d3ae2fd74",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {
+        },
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmWFcCsjkRgEcVZ9yJySNPXhUc5WH5iC8dCpAdtGUKekQk",
+              "extension": "jpeg",
+              "hash": "efcce7eaf9858773d68b0b7863ece65bbbfcdc4b719eacbfb2ac8b96d6925ba4",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {
+        },
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmVQ6ZzprLYHQvwDLdUf74554eahaFEigwpqsGSShYRpbn",
+              "extension": "jpeg",
+              "hash": "d9db1b05d719d35f3a4696fb879dfd56d0d94a67a9c457412d16092e7fcab437",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmViByYWYqiohmNm7Wu7doyumZJ6rjWojR2Ufg45uDbsVq",
+              "extension": "jpeg",
+              "hash": "2bb71424b3352d58570d6b5267a1e87b40501ac0002639ac366e11d66d7f9ba6",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmeJBX49DkzQrqWExJ92wckDEe7h3XKSnpXpofZ6jJz2rA",
+              "extension": "jpeg",
+              "hash": "7a48efb618bd8d597797584a941031bdb2a3295a5a8a33276eb0c5c96e3fe993",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmNzAP9wbkHFarJqMiQX6JkNWhR3pDrEfvBEskHppHBeeg",
+              "extension": "jpeg",
+              "hash": "ff1cffc4cceb8174d3a4d700b6ea4215f9b1bbac004d2f5849c62de6d3d24f09",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmUkwmTNNWpM2QxdQY8DrBftogy2sE5cs8mbNyh3CrSATa",
+              "extension": "jpeg",
+              "hash": "7a44a7f9072b19276a75e94d879cb18c5c624ff4d18e317bab2aedcf554f660c",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmfMYuJBwuoyBp6xdK2rKxWpuGncUDvN1Qzg1quBM57rEj",
+              "extension": "jpeg",
+              "hash": "08fa918090b3acd937081eeea367ab6ff25ca4b2a76f4d2791f1dc7a04e8d4d4",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "QmfVSSREh75SyFDekRUBLaLEHf9Ps1U8oocy54CjEHfbke",
+              "extension": "jpeg",
+              "hash": "14758ea58ca56c43a867ef781a4027368d688d922eec4c0ea530196c6991a9d3",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "edit": [
+      {
+        "change": {
+          "images.review": {
+            "append": {
+              "cid": "Qme35CpDmPGdgjHyS5b5cvaNUMG35T24eXPna8veEpLY48",
+              "extension": "jpeg",
+              "hash": "6ec6c4a14fd80c787c85da1b25ba615ff3b283c4c9edd91d5e497e1446f5ea59",
+              "type": "#image"
+            }
+          },
+          "version": "increment"
+        },
+        "current": {},
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ]
+      }
+    ]
+  },
+  {
+    "create": [
+      {
+        "id": [
+          "8FW97P",
+          "wdhpik"
+        ],
+        "source": {
+          "osm": [
+            {
+              "changeset": "32438066",
+              "id": 227631026,
+              "lat": 48.27170487827352,
+              "lon": 7.716907357134784,
+              "osm_tag": "amenity",
+              "osm_value": "biergarten",
+              "tags": {
+                "amenity": "biergarten"
+              },
+              "timestamp": "2015-07-06T00:18:20Z",
+              "type": "way",
+              "version": "4"
+            }
+          ],
+          "old-osm-ids": []
+        },
+        "version": 2
+      }
+    ]
+  }
+]
