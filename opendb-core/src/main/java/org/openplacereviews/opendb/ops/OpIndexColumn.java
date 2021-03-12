@@ -230,7 +230,10 @@ public class OpIndexColumn {
 			if (array == null) {
 				array = new ArrayList<Object>();
 			}
-			array.add(opObject.getId().get(idIndex));
+			List<String> objId = opObject.getId();
+			if (objId.size() > idIndex) {
+				array.add(objId.get(idIndex));
+			}
 		}
 		for (IndexExpression f : fieldsExpression) {
 			array = JsonObjectUtils.getIndexObjectByField(opObject.getRawOtherFields(), f.expression, array);
