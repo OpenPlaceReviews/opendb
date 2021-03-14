@@ -66,7 +66,9 @@ public class IPFSFileManager {
 			resourceDTO.setCid(ipfsService.writeContent(resourceDTO.getMultipartFile().getBytes()));
 		}
 		File f = getFileByHash(resourceDTO.getHash(), resourceDTO.getExtension());
-		FileUtils.writeByteArrayToFile(f, resourceDTO.getMultipartFile().getBytes());
+		if (!f.exists()) {
+			FileUtils.writeByteArrayToFile(f, resourceDTO.getMultipartFile().getBytes());
+		}
 		dbManager.storeResourceObject(resourceDTO);
 		return resourceDTO;
 	}
