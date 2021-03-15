@@ -13,9 +13,6 @@ public class JavascriptFormatter {
 		String idName = op == null ? "sys_op_operation" : "op_" + op.getId().get(0).replace('.', '_');
 		String className = OUtils.capitalizeFirstLetter(idName);
 		s.append("class " + className + (op == null ? " " : " extends Sys_op_operation ") + "{\n");
-		String desc = "if (!obj.userdetails) {" +
-				" return this.getBaseName() + ' ' + obj.id;" +
-				"} else return this.getBaseName() + ' ' + obj.id + ' details: ' + JSON.stringify(obj.userdetails); ";
 		if (op == null) {
 			genJSFunction(s, "Abstract", "getBaseName");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName(); "), "getName");
@@ -23,7 +20,7 @@ public class JavascriptFormatter {
 			genJSFunction(s, Collections.singletonList("return ''; "), "getIcon");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName() + ' ' + obj.id; "), "getObjName", "obj");
 			genJSFunction(s, Collections.singletonList("return this.getIcon(); "), "getObjectIcon", "obj");
-			genJSFunction(s, Collections.singletonList(desc), "getObjDescription", "obj");
+			genJSFunction(s, Collections.singletonList("return obj.userdetails ? this.getBaseName() + ' ' + obj.id + ' details: ' + JSON.stringify(obj.userdetails) : this.getBaseName() + ' ' + obj.id;"), "getObjDescription", "obj");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName(); "), "getOpName", "op");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName(); "), "getOpDescription", "op");
 		} else {

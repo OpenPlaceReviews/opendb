@@ -88,7 +88,7 @@
 				"object-icon" : "opendb-icons:ic_user_login",
 				"object-name-format" : ["return 'User ' + obj.id;"],
 				"object-description-format" : [
-					"if(obj.id) {return 'User login' + obj.id;} else return null;"
+					"return obj.id ? 'User login' + obj.id : null;"
 				]
 			}
 		}]
