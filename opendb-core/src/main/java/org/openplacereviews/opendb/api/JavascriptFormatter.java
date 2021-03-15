@@ -20,7 +20,7 @@ public class JavascriptFormatter {
 			genJSFunction(s, Collections.singletonList("return ''; "), "getIcon");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName() + ' ' + obj.id; "), "getObjName", "obj");
 			genJSFunction(s, Collections.singletonList("return this.getIcon(); "), "getObjectIcon", "obj");
-			genJSFunction(s, Collections.singletonList("return this.getBaseName() + ' ' + obj.id + (obj.userdetails ? ' details: ' + JSON.stringify(obj.userdetails) : '' )"), "getObjDescription", "obj");
+			genJSFunction(s, Collections.singletonList("return this.getBaseName() + ' ' + obj.id + (obj.userdetails ? ' details: ' + JSON.stringify(obj.userdetails) : ''); "), "getObjDescription", "obj");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName(); "), "getOpName", "op");
 			genJSFunction(s, Collections.singletonList("return this.getBaseName(); "), "getOpDescription", "op");
 		} else {
