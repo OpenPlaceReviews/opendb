@@ -997,7 +997,8 @@ public class OpBlockChain {
 					}
 				}
 			}
-			int deleteCount=0;
+			String deleteOpObj = null;
+			List<String> deleteFieldExprs = null;
 			Map<String, Object> changedMap = editObject.getChangedEditFields();
 			for (Map.Entry<String, Object> e : changedMap.entrySet()) {
 				// evaluate changes for new object
@@ -1013,16 +1014,14 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						if (deleteCount >= 1) {
-							Matcher m = Pattern.compile("\\[(\\d+)\\]").matcher(fieldExpr);
-							if (m.find()) {
-								int newNumber = Integer.parseInt(m.group(1)) - deleteCount;
-								newObject.setFieldByExpr(fieldExpr.substring(0, m.start(1)) + newNumber + fieldExpr.substring(m.end(1)), null);
-							}
-						} else {
-							newObject.setFieldByExpr(fieldExpr, null);
+						if (deleteOpObj == null) {
+							deleteOpObj = UUID.randomUUID().toString();
 						}
-						deleteCount++;
+						if (deleteFieldExprs == null) {
+							deleteFieldExprs = new ArrayList<>();
+						}
+						newObject.setFieldByExpr(fieldExpr, deleteOpObj);
+						deleteFieldExprs.add(fieldExpr);
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
@@ -1082,6 +1081,11 @@ public class OpBlockChain {
 					}
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
 					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
+				}
+			}
+			if (deleteFieldExprs != null) {
+				for (String fieldExpr : deleteFieldExprs) {
+					newObject.deleteFieldByExpr(fieldExpr, deleteOpObj);
 				}
 			}
 			newObject.parentHash = u.getRawHash();
