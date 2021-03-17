@@ -4,7 +4,7 @@ logging:
   pattern.console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){yellow} %-5level [%thread]: %message%n%ex{4}"
 
 server:
-  port: ${OPENDB_PORT:6465}
+  port: ${OPENDB_PORT:6463}
   connection-timeout: 120000
   tomcat:
     max-http-post-size: 4096

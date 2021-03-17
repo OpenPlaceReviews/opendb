@@ -10,10 +10,7 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -415,7 +412,7 @@ public class OpBlockchainTest {
 		JsonFormatter formatter = new JsonFormatter();
 		generateOperationsByList(formatter, blc, MULTIPLE_DELETE_LIST);
 		OpObject opObject = blc.getObjectByName("osm.place","8FW97P", "wdhpik");
-		int countEl = opObject.getFieldByExpr("images.review").toString().split("},").length;
+		int countEl = ((List)opObject.getStringListObjMap("images").get("review")).size();
 
 		assertEquals( 3, countEl);
 	}

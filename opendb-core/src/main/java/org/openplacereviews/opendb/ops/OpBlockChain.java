@@ -54,8 +54,9 @@ public class OpBlockChain {
 	public static final String OP_CHANGE_APPEND = "append";
 	public static final String OP_CHANGE_APPENDMANY = "appendmany";
 	public static final String OP_CHANGE_SET = "set";
-	
-	
+
+	public static final String OP_CHANGE_DELETE_OBJ = "45de018e-46b0-4889-9745-71aa807ce8ff-";
+
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
@@ -997,7 +998,7 @@ public class OpBlockChain {
 					}
 				}
 			}
-			int deleteCount=0;
+			boolean hasDeleteOps = false;
 			Map<String, Object> changedMap = editObject.getChangedEditFields();
 			for (Map.Entry<String, Object> e : changedMap.entrySet()) {
 				// evaluate changes for new object
@@ -1013,16 +1014,8 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						if (deleteCount >= 1) {
-							Matcher m = Pattern.compile("\\[(\\d+)\\]").matcher(fieldExpr);
-							if (m.find()) {
-								int newNumber = Integer.parseInt(m.group(1)) - deleteCount;
-								newObject.setFieldByExpr(fieldExpr.substring(0, m.start(1)) + newNumber + fieldExpr.substring(m.end(1)), null);
-							}
-						} else {
-							newObject.setFieldByExpr(fieldExpr, null);
-						}
-						deleteCount++;
+						newObject.setFieldByExpr(fieldExpr, OP_CHANGE_DELETE_OBJ);
+						hasDeleteOps = true;
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
@@ -1083,6 +1076,9 @@ public class OpBlockChain {
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
 					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
 				}
+			}
+			if (hasDeleteOps) {
+				newObject.deleteFieldsByObject(OP_CHANGE_DELETE_OBJ);
 			}
 			newObject.parentHash = u.getRawHash();
 			newObject.makeImmutable();
