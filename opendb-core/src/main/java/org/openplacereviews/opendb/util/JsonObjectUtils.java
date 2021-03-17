@@ -4,7 +4,6 @@ import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openplacereviews.opendb.ops.OpOperation;
 
 /**
  * Class uses for work with Json Object represent as Map.
@@ -90,20 +89,7 @@ public class JsonObjectUtils {
 		return accessField(jsonMap, fieldSequence.toArray(new String[fieldSequence.size()]), new OperationAccess(DELETE_OPERATION, null));
 	}
 
-	/**
-	 * Delete field(s) having defined value from json Map (field path presented as sequence of string).
-	 * Few fields with same values may be deleted if field path is indexed (car[2] for example).
-	 *
-	 * @param jsonMap       source json object deserialized in map
-	 * @param fieldSequence Sequence to field value.
-	 *                      Example: person.car.number have to be ["person", "car[2]", "number"]
-	 * @param value         Value of field.
-	 * @return
-	 */
-	public static Object deleteFieldsByValue(Map<String, Object> jsonMap, List<String> fieldSequence, Object value) {
-		return accessField(jsonMap, fieldSequence.toArray(new String[fieldSequence.size()]), new OperationAccess(DELETE_OPERATION, value));
-	}
-
+	
 	@SuppressWarnings("unchecked")
 	private static Object accessField(Map<String, Object> jsonObject, String[] fieldSequence, OperationAccess op) {
 		if (fieldSequence == null || fieldSequence.length == 0) {
@@ -220,16 +206,7 @@ public class JsonObjectUtils {
 	private static Object accessObjField(OperationAccess op, Map<String, Object> jsonObjLocal, String fieldName) {
 		Object prevValue;
 		if (op.operation == DELETE_OPERATION) {
-			if (op.value != null) {
-				Object value = jsonObjLocal.get(fieldName);
-				if (op.value.equals(value)) {
-					prevValue = jsonObjLocal.remove(fieldName);
-				} else {
-					prevValue = null;
-				}
-			} else {
-				prevValue = jsonObjLocal.remove(fieldName);
-			}
+			prevValue = jsonObjLocal.remove(fieldName);
 		} else if (op.operation == SET_OPERATION) {
 			prevValue = jsonObjLocal.put(fieldName, op.value);
 		} else {
@@ -240,38 +217,28 @@ public class JsonObjectUtils {
 
 	private static Object accessListField(OperationAccess op, List<Object> jsonListLocal, int indexToAccess) {
 		Object prevValue;
+		int lastIndex = indexToAccess;
 		if (op.operation == DELETE_OPERATION) {
-			if (op.value != null) {
-				Iterator<Object> it = jsonListLocal.iterator();
-				while (it.hasNext()) {
-					Object o = it.next();
-					if (op.value.equals(o)) {
-						it.remove();
-					}
-				}
+			if (lastIndex >= jsonListLocal.size() || lastIndex < 0) {
 				prevValue = null;
 			} else {
-				if (indexToAccess >= jsonListLocal.size() || indexToAccess < 0) {
-					prevValue = null;
-				} else {
-					prevValue = jsonListLocal.remove(indexToAccess);
-				}
+				prevValue = jsonListLocal.remove(lastIndex);
 			}
 		} else if (op.operation == SET_OPERATION) {
-			if (indexToAccess == jsonListLocal.size() || indexToAccess == -1) {
+			if (lastIndex == jsonListLocal.size() || lastIndex == -1) {
 				prevValue = null;
 				jsonListLocal.add(op.value);
-			} else if (indexToAccess >= jsonListLocal.size() || indexToAccess < 0) {
+			} else if (lastIndex >= jsonListLocal.size() || lastIndex < 0) {
 				throw new IllegalArgumentException(String.format("Illegal access to %d position in array with size %d",
-						indexToAccess, jsonListLocal.size()));
+						lastIndex, jsonListLocal.size()));
 			} else {
-				prevValue = jsonListLocal.set(indexToAccess, op.value);
+				prevValue = jsonListLocal.set(lastIndex, op.value);
 			}
 		} else {
-			if (indexToAccess >= jsonListLocal.size() || indexToAccess < 0) {
+			if (lastIndex >= jsonListLocal.size() || lastIndex < 0) {
 				prevValue = null;
 			} else {
-				prevValue = jsonListLocal.get(indexToAccess);
+				prevValue = jsonListLocal.get(lastIndex);
 			}
 		}
 		return prevValue;

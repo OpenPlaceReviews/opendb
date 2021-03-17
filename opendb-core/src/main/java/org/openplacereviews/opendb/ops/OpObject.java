@@ -233,24 +233,7 @@ public class OpObject {
 		}
 	}
 
-	public void deleteFieldByExpr(String field, Object object) {
-		if (field.contains(".") || field.contains("[") || field.contains("]")) {
-			List<String> fieldSequence = generateFieldSequence(field);
-			if (object == null) {
-				JsonObjectUtils.deleteField(this.fields, fieldSequence);
-			} else {
-				JsonObjectUtils.deleteFieldsByValue(this.fields, fieldSequence, object);
-			}
-		} else if (object == null) {
-			fields.remove(field);
-		} else {
-			Object value = fields.get(field);
-			if (object.equals(value)) {
-				fields.remove(field);
-			}
-		}
-	}
-
+	
 	public Object getCacheObject(String f) {
 		if(cacheFields == null) {
 			return null;
