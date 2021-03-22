@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -625,7 +626,7 @@ public class DBSchemaManager {
 	
 	private void fixMultipleDeletions(JdbcTemplate jdbcTemplate) {
 		LOGGER.info("Fix operations with errorneous multiple deletions");
-		Map<List<String>, String> objsToFix = new TreeMap<>();
+		Map<List<String>, String> objsToFix = new HashMap<>();
 		jdbcTemplate.query("select content, type, superblock, hash from " + OPERATIONS_TABLE + " where content @@ '$.edit.change.keyvalue().key like_regex \".*\\[^[0]\\].*\"'",
 				new RowCallbackHandler() {
 					@Override
