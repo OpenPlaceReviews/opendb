@@ -1,11 +1,32 @@
 package org.openplacereviews.opendb.service;
 
 
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_DELETE;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
@@ -19,14 +40,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_DELETE;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
 
 @Service
 public class DBSchemaManager {
@@ -256,7 +269,7 @@ public class DBSchemaManager {
 				updateExternalResources(jdbcTemplate);
 			}
 			if (dbVersion < 7) {
-				setFixMultipleDeletions(jdbcTemplate);
+				fixMultipleDeletions(jdbcTemplate);
 			}
 			//setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if (dbVersion > OPENDB_SCHEMA_VERSION) {
@@ -271,58 +284,6 @@ public class DBSchemaManager {
 		}
 	}
 
-	private void updateExternalResources(JdbcTemplate jdbcTemplate) {
-		LOGGER.info("Adding new columns: 'blocks' for table: " + EXT_RESOURCE_TABLE);
-		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
-		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
-			@Override
-			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
-				int i = 0;
-				while (rs.next()) {
-					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
-					externalResourceService.processOperations(opBlock);
-					i++;
-				}
-				LOGGER.info("Updated " + i + " blocks");
-				return i;
-			}
-		});
-	}
-
-	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
-		LOGGER.info("Adding new columns: 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
-		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
-		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
-			@Override
-			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
-				int i = 0;
-				while (rs.next()) {
-					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
-					OpBlock blockheader = OpBlock.createHeader(opBlock, rules);
-					PGobject blockHeaderObj = new PGobject();
-					blockHeaderObj.setType("jsonb");
-					try {
-						blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
-					} catch (SQLException e) {
-						throw new IllegalArgumentException(e);
-					}
-					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + 
-							" set opcount = ?, objdeleted = ?, objedited = ?, objadded = ?, blocksize = ?, header = ? " +
-									" WHERE hash = ?",
-									blockheader.getIntValue(OpBlock.F_OPERATIONS_SIZE, 0),
-									blockheader.getIntValue(OpBlock.F_OBJ_DELETED, 0),
-									blockheader.getIntValue(OpBlock.F_OBJ_EDITED, 0),
-									blockheader.getIntValue(OpBlock.F_OBJ_ADDED, 0),
-									blockheader.getIntValue(OpBlock.F_BLOCK_SIZE, 0),
-									blockHeaderObj, 
-							SecUtils.getHashBytes(opBlock.getRawHash()));
-					i++;
-				}
-				LOGGER.info("Updated " + i + " blocks");
-				return i;
-			}
-		});
-	}
 	
 	private void setOperationsType(JdbcTemplate jdbcTemplate, String table) {
 		LOGGER.info("Indexing operation types required for db version 2: " + table);
@@ -343,39 +304,6 @@ public class DBSchemaManager {
 		handleBatch(jdbcTemplate, batchArgs, batchQuery, true);
 	}
 
-	private void setFixMultipleDeletions(JdbcTemplate jdbcTemplate) {
-		LOGGER.info("Fix operations with errorneous multiple deletions");
-		List<OpOperation> ops = new ArrayList<>();
-		List<OpObject> objs = new ArrayList<>();
-		jdbcTemplate.query("SELECT content FROM " + OPERATIONS_TABLE +
-				" WHERE content @@ '$.type == \"opr.place\"' " +
-				" AND content @@ '$.edit.change.keyvalue().key like_regex \"^images\\\\.([a-zA-Z]*)(\\\\[\\\\d\\\\])$\"'", new RowCallbackHandler() {
-			@Override
-			public void processRow(ResultSet rs) throws SQLException {
-				OpOperation op = formatter.parseOperation(rs.getString(1));
-				for (OpObject editObject : op.getEdited()) {
-					Map<String, Object> changedMap = editObject.getChangedEditFields();
-					int deleteCounter = 0;
-					for (Map.Entry<String, Object> e : changedMap.entrySet()) {
-						Object opValue = e.getValue();
-						if (opValue instanceof Map) {
-							continue;
-						}
-						String opValueStr = opValue.toString();
-						if (OP_CHANGE_DELETE.equals(opValueStr)) {
-							deleteCounter++;
-						}
-						if (deleteCounter > 1) {
-							ops.add(op);
-							objs.add(editObject);
-							break;
-						}
-					}
-				}
-			}
-		});
-		LOGGER.info("Fixed " + ops.size() + " operations");
-	}
 
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
 		dbschema.initSettingsTable(metadataDB, jdbcTemplate);
@@ -636,5 +564,94 @@ public class DBSchemaManager {
 
 	
 
+	
+	/// MIGRATION functions
 
+	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Adding new columns: 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
+		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
+			@Override
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				int i = 0;
+				while (rs.next()) {
+					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
+					OpBlock blockheader = OpBlock.createHeader(opBlock, rules);
+					PGobject blockHeaderObj = new PGobject();
+					blockHeaderObj.setType("jsonb");
+					try {
+						blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
+					} catch (SQLException e) {
+						throw new IllegalArgumentException(e);
+					}
+					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + 
+							" set opcount = ?, objdeleted = ?, objedited = ?, objadded = ?, blocksize = ?, header = ? " +
+									" WHERE hash = ?",
+									blockheader.getIntValue(OpBlock.F_OPERATIONS_SIZE, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_DELETED, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_EDITED, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_ADDED, 0),
+									blockheader.getIntValue(OpBlock.F_BLOCK_SIZE, 0),
+									blockHeaderObj, 
+							SecUtils.getHashBytes(opBlock.getRawHash()));
+					i++;
+				}
+				LOGGER.info("Updated " + i + " blocks");
+				return i;
+			}
+		});
+	}
+	
+	private void updateExternalResources(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Adding new columns: 'blocks' for table: " + EXT_RESOURCE_TABLE);
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
+		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
+			@Override
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				int i = 0;
+				while (rs.next()) {
+					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
+					externalResourceService.processOperations(opBlock);
+					i++;
+				}
+				LOGGER.info("Updated " + i + " blocks");
+				return i;
+			}
+		});
+	}
+
+	
+	private void fixMultipleDeletions(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Fix operations with errorneous multiple deletions");
+		List<OpOperation> ops = new ArrayList<>();
+		List<OpObject> objs = new ArrayList<>();
+		jdbcTemplate.query("select content, type, superblock, hash from " + OPERATIONS_TABLE + " where content @@ '$.edit.change.keyvalue().key like_regex \".*\\[^[0]\\].*\"'",
+				new RowCallbackHandler() {
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						OpOperation op = formatter.parseOperation(rs.getString(1));
+						for (OpObject editObject : op.getEdited()) {
+							Map<String, Object> changedMap = editObject.getChangedEditFields();
+							int deleteCounter = 0;
+							for (Map.Entry<String, Object> e : changedMap.entrySet()) {
+								Object opValue = e.getValue();
+								if (opValue instanceof Map) {
+									continue;
+								}
+								String opValueStr = opValue.toString();
+								if (OP_CHANGE_DELETE.equals(opValueStr)) {
+									deleteCounter++;
+								}
+								if (deleteCounter > 1) {
+									LOGGER.info("OPERATION to fix: " + op.toString() +  " obj " + editObject.getId() + " -> " + editObject);
+									ops.add(op);
+									objs.add(editObject);
+									break;
+								}
+							}
+						}
+					}
+		});
+		LOGGER.info("Fixed " + ops.size() + " operations");
+	}
 }

@@ -1,5 +1,33 @@
 package org.openplacereviews.opendb.ops;
 
+import static org.openplacereviews.opendb.ops.OpBlock.F_HASH;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNATURE;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNED_BY;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_OP;
+import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
+import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
+import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
+
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.stream.Stream;
+
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
@@ -8,24 +36,6 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.security.KeyPair;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
-import static org.openplacereviews.opendb.ops.OpBlock.*;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
-import static org.openplacereviews.opendb.ops.OpObject.F_OP;
-import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
-import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
-import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 
 /**
  *  Guidelines of object methods:
@@ -55,7 +65,7 @@ public class OpBlockChain {
 	public static final String OP_CHANGE_APPENDMANY = "appendmany";
 	public static final String OP_CHANGE_SET = "set";
 
-	public static final String OP_CHANGE_DELETE_OBJ = "45de018e-46b0-4889-9745-71aa807ce8ff-";
+	private static final String OP_CHANGE_TEMPDELETE_OBJ = "45de018e-46b0-4889-9745-71aa807ce8ff-x1openplacereviews";
 
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
@@ -1020,7 +1030,7 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						newObject.setFieldByExpr(fieldExpr, OP_CHANGE_DELETE_OBJ);
+						newObject.setFieldByExpr(fieldExpr, OP_CHANGE_TEMPDELETE_OBJ);
 						hasDeleteOps = true;
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
@@ -1084,7 +1094,7 @@ public class OpBlockChain {
 				}
 			}
 			if (hasDeleteOps) {
-				newObject.deleteFieldsByObject(OP_CHANGE_DELETE_OBJ);
+				newObject.deleteFieldsByObject(OP_CHANGE_TEMPDELETE_OBJ);
 			}
 			newObject.parentHash = u.getRawHash();
 			newObject.makeImmutable();
