@@ -47,7 +47,7 @@ import org.springframework.stereotype.Service;
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 7;
+	private static final int OPENDB_SCHEMA_VERSION = 6;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -269,12 +269,11 @@ public class DBSchemaManager {
 			}
 			if (dbVersion < 6) {
 				updateExternalResources(jdbcTemplate);
-				setSetting(jdbcTemplate, "opendb.version", "6");
 			}
-			if (dbVersion < 7) {
-				fixMultipleDeletions(jdbcTemplate);
-			}
-			//setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
+//			if (dbVersion <= 6) {
+//				fixMultipleDeletions(jdbcTemplate);
+//			}
+			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if (dbVersion > OPENDB_SCHEMA_VERSION) {
 			throw new UnsupportedOperationException();
 		}
@@ -624,7 +623,8 @@ public class DBSchemaManager {
 	}
 
 	
-	private void fixMultipleDeletions(JdbcTemplate jdbcTemplate) {
+	protected void fixMultipleDeletions(JdbcTemplate jdbcTemplate) {
+		// THIS method was never used cause the errors occurred in blockchain were irreversible, so it was needed to keep both versions of the code (buggy & fixed)
 		LOGGER.info("Fix operations with errorneous multiple deletions");
 		Map<List<String>, String> objsToFix = new HashMap<>();
 		jdbcTemplate.query("select content, type, superblock, hash from " + OPERATIONS_TABLE + " where content @@ '$.edit.change.keyvalue().key like_regex \".*\\[^[0]\\].*\"'",
@@ -645,8 +645,11 @@ public class DBSchemaManager {
 									deleteCounter++;
 								}
 								if (deleteCounter > 1) {
+									List<String> combinedId = new ArrayList<>();
+									combinedId.add(op.getType());
+									combinedId.addAll(editObject.getId());
 									LOGGER.info(String.format("Suspicious operation probably to fix: %s, %s - %s", op.getType(), op.getHash(), editObject.getId()));
-									objsToFix.put(editObject.getId(), op.getType());
+									objsToFix.put(combinedId, op.getType());
 									break objFields;
 								}
 							}
@@ -654,34 +657,34 @@ public class DBSchemaManager {
 					}
 		});
 		LOGGER.info("To scan & fix objects: " + objsToFix);
-//		Iterator<Entry<List<String>, String>> itObj = objsToFix.entrySet().iterator();
-//		while (itObj.hasNext()) {
-//			Entry<List<String>, String> e = itObj.next();
-//			List<String> objectId = e.getKey();
-//			String objType = e.getValue();
-//			List<OpOperation> opsList = new ArrayList<OpOperation>();
-//			StringBuilder idQ = new StringBuilder();
-//			for (String idP : objectId) {
-//				if (idQ.length() > 0) {
-//					idQ.append(", ");
-//				}
-//				idQ.append("\"").append(idP).append("\"");
-//			}
-//			String sqlQuery = "select content, type, superblock, hash from " + OPERATIONS_TABLE + " where type = \""
-//					+ objType + "\"  and (content @@ '$.create.id = [" + idQ.toString() + "]' or "
-//							+ "           content @@ '$.create.id = [" + idQ.toString() + "]' or "
-//							+ "           content @@ '$.delete.id = [" + idQ.toString() + "]') "
-//							+ " order by sblockid asc, sorder asc";
-//			LOGGER.info(sqlQuery);
-//			jdbcTemplate.query(sqlQuery, new RowCallbackHandler() {
-//				@Override
-//				public void processRow(ResultSet rs) throws SQLException {
-//					OpOperation op = formatter.parseOperation(rs.getString(1));
-//					LOGGER.info(objType + " " + op.getHash());
-//					opsList.add(op);
-//				}
-//			});
-//		}
+		Iterator<Entry<List<String>, String>> itObj = objsToFix.entrySet().iterator();
+		while (itObj.hasNext()) {
+			List<String> objectId = itObj.next().getKey();
+			String objType = objectId.remove(0);
+			List<OpOperation> opsList = new ArrayList<OpOperation>();
+			StringBuilder idQ = new StringBuilder();
+			for (String idP : objectId) {
+				if (idQ.length() > 0) {
+					idQ.append(", ");
+				}
+				idQ.append("\"").append(idP).append("\"");
+			}
+			String sqlQuery = "select content, type, superblock, hash from " + OPERATIONS_TABLE + " where type = '"
+					+ objType + "'  and (content->'edit' @> '[{\"id\":[" + idQ.toString() + "]}]'::jsonb or "
+					+ "                  content->'create' @> '[{\"id\":[" + idQ.toString() + "]}]'::jsonb or "
+					+ "                  content->'create' @> '[{\"id\":[" + idQ.toString() + "]}]'::jsonb)"
+					+ " order by sblockid asc, sorder asc";
+			LOGGER.info(sqlQuery);
+			LOGGER.info("Proceed with " + objectId);
+			jdbcTemplate.query(sqlQuery, new RowCallbackHandler() {
+				@Override
+				public void processRow(ResultSet rs) throws SQLException {
+					OpOperation op = formatter.parseOperation(rs.getString(1));
+					LOGGER.info(objType + " " + op.getHash());
+					opsList.add(op);
+				}
+			});
+		}
 		
 	}
 }

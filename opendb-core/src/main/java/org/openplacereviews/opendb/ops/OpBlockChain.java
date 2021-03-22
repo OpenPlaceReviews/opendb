@@ -263,7 +263,7 @@ public class OpBlockChain {
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			for (OpOperation o : block.getOperations()) {
-				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash());
+				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash(), block.getDate(OpBlock.F_DATE));
 				validateAndPrepareOperation(o, validationCtx, hctx);
 				atomicAddOperationAfterPrepare(o, validationCtx);
 			}
@@ -285,9 +285,9 @@ public class OpBlockChain {
 		}
 		// calculate blocks and ops to be removed, all blocks must be present in new parent
 		// if(blocks.size() > 0) { return false; }
-		for(OpBlock bl : blocks.getAllBlockHeaders()) {
+		for (OpBlock bl : blocks.getAllBlockHeaders()) {
 			int blDept = newParent.getBlockDepth(bl);
-			if(blDept < 0) {
+			if (blDept < 0) {
 				return false;
 			}
 		}
@@ -352,7 +352,7 @@ public class OpBlockChain {
 	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, DeletedObjectCtx historyObjectCtx) {
 		op.checkImmutable();
 		validateIsUnlocked();
-		LocalValidationCtx validationCtx = new LocalValidationCtx("");
+		LocalValidationCtx validationCtx = new LocalValidationCtx("", 0);
 		boolean valid = validateAndPrepareOperation(op, validationCtx, historyObjectCtx);
 		if(!valid || onlyValidate) {
 			return valid;
@@ -433,7 +433,7 @@ public class OpBlockChain {
 			}
 		}
 		for (OpOperation o : ops) {
-			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>");
+			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>", 0);
 			validateAndPrepareOperation(o, validationCtx, null);
 			atomicAddOperationAfterPrepare(o, validationCtx);
 		}
@@ -1030,8 +1030,12 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						newObject.setFieldByExpr(fieldExpr, OP_CHANGE_TEMPDELETE_OBJ);
-						hasDeleteOps = true;
+						if(ctx.version <= LocalValidationCtx.VERSION_BEFORE_20_2021) {
+							newObject.setFieldByExpr(fieldExpr, null);
+						} else {
+							newObject.setFieldByExpr(fieldExpr, OP_CHANGE_TEMPDELETE_OBJ);
+							hasDeleteOps = true;
+						}
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
@@ -1110,14 +1114,19 @@ public class OpBlockChain {
 
 	// no multi thread issue (used only in synchronized blocks)
 	public static class LocalValidationCtx {
+		public static int VERSION_BEFORE_20_2021 = 0;
+		public static int VERSION = 1;
 		final String blockHash;
+		final int version;
 		Set<List<String>> ids = new HashSet<List<String>>();
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
 
-		public LocalValidationCtx(String bhash) {
+		public LocalValidationCtx(String bhash, long blockDate) {
 			blockHash = bhash;
+			// Mon Mar 22 2021 16:10:10 GMT+0000
+			version = blockDate <= 0 || blockDate >= 1616429410000l ? VERSION : VERSION_BEFORE_20_2021;
 		}
 	}
 
