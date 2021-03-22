@@ -6,14 +6,11 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.openplacereviews.opendb.ObjectGeneratorTest.generateOperations;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -408,6 +405,16 @@ public class OpBlockchainTest {
 		copy.setId("test1");
 		assertFalse(copy.isImmutable());
 		assertNotEquals(copy.getId(), old.getId());
+	}
+
+	@Test
+	public void testCreateAndEditObject() throws FailedVerificationException {
+		JsonFormatter formatter = new JsonFormatter();
+		generateOperationsByList(formatter, blc, MULTIPLE_DELETE_LIST);
+		OpObject opObject = blc.getObjectByName("osm.place","8FW97P", "wdhpik");
+		int countEl = ((List)opObject.getStringListObjMap("images").get("review")).size();
+
+		assertEquals( 3, countEl);
 	}
 
 	private OpObject generateTestOpObject() {

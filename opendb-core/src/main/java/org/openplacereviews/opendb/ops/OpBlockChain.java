@@ -14,6 +14,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.openplacereviews.opendb.ops.OpBlock.*;
@@ -52,8 +54,9 @@ public class OpBlockChain {
 	public static final String OP_CHANGE_APPEND = "append";
 	public static final String OP_CHANGE_APPENDMANY = "appendmany";
 	public static final String OP_CHANGE_SET = "set";
-	
-	
+
+	public static final String OP_CHANGE_DELETE_OBJ = "45de018e-46b0-4889-9745-71aa807ce8ff-";
+
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
@@ -1001,6 +1004,7 @@ public class OpBlockChain {
 					}
 				}
 			}
+			boolean hasDeleteOps = false;
 			Map<String, Object> changedMap = editObject.getChangedEditFields();
 			for (Map.Entry<String, Object> e : changedMap.entrySet()) {
 				// evaluate changes for new object
@@ -1016,7 +1020,8 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						newObject.setFieldByExpr(fieldExpr, null);
+						newObject.setFieldByExpr(fieldExpr, OP_CHANGE_DELETE_OBJ);
+						hasDeleteOps = true;
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
@@ -1077,6 +1082,9 @@ public class OpBlockChain {
 				} catch(IndexOutOfBoundsException | IllegalArgumentException ex) {
 					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
 				}
+			}
+			if (hasDeleteOps) {
+				newObject.deleteFieldsByObject(OP_CHANGE_DELETE_OBJ);
 			}
 			newObject.parentHash = u.getRawHash();
 			newObject.makeImmutable();

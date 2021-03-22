@@ -1,6 +1,7 @@
 package org.openplacereviews.opendb.util;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -89,7 +90,39 @@ public class JsonObjectUtils {
 		return accessField(jsonMap, fieldSequence.toArray(new String[fieldSequence.size()]), new OperationAccess(DELETE_OPERATION, null));
 	}
 
-	
+	/**
+	 * Delete fields having defined value from json Map
+	 *
+	 * @param obj              source json object deserialized in map
+	 * @param objectToDelete   value of field
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public static void deleteFieldsByObject(Object obj, Object objectToDelete) {
+		if (obj instanceof Map) {
+			Iterator<Entry<String, Object>> it = ((Map<String, Object>) obj).entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<String, Object> entry = it.next();
+				Object object = entry.getValue();
+				if (object instanceof Map || object instanceof List) {
+					deleteFieldsByObject(object, objectToDelete);
+				} else if (objectToDelete.equals(object)) {
+					it.remove();
+				}
+			}
+		} else if (obj instanceof List) {
+			Iterator<Object> it = ((List<Object>) obj).iterator();
+			while (it.hasNext()) {
+				Object object = it.next();
+				if (object instanceof Map || object instanceof List) {
+					deleteFieldsByObject(object, objectToDelete);
+				} else if (objectToDelete.equals(object)) {
+					it.remove();
+				}
+			}
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	private static Object accessField(Map<String, Object> jsonObject, String[] fieldSequence, OperationAccess op) {
 		if (fieldSequence == null || fieldSequence.length == 0) {

@@ -5,10 +5,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpIndexColumn;
-import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.*;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
@@ -27,6 +24,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_DELETE;
 import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
 import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
 
@@ -34,7 +32,7 @@ import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED
 public class DBSchemaManager {
 
 	protected static final Log LOGGER = LogFactory.getLog(DBSchemaManager.class);
-	private static final int OPENDB_SCHEMA_VERSION = 6;
+	private static final int OPENDB_SCHEMA_VERSION = 7;
 	
 	// //////////SYSTEM TABLES DDL ////////////
 	protected static final String SETTINGS_TABLE = "opendb_settings";
@@ -257,7 +255,10 @@ public class DBSchemaManager {
 			if (dbVersion < 6) {
 				updateExternalResources(jdbcTemplate);
 			}
-			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
+			if (dbVersion < 7) {
+				setFixMultipleDeletions(jdbcTemplate);
+			}
+			//setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if (dbVersion > OPENDB_SCHEMA_VERSION) {
 			throw new UnsupportedOperationException();
 		}
@@ -340,6 +341,40 @@ public class DBSchemaManager {
 			}
 		});
 		handleBatch(jdbcTemplate, batchArgs, batchQuery, true);
+	}
+
+	private void setFixMultipleDeletions(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Fix operations with errorneous multiple deletions");
+		List<OpOperation> ops = new ArrayList<>();
+		List<OpObject> objs = new ArrayList<>();
+		jdbcTemplate.query("SELECT content FROM " + OPERATIONS_TABLE +
+				" WHERE content @@ '$.type == \"opr.place\"' " +
+				" AND content @@ '$.edit.change.keyvalue().key like_regex \"^images\\\\.([a-zA-Z]*)(\\\\[\\\\d\\\\])$\"'", new RowCallbackHandler() {
+			@Override
+			public void processRow(ResultSet rs) throws SQLException {
+				OpOperation op = formatter.parseOperation(rs.getString(1));
+				for (OpObject editObject : op.getEdited()) {
+					Map<String, Object> changedMap = editObject.getChangedEditFields();
+					int deleteCounter = 0;
+					for (Map.Entry<String, Object> e : changedMap.entrySet()) {
+						Object opValue = e.getValue();
+						if (opValue instanceof Map) {
+							continue;
+						}
+						String opValueStr = opValue.toString();
+						if (OP_CHANGE_DELETE.equals(opValueStr)) {
+							deleteCounter++;
+						}
+						if (deleteCounter > 1) {
+							ops.add(op);
+							objs.add(editObject);
+							break;
+						}
+					}
+				}
+			}
+		});
+		LOGGER.info("Fixed " + ops.size() + " operations");
 	}
 
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {

@@ -233,6 +233,9 @@ public class OpObject {
 		}
 	}
 
+	public void deleteFieldsByObject(Object object) {
+		JsonObjectUtils.deleteFieldsByObject(this.fields, object);
+	}
 	
 	public Object getCacheObject(String f) {
 		if(cacheFields == null) {
