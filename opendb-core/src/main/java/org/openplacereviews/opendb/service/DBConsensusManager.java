@@ -1031,7 +1031,7 @@ public class DBConsensusManager {
 	}
 
 	public ResourceDTO getResourceObjectIfExists(ResourceDTO imageDTO) {
-		return jdbcTemplate.query("SELECT hash, extension, cid, cardinality(blocks), added FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
+		return jdbcTemplate.query("SELECT hash, extension, cid, added FROM " + EXT_RESOURCE_TABLE + " WHERE hash = ?", new ResultSetExtractor<ResourceDTO>() {
 
 			@Override
 			public ResourceDTO extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -1040,8 +1040,7 @@ public class DBConsensusManager {
 					imageDTO.setHash(SecUtils.hexify(rs.getBytes(1)));
 					imageDTO.setExtension(rs.getString(2));
 					imageDTO.setCid(rs.getString(3));
-					imageDTO.setActive(rs.getInt(4) > 0);
-					imageDTO.setAdded(rs.getTimestamp(5));
+					imageDTO.setAdded(rs.getTimestamp(4));
 					return imageDTO;
 				}
 				return null;

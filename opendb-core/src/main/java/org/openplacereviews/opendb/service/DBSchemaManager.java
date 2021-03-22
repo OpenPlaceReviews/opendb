@@ -1,6 +1,25 @@
 package org.openplacereviews.opendb.service;
 
 
+import static org.openplacereviews.opendb.ops.OpBlockChain.OP_CHANGE_DELETE;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
+import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
@@ -8,6 +27,7 @@ import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpObject;
 import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.de.ColumnDef;
 import org.openplacereviews.opendb.ops.de.ColumnDef.IndexType;
@@ -22,13 +42,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.INDEXED;
-import static org.openplacereviews.opendb.ops.de.ColumnDef.IndexType.NOT_INDEXED;
 
 @Service
 public class DBSchemaManager {
@@ -257,6 +270,9 @@ public class DBSchemaManager {
 			if (dbVersion < 6) {
 				updateExternalResources(jdbcTemplate);
 			}
+//			if (dbVersion <= 6) {
+//				fixMultipleDeletions(jdbcTemplate);
+//			}
 			setSetting(jdbcTemplate, "opendb.version", OPENDB_SCHEMA_VERSION + "");
 		} else if (dbVersion > OPENDB_SCHEMA_VERSION) {
 			throw new UnsupportedOperationException();
@@ -270,58 +286,6 @@ public class DBSchemaManager {
 		}
 	}
 
-	private void updateExternalResources(JdbcTemplate jdbcTemplate) {
-		LOGGER.info("Adding new columns: 'blocks' for table: " + EXT_RESOURCE_TABLE);
-		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
-		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
-			@Override
-			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
-				int i = 0;
-				while (rs.next()) {
-					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
-					externalResourceService.processOperations(opBlock);
-					i++;
-				}
-				LOGGER.info("Updated " + i + " blocks");
-				return i;
-			}
-		});
-	}
-
-	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
-		LOGGER.info("Adding new columns: 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
-		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
-		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
-			@Override
-			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
-				int i = 0;
-				while (rs.next()) {
-					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
-					OpBlock blockheader = OpBlock.createHeader(opBlock, rules);
-					PGobject blockHeaderObj = new PGobject();
-					blockHeaderObj.setType("jsonb");
-					try {
-						blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
-					} catch (SQLException e) {
-						throw new IllegalArgumentException(e);
-					}
-					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + 
-							" set opcount = ?, objdeleted = ?, objedited = ?, objadded = ?, blocksize = ?, header = ? " +
-									" WHERE hash = ?",
-									blockheader.getIntValue(OpBlock.F_OPERATIONS_SIZE, 0),
-									blockheader.getIntValue(OpBlock.F_OBJ_DELETED, 0),
-									blockheader.getIntValue(OpBlock.F_OBJ_EDITED, 0),
-									blockheader.getIntValue(OpBlock.F_OBJ_ADDED, 0),
-									blockheader.getIntValue(OpBlock.F_BLOCK_SIZE, 0),
-									blockHeaderObj, 
-							SecUtils.getHashBytes(opBlock.getRawHash()));
-					i++;
-				}
-				LOGGER.info("Updated " + i + " blocks");
-				return i;
-			}
-		});
-	}
 	
 	private void setOperationsType(JdbcTemplate jdbcTemplate, String table) {
 		LOGGER.info("Indexing operation types required for db version 2: " + table);
@@ -341,6 +305,7 @@ public class DBSchemaManager {
 		});
 		handleBatch(jdbcTemplate, batchArgs, batchQuery, true);
 	}
+
 
 	public void initializeDatabaseSchema(MetadataDb metadataDB, JdbcTemplate jdbcTemplate) {
 		dbschema.initSettingsTable(metadataDB, jdbcTemplate);
@@ -601,5 +566,125 @@ public class DBSchemaManager {
 
 	
 
+	
+	/// MIGRATION functions
 
+	private void addBlockAdditionalInfo(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Adding new columns: 'opcount, objdeleted, objedited, objadded' for table: " + BLOCKS_TABLE);
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
+		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
+			@Override
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				int i = 0;
+				while (rs.next()) {
+					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
+					OpBlock blockheader = OpBlock.createHeader(opBlock, rules);
+					PGobject blockHeaderObj = new PGobject();
+					blockHeaderObj.setType("jsonb");
+					try {
+						blockHeaderObj.setValue(formatter.fullObjectToJson(blockheader));
+					} catch (SQLException e) {
+						throw new IllegalArgumentException(e);
+					}
+					jdbcTemplate.update("UPDATE " + BLOCKS_TABLE + 
+							" set opcount = ?, objdeleted = ?, objedited = ?, objadded = ?, blocksize = ?, header = ? " +
+									" WHERE hash = ?",
+									blockheader.getIntValue(OpBlock.F_OPERATIONS_SIZE, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_DELETED, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_EDITED, 0),
+									blockheader.getIntValue(OpBlock.F_OBJ_ADDED, 0),
+									blockheader.getIntValue(OpBlock.F_BLOCK_SIZE, 0),
+									blockHeaderObj, 
+							SecUtils.getHashBytes(opBlock.getRawHash()));
+					i++;
+				}
+				LOGGER.info("Updated " + i + " blocks");
+				return i;
+			}
+		});
+	}
+	
+	private void updateExternalResources(JdbcTemplate jdbcTemplate) {
+		LOGGER.info("Adding new columns: 'blocks' for table: " + EXT_RESOURCE_TABLE);
+		final OpBlockchainRules rules = new OpBlockchainRules(formatter, null);
+		jdbcTemplate.query("SELECT content FROM " + BLOCKS_TABLE, new ResultSetExtractor<Integer>() {
+			@Override
+			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+				int i = 0;
+				while (rs.next()) {
+					OpBlock opBlock = formatter.parseBlock(rs.getString(1));
+					externalResourceService.processOperations(opBlock);
+					i++;
+				}
+				LOGGER.info("Updated " + i + " blocks");
+				return i;
+			}
+		});
+	}
+
+	
+	protected void fixMultipleDeletions(JdbcTemplate jdbcTemplate) {
+		// THIS method was never used cause the errors occurred in blockchain were irreversible, so it was needed to keep both versions of the code (buggy & fixed)
+		LOGGER.info("Fix operations with errorneous multiple deletions");
+		Map<List<String>, String> objsToFix = new HashMap<>();
+		jdbcTemplate.query("select content, type, superblock, hash from " + OPERATIONS_TABLE + " where content @@ '$.edit.change.keyvalue().key like_regex \".*\\[^[0]\\].*\"'",
+				new RowCallbackHandler() {
+					@Override
+					public void processRow(ResultSet rs) throws SQLException {
+						OpOperation op = formatter.parseOperation(rs.getString(1));
+						for (OpObject editObject : op.getEdited()) {
+							Map<String, Object> changedMap = editObject.getChangedEditFields();
+							int deleteCounter = 0;
+							objFields: for (Map.Entry<String, Object> e : changedMap.entrySet()) {
+								Object opValue = e.getValue();
+								if (opValue instanceof Map) {
+									continue;
+								}
+								String opValueStr = opValue.toString();
+								if (OP_CHANGE_DELETE.equals(opValueStr)) {
+									deleteCounter++;
+								}
+								if (deleteCounter > 1) {
+									List<String> combinedId = new ArrayList<>();
+									combinedId.add(op.getType());
+									combinedId.addAll(editObject.getId());
+									LOGGER.info(String.format("Suspicious operation probably to fix: %s, %s - %s", op.getType(), op.getHash(), editObject.getId()));
+									objsToFix.put(combinedId, op.getType());
+									break objFields;
+								}
+							}
+						}
+					}
+		});
+		LOGGER.info("To scan & fix objects: " + objsToFix);
+		Iterator<Entry<List<String>, String>> itObj = objsToFix.entrySet().iterator();
+		while (itObj.hasNext()) {
+			List<String> objectId = itObj.next().getKey();
+			String objType = objectId.remove(0);
+			List<OpOperation> opsList = new ArrayList<OpOperation>();
+			StringBuilder idQ = new StringBuilder();
+			for (String idP : objectId) {
+				if (idQ.length() > 0) {
+					idQ.append(", ");
+				}
+				idQ.append("\"").append(idP).append("\"");
+			}
+			String sqlQuery = "select content, type, superblock, hash from " + OPERATIONS_TABLE + " where type = '"
+					+ objType + "'  and (content->'edit' @> '[{\"id\":[" + idQ.toString() + "]}]'::jsonb or "
+					+ "                  content->'create' @> '[{\"id\":[" + idQ.toString() + "]}]'::jsonb or "
+					+ "                  content->'create' @> '[{\"id\":[" + idQ.toString() + "]}]'::jsonb)"
+					+ " order by sblockid asc, sorder asc";
+			LOGGER.info(sqlQuery);
+			LOGGER.info("Proceed with " + objectId);
+			jdbcTemplate.query(sqlQuery, new RowCallbackHandler() {
+				@Override
+				public void processRow(ResultSet rs) throws SQLException {
+					OpOperation op = formatter.parseOperation(rs.getString(1));
+					LOGGER.info(objType + " " + op.getHash());
+					opsList.add(op);
+				}
+			});
+		}
+		
+	}
 }

@@ -1,5 +1,33 @@
 package org.openplacereviews.opendb.ops;
 
+import static org.openplacereviews.opendb.ops.OpBlock.F_HASH;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNATURE;
+import static org.openplacereviews.opendb.ops.OpBlock.F_SIGNED_BY;
+import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
+import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
+import static org.openplacereviews.opendb.ops.OpObject.F_OP;
+import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
+import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
+import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
+import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
+
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.stream.Stream;
+
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpPrivateObjectInstancesById.CacheObject;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
@@ -8,22 +36,6 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.DBConsensusManager.DBStaleException;
 import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-
-import java.security.KeyPair;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.stream.Stream;
-
-import static org.openplacereviews.opendb.ops.OpBlock.*;
-import static org.openplacereviews.opendb.ops.OpBlockchainRules.OP_VOTE;
-import static org.openplacereviews.opendb.ops.OpObject.F_FINAL;
-import static org.openplacereviews.opendb.ops.OpObject.F_OP;
-import static org.openplacereviews.opendb.ops.OpObject.F_STATE;
-import static org.openplacereviews.opendb.ops.OpObject.F_SUBMITTED_OP_HASH;
-import static org.openplacereviews.opendb.ops.OpObject.F_VOTE;
-import static org.openplacereviews.opendb.ops.OpOperation.F_REF;
 
 /**
  *  Guidelines of object methods:
@@ -52,8 +64,9 @@ public class OpBlockChain {
 	public static final String OP_CHANGE_APPEND = "append";
 	public static final String OP_CHANGE_APPENDMANY = "appendmany";
 	public static final String OP_CHANGE_SET = "set";
-	
-	
+
+	private static final String OP_CHANGE_TEMPDELETE_OBJ = "45de018e-46b0-4889-9745-71aa807ce8ff-x1openplacereviews";
+
 	public static final int LOCKED_ERROR = -1; // means it is locked and there was unrecoverable error during atomic operation
 	public static final int UNLOCKED =  0; // unlocked and ready for operations
 	public static final int LOCKED_OP_IN_PROGRESS = 1; // operation on blockchain is in progress and it will be unlocked after
@@ -250,7 +263,7 @@ public class OpBlockChain {
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
 			for (OpOperation o : block.getOperations()) {
-				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash());
+				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash(), block.getDate(OpBlock.F_DATE));
 				validateAndPrepareOperation(o, validationCtx, hctx);
 				atomicAddOperationAfterPrepare(o, validationCtx);
 			}
@@ -272,9 +285,9 @@ public class OpBlockChain {
 		}
 		// calculate blocks and ops to be removed, all blocks must be present in new parent
 		// if(blocks.size() > 0) { return false; }
-		for(OpBlock bl : blocks.getAllBlockHeaders()) {
+		for (OpBlock bl : blocks.getAllBlockHeaders()) {
 			int blDept = newParent.getBlockDepth(bl);
-			if(blDept < 0) {
+			if (blDept < 0) {
 				return false;
 			}
 		}
@@ -339,7 +352,7 @@ public class OpBlockChain {
 	private synchronized boolean addOperation(OpOperation op, boolean onlyValidate, DeletedObjectCtx historyObjectCtx) {
 		op.checkImmutable();
 		validateIsUnlocked();
-		LocalValidationCtx validationCtx = new LocalValidationCtx("");
+		LocalValidationCtx validationCtx = new LocalValidationCtx("", 0);
 		boolean valid = validateAndPrepareOperation(op, validationCtx, historyObjectCtx);
 		if(!valid || onlyValidate) {
 			return valid;
@@ -420,7 +433,7 @@ public class OpBlockChain {
 			}
 		}
 		for (OpOperation o : ops) {
-			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>");
+			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>", 0);
 			validateAndPrepareOperation(o, validationCtx, null);
 			atomicAddOperationAfterPrepare(o, validationCtx);
 		}
@@ -444,8 +457,14 @@ public class OpBlockChain {
 			OpPrivateObjectInstancesById pid = parent.objByName.get(type);
 			nid.putObjects(pid, true);
 			nid.putObjects(cid, true);
-
 		}
+
+		// 3. add blockOperations and queueOperations
+		blockOperations.putAll(copy.blockOperations);
+		blockOperations.putAll(parent.blockOperations);
+
+		queueOperations.addAll(copy.queueOperations);
+		queueOperations.addAll(parent.queueOperations);
 	}
 
 	public Deque<OpOperation> getQueueOperations() {
@@ -995,6 +1014,7 @@ public class OpBlockChain {
 					}
 				}
 			}
+			boolean hasDeleteOps = false;
 			Map<String, Object> changedMap = editObject.getChangedEditFields();
 			for (Map.Entry<String, Object> e : changedMap.entrySet()) {
 				// evaluate changes for new object
@@ -1010,7 +1030,12 @@ public class OpBlockChain {
 				try {
 					boolean checkCurrentFieldSpecified = false;
 					if (OP_CHANGE_DELETE.equals(opId)) {
-						newObject.setFieldByExpr(fieldExpr, null);
+						if(ctx.version <= LocalValidationCtx.VERSION_BEFORE_20_2021) {
+							newObject.setFieldByExpr(fieldExpr, null);
+						} else {
+							newObject.setFieldByExpr(fieldExpr, OP_CHANGE_TEMPDELETE_OBJ);
+							hasDeleteOps = true;
+						}
 						checkCurrentFieldSpecified = true;
 					} else if (OP_CHANGE_SET.equals(opId)) {
 						newObject.setFieldByExpr(fieldExpr, opValue);
@@ -1072,6 +1097,9 @@ public class OpBlockChain {
 					return rules.error(u, ErrorType.EDIT_OBJ_NOT_FOUND, u.getHash(), fieldExpr + " " + ex.getMessage());
 				}
 			}
+			if (hasDeleteOps) {
+				newObject.deleteFieldsByObject(OP_CHANGE_TEMPDELETE_OBJ);
+			}
 			newObject.parentHash = u.getRawHash();
 			newObject.makeImmutable();
 			ctx.newObjsCache.put(newObject, currentObject);
@@ -1086,14 +1114,19 @@ public class OpBlockChain {
 
 	// no multi thread issue (used only in synchronized blocks)
 	public static class LocalValidationCtx {
+		public static int VERSION_BEFORE_20_2021 = 0;
+		public static int VERSION = 1;
 		final String blockHash;
+		final int version;
 		Set<List<String>> ids = new HashSet<List<String>>();
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
 
-		public LocalValidationCtx(String bhash) {
+		public LocalValidationCtx(String bhash, long blockDate) {
 			blockHash = bhash;
+			// Mon Mar 22 2021 16:10:10 GMT+0000
+			version = blockDate <= 0 || blockDate >= 1616429410000l ? VERSION : VERSION_BEFORE_20_2021;
 		}
 	}
 

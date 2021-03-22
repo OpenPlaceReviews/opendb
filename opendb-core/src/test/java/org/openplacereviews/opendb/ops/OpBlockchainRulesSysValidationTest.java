@@ -186,7 +186,7 @@ public class OpBlockchainRulesSysValidationTest {
 		opOperation.makeImmutable();
 
 		exceptionRule.expect(BlockchainValidationException.class);
-		blc.getRules().validateRules(blc, opOperation, new OpBlockChain.LocalValidationCtx(null));
+		blc.getRules().validateRules(blc, opOperation, new OpBlockChain.LocalValidationCtx(null, 0));
 	}
 
 
