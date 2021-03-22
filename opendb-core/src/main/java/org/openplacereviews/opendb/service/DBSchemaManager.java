@@ -654,34 +654,34 @@ public class DBSchemaManager {
 					}
 		});
 		LOGGER.info("To scan & fix objects: " + objsToFix);
-		Iterator<Entry<List<String>, String>> itObj = objsToFix.entrySet().iterator();
-		while (itObj.hasNext()) {
-			Entry<List<String>, String> e = itObj.next();
-			List<String> objectId = e.getKey();
-			String objType = e.getValue();
-			List<OpOperation> opsList = new ArrayList<OpOperation>();
-			StringBuilder idQ = new StringBuilder();
-			for (String idP : objectId) {
-				if (idQ.length() > 0) {
-					idQ.append(", ");
-				}
-				idQ.append("\"").append(idP).append("\"");
-			}
-			String sqlQuery = "select content, type, superblock, hash from " + OPERATIONS_TABLE + " where type = \""
-					+ objType + "\"  and (content @@ '$.create.id = [" + idQ.toString() + "]' or "
-							+ "           content @@ '$.create.id = [" + idQ.toString() + "]' or "
-							+ "           content @@ '$.delete.id = [" + idQ.toString() + "]') "
-							+ " order by sblockid asc, sorder asc";
-			LOGGER.info(sqlQuery);
-			jdbcTemplate.query(sqlQuery, new RowCallbackHandler() {
-				@Override
-				public void processRow(ResultSet rs) throws SQLException {
-					OpOperation op = formatter.parseOperation(rs.getString(1));
-					LOGGER.info(objType + " " + op.getHash());
-					opsList.add(op);
-				}
-			});
-		}
+//		Iterator<Entry<List<String>, String>> itObj = objsToFix.entrySet().iterator();
+//		while (itObj.hasNext()) {
+//			Entry<List<String>, String> e = itObj.next();
+//			List<String> objectId = e.getKey();
+//			String objType = e.getValue();
+//			List<OpOperation> opsList = new ArrayList<OpOperation>();
+//			StringBuilder idQ = new StringBuilder();
+//			for (String idP : objectId) {
+//				if (idQ.length() > 0) {
+//					idQ.append(", ");
+//				}
+//				idQ.append("\"").append(idP).append("\"");
+//			}
+//			String sqlQuery = "select content, type, superblock, hash from " + OPERATIONS_TABLE + " where type = \""
+//					+ objType + "\"  and (content @@ '$.create.id = [" + idQ.toString() + "]' or "
+//							+ "           content @@ '$.create.id = [" + idQ.toString() + "]' or "
+//							+ "           content @@ '$.delete.id = [" + idQ.toString() + "]') "
+//							+ " order by sblockid asc, sorder asc";
+//			LOGGER.info(sqlQuery);
+//			jdbcTemplate.query(sqlQuery, new RowCallbackHandler() {
+//				@Override
+//				public void processRow(ResultSet rs) throws SQLException {
+//					OpOperation op = formatter.parseOperation(rs.getString(1));
+//					LOGGER.info(objType + " " + op.getHash());
+//					opsList.add(op);
+//				}
+//			});
+//		}
 		
 	}
 }
