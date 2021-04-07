@@ -293,7 +293,7 @@ public class BlocksManager {
 	}
 	
 	public boolean replicate() {
-		if (isReplicateOn()) {
+		if (isReplicateOn() && blockchain != null) {
 			try {
 				String from = blockchain.getLastBlockRawHash();
 				BlocksListResult replicateBlockHeaders = formatter
