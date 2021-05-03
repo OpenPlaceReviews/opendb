@@ -95,7 +95,8 @@ public class PublicDataManager {
 			boolean updated = updateEndpointWithNewOperation(e, op, block);
 			if (updated) {
 				changed = true;
-				botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
+				// bot is not needed here cause mostly it will be updated by user-request with invalidate=true
+				// botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
 			}
 		}
 		return changed;
