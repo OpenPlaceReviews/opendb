@@ -1,19 +1,24 @@
 package org.openplacereviews.opendb.service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpOperation;
 import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
+import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.core.io.AbstractResource;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class PublicDataManager {
@@ -30,9 +35,13 @@ public class PublicDataManager {
 	@Autowired 
 	private AutowireCapableBeanFactory beanFactory;
 	
+	@Autowired
+	private BotManager botManager;
+	
 	private Map<String, PublicAPIEndpoint<?, ?>> endpoints = new ConcurrentHashMap<>(); 
 	
 	private Map<String, Class<? extends IPublicDataProvider<?, ?>>> dataProviders = new ConcurrentHashMap<>();
+	
 	
 	private int localVersion = 0;
 
@@ -40,7 +49,7 @@ public class PublicDataManager {
 		updateEndpoints(null);
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes", "deprecation" })
 	public void updateEndpoints(String endpointFilter) {
 		int v = SettingsManager.OPENDB_ENDPOINTS_CONFIG.version.get();
    		List<CommonPreference<Map<String, Object>>> prefs = settingsManager.getPreferencesByPrefix(SettingsManager.OPENDB_ENDPOINTS_CONFIG);
@@ -78,6 +87,28 @@ public class PublicDataManager {
 		}
 		localVersion = v;
 	}
+	
+	
+	public boolean operationAdded(OpOperation op, OpBlock block) {
+		boolean changed = false;
+		for (PublicAPIEndpoint<?, ?> e : endpoints.values()) {
+			boolean updated = updateEndpointWithNewOperation(e, op, block);
+			if (updated) {
+				changed = true;
+				// bot is not needed here cause mostly it will be updated by user-request with invalidate=true
+				// TODO: to test
+				// botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
+			}
+		}
+		return changed;
+	}
+
+	private <T, K> boolean updateEndpointWithNewOperation(PublicAPIEndpoint<T, K> e, OpOperation op, OpBlock block) {
+		if (e != null && e.provider != null) {
+			return e.provider.operationAdded(e, op, block);
+		}
+		return false;
+	}
 
 	public void registerDataProvider(Class<? extends IPublicDataProvider<?, ?>> provider) {
 		dataProviders.put(provider.getName(), provider);
@@ -109,6 +140,7 @@ public class PublicDataManager {
 		public long accessTime;
 		public long access;
 		public long size;
+		public boolean forceUpdate;
 		transient T value;
 	}
 	
@@ -181,7 +213,7 @@ public class PublicDataManager {
 						ch.access++;
 						long timePast = now - ch.evalTime;
 						long intWait = map.getLong(CACHE_TIME_SEC, DEFAULT_CACHE_TIME_SECONDS);
-						if (timePast > intWait) {
+						if (timePast > intWait || ch.forceUpdate) {
 							ch = null;
 						}
 					}

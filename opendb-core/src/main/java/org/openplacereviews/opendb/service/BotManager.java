@@ -1,5 +1,24 @@
 package org.openplacereviews.opendb.service;
 
+import static org.openplacereviews.opendb.service.SettingsManager.BOT_ENABLED;
+import static org.openplacereviews.opendb.service.SettingsManager.BOT_INTERVAL_SECONDS;
+import static org.openplacereviews.opendb.service.SettingsManager.OPENDB_BOTS_CONFIG;
+import static org.openplacereviews.opendb.service.SettingsManager.OPENDB_ENDPOINTS_CONFIG;
+import static org.openplacereviews.opendb.service.bots.PublicDataUpdateBot.PUBLIC_DATA_BOT_NAME_PREFIX;
+
+import java.lang.reflect.Constructor;
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.ops.OpBlockChain;
@@ -14,20 +33,6 @@ import org.openplacereviews.opendb.service.bots.UpdateIndexesBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import static org.openplacereviews.opendb.service.SettingsManager.*;
-import static org.openplacereviews.opendb.service.bots.PublicDataUpdateBot.PUBLIC_DATA_BOT_NAME_PREFIX;
 
 @Service
 public class BotManager {
@@ -49,9 +54,8 @@ public class BotManager {
 
 	private Map<String, IOpenDBBot<?>> bots = new TreeMap<String, IOpenDBBot<?>>();
 	private Map<String, IOpenDBBot<?>> systemBots = new TreeMap<String, IOpenDBBot<?>>();
-	private List<Future<?>> futures = new ArrayList<>();
-	private ExecutorService service = Executors.newFixedThreadPool(5);
-
+	private ScheduledExecutorService service = Executors.newScheduledThreadPool(5);
+	private Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<String, ScheduledFuture<?>>();
 	
 
 	@PostConstruct
@@ -88,10 +92,10 @@ public class BotManager {
 			initBotPreference(id);
 		}
 		Collection<PublicAPIEndpoint<?, ?>> endpoints = publicDataManager.getEndpoints().values();
-		for(PublicAPIEndpoint<?, ?> papi : endpoints) {
+		for (PublicAPIEndpoint<?, ?> papi : endpoints) {
 			PublicDataUpdateBot<?, ?> bt = new PublicDataUpdateBot<>(papi);
 			beanFactory.autowireBean(bt);
-			if(!nbots.containsKey(bt.getId())) {
+			if (!nbots.containsKey(bt.getId())) {
 				nbots.put(bt.getId(), bt);
 			}
 		}
@@ -130,14 +134,28 @@ public class BotManager {
 
 
 
-	public boolean startBot(String botId) {
-		IOpenDBBot<?> botObj = getBots().get(botId);
+	@SuppressWarnings("unchecked")
+	public <T> boolean startBot(String botId) {
+		IOpenDBBot<T> botObj = (IOpenDBBot<T>) getBots().get(botId);
 		MapStringObjectPreference p = getBotConfiguration(botId);
 		if (botObj == null || p == null) {
 			return false;
 		}
-		p.setValue(SettingsManager.BOT_LAST_RUN, System.currentTimeMillis() / 1000, true);
-		futures.add(service.submit(botObj));
+		ScheduledFuture<?> scheduledFuture = scheduledFutures.get(botId);
+		if (scheduledFuture != null && scheduledFuture.getDelay(TimeUnit.MILLISECONDS) > 0 &&
+				!scheduledFuture.isDone()) {
+			// bot is already scheduled
+			// TODO: to test
+			return true;
+		}
+		scheduledFuture = service.schedule(new Callable<T>() {
+
+			public T call() throws Exception {
+				p.setValue(SettingsManager.BOT_LAST_RUN, System.currentTimeMillis() / 1000, true);
+				return botObj.call();
+			}
+		}, 50, TimeUnit.MILLISECONDS);
+		scheduledFutures.put(botId, scheduledFuture);
 		return true;
 	}
 

@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.service;
 
 import org.junit.*;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -49,6 +50,9 @@ public class OpBlockchainCompactSearchTest {
 	@Spy
 	@InjectMocks
 	private FileBackupManager fileBackupManager;
+	
+	@Mock
+	private PublicDataManager publicDataManager;
 
 	@Spy
 	private IPFSFileManager ipfsFileManager;
@@ -92,6 +96,7 @@ public class OpBlockchainCompactSearchTest {
 		ReflectionTestUtils.setField(historyManager, "blocksManager", blocksManager);
 		ReflectionTestUtils.setField(historyManager, "formatter", formatter);
 		ReflectionTestUtils.setField(historyManager, "txTemplate", txTemplate);
+		ReflectionTestUtils.setField(blocksManager, "publicDataManager", publicDataManager);
 		ReflectionTestUtils.setField(blocksManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blocksManager, "serverUser", serverName);
 		ReflectionTestUtils.setField(blocksManager, "formatter", formatter);
