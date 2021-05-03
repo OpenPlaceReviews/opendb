@@ -1,7 +1,9 @@
 package org.openplacereviews.opendb.service;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateMetadataDB;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
@@ -23,7 +25,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -76,6 +77,9 @@ public class OpBlockchainDbAccessTest {
 
 	@Mock
 	private IPFSFileManager extResourceService;
+	
+	@Mock
+	private PublicDataManager publicDataManager;
 
 	@Spy
 	@InjectMocks
@@ -129,6 +133,7 @@ public class OpBlockchainDbAccessTest {
 		databaseBlockChain = dbConsensusManager.init(metadataDb);
 		
 		databaseBlocksManager = new BlocksManager();
+		ReflectionTestUtils.setField(databaseBlocksManager, "publicDataManager", publicDataManager);
 		ReflectionTestUtils.setField(databaseBlocksManager, "extResourceService", extResourceService);
 		ReflectionTestUtils.setField(databaseBlocksManager, "historyManager", historyManager);
 		ReflectionTestUtils.setField(databaseBlocksManager, "logSystem", logSystem);

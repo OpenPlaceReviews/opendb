@@ -961,6 +961,7 @@ public class DBConsensusManager {
 			@Override
 			public Boolean doInTransaction(TransactionStatus status) {
 				byte[] blockHash = SecUtils.getHashBytes(block.getRawHash());
+				jdbcTemplate.update("DELETE FROM " + BLOCKS_TRASH_TABLE + " WHERE hash = ?", blockHash);
 				int upd = jdbcTemplate.update("WITH moved_rows AS ( DELETE FROM " + BLOCKS_TABLE + " a WHERE hash = ? and superblock is null RETURNING a.*) "
 						+ " INSERT INTO " + BLOCKS_TRASH_TABLE
 						+ " (hash, phash, blockid, time, content) SELECT hash, phash, blockid, now(), content FROM moved_rows", blockHash);

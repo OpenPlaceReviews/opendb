@@ -2,6 +2,7 @@ package org.openplacereviews.opendb.service;
 
 import org.junit.*;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -52,6 +53,9 @@ public class BlocksManagerTest {
 	@Spy
 	@InjectMocks
 	private DBSchemaManager dbSchemaManager;
+	
+	@Mock
+	private PublicDataManager publicDataManager;
 
 	@Spy
 	@InjectMocks
@@ -98,6 +102,7 @@ public class BlocksManagerTest {
 		ReflectionTestUtils.setField(historyManager, "jdbcTemplate", jdbcTemplate);
 		ReflectionTestUtils.setField(historyManager, "blocksManager", blocksManager);
 		ReflectionTestUtils.setField(historyManager, "formatter", formatter);
+		ReflectionTestUtils.setField(blocksManager, "publicDataManager", publicDataManager);
 		ReflectionTestUtils.setField(blocksManager, "dataManager", dbConsensusManager);
 		ReflectionTestUtils.setField(blocksManager, "serverUser", serverName);
 		ReflectionTestUtils.setField(blocksManager, "formatter", formatter);
@@ -141,6 +146,7 @@ public class BlocksManagerTest {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testVotingProcessForVoteOperation() throws FailedVerificationException {
 		testCreatingVoteOperation();
 

@@ -98,7 +98,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	}
 	
 	protected Future<TaskResult> submitTask(String msg, Callable<TaskResult> task, Deque<Future<TaskResult>> futures) {
-		if(service == null) {
+		if (service == null) {
 			return null;
 		}
 		Future<TaskResult> f = service.submit(task);

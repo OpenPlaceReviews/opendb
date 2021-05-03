@@ -387,7 +387,7 @@ public class SettingsManager {
 		public MapStringObjectPreference setValue(String key, Object value, boolean save) {
 			this.value.put(key, value);
 			family.version.getAndIncrement();
-			if(save) {
+			if (save) {
 				set(this.value, true);
 			}
 			return this;
@@ -395,7 +395,7 @@ public class SettingsManager {
 		
 		public boolean getBoolean(String key, boolean def) {
 			Object o = this.value.get(key);
-			if(o != null && (o instanceof Boolean)) {
+			if (o != null && (o instanceof Boolean)) {
 				return (boolean) o;
 			}
 			return def;

@@ -186,7 +186,9 @@ public class BlocksManager {
 			m.capture();
 		}
 		// it could be in other modified methods as well
+		Metric pdm = mBlockPublicDataRefresh.start();
 		publicDataManager.operationAdded(op, null);
+		pdm.capture();
 		return added;
 	}
 
@@ -259,6 +261,12 @@ public class BlocksManager {
 				String.format("New block '%s':%d  is created on top of '%s'. ",
 						opBlock.getFullHash(), opBlock.getBlockId(), opBlock.getStringValue(OpBlock.F_PREV_BLOCK_HASH) ));
 		pm.capture();
+		Metric pdm = mBlockPublicDataRefresh.start();
+		// change only after block is inserted into db
+		for (OpOperation o : opBlock.getOperations()) {
+			publicDataManager.operationAdded(o, opBlock);
+		}
+		pdm.capture();
 		return opBlock;
 	}
 
@@ -615,5 +623,6 @@ public class BlocksManager {
 	private static final PerformanceMetric mBlockSaveSuperBlock = PerformanceMetrics.i().getMetric("block.mgmt.replicate.db.savehistory");
 	private static final PerformanceMetric mBlockCompact = PerformanceMetrics.i().getMetric("block.mgmt.replicate.compact");
 	private static final PerformanceMetric mBlockRebase = PerformanceMetrics.i().getMetric("block.mgmt.replicate.rebase");
+	private static final PerformanceMetric mBlockPublicDataRefresh = PerformanceMetrics.i().getMetric("block.mgmt.publicdata.refres");
 
 }
