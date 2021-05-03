@@ -144,6 +144,7 @@ public class BotManager {
 		ScheduledFuture<?> scheduledFuture = scheduledFutures.get(botId);
 		if (scheduledFuture != null && scheduledFuture.getDelay(TimeUnit.MILLISECONDS) > 0 &&
 				!scheduledFuture.isDone()) {
+			// bot is already scheduled 
 			return true;
 		}
 		scheduledFuture = service.schedule(new Callable<T>() {
