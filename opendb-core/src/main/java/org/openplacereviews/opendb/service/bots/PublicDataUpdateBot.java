@@ -19,8 +19,13 @@ public class PublicDataUpdateBot<P, V> extends GenericMultiThreadBot<PublicDataU
 	private PublicAPIEndpoint<P, V> apiEndpoint;
 
 	public PublicDataUpdateBot(PublicDataManager.PublicAPIEndpoint<P, V> apiEndpoint) {
-		super(PUBLIC_DATA_BOT_NAME_PREFIX + apiEndpoint.getId());
+		super(apiEndpointBotName(apiEndpoint));
 		this.apiEndpoint = apiEndpoint;
+	}
+	
+	
+	public static <PT, VT> String apiEndpointBotName(PublicDataManager.PublicAPIEndpoint<PT, VT> apiEndpoint) {
+		return PUBLIC_DATA_BOT_NAME_PREFIX + apiEndpoint.getId();
 	}
 
 	@Override

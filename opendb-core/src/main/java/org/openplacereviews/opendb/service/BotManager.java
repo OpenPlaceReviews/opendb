@@ -88,10 +88,10 @@ public class BotManager {
 			initBotPreference(id);
 		}
 		Collection<PublicAPIEndpoint<?, ?>> endpoints = publicDataManager.getEndpoints().values();
-		for(PublicAPIEndpoint<?, ?> papi : endpoints) {
+		for (PublicAPIEndpoint<?, ?> papi : endpoints) {
 			PublicDataUpdateBot<?, ?> bt = new PublicDataUpdateBot<>(papi);
 			beanFactory.autowireBean(bt);
-			if(!nbots.containsKey(bt.getId())) {
+			if (!nbots.containsKey(bt.getId())) {
 				nbots.put(bt.getId(), bt);
 			}
 		}

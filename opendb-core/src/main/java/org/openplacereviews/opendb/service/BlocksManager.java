@@ -52,6 +52,9 @@ public class BlocksManager {
 
 	@Autowired
 	private SettingsManager settingsManager;
+	
+	@Autowired
+	private PublicDataManager publicDataManager;
 
 	protected List<String> bootstrapList = new ArrayList<>();
 	
@@ -182,6 +185,8 @@ public class BlocksManager {
 			}
 			m.capture();
 		}
+		// it could be in other modified methods as well
+		publicDataManager.operationAdded(op, null);
 		return added;
 	}
 
