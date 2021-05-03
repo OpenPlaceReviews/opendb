@@ -96,7 +96,8 @@ public class PublicDataManager {
 			if (updated) {
 				changed = true;
 				// bot is not needed here cause mostly it will be updated by user-request with invalidate=true
-				botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
+				// TODO: to test
+				// botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
 			}
 		}
 		return changed;
