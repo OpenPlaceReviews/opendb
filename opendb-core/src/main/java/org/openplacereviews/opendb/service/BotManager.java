@@ -144,8 +144,7 @@ public class BotManager {
 		ScheduledFuture<?> scheduledFuture = scheduledFutures.get(botId);
 		if (scheduledFuture != null && scheduledFuture.getDelay(TimeUnit.MILLISECONDS) > 0 &&
 				!scheduledFuture.isDone()) {
-			// bot is already scheduled
-			// TODO: to test
+			// scheduledFuture.isDone() doesnt't work correctly cause task will be scheduled anyway 
 			return true;
 		}
 		scheduledFuture = service.schedule(new Callable<T>() {
@@ -154,7 +153,7 @@ public class BotManager {
 				p.setValue(SettingsManager.BOT_LAST_RUN, System.currentTimeMillis() / 1000, true);
 				return botObj.call();
 			}
-		}, 50, TimeUnit.MILLISECONDS);
+		}, 100, TimeUnit.MILLISECONDS);
 		scheduledFutures.put(botId, scheduledFuture);
 		return true;
 	}

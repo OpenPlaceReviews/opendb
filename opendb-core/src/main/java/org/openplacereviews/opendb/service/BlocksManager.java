@@ -623,6 +623,6 @@ public class BlocksManager {
 	private static final PerformanceMetric mBlockSaveSuperBlock = PerformanceMetrics.i().getMetric("block.mgmt.replicate.db.savehistory");
 	private static final PerformanceMetric mBlockCompact = PerformanceMetrics.i().getMetric("block.mgmt.replicate.compact");
 	private static final PerformanceMetric mBlockRebase = PerformanceMetrics.i().getMetric("block.mgmt.replicate.rebase");
-	private static final PerformanceMetric mBlockPublicDataRefresh = PerformanceMetrics.i().getMetric("block.mgmt.publicdata.refres");
+	private static final PerformanceMetric mBlockPublicDataRefresh = PerformanceMetrics.i().getMetric("block.mgmt.publicdata.refresh");
 
 }
