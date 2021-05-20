@@ -92,12 +92,15 @@ public class PublicDataManager {
 	public boolean operationAdded(OpOperation op, OpBlock block) {
 		boolean changed = false;
 		for (PublicAPIEndpoint<?, ?> e : endpoints.values()) {
-			boolean updated = updateEndpointWithNewOperation(e, op, block);
-			if (updated) {
-				changed = true;
-				// bot is not needed here cause mostly it will be updated by user-request with invalidate=true
-				// TODO: to test
-				// botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
+			try {
+				boolean updated = updateEndpointWithNewOperation(e, op, block);
+				if (updated) {
+					changed = true;
+					// bot is not needed here cause mostly it will be updated by user-request with invalidate=true
+					// botManager.startBot(PublicDataUpdateBot.apiEndpointBotName(e));
+				}
+			} catch (RuntimeException es) {
+				LOGGER.warn(String.format("Error updating endpoint cache '%s': %s", e.getId(), es.getMessage()), es);
 			}
 		}
 		return changed;
