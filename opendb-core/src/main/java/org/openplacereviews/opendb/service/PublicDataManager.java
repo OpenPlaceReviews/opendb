@@ -14,7 +14,6 @@ import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
-import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.core.io.AbstractResource;
@@ -30,13 +29,13 @@ public class PublicDataManager {
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
 	@Autowired
-	private SettingsManager settingsManager;
+	protected SettingsManager settingsManager;
 	
 	@Autowired 
-	private AutowireCapableBeanFactory beanFactory;
+	protected AutowireCapableBeanFactory beanFactory;
 	
 	@Autowired
-	private BotManager botManager;
+	protected BotManager botManager;
 	
 	private Map<String, PublicAPIEndpoint<?, ?>> endpoints = new ConcurrentHashMap<>(); 
 	
