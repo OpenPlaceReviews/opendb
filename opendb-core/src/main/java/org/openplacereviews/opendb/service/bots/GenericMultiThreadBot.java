@@ -157,8 +157,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 		
 	}
 	
-	public OpOperation addOpIfNeeded(OpOperation op, 
-			boolean force) throws FailedVerificationException {
+	public OpOperation addOpIfNeeded(OpOperation op, boolean force) throws FailedVerificationException {
 		int sz = (int) (force ? 0 : placesPerOperation - 1);
 		if(op.getEdited().size() > sz || 
 				op.getCreated().size() > sz || op.getDeleted().size() > sz) {
@@ -249,7 +248,7 @@ public abstract class GenericMultiThreadBot<T> implements IOpenDBBot<T> {
 	
 	protected void initVars() {
 		OpObject nbot = blocksManager.getBlockchain().getObjectByName(OpBlockchainRules.OP_BOT, id);
-		if(nbot == null) {
+		if (nbot == null) {
 			throw new IllegalStateException("Can't retrieve bot object state");
 		}
 		botObject = nbot;
