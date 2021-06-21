@@ -14,7 +14,6 @@ import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.service.SettingsManager.CommonPreference;
 import org.openplacereviews.opendb.service.SettingsManager.MapStringObjectPreference;
-import org.openplacereviews.opendb.service.bots.PublicDataUpdateBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.core.io.AbstractResource;
@@ -30,13 +29,13 @@ public class PublicDataManager {
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
 	@Autowired
-	private SettingsManager settingsManager;
+	protected SettingsManager settingsManager;
 	
 	@Autowired 
-	private AutowireCapableBeanFactory beanFactory;
+	protected AutowireCapableBeanFactory beanFactory;
 	
 	@Autowired
-	private BotManager botManager;
+	protected BotManager botManager;
 	
 	private Map<String, PublicAPIEndpoint<?, ?>> endpoints = new ConcurrentHashMap<>(); 
 	
@@ -205,29 +204,44 @@ public class PublicDataManager {
 
 		public AbstractResource getContent(Map<String, String[]> params) {
 			Metric m = reqMetric.start();
-			long now = getNow();
 			try {
-				P p = provider.formatParams(params);
-				CacheHolder<T> ch = null;
-				if (!cacheDisabled) {
-					ch = cacheObjects.get(p);
-					if (ch != null) {
-						ch.accessTime = now;
-						ch.access++;
-						long timePast = now - ch.evalTime;
-						long intWait = map.getLong(CACHE_TIME_SEC, DEFAULT_CACHE_TIME_SECONDS);
-						if (timePast > intWait || ch.forceUpdate) {
-							ch = null;
-						}
-					}
-				}
-				if (ch == null) {
-					ch = evalCacheValue(now, p);
-				}
+				CacheHolder<T> ch = getCacheHolder(params);
 				return provider.formatContent(ch.value);
 			} finally {
 				m.capture();
 			}
+		}
+		
+		public T getContentObject(Map<String, String[]> params) {
+			Metric m = reqMetric.start();
+			try {
+				CacheHolder<T> ch = getCacheHolder(params);
+				return ch.value;
+			} finally {
+				m.capture();
+			}
+		}
+
+		private CacheHolder<T> getCacheHolder(Map<String, String[]> params) {
+			long now = getNow();
+			P p = provider.formatParams(params);
+			CacheHolder<T> ch = null;
+			if (!cacheDisabled) {
+				ch = cacheObjects.get(p);
+				if (ch != null) {
+					ch.accessTime = now;
+					ch.access++;
+					long timePast = now - ch.evalTime;
+					long intWait = map.getLong(CACHE_TIME_SEC, DEFAULT_CACHE_TIME_SECONDS);
+					if (timePast > intWait || ch.forceUpdate) {
+						ch = null;
+					}
+				}
+			}
+			if (ch == null) {
+				ch = evalCacheValue(now, p);
+			}
+			return ch;
 		}
 
 		private CacheHolder<T> evalCacheValue(long now, P p) {

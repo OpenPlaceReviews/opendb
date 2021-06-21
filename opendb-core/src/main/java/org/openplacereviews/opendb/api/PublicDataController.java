@@ -40,7 +40,7 @@ public class PublicDataController {
 		}
 		
 		PublicAPIEndpoint<?, ?> apiEndpoint = dataManager.getEndpoint(id);
-		if(apiEndpoint != null) {
+		if (apiEndpoint != null) {
 			if (suffix.equals("index")) {
 				return ResponseEntity.ok(apiEndpoint.getPage(params));
 			}
