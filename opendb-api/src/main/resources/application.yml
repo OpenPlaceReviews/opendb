@@ -5,7 +5,7 @@ logging:
 
 server:
   port: ${OPENDB_PORT:6463}
-  connection-timeout: 120000
+  connection-timeout: 300000
   tomcat:
     max-http-post-size: 4096
     max-threads: 5
