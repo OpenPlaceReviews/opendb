@@ -257,17 +257,18 @@ public class PublicDataManager {
 			ch = new CacheHolder<>();
 			try {
 				boolean acquired = available.tryAcquire(now, null);
-				if (acquired) {
-					try {
-						ch.value = provider.getContent(p);
-					} finally {
-						available.release();
-					}
+				if (!acquired) {
+					throw new IllegalStateException("Couldn't acquire thread to evaluate report");
 				}
 			} catch (InterruptedException e) {
 				LOGGER.error("Interrupted evaluation: " + e.getMessage());
 				throw new IllegalStateException(e.getMessage(), e);
-			}				
+			}
+			try {
+				ch.value = provider.getContent(p);
+			} finally {
+				available.release();
+			}
 			if (!cacheDisabled) {
 				ch.accessTime = now;
 				ch.evalTime = now;
