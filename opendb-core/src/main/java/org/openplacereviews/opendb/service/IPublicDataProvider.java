@@ -69,5 +69,9 @@ public interface IPublicDataProvider<Params, Value> {
 		// not serializable
 		return null;
 	}
+	
+	default int getConcurrentThreadAvailable() {
+		return 10;
+	}
 
 }

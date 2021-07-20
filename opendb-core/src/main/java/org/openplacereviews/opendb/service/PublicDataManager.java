@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,8 +26,11 @@ public class PublicDataManager {
 	public static final String ENDPOINT_PATH = "path";
 	public static final String CACHE_TIME_SEC = "cache_time_sec";
 	public static final int DEFAULT_CACHE_TIME_SECONDS = 3600;
+	public static final int DEFAULT_WAIT_EVAL_THREAD_SECONDS = 360; 
 	public static final String ENDPOINT_PROVIDER = "provider";
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
+	
+	
 	
 	@Autowired
 	protected SettingsManager settingsManager;
@@ -158,9 +162,12 @@ public class PublicDataManager {
 		private PerformanceMetric dataMetric;
 		private PerformanceMetric pageMetric;
 		private PerformanceMetric reqMetric;
+		private final Semaphore available;
+
 
 		public PublicAPIEndpoint(IPublicDataProvider<P, T> provider, MapStringObjectPreference map) {
 			this.provider = provider;
+			this.available = new Semaphore(provider.getConcurrentThreadAvailable(), true);
 			this.map = map;
 			this.path = (String) map.get().get(ENDPOINT_PATH);
 			this.id = (String) map.get().get(SettingsManager.ENDPOINT_ID);
@@ -248,7 +255,19 @@ public class PublicDataManager {
 			CacheHolder<T> ch;
 			Metric mt = dataMetric.start();
 			ch = new CacheHolder<>();
-			ch.value = provider.getContent(p);
+			try {
+				boolean acquired = available.tryAcquire(now, null);
+				if (acquired) {
+					try {
+						ch.value = provider.getContent(p);
+					} finally {
+						available.release();
+					}
+				}
+			} catch (InterruptedException e) {
+				LOGGER.error("Interrupted evaluation: " + e.getMessage());
+				throw new IllegalStateException(e.getMessage(), e);
+			}				
 			if (!cacheDisabled) {
 				ch.accessTime = now;
 				ch.evalTime = now;
