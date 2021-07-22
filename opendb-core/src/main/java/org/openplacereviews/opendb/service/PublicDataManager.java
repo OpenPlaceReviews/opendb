@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -147,7 +148,7 @@ public class PublicDataManager {
 		public long access;
 		public long size;
 		public boolean forceUpdate;
-		transient T value;
+		public transient T value;
 	}
 	
 	public static class PublicAPIEndpoint<P, T> {
@@ -256,7 +257,7 @@ public class PublicDataManager {
 			Metric mt = dataMetric.start();
 			ch = new CacheHolder<>();
 			try {
-				boolean acquired = available.tryAcquire(now, null);
+				boolean acquired = available.tryAcquire(DEFAULT_WAIT_EVAL_THREAD_SECONDS, TimeUnit.SECONDS);
 				if (!acquired) {
 					throw new IllegalStateException("Couldn't acquire thread to evaluate report");
 				}
