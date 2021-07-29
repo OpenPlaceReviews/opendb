@@ -27,7 +27,7 @@ public class PublicDataManager {
 	public static final String ENDPOINT_PATH = "path";
 	public static final String CACHE_TIME_SEC = "cache_time_sec";
 	public static final int DEFAULT_CACHE_TIME_SECONDS = 3600;
-	public static final int DEFAULT_WAIT_EVAL_THREAD_SECONDS = 360; 
+	public static final int DEFAULT_WAIT_EVAL_THREAD_SECONDS = 5; 
 	public static final String ENDPOINT_PROVIDER = "provider";
 	protected static final Log LOGGER = LogFactory.getLog(PublicDataManager.class);
 	
