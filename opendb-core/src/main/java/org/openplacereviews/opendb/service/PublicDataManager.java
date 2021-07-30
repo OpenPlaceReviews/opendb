@@ -259,8 +259,10 @@ public class PublicDataManager {
 			try {
 				boolean acquired = available.tryAcquire(DEFAULT_WAIT_EVAL_THREAD_SECONDS, TimeUnit.SECONDS);
 				if (!acquired) {
-					throw new IllegalStateException("Couldn't acquire thread to evaluate report");
+					throw new IllegalStateException(
+							String.format("Couldn't acquire report thread %s: available %d", id, available.availablePermits()));
 				}
+				LOGGER.info(String.format("Acquire report thread %s: available %d", id, available.availablePermits()));
 			} catch (InterruptedException e) {
 				LOGGER.error("Interrupted evaluation: " + e.getMessage());
 				throw new IllegalStateException(e.getMessage(), e);
@@ -269,6 +271,7 @@ public class PublicDataManager {
 				ch.value = provider.getContent(p);
 			} finally {
 				available.release();
+				LOGGER.info(String.format("Release report thread %s: available %d", id, available.availablePermits()));
 			}
 			if (!cacheDisabled) {
 				ch.accessTime = now;
