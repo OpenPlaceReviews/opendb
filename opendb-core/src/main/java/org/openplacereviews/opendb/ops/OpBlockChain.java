@@ -1009,7 +1009,7 @@ public class OpBlockChain {
 					Entry<String, Object> fieldsPair = itEditCurrentFields.next();
 					Object expectedOldValF = currentObject.getFieldByExpr(fieldsPair.getKey());
 					if (!OUtils.equals(fieldsPair.getValue(), expectedOldValF)) {
-						return rules.error(u, ErrorType.EDIT_OLD_FIELD_VALUE_INCORRECT, u.getHash(),
+						return rules.error(u, ErrorType.EDIT_OLD_FIELD_VALUE_INCORRECT, u.getHash(), currentObject.getId().toString(),
 								fieldsPair.getKey(), fieldsPair.getValue(), expectedOldValF);
 					}
 				}
