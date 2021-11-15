@@ -710,7 +710,7 @@ public class OpBlockchainRules {
 		DEL_OBJ_NOT_FOUND("Operation '%s': object to delete '%s' wasn't found"),
 		OBJ_MODIFIED_TWICE_IN_SAME_OPERATION("Operation '%s': object '%s' was modified twice in the same operation"),
 		EDIT_OBJ_NOT_FOUND("Operation '%s': object to edit '%s' wasn't found"),
-		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': old field '%s' value '%s' expected old field value '%s'"),
+		EDIT_OLD_FIELD_VALUE_INCORRECT("Operation '%s': object '%s' old field '%s' value '%s' expected old field value '%s'"),
 		EDIT_CHANGE_DID_NOT_SPECIFY_CURRENT_VALUE("Operation '%s': change field '%s' is missing in current section of edit operation (optimistic lock) - object '%s'"),
 		EDIT_OP_NOT_SUPPORTED("Edit obj operation '%s' is not supported yet"),
 		EDIT_OP_INCREMENT_ONLY_FOR_NUMBERS("Operation increment only supported for numbers: field '%s', value '%s'"),
