@@ -10,6 +10,7 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
+import java.io.InputStreamReader;
 import java.util.*;
 
 import org.junit.Before;
@@ -17,8 +18,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.BlockchainValidationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
 import junitparams.JUnitParamsRunner;
@@ -31,6 +34,8 @@ public class OpBlockchainTest {
 	public ExpectedException exceptionRule = ExpectedException.none();
 
 	public OpBlockChain blc;
+
+	public JsonFormatter formatter;
 
 	private Object[] parametersWithBlockchainAndBlock() throws FailedVerificationException {
 		beforeEachTestMethod();
@@ -54,7 +59,7 @@ public class OpBlockchainTest {
 
 	@Before
 	public void beforeEachTestMethod() throws FailedVerificationException {
-		JsonFormatter formatter = new JsonFormatter();
+		formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
 		generateOperations(formatter, blc);
 	}
@@ -433,4 +438,24 @@ public class OpBlockchainTest {
 		return opObject;
 	}
 
+	@Test
+	@Parameters(method = "parametersWithBlockchainAndBlock")
+	public void testCreateFixOperation(OpBlockChain blcDB) throws FailedVerificationException {
+		OpBlock opBlock = blcDB.getFullBlockByRawHash(blcDB.getBlockHeadersById(0).getRawHash());
+		blc.replicateBlock(opBlock);
+		if (opBlock.getBlockId() == 0) {
+			OpOperation fixOpr = new OpOperation(formatter.fromJson(
+					new InputStreamReader(Objects.requireNonNull(MgmtController.class.getResourceAsStream("/fixOperations/place_id_76H3X2_uqbg6o.json"))),
+					OpOperation.class),true);
+			if (!OUtils.isEmpty(serverName) && fixOpr.getSignedBy().isEmpty()) {
+				fixOpr.setSignedBy(serverName);
+				fixOpr = blc.getRules().generateHashAndSign(fixOpr, serverKeyPair);
+				fixOpr.makeImmutable();
+				blc.addOperation(fixOpr);
+			}
+		}
+		OpObject opObject = blc.getObjectByName("osm.place", "76H3X2", "uqbg6o");
+
+		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
+	}
 }

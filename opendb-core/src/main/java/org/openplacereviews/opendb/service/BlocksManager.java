@@ -342,7 +342,7 @@ public class BlocksManager {
 					}
 				}
 				return true;
-			} catch (IOException e) {
+			} catch (IOException | FailedVerificationException e) {
 				LOGGER.error(e.getMessage(), e);
 				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED,
 						"Failed to replicate from " + getReplicateUrl(), e);
@@ -351,31 +351,44 @@ public class BlocksManager {
 		return false;
 	}
 
-	private OpBlock downloadBlock(OpBlock header) throws MalformedURLException, IOException {
+	public void addFixOperation(OpBlockChain blc, OpBlock fullBlock, int blockId, String jsonOpr) throws FailedVerificationException {
+		if (fullBlock.getBlockId() == blockId) {
+			OpOperation fixOpr = new OpOperation(formatter.fromJson(
+					new InputStreamReader(Objects.requireNonNull(MgmtController.class.getResourceAsStream(jsonOpr))),
+					OpOperation.class),true);
+			String serverName = getServerUser();
+			if (!OUtils.isEmpty(serverName) && fixOpr.getSignedBy().isEmpty()) {
+				fixOpr.setSignedBy(serverName);
+				fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
+				fixOpr.makeImmutable();
+				blc.addOperation(fixOpr);
+			}
+		}
+	}
+
+	private OpBlock downloadBlock(OpBlock header) throws IOException {
 		URL downloadByHash = new URL(getReplicateUrl() + "block-by-hash?hash=" + header.getRawHash());
 		OpBlock res = formatter.fromJson(new InputStreamReader(downloadByHash.openStream()), OpBlock.class);
-		if(res.getBlockId() == -1) {
+		if (res.getBlockId() == -1) {
 			return null;
 		}
 		return res;
 	}
 	
-	public synchronized boolean replicateOneBlock(OpBlock block) {
+	public synchronized boolean replicateOneBlock(OpBlock block) throws FailedVerificationException {
 		Metric m = mBlockSync.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
 		OpBlock res;
 		DeletedObjectCtx hctx = new DeletedObjectCtx();
+		addFixOperation(blc, block, 12762, "/fixOperations/place_id_76H3X2_uqbg6o.json");
 		res = blc.replicateBlock(block, hctx);
 		m.capture();
-		if(res == null) {
+		if (res == null) {
 			return false;
 		}
 		extResourceService.processOperations(block);
 		res = replicateValidBlock(blc, res, hctx);
-		if(res == null) {
-			return false;
-		}
-		return true;
+		return res != null;
 	}
 	
 	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {

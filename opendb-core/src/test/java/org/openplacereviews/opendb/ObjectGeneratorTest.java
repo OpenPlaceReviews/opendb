@@ -28,7 +28,7 @@ public class ObjectGeneratorTest {
 
 	public static String[] BOOTSTRAP_LIST =
 			new String[] {"opr-0-test-user", "history-test", "std-ops-defintions", "std-roles", "opr-0-test-user-test",
-					"opr-0-test-grant", "std-validations"};
+					"opr-0-test-grant", "std-validations", "create-obj-fix-opr"};
 
 	public static String[] BLOCKCHAIN_LIST =
 			new String[] {"opr-0-test-user", "std-roles", "opr-0-test-grant", "std-ops-defintions", "opr-0-test-user-test", "std-validations", "voting-process"};
