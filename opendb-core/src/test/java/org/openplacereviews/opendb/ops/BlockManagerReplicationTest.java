@@ -61,6 +61,7 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		formatter = new JsonFormatter();
 		blocksManager = new BlocksManager() {
 			public synchronized boolean compact() {
+				// TODO
 				return false;
 			};
 		};
@@ -85,13 +86,19 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 		boolean replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		
 		// 2-nd block
 		addOperationFromList(formatter, blc, new String[] { "create-obj-fix-opr2" });
 		opBlock = blc.createBlock(serverName, serverKeyPair);
+		
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
-		OpObject opObject = blc.getObjectByName("osm.place", "76H3X2", "uqbg6o");
 		
+		OpObject opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
 		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
+		
+		addOperationFromList(formatter, blocksManager.getBlockchain(), new String[] { "create-obj-fix-opr3" });
+		opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
+		assertEquals("111168846", opObject.getFieldByExpr("source.osm[0].changeset"));
 	}
 }

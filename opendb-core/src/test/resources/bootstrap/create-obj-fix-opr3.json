@@ -1,0 +1,29 @@
+[
+	{
+		"type": "osm.place",
+		"edit": [
+			{
+				"id": [
+					"76H3X2",
+					"uqbg6o"
+				],
+				"change": {
+					"source.osm[0].changeset": {
+						"set": "111168846"
+					},
+					"source.osm[0].lat": {
+						"set": "21.983"
+					},
+					"source.osm[0].lon": {
+						"set": "-98.99"
+					}
+				},
+				"current": {
+					"source.osm[0].changeset": "111168845",
+					"source.osm[0].lat": 21.9803994,
+					"source.osm[0].lon": -98.9990118
+				}
+			}
+		]
+	}
+]

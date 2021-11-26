@@ -379,6 +379,12 @@ public class OpBlockChain {
 			oinf.add(deletedRef, dl);
 		}
 		queueOperations.add(u);
+		atomicEditOperation(u, validationCtx);
+		
+	}
+
+	public void atomicEditOperation(OpOperation u, LocalValidationCtx validationCtx) {
+		String objType = u.getType();
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
@@ -822,16 +828,16 @@ public class OpBlockChain {
 		parent.fetchBlockHeaders(lst, depth);
 	}
 
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
+	public boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
 		Metric pm = mPrepareTotal.start();
-		if(OUtils.isEmpty(u.getRawHash())) {
+		if (OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
-		if(!u.hasCreated() && !u.hasEdited() && !u.hasDeleted()) {
+		if (!u.hasCreated() && !u.hasEdited() && !u.hasDeleted()) {
 			return rules.error(u, ErrorType.OP_EMPTY, u.getType(), ctx.blockHash);
 		}
 		OpOperation oin = getOperationByHash(u.getRawHash());
-		if(oin != null) {
+		if (oin != null) {
 			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
 		u.updateObjectsRef();
@@ -840,14 +846,14 @@ public class OpBlockChain {
 		Metric m = mPrepareDelete.start();
 		valid = prepareDeletedObjects(u, ctx, hctx);
 		m.capture();
-		if(!valid) {
+		if (!valid) {
 			return false;
 		}
 		// should be called after prepareDeletedObjects (so cache is prepared)
 		m = mPrepareCreate.start();
 		valid = prepareCreatedObjects(u, ctx);
 		m.capture();
-		if(!valid) {
+		if (!valid) {
 			return false;
 		}
 		m = mPrepareEdit.start();
@@ -858,13 +864,13 @@ public class OpBlockChain {
 		}
 		m = mPrepareRef.start();
 		valid = prepareReferencedObjects(u, ctx);
-		if(!valid) {
+		if (!valid) {
 			return valid;
 		}
 		m.capture();
 		pm.capture();
 		valid = rules.validateOp(this, u, ctx);
-		if(!valid) {
+		if (!valid) {
 			return valid;
 		}
 		if (u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {

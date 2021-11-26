@@ -25,6 +25,7 @@ import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.OpBlock;
 import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
+import org.openplacereviews.opendb.ops.OpBlockChain.LocalValidationCtx;
 import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
 import org.openplacereviews.opendb.ops.OpIndexColumn;
@@ -417,20 +418,20 @@ public class BlocksManager {
 				OpOperation[] lst = formatter.fromJson(
 						new InputStreamReader(MgmtController.class.getResourceAsStream("/patches/" + f + ".json")),
 						OpOperation[].class);
+				String serverName = getServerUser();
 				for (OpOperation fixOpr : lst) {
-					// TODO
-//					String serverName = getServerUser();
-//					if (!OUtils.isEmpty(serverName) && fixOpr.getSignedBy().isEmpty()) {
-//						fixOpr.setSignedBy(serverName);
-//						fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
-//						fixOpr.makeImmutable();
-//						blc.addOperation(fixOpr);
-//						OpObject opObject = blc.getObjectByName("osm.place", "76H3X2", "uqbg6o");
-//						System.out.println(opObject);
-//						if(opObject != null) {
-//							System.out.println(opObject.getFieldByExpr("source.osm[0].changeset"));
-//						}
-//					}
+					fixOpr.setSignedBy(serverName);
+					fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
+					fixOpr.makeImmutable();
+					// blc.addOperation(fixOpr); // TODO
+					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0);
+					blc.validateAndPrepareOperation(fixOpr, validationCtx, null);
+					blc.atomicEditOperation(fixOpr, validationCtx);
+					OpObject opObject = blc.getObjectByName("osm.place", "76H3X2", "uqbg6o");
+					System.out.println(opObject);
+					if(opObject != null) {
+						System.out.println(opObject.getFieldByExpr("source.osm[0].changeset"));
+					}
 				}
 			}
 		}
