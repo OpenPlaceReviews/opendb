@@ -1,0 +1,57 @@
+[{
+  "type": "osm.place",
+  "edit": [
+    {
+      "id": [
+        "76H3X2",
+        "uqbg6o"
+      ],
+      "change": {
+        "source.osm[0].changeset": {
+          "set": "111168845"
+        },
+        "source.osm[0].deleted": "delete",
+        "source.osm[0].tags.name": {
+          "set": "Río Bravo"
+        },
+        "source.osm[0].tags.phone": {
+          "set": "+5214813818202"
+        },
+        "source.osm[0].timestamp": {
+          "set": "2021-09-14T00:02:44Z"
+        },
+        "source.osm[0].version": {
+          "set": "2"
+        },
+        "source.osm[1].changeset": {
+          "set": "54639221"
+        },
+        "source.osm[1].deleted": {
+          "set": "2021-09-14T00:56:24.909+0000"
+        },
+        "source.osm[1].tags.name": {
+          "set": "Restaurante mariscos Río Bravo"
+        },
+        "source.osm[1].tags.phone": {
+          "set": "4813818202"
+        },
+        "source.osm[1].timestamp": {
+          "set": "017-12-14T23:59:47Z"
+        }
+      },
+      "current": {
+        "source.osm[0].changeset": "54639221",
+        "source.osm[0].deleted": "2021-09-14T00:56:24.909+0000",
+        "source.osm[0].tags.name": "Restaurante mariscos Río Bravo",
+        "source.osm[0].tags.phone": "4813818202",
+        "source.osm[0].timestamp": "2017-12-14T23:59:47Z",
+        "source.osm[0].version": "1",
+        "source.osm[1].changeset": "111168845",
+        "source.osm[1].tags.name": "Río Bravo",
+        "source.osm[1].tags.phone": "+5214813818202",
+        "source.osm[1].timestamp": "2021-09-14T00:02:44Z",
+        "source.osm[1].version": "2"
+      }
+    }
+  ]
+}]

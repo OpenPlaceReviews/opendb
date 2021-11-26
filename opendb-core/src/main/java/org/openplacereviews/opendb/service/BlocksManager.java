@@ -1,13 +1,36 @@
 package org.openplacereviews.opendb.service;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URL;
+import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openplacereviews.opendb.OpenDBServer.MetadataDb;
 import org.openplacereviews.opendb.SecUtils;
 import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.ops.*;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
 import org.openplacereviews.opendb.ops.OpBlockChain.DeletedObjectCtx;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.ErrorType;
+import org.openplacereviews.opendb.ops.OpIndexColumn;
+import org.openplacereviews.opendb.ops.OpObject;
+import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.ops.PerformanceMetrics;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.Metric;
 import org.openplacereviews.opendb.ops.PerformanceMetrics.PerformanceMetric;
 import org.openplacereviews.opendb.service.SettingsManager.BlockSource;
@@ -17,14 +40,6 @@ import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.KeyPair;
-import java.util.*;
 
 @Service
 public class BlocksManager {
@@ -57,6 +72,8 @@ public class BlocksManager {
 	private PublicDataManager publicDataManager;
 
 	protected List<String> bootstrapList = new ArrayList<>();
+	
+	protected Map<Integer, List<String>> patchReplicationList = new LinkedHashMap<>();
 	
 	@Value("${opendb.mgmt.user}")
 	private String serverUser;
@@ -342,7 +359,7 @@ public class BlocksManager {
 					}
 				}
 				return true;
-			} catch (IOException e) {
+			} catch (IOException | FailedVerificationException e) {
 				LOGGER.error(e.getMessage(), e);
 				logSystem.logError(null, ErrorType.MGMT_REPLICATION_IO_FAILED,
 						"Failed to replicate from " + getReplicateUrl(), e);
@@ -351,31 +368,28 @@ public class BlocksManager {
 		return false;
 	}
 
-	private OpBlock downloadBlock(OpBlock header) throws MalformedURLException, IOException {
+	private OpBlock downloadBlock(OpBlock header) throws IOException {
 		URL downloadByHash = new URL(getReplicateUrl() + "block-by-hash?hash=" + header.getRawHash());
 		OpBlock res = formatter.fromJson(new InputStreamReader(downloadByHash.openStream()), OpBlock.class);
-		if(res.getBlockId() == -1) {
+		if (res.getBlockId() == -1) {
 			return null;
 		}
 		return res;
 	}
 	
-	public synchronized boolean replicateOneBlock(OpBlock block) {
+	public synchronized boolean replicateOneBlock(OpBlock block) throws FailedVerificationException {
 		Metric m = mBlockSync.start();
 		OpBlockChain blc = new OpBlockChain(blockchain.getParent(), blockchain.getRules());
-		OpBlock res;
 		DeletedObjectCtx hctx = new DeletedObjectCtx();
-		res = blc.replicateBlock(block, hctx);
+		patchReplicationBlocks(blc, block);
+		OpBlock res = blc.replicateBlock(block, hctx);
 		m.capture();
-		if(res == null) {
+		if (res == null) {
 			return false;
 		}
 		extResourceService.processOperations(block);
 		res = replicateValidBlock(blc, res, hctx);
-		if(res == null) {
-			return false;
-		}
-		return true;
+		return res != null;
 	}
 	
 	public synchronized Set<String> removeQueueOperations(Set<String> operationsToDelete) {
@@ -394,6 +408,32 @@ public class BlocksManager {
 		dataManager.removeOperations(deleted);
 		blockchain = blc;
 		return deleted;
+	}
+	
+	private synchronized void patchReplicationBlocks(OpBlockChain blc, OpBlock block) throws FailedVerificationException {
+		List<String> patches = patchReplicationList.get(block.getBlockId());
+		if (patches != null) {
+			for (String f : patches) {
+				OpOperation[] lst = formatter.fromJson(
+						new InputStreamReader(MgmtController.class.getResourceAsStream("/patches/" + f + ".json")),
+						OpOperation[].class);
+				for (OpOperation fixOpr : lst) {
+					// TODO
+//					String serverName = getServerUser();
+//					if (!OUtils.isEmpty(serverName) && fixOpr.getSignedBy().isEmpty()) {
+//						fixOpr.setSignedBy(serverName);
+//						fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
+//						fixOpr.makeImmutable();
+//						blc.addOperation(fixOpr);
+//						OpObject opObject = blc.getObjectByName("osm.place", "76H3X2", "uqbg6o");
+//						System.out.println(opObject);
+//						if(opObject != null) {
+//							System.out.println(opObject.getFieldByExpr("source.osm[0].changeset"));
+//						}
+//					}
+				}
+			}
+		}
 	}
 	
 	public synchronized void bootstrap(String serverName, KeyPair serverLoginKeyPair) throws FailedVerificationException {
@@ -559,8 +599,17 @@ public class BlocksManager {
 		return dataManager.getIndex(type, indexId);
 	}
 	
-	public void setBootstrapList(List<String> bootstrapList) {
+	public synchronized void setBootstrapList(List<String> bootstrapList) {
 		this.bootstrapList = bootstrapList;
+	}
+	
+	public synchronized void addPatchOperation(int blockId, String patchFile) {
+		List<String> lst = patchReplicationList.get(blockId);
+		if (lst == null) {
+			lst = new ArrayList<String>();
+			patchReplicationList.put(blockId, lst);
+		}
+		lst.add(patchFile);
 	}
 	
 	public double getQueueCapacity() {

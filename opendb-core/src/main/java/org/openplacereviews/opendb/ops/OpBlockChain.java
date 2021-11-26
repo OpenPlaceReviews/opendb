@@ -251,10 +251,10 @@ public class OpBlockChain {
 	public synchronized OpBlock replicateBlock(OpBlock block, DeletedObjectCtx hctx) {
 		block.checkImmutable();
 		validateIsUnlocked();
-		if (!isQueueEmpty()) {
-			// can't replicate blocks when operations are not empty
-			return null;
-		}
+//		if (!isQueueEmpty()) {
+//			// can't replicate blocks when operations are not empty
+//			return null;
+//		}
 		boolean valid = rules.validateBlock(this,
 				block, getLastBlockHeader(), block.getBlockId() != 0);
 		if (!valid) {

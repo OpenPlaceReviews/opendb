@@ -1,28 +1,30 @@
 package org.openplacereviews.opendb;
 
-import org.openplacereviews.opendb.api.MgmtController;
-import org.openplacereviews.opendb.service.BlocksManager;
-import org.openplacereviews.opendb.util.DBConstants;
-import org.openplacereviews.opendb.ops.OpBlock;
-import org.openplacereviews.opendb.ops.OpBlockChain;
-import org.openplacereviews.opendb.ops.OpBlockchainRules;
-import org.openplacereviews.opendb.ops.OpOperation;
-import org.openplacereviews.opendb.service.DBConsensusManager;
-import org.openplacereviews.opendb.util.JsonFormatter;
-import org.openplacereviews.opendb.util.OUtils;
-import org.openplacereviews.opendb.util.exception.FailedVerificationException;
-import org.springframework.jdbc.core.JdbcTemplate;
+import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
+import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.KeyPair;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
-import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
-import static org.openplacereviews.opendb.VariableHelperTest.serverName;
+import org.openplacereviews.opendb.api.MgmtController;
+import org.openplacereviews.opendb.ops.OpBlock;
+import org.openplacereviews.opendb.ops.OpBlockChain;
+import org.openplacereviews.opendb.ops.OpBlockchainRules;
+import org.openplacereviews.opendb.ops.OpOperation;
+import org.openplacereviews.opendb.service.BlocksManager;
+import org.openplacereviews.opendb.service.DBConsensusManager;
+import org.openplacereviews.opendb.util.DBConstants;
+import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class ObjectGeneratorTest {
 
@@ -70,7 +72,7 @@ public class ObjectGeneratorTest {
 		return Arrays.asList(lst).subList(0, amount);
 	}
 
-	private static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {
+	protected static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {
 		for (String f : userList) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),

@@ -10,6 +10,7 @@ import static org.openplacereviews.opendb.ObjectGeneratorTest.*;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
 
+import java.io.InputStreamReader;
 import java.util.*;
 
 import org.junit.Before;
@@ -17,8 +18,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.openplacereviews.opendb.api.MgmtController;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.BlockchainValidationException;
 import org.openplacereviews.opendb.util.JsonFormatter;
+import org.openplacereviews.opendb.util.OUtils;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 
 import junitparams.JUnitParamsRunner;
@@ -31,6 +34,8 @@ public class OpBlockchainTest {
 	public ExpectedException exceptionRule = ExpectedException.none();
 
 	public OpBlockChain blc;
+
+	public JsonFormatter formatter;
 
 	private Object[] parametersWithBlockchainAndBlock() throws FailedVerificationException {
 		beforeEachTestMethod();
@@ -54,7 +59,7 @@ public class OpBlockchainTest {
 
 	@Before
 	public void beforeEachTestMethod() throws FailedVerificationException {
-		JsonFormatter formatter = new JsonFormatter();
+		formatter = new JsonFormatter();
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(formatter, null));
 		generateOperations(formatter, blc);
 	}
@@ -432,5 +437,6 @@ public class OpBlockchainTest {
 		opObject.putObjectValue("tags", Collections.singletonList(tagsMap));
 		return opObject;
 	}
+
 
 }
