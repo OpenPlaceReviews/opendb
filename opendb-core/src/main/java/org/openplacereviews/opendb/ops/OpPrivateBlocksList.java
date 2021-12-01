@@ -78,7 +78,7 @@ public class OpPrivateBlocksList {
 	
 	
 	public String getSuperBlockHash() {
-		if (blockHeaders.size() == 0) {
+		if (blockHeaders.isEmpty()) {
 			return "";
 		}
 		OpBlock l = getLastBlockHeader();
@@ -86,7 +86,7 @@ public class OpPrivateBlocksList {
 		if( l == null || f == null) {
 			return "";
 		}
-		String hash = l == null ? "" : l.getRawHash();
+		String hash = l.getRawHash();
 		int sz = l.getBlockId() - f.getBlockId() + 1;
 		return OpBlockchainRules.calculateSuperblockHash(sz, hash);
 	}

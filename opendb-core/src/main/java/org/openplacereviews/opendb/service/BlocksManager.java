@@ -411,7 +411,7 @@ public class BlocksManager {
 		return deleted;
 	}
 	
-	private synchronized void patchReplicationBlocks(OpBlockChain blc, OpBlock block) throws FailedVerificationException {
+	public synchronized void patchReplicationBlocks(OpBlockChain blc, OpBlock block) throws FailedVerificationException {
 		List<String> patches = patchReplicationList.get(block.getBlockId());
 		if (patches != null) {
 			for (String f : patches) {
