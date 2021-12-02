@@ -26,7 +26,6 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -887,7 +886,7 @@ public class DBConsensusManager {
 			compactedParent = compact(blc.getSuperblockSize(), blc.getParent(), db);
 			// only 1 compact at a time
 			boolean compact = compactedParent == blc.getParent();
-			compact = compact && ((double) blc.getSuperblockSize() + settingsManager.OPENDB_COMPACT_COEFICIENT.get() * prevSize) > ((double) blc.getParent().getSuperblockSize());
+			compact = compact && (blc.getSuperblockSize() + settingsManager.OPENDB_COMPACT_COEFICIENT.get() * prevSize) > (blc.getParent().getSuperblockSize());
 			if (compact) {
 				LOGGER.info("Chain to compact: ");
 				printBlockChain(blc);
@@ -912,8 +911,8 @@ public class DBConsensusManager {
 		return blc;
 	}
 
-	private void printBlockChain(OpBlockChain blc) {
-		List<String> superBlocksChain = new ArrayList<String>();
+	public void printBlockChain(OpBlockChain blc) {
+		List<String> superBlocksChain = new ArrayList<>();
 		OpBlockChain p = blc;
 		while (p != null && !p.isNullBlock()) {
 			String sh = p.getSuperBlockHash();

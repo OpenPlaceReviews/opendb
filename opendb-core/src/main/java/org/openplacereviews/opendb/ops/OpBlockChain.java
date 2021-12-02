@@ -265,7 +265,7 @@ public class OpBlockChain {
 			for (OpOperation o : block.getOperations()) {
 				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash(), block.getDate(OpBlock.F_DATE));
 				validateAndPrepareOperation(o, validationCtx, hctx);
-				atomicAddOperationAfterPrepare(o, validationCtx);
+				atomicAddOperationAfterPrepare(o, validationCtx, true);
 			}
 			atomicCreateBlockFromAllOps(block);
 			locked = UNLOCKED;
@@ -359,7 +359,7 @@ public class OpBlockChain {
 		}
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
-			atomicAddOperationAfterPrepare(op, validationCtx);
+			atomicAddOperationAfterPrepare(op, validationCtx, true);
 			locked = UNLOCKED;
 		} finally {
 			if(locked == LOCKED_OP_IN_PROGRESS) {
@@ -369,7 +369,7 @@ public class OpBlockChain {
 		return valid;
 	}
 
-	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
+	public void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx, boolean add) {
 		List<List<String>> deletedRefs = u.getDeleted();
 		String objType = u.getType();
 		for (List<String> deletedRef : deletedRefs) {
@@ -378,7 +378,9 @@ public class OpBlockChain {
 			dl.setParentOp(u.getType(), u.getRawHash());
 			oinf.add(deletedRef, dl);
 		}
-		queueOperations.add(u);
+		if (add) {
+			queueOperations.add(u);
+		}
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
@@ -390,6 +392,7 @@ public class OpBlockChain {
 				oinf.add(voteObj.getId(), voteObj);
 			}
 		}
+		
 	}
 
 	private void atomicSetParent(OpBlockChain parent) {
@@ -435,7 +438,7 @@ public class OpBlockChain {
 		for (OpOperation o : ops) {
 			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>", 0);
 			validateAndPrepareOperation(o, validationCtx, null);
-			atomicAddOperationAfterPrepare(o, validationCtx);
+			atomicAddOperationAfterPrepare(o, validationCtx, true);
 		}
 		atomicSetParent(newParent);
 	}
@@ -822,16 +825,16 @@ public class OpBlockChain {
 		parent.fetchBlockHeaders(lst, depth);
 	}
 
-	private boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
+	public boolean validateAndPrepareOperation(OpOperation u, LocalValidationCtx ctx, DeletedObjectCtx hctx) {
 		Metric pm = mPrepareTotal.start();
-		if(OUtils.isEmpty(u.getRawHash())) {
+		if (OUtils.isEmpty(u.getRawHash())) {
 			return rules.error(u, ErrorType.OP_HASH_IS_NOT_CORRECT, u.getHash(), "");
 		}
-		if(!u.hasCreated() && !u.hasEdited() && !u.hasDeleted()) {
+		if (!u.hasCreated() && !u.hasEdited() && !u.hasDeleted()) {
 			return rules.error(u, ErrorType.OP_EMPTY, u.getType(), ctx.blockHash);
 		}
 		OpOperation oin = getOperationByHash(u.getRawHash());
-		if(oin != null) {
+		if (oin != null) {
 			return rules.error(u, ErrorType.OP_HASH_IS_DUPLICATED, u.getHash(), ctx.blockHash);
 		}
 		u.updateObjectsRef();
@@ -840,14 +843,14 @@ public class OpBlockChain {
 		Metric m = mPrepareDelete.start();
 		valid = prepareDeletedObjects(u, ctx, hctx);
 		m.capture();
-		if(!valid) {
+		if (!valid) {
 			return false;
 		}
 		// should be called after prepareDeletedObjects (so cache is prepared)
 		m = mPrepareCreate.start();
 		valid = prepareCreatedObjects(u, ctx);
 		m.capture();
-		if(!valid) {
+		if (!valid) {
 			return false;
 		}
 		m = mPrepareEdit.start();
@@ -858,13 +861,13 @@ public class OpBlockChain {
 		}
 		m = mPrepareRef.start();
 		valid = prepareReferencedObjects(u, ctx);
-		if(!valid) {
+		if (!valid) {
 			return valid;
 		}
 		m.capture();
 		pm.capture();
 		valid = rules.validateOp(this, u, ctx);
-		if(!valid) {
+		if (!valid) {
 			return valid;
 		}
 		if (u.getCacheObject(OpObject.F_TIMESTAMP_ADDED) == null) {

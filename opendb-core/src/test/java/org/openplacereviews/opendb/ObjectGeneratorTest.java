@@ -72,7 +72,7 @@ public class ObjectGeneratorTest {
 		return Arrays.asList(lst).subList(0, amount);
 	}
 
-	protected static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {
+	public static void addOperationFromList(JsonFormatter formatter, OpBlockChain blc, String[] userList) throws FailedVerificationException {
 		for (String f : userList) {
 			OpOperation[] lst = formatter.fromJson(
 					new InputStreamReader(MgmtController.class.getResourceAsStream("/bootstrap/" + f + ".json")),
