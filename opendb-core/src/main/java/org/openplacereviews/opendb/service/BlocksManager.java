@@ -415,6 +415,7 @@ public class BlocksManager {
 		List<String> patches = patchReplicationList.get(block.getBlockId());
 		if (patches != null) {
 			for (String f : patches) {
+				LOGGER.warn(String.format("### PATCHING %d with %s", block.getBlockId(), f));
 				OpOperation[] lst = formatter.fromJson(
 						new InputStreamReader(MgmtController.class.getResourceAsStream("/patches/" + f + ".json")),
 						OpOperation[].class);
