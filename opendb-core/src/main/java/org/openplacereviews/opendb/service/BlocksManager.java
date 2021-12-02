@@ -423,15 +423,9 @@ public class BlocksManager {
 					fixOpr.setSignedBy(serverName);
 					fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
 					fixOpr.makeImmutable();
-					// blc.addOperation(fixOpr); // TODO
 					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0);
 					blc.validateAndPrepareOperation(fixOpr, validationCtx, null);
 					blc.atomicEditOperation(fixOpr, validationCtx);
-					OpObject opObject = blc.getObjectByName("osm.place", "76H3X2", "uqbg6o");
-					System.out.println(opObject);
-					if(opObject != null) {
-						System.out.println(opObject.getFieldByExpr("source.osm[0].changeset"));
-					}
 				}
 			}
 		}

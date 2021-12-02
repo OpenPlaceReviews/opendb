@@ -1,29 +1,60 @@
 [
-	{
-		"type": "osm.place",
-		"edit": [
-			{
-				"id": [
-					"76H3X2",
-					"uqbg6o"
-				],
-				"change": {
-					"source.osm[0].changeset": {
-						"set": "111168846"
-					},
-					"source.osm[0].lat": {
-						"set": "21.983"
-					},
-					"source.osm[0].lon": {
-						"set": "-98.99"
-					}
-				},
-				"current": {
-					"source.osm[0].changeset": "111168845",
-					"source.osm[0].lat": 21.9803994,
-					"source.osm[0].lon": -98.9990118
-				}
-			}
-		]
-	}
+  {
+    "type": "osm.place",
+    "create": [
+      {
+        "id": [
+          "76H3X3",
+          "u3bg62"
+        ],
+        "source": {
+          "osm": [
+            {
+              "changeset": "54639221",
+              "deleted": "2021-09-14T00:56:24.909+0000",
+              "id": 5284956138,
+              "lat": 21.9803994,
+              "lon": -98.9990118,
+              "osm_tag": "amenity",
+              "osm_value": "restaurant",
+              "tags": {
+                "addr:housenumber": "0",
+                "addr:neighbourhood": "Tipzen",
+                "addr:postcode": "79050",
+                "addr:street": "Carretera Valles - Tampico",
+                "amenity": "restaurant",
+                "cuisine": "seafood",
+                "name": "Restaurante mariscos Río Bravo",
+                "phone": "4813818202"
+              },
+              "timestamp": "2017-12-14T23:59:47Z",
+              "type": "node",
+              "version": "1"
+            },
+            {
+              "changeset": "111168845",
+              "id": 5284956138,
+              "lat": 21.9803994,
+              "lon": -98.9990118,
+              "osm_tag": "amenity",
+              "osm_value": "restaurant",
+              "tags": {
+                "addr:housenumber": "0",
+                "addr:neighbourhood": "Tipzen",
+                "addr:postcode": "79050",
+                "addr:street": "Carretera Valles - Tampico",
+                "amenity": "restaurant",
+                "cuisine": "seafood",
+                "name": "Río Bravo",
+                "phone": "+5214813818202"
+              },
+              "timestamp": "2021-09-14T00:02:44Z",
+              "type": "node",
+              "version": "2"
+            }
+          ]
+        }
+      }
+    ]
+  }
 ]

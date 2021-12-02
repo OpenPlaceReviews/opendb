@@ -83,7 +83,7 @@ public class OpPrivateBlocksList {
 		}
 		OpBlock l = getLastBlockHeader();
 		OpBlock f = getFirstBlockHeader();
-		if( l == null || f == null) {
+		if (l == null || f == null) {
 			return "";
 		}
 		String hash = l.getRawHash();

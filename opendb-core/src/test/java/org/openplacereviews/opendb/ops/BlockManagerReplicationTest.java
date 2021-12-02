@@ -76,7 +76,14 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		ReflectionTestUtils.setField(blocksManager, "extResourceService", ipfsFileManager);
 		ReflectionTestUtils.setField(blocksManager, "logSystem", logOperationService);
 	}
+	
 
+	
+	private void assertObjectPatched() {
+		OpObject opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
+		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
+	}
+	
 	@Test
 	public void testOperationReplication() throws FailedVerificationException {
 		generateOperations(formatter, blc);
@@ -92,14 +99,13 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
-		OpObject opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
-		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
 
 		addOperationFromList(formatter, blocksManager.getBlockchain(), new String[]{"create-obj-fix-opr3"});
-		opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
-		assertEquals("111168846", opObject.getFieldByExpr("source.osm[0].changeset"));
+		assertObjectPatched();
 	}
+
 
 	@Test
 	public void testCompactCoef1() throws FailedVerificationException {
@@ -110,27 +116,30 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		OpBlock opBlock = blc.createBlock(serverName, serverKeyPair);
 		boolean replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
-
+		
 		// 2-nd block
 		addOperationFromList(formatter, blc, new String[]{"create-obj-fix-opr2"});
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		addOperationFromList(formatter, blc, new String[]{"create-obj-fix-opr3"});
+		assertObjectPatched();
 
 		// 3-nd block
 		addOperationFromList(formatter, blc, new String[]{"create-obj-fix-opr4"});
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
-
+		assertObjectPatched();
+		
 		// 4-nd block
 		addOperationFromList(formatter, blc, new String[]{"create-obj-fix-opr5"});
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
-
+		assertObjectPatched();
 		Mockito.verify(dbConsensusManager, Mockito.times(1)).printBlockChain(any());
 	}
 
@@ -150,6 +159,7 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		addOperationFromList(formatter, blc, new String[]{"create-obj-fix-opr3"});
 
@@ -158,12 +168,14 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		// 4-nd block
 		addOperationFromList(formatter, blc, new String[]{"create-obj-fix-opr5"});
 		opBlock = blc.createBlock(serverName, serverKeyPair);
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		Mockito.verify(dbConsensusManager, Mockito.times(2)).printBlockChain(any());
 	}
@@ -206,6 +218,7 @@ public class BlockManagerReplicationTest extends ObjectGeneratorTest {
 		}
 		assertEquals(2, blocksChain.size());
 		assertEquals(blocksChain.get(1), hash);
+		assertObjectPatched();
 
 
 	}

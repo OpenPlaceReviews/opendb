@@ -144,7 +144,7 @@ public class BlockManagerReplicationDBTest {
 
 		addOperationFromList(formatter, opBlockChain, new String[]{"create-obj-fix-opr3"});
 		opObject = opBlockChain.getObjectByName("osm.place", "76H3X2", "uqbg6o");
-		assertEquals("111168846", opObject.getFieldByExpr("source.osm[0].changeset"));
+		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
 	}
 
 	@Test
