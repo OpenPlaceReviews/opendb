@@ -121,6 +121,11 @@ public class BlockManagerReplicationDBTest {
 		databaseServer.wipeDatabase();
 	}
 
+	private void assertObjectPatched() {
+		OpObject opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
+		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
+	}
+
 	@Test
 	public void testOperationReplicationDB() throws FailedVerificationException {
 		generateOperations(formatter, opBlockChain);
@@ -138,6 +143,7 @@ public class BlockManagerReplicationDBTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		OpObject opObject = blocksManager.getBlockchain().getObjectByName("osm.place", "76H3X2", "uqbg6o");
 		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
@@ -145,6 +151,7 @@ public class BlockManagerReplicationDBTest {
 		addOperationFromList(formatter, opBlockChain, new String[]{"create-obj-fix-opr3"});
 		opObject = opBlockChain.getObjectByName("osm.place", "76H3X2", "uqbg6o");
 		assertEquals("111168845", opObject.getFieldByExpr("source.osm[0].changeset"));
+		assertObjectPatched();
 	}
 
 	@Test
@@ -164,6 +171,7 @@ public class BlockManagerReplicationDBTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		addOperationFromList(formatter, opBlockChain, new String[]{"create-obj-fix-opr3"});
 
@@ -173,6 +181,7 @@ public class BlockManagerReplicationDBTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		replicate = blocksManager.replicateOneBlock(opBlock);
 		assertTrue("Replication failed", replicate);
+		assertObjectPatched();
 
 		Mockito.verify(dbConsensusManager, Mockito.times(1)).printBlockChain(any());
 
@@ -224,6 +233,7 @@ public class BlockManagerReplicationDBTest {
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
 		blocksManager.replicateOneBlock(opBlock);
 		String hash = opBlock.getRawHash().substring(opBlock.getRawHash().length() - 4, opBlock.getRawHash().length() - 1);
+		assertObjectPatched();
 
 		addOperationFromList(formatter, opBlockChain, new String[]{"create-obj-fix-opr3"});
 
@@ -231,6 +241,7 @@ public class BlockManagerReplicationDBTest {
 		addOperationFromList(formatter, opBlockChain, new String[]{"create-obj-fix-opr4"});
 		opBlock = opBlockChain.createBlock(serverName, serverKeyPair);
 		opBlock.getOperations().forEach(opOperation -> dbConsensusManager.insertOperation(opOperation));
+		assertObjectPatched();
 
 		OpBlockChain blc2 = new OpBlockChain(opBlockChain.getParent(), opBlockChain.getRules());
 		OpBlockChain.DeletedObjectCtx hctx = new OpBlockChain.DeletedObjectCtx();
@@ -252,5 +263,6 @@ public class BlockManagerReplicationDBTest {
 		}
 		assertEquals(2, blocksChain.size());
 		assertEquals(blocksChain.get(1), hash);
+		assertObjectPatched();
 	}
 }
