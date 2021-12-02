@@ -265,7 +265,7 @@ public class OpBlockChain {
 			for (OpOperation o : block.getOperations()) {
 				LocalValidationCtx validationCtx = new LocalValidationCtx(block.getFullHash(), block.getDate(OpBlock.F_DATE));
 				validateAndPrepareOperation(o, validationCtx, hctx);
-				atomicAddOperationAfterPrepare(o, validationCtx);
+				atomicAddOperationAfterPrepare(o, validationCtx, true);
 			}
 			atomicCreateBlockFromAllOps(block);
 			locked = UNLOCKED;
@@ -359,7 +359,7 @@ public class OpBlockChain {
 		}
 		locked = LOCKED_OP_IN_PROGRESS;
 		try {
-			atomicAddOperationAfterPrepare(op, validationCtx);
+			atomicAddOperationAfterPrepare(op, validationCtx, true);
 			locked = UNLOCKED;
 		} finally {
 			if(locked == LOCKED_OP_IN_PROGRESS) {
@@ -369,7 +369,7 @@ public class OpBlockChain {
 		return valid;
 	}
 
-	private void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx) {
+	public void atomicAddOperationAfterPrepare(OpOperation u, LocalValidationCtx validationCtx, boolean add) {
 		List<List<String>> deletedRefs = u.getDeleted();
 		String objType = u.getType();
 		for (List<String> deletedRef : deletedRefs) {
@@ -378,13 +378,9 @@ public class OpBlockChain {
 			dl.setParentOp(u.getType(), u.getRawHash());
 			oinf.add(deletedRef, dl);
 		}
-		queueOperations.add(u);
-		atomicEditOperation(u, validationCtx);
-		
-	}
-
-	public void atomicEditOperation(OpOperation u, LocalValidationCtx validationCtx) {
-		String objType = u.getType();
+		if (add) {
+			queueOperations.add(u);
+		}
 		for (OpObject editedOpOpbject : validationCtx.newObjsCache.keySet()) {
 			OpPrivateObjectInstancesById oinf = getOrCreateObjectsByIdMap(objType);
 			oinf.add(editedOpOpbject.getId(), editedOpOpbject);
@@ -396,6 +392,7 @@ public class OpBlockChain {
 				oinf.add(voteObj.getId(), voteObj);
 			}
 		}
+		
 	}
 
 	private void atomicSetParent(OpBlockChain parent) {
@@ -441,7 +438,7 @@ public class OpBlockChain {
 		for (OpOperation o : ops) {
 			LocalValidationCtx validationCtx = new LocalValidationCtx("<queue>", 0);
 			validateAndPrepareOperation(o, validationCtx, null);
-			atomicAddOperationAfterPrepare(o, validationCtx);
+			atomicAddOperationAfterPrepare(o, validationCtx, true);
 		}
 		atomicSetParent(newParent);
 	}

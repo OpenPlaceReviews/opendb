@@ -425,7 +425,7 @@ public class BlocksManager {
 					fixOpr.makeImmutable();
 					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0);
 					blc.validateAndPrepareOperation(fixOpr, validationCtx, null);
-					blc.atomicEditOperation(fixOpr, validationCtx);
+					blc.atomicAddOperationAfterPrepare(fixOpr, validationCtx, false);
 				}
 			}
 		}
