@@ -1121,15 +1121,21 @@ public class OpBlockChain {
 		public static int VERSION = 1;
 		final String blockHash;
 		final int version;
+		final boolean skipSigValidation;
 		Set<List<String>> ids = new HashSet<List<String>>();
 		Map<String, OpObject> refObjsCache = new HashMap<String, OpObject>();
 		List<OpObject> deletedObjsCache = new ArrayList<OpObject>();
 		Map<OpObject, OpObject> newObjsCache = new HashMap<OpObject, OpObject>();
 
 		public LocalValidationCtx(String bhash, long blockDate) {
+			this(bhash, blockDate, false);
+		}
+		
+		public LocalValidationCtx(String bhash, long blockDate, boolean skipSigValidation) {
 			blockHash = bhash;
 			// Mon Mar 22 2021 16:10:10 GMT+0000
 			version = blockDate <= 0 || blockDate >= 1616429410000l ? VERSION : VERSION_BEFORE_20_2021;
+			this.skipSigValidation = skipSigValidation;
 		}
 	}
 

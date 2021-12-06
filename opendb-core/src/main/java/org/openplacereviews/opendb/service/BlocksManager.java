@@ -424,7 +424,7 @@ public class BlocksManager {
 					fixOpr.setSignedBy(serverName);
 					fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
 					fixOpr.makeImmutable();
-					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0);
+					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0, true);
 					blc.validateAndPrepareOperation(fixOpr, validationCtx, null);
 					blc.atomicAddOperationAfterPrepare(fixOpr, validationCtx, false);
 				}

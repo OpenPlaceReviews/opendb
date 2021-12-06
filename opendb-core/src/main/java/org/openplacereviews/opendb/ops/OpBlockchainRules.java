@@ -546,7 +546,7 @@ public class OpBlockchainRules {
 			return error(u, ErrorType.OP_SIZE_IS_EXCEEDED, u.getHash(), sz, OpBlockchainRules.MAX_OP_SIZE_MB);
 		}
 		Metric m = mValidSig.start();
-		boolean valid = validateSignatures(opBlockChain, u);
+		boolean valid = ctx != null && ctx.skipSigValidation ? true : validateSignatures(opBlockChain, u);
 		m.capture();
 		if(!valid) {
 			return valid;
