@@ -422,7 +422,7 @@ public class BlocksManager {
 				String serverName = getServerUser();
 				for (OpOperation fixOpr : lst) {
 					fixOpr.setSignedBy(serverName);
-					fixOpr = generateHashAndSign(fixOpr, getServerLoginKeyPair());
+					fixOpr = blc.getRules().generateHashAndSign(fixOpr, getServerLoginKeyPair());
 					fixOpr.makeImmutable();
 					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0, true);
 					blc.validateAndPrepareOperation(fixOpr, validationCtx, null);
