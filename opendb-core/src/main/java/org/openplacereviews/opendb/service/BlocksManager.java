@@ -419,10 +419,8 @@ public class BlocksManager {
 				OpOperation[] lst = formatter.fromJson(
 						new InputStreamReader(MgmtController.class.getResourceAsStream("/patches/" + f + ".json")),
 						OpOperation[].class);
-				String serverName = getServerUser();
 				for (OpOperation fixOpr : lst) {
-					fixOpr.setSignedBy(serverName);
-					fixOpr = blc.getRules().generateHashAndSign(fixOpr, getServerLoginKeyPair());
+					blc.getRules().calculateOperationHash(fixOpr, true);
 					fixOpr.makeImmutable();
 					LocalValidationCtx validationCtx = new LocalValidationCtx("", 0, true);
 					blc.validateAndPrepareOperation(fixOpr, validationCtx, null);
