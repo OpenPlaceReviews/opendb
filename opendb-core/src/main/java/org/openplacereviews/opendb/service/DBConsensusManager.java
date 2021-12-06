@@ -12,6 +12,7 @@ import org.openplacereviews.opendb.ops.de.CompoundKey;
 import org.openplacereviews.opendb.service.IPFSService.ResourceDTO;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.OUtils;
+import org.openplacereviews.opendb.util.exception.FailedVerificationException;
 import org.postgresql.util.PGobject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -60,6 +61,9 @@ public class DBConsensusManager {
 
 	@Autowired
 	private FileBackupManager backupManager;
+	
+	@Autowired
+	private BlocksManager blocksManager;
 
 	@Autowired
 	private JsonFormatter formatter;
@@ -97,7 +101,7 @@ public class DBConsensusManager {
 	}
 	
 	// mainchain could change
-	public OpBlockChain init(MetadataDb metadataDB) {
+	public OpBlockChain init(MetadataDb metadataDB) throws FailedVerificationException {
 		settingsManager.initPreferences();
 		dbSchema.initializeDatabaseSchema(metadataDB, jdbcTemplate);
 		backupManager.init();
@@ -150,7 +154,7 @@ public class DBConsensusManager {
 	}
 
 	private OpBlockChain loadBlocks(List<OpBlock> topBlockInfo, final OpBlockChain newParent,
-									final OpBlockchainRules rules) {
+									final OpBlockchainRules rules) throws FailedVerificationException {
 		if (topBlockInfo.size() == 0) {
 			return newParent;
 		}
@@ -158,6 +162,7 @@ public class DBConsensusManager {
 		for (OpBlock b : topBlockInfo) {
 			String blockHash = b.getRawHash();
 			OpBlock rawBlock = loadBlock(blockHash);
+			blocksManager.patchReplicationBlocks(blc, rawBlock);
 			OpBlock replicateBlock = blc.replicateBlock(rawBlock);
 			if (replicateBlock == null) {
 				throw new IllegalStateException("Could not replicate block " + blockHash + " "
