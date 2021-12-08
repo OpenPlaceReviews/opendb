@@ -219,18 +219,20 @@ public class OpObject {
 	}
 
 	public void setFieldByExpr(String field, Object object) {
-		if (field.contains(".") || field.contains("[") || field.contains("]")) {
-			List<String> fieldSequence = generateFieldSequence(field);
-			if (object == null) {
-				JsonObjectUtils.deleteField(this.fields, fieldSequence);
+		if (!isImmutable) {
+			if (field.contains(".") || field.contains("[") || field.contains("]")) {
+				List<String> fieldSequence = generateFieldSequence(field);
+				if (object == null) {
+					JsonObjectUtils.deleteField(this.fields, fieldSequence);
+				} else {
+					JsonObjectUtils.setField(this.fields, fieldSequence, object);
+				}
+			} else if (object == null) {
+				fields.remove(field);
 			} else {
-				JsonObjectUtils.setField(this.fields, fieldSequence, object);
+				fields.put(field, object);
 			}
-		} else if (object == null) {
-			fields.remove(field);
-		} else {
-			fields.put(field, object);
-		}
+		} else throw new UnsupportedOperationException("Changes immutable object are not supported");
 	}
 
 	public void deleteFieldsByObject(Object object) {

@@ -300,7 +300,34 @@ public class OpBlockchainEditOpTest {
 	}
 
 	@Test
-	public void testEditAppendOsmOp() throws FailedVerificationException {
+	public void testMergeOpOsmOrder() throws FailedVerificationException {
+		blc.addOperation(createMergeOperation());
+
+		OpObject opObject = blc.getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		assertEquals("2021-09-14T00:56:24.909+0000", opObject.getFieldByExpr("source.osm[0].deleted"));
+	}
+
+	@Test
+	public void testCheckImmutableObj() throws FailedVerificationException {
+		blc.addOperation(createMergeOperation());
+		OpObject obj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		Map<String, List<Map<String, Object>>> sourcesObj = obj.getField(null, "source");
+
+		List<Map<String, Object>> listValues = sourcesObj.get("osm");
+		Collections.swap(listValues, 0, 1);
+		Map<String, List<Map<String, Object>>> newOsmMap = new HashMap<>();
+		newOsmMap.put("osm", listValues);
+
+		Exception exception = null;
+		try {
+			obj.setFieldByExpr("source", newOsmMap);
+		} catch (UnsupportedOperationException t) {
+			exception = t;
+		}
+		assertNotNull(exception);
+	}
+
+	private OpOperation createMergeOperation() throws FailedVerificationException {
 		addOperationFromList(jsonFormatter, blc, new String[]{"create-obj-append-osm"});
 		addOperationFromList(jsonFormatter, blc, new String[]{"create-obj-append-osm2"});
 		OpObject oldObj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
@@ -324,7 +351,7 @@ public class OpBlockchainEditOpTest {
 			TreeMap<String, Object> appendObj = new TreeMap<>();
 			String category = "source" + "." + newf.getKey();
 			List<Map<String, Object>> newCategoryList = (List<Map<String, Object>>) newf.getValue();
-			if(!newCategoryList.isEmpty()) {
+			if (!newCategoryList.isEmpty()) {
 				if (oldFields == null || !oldFields.containsKey(newf.getKey())) {
 					appendObj.put("set", newCategoryList);
 				} else {
@@ -345,28 +372,6 @@ public class OpBlockchainEditOpTest {
 		editOp.addEdited(editObj);
 		blc.getRules().generateHashAndSign(editOp, serverKeyPair);
 		editOp.makeImmutable();
-		blc.addOperation(editOp);
-
-		//change obj again
-		OpObject oldObjForChange = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
-		Map<String, List<Map<String, Object>>> sourcesObj = oldObjForChange.getField(null, "source");
-
-		List<Map<String, Object>> listValues = sourcesObj.get("osm");
-		Collections.swap(listValues, 0, 1);
-		Map<String, List<Map<String, Object>>> newOsmMap = new HashMap<>();
-		newOsmMap.put("osm",listValues);
-		oldObjForChange.setFieldByExpr("source",newOsmMap);
-
-		//add op
-		Exception exception = null;
-		try {
-			addOperationFromList(jsonFormatter, blc, new String[]{"create-obj-append-osm3"});
-		} catch (BlockchainValidationException t) {
-			exception = t;
-		}
-		assertNotNull(exception);
-
-		OpObject opObject = blc.getObjectByName("opr.place", "76H3X2", "uqbg6o");
-		assertNull(opObject.getFieldByExpr("source.osm[0].deleted"));
+		return editOp;
 	}
 }
