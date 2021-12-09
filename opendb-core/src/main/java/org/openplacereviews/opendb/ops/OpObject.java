@@ -299,15 +299,16 @@ public class OpObject {
 	
 	@SuppressWarnings("unchecked")
 	public <T> T getField(T def, String... fields) {
-		Map<String, Object> p = this.fields;
-		for(int i = 0; i < fields.length - 1 ; i++) {
-			p = (Map<String, Object>) p.get(fields[i]);
-			if(p == null) {
+		Map<String, Object> fieldMap = this.fields;
+		Map<String, Object> deepCopyFieldMap = (Map<String, Object>) copyingObjects(fieldMap, false);
+		for (int i = 0; i < fields.length - 1; i++) {
+			deepCopyFieldMap = (Map<String, Object>) deepCopyFieldMap.get(fields[i]);
+			if (deepCopyFieldMap == null) {
 				return def;
 			}
 		}
-		T res = (T) p.get(fields[fields.length - 1]);
-		if(res == null) {
+		T res = (T) deepCopyFieldMap.get(fields[fields.length - 1]);
+		if (res == null) {
 			return def;
 		}
 		return res;

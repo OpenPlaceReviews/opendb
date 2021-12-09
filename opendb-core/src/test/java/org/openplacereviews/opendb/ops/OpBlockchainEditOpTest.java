@@ -315,6 +315,11 @@ public class OpBlockchainEditOpTest {
 
 		List<Map<String, Object>> listValues = sourcesObj.get("osm");
 		Collections.swap(listValues, 0, 1);
+
+		//check the object in blockchain wasn't change
+		OpObject oldObj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		assertEquals("2021-09-14T00:56:24.909+0000", oldObj.getFieldByExpr("source.osm[0].deleted"));
+
 		Map<String, List<Map<String, Object>>> newOsmMap = new HashMap<>();
 		newOsmMap.put("osm", listValues);
 
