@@ -219,18 +219,20 @@ public class OpObject {
 	}
 
 	public void setFieldByExpr(String field, Object object) {
-		if (field.contains(".") || field.contains("[") || field.contains("]")) {
-			List<String> fieldSequence = generateFieldSequence(field);
-			if (object == null) {
-				JsonObjectUtils.deleteField(this.fields, fieldSequence);
+		if (!isImmutable) {
+			if (field.contains(".") || field.contains("[") || field.contains("]")) {
+				List<String> fieldSequence = generateFieldSequence(field);
+				if (object == null) {
+					JsonObjectUtils.deleteField(this.fields, fieldSequence);
+				} else {
+					JsonObjectUtils.setField(this.fields, fieldSequence, object);
+				}
+			} else if (object == null) {
+				fields.remove(field);
 			} else {
-				JsonObjectUtils.setField(this.fields, fieldSequence, object);
+				fields.put(field, object);
 			}
-		} else if (object == null) {
-			fields.remove(field);
-		} else {
-			fields.put(field, object);
-		}
+		} else throw new UnsupportedOperationException("Changes immutable object are not supported");
 	}
 
 	public void deleteFieldsByObject(Object object) {
@@ -297,16 +299,19 @@ public class OpObject {
 	
 	@SuppressWarnings("unchecked")
 	public <T> T getField(T def, String... fields) {
-		Map<String, Object> p = this.fields;
-		for(int i = 0; i < fields.length - 1 ; i++) {
-			p = (Map<String, Object>) p.get(fields[i]);
-			if(p == null) {
+		Map<String, Object> fieldMap = this.fields;
+		for (int i = 0; i < fields.length - 1; i++) {
+			fieldMap = (Map<String, Object>) fieldMap.get(fields[i]);
+			if (fieldMap == null) {
 				return def;
 			}
 		}
-		T res = (T) p.get(fields[fields.length - 1]);
-		if(res == null) {
+		T res = (T) fieldMap.get(fields[fields.length - 1]);
+		if (res == null) {
 			return def;
+		}
+		if (isImmutable) {
+			res = (T) copyingObjects(res, false);
 		}
 		return res;
 	}

@@ -1,0 +1,19 @@
+[{
+  "type": "opr.place",
+  "edit": [
+    {
+      "id": [
+        "76H3X2",
+        "uqbg6o"
+      ],
+      "change": {
+        "source.osm[0].changeset": {
+          "set": "111168845"
+        }
+      },
+      "current": {
+        "source.osm[0].changeset": "54639221"
+      }
+    }
+  ]
+}]

@@ -2,15 +2,18 @@ package org.openplacereviews.opendb.ops;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.openplacereviews.opendb.ops.OpBlockchainRules.BlockchainValidationException;
+import org.openplacereviews.opendb.service.BlocksManager;
 import org.openplacereviews.opendb.util.JsonFormatter;
 import org.openplacereviews.opendb.util.exception.FailedVerificationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.openplacereviews.opendb.ObjectGeneratorTest.addOperationFromList;
 import static org.openplacereviews.opendb.ObjectGeneratorTest.generateUserOperations;
 import static org.openplacereviews.opendb.VariableHelperTest.serverKeyPair;
 import static org.openplacereviews.opendb.VariableHelperTest.serverName;
@@ -23,17 +26,26 @@ public class OpBlockchainEditOpTest {
 
 	public OpBlockChain blc;
 
+	@Spy
 	public JsonFormatter jsonFormatter;
+
+	@Spy
+	public BlocksManager blocksManager;
 
 	@Before
 	public void beforeEachTestMethod() throws FailedVerificationException {
-		jsonFormatter = new JsonFormatter();
+		MockitoAnnotations.initMocks(this);
+
 		blc = new OpBlockChain(OpBlockChain.NULL, new OpBlockchainRules(jsonFormatter, null));
+		blocksManager.init(null, blc);
 		generateUserOperations(jsonFormatter, blc);
 		for (OpOperation opOperation : generateStartOpForTest()) {
 			opOperation.makeImmutable();
 			blc.addOperation(opOperation);
 		}
+
+		ReflectionTestUtils.setField(blocksManager, "serverUser", serverName);
+		ReflectionTestUtils.setField(blocksManager, "serverKeyPair", serverKeyPair);
 	}
 
 	@Test
@@ -285,5 +297,86 @@ public class OpBlockchainEditOpTest {
 		blc.getRules().generateHashAndSign(newOpObject, serverKeyPair);
 
 		return Arrays.asList(initOp, newOpObject);
+	}
+
+	@Test
+	public void testMergeOpOsmOrder() throws FailedVerificationException {
+		blc.addOperation(createMergeOperation());
+
+		OpObject opObject = blc.getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		assertEquals("2021-09-14T00:56:24.909+0000", opObject.getFieldByExpr("source.osm[0].deleted"));
+	}
+
+	@Test
+	public void testCheckImmutableObj() throws FailedVerificationException {
+		blc.addOperation(createMergeOperation());
+		OpObject obj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		Map<String, List<Map<String, Object>>> sourcesObj = obj.getField(null, "source");
+
+		List<Map<String, Object>> listValues = sourcesObj.get("osm");
+		Collections.swap(listValues, 0, 1);
+
+		//check the object in blockchain wasn't change
+		OpObject oldObj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		assertEquals("2021-09-14T00:56:24.909+0000", oldObj.getFieldByExpr("source.osm[0].deleted"));
+
+		Map<String, List<Map<String, Object>>> newOsmMap = new HashMap<>();
+		newOsmMap.put("osm", listValues);
+
+		Exception exception = null;
+		try {
+			obj.setFieldByExpr("source", newOsmMap);
+		} catch (UnsupportedOperationException t) {
+			exception = t;
+		}
+		assertNotNull(exception);
+	}
+
+	private OpOperation createMergeOperation() throws FailedVerificationException {
+		addOperationFromList(jsonFormatter, blc, new String[]{"create-obj-append-osm"});
+		addOperationFromList(jsonFormatter, blc, new String[]{"create-obj-append-osm2"});
+		OpObject oldObj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg6o");
+		OpObject newObj = blocksManager.getBlockchain().getObjectByName("opr.place", "76H3X2", "uqbg62");
+
+		//create merge op
+		OpOperation editOp = new OpOperation();
+		editOp.setType("opr.place");
+		editOp.setSignedBy(serverName);
+
+		OpObject editObj = new OpObject();
+		editObj.setId(oldObj.getId().get(0), oldObj.getId().get(1));
+
+		TreeMap<String, Object> current = new TreeMap<>();
+		TreeMap<String, Object> changed = new TreeMap<>();
+
+		Map<String, Object> newFields = newObj.getField(null, "source");
+		Map<String, Object> oldFields = oldObj.getField(null, "source");
+
+		for (Map.Entry<String, Object> newf : newFields.entrySet()) {
+			TreeMap<String, Object> appendObj = new TreeMap<>();
+			String category = "source" + "." + newf.getKey();
+			List<Map<String, Object>> newCategoryList = (List<Map<String, Object>>) newf.getValue();
+			if (!newCategoryList.isEmpty()) {
+				if (oldFields == null || !oldFields.containsKey(newf.getKey())) {
+					appendObj.put("set", newCategoryList);
+				} else {
+					if (newCategoryList.size() > 1) {
+						appendObj.put("appendmany", newCategoryList);
+					} else {
+						appendObj.put("append", newCategoryList.get(0));
+					}
+					current.put(category, oldFields.get(newf.getKey()));
+				}
+				changed.put(category, appendObj);
+			}
+		}
+
+		editObj.putObjectValue(OpObject.F_CHANGE, changed);
+		editObj.putObjectValue(OpObject.F_CURRENT, current);
+
+		editOp.addEdited(editObj);
+		blc.getRules().generateHashAndSign(editOp, serverKeyPair);
+		editOp.makeImmutable();
+		return editOp;
 	}
 }
