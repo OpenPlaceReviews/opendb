@@ -300,9 +300,6 @@ public class OpObject {
 	@SuppressWarnings("unchecked")
 	public <T> T getField(T def, String... fields) {
 		Map<String, Object> fieldMap = this.fields;
-		if (isImmutable) {
-			fieldMap = (Map<String, Object>) copyingObjects(fieldMap, false);
-		}
 		for (int i = 0; i < fields.length - 1; i++) {
 			fieldMap = (Map<String, Object>) fieldMap.get(fields[i]);
 			if (fieldMap == null) {
@@ -312,6 +309,9 @@ public class OpObject {
 		T res = (T) fieldMap.get(fields[fields.length - 1]);
 		if (res == null) {
 			return def;
+		}
+		if (isImmutable) {
+			res = (T) copyingObjects(res, false);
 		}
 		return res;
 	}
