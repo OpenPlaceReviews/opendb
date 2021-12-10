@@ -300,14 +300,16 @@ public class OpObject {
 	@SuppressWarnings("unchecked")
 	public <T> T getField(T def, String... fields) {
 		Map<String, Object> fieldMap = this.fields;
-		Map<String, Object> deepCopyFieldMap = (Map<String, Object>) copyingObjects(fieldMap, false);
+		if (isImmutable) {
+			fieldMap = (Map<String, Object>) copyingObjects(fieldMap, false);
+		}
 		for (int i = 0; i < fields.length - 1; i++) {
-			deepCopyFieldMap = (Map<String, Object>) deepCopyFieldMap.get(fields[i]);
-			if (deepCopyFieldMap == null) {
+			fieldMap = (Map<String, Object>) fieldMap.get(fields[i]);
+			if (fieldMap == null) {
 				return def;
 			}
 		}
-		T res = (T) deepCopyFieldMap.get(fields[fields.length - 1]);
+		T res = (T) fieldMap.get(fields[fields.length - 1]);
 		if (res == null) {
 			return def;
 		}
