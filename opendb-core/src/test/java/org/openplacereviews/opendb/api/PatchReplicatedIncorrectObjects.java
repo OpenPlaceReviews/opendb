@@ -34,9 +34,9 @@ public class PatchReplicatedIncorrectObjects {
 
 	public static void main(String[] args) throws JsonSyntaxException, IOException {
 		
-//		scanCompareObjects("https://openplacereviews.org/", "https://r2.openplacereviews.org/", 12705, 12800);
-		compareObjects(DOUBLE_CHECK_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
-		compareObjects(DISCOVERED_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
+		scanCompareObjects("https://openplacereviews.org/", "https://r2.openplacereviews.org/", 12720, 12800);
+//		compareObjects(DOUBLE_CHECK_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
+//		compareObjects(DISCOVERED_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
 //		generateEditTouchPatchOperation("https://openplacereviews.org/", DOUBLE_CHECK_OBJECTS_TO_PATCH, "version", 1);
 		
 		
@@ -54,7 +54,7 @@ public class PatchReplicatedIncorrectObjects {
 //			System.out.println(fmt.objToJson(obj2));
 			boolean equal = fmt.objToJson(obj1).equals(fmt.objToJson(obj2));
 			if (equal) {
-				System.out.println(Arrays.toString(objId) + " - OK. ");
+//				System.out.println(Arrays.toString(objId) + " - OK. ");
 			} else {
 				OpObject editObject = new OpObject();
 				editObject.putObjectValue(F_ID, obj1.getId());
@@ -75,21 +75,26 @@ public class PatchReplicatedIncorrectObjects {
 		JsonFormatter fmt = new JsonFormatter();
 		List<String> failedObjects = new ArrayList<>();
 		for (int blockId = blockStart; blockId <= blockEnd; blockId++) {
-			System.out.println("\n\n\n>>> BLOCK " + blockId);
-			URL u = new URL(host1 + "api/objects-from-edit-op-by-block-id?blockId=" + blockId);
-//			URL u = new URL(host1 + "api/edited-objects-by-block?type=opr.place&blockId=" + blockId);
+			System.out.println("\n>>> BLOCK " + blockId);
+//			URL u = new URL(host1 + "api/objects-from-edit-op-by-block-id?blockId=" + blockId);
+			URL u = new URL(host1 + "api/edited-objects-by-block?type=opr.place&blockId=" + blockId);
 			List<String> objs = fmt.fromJson(new InputStreamReader(u.openStream()), List.class);
+			boolean ok = true;
 			for (String objId : objs) {
 				OpObject obj1 = loadObject(host1, fmt, objId.split(","));
 				OpObject obj2 = loadObject(host2, fmt, objId.split(","));
 				boolean equal = fmt.objToJson(obj1).equals(fmt.objToJson(obj2));
 				if (equal) {
-					System.out.println(objId + " - OK. ");
+//					System.out.println(objId + " - OK. ");
 				} else {
+					ok = false;
 					failedObjects.add(objId);
 					System.out.println(objId + " - FAILED. ");
 					System.err.println("!!!! " + objId + " - FAILED. ");
 				}
+			}
+			if (ok) {
+				System.out.println("<<< BLOCK IS OK");
 			}
 		}
 		System.out.println("FAILED: " + failedObjects);
