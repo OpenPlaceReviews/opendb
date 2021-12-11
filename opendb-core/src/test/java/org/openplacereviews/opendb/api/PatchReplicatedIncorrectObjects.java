@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -33,14 +34,45 @@ public class PatchReplicatedIncorrectObjects {
 
 	public static void main(String[] args) throws JsonSyntaxException, IOException {
 		
-		compareObjects("https://openplacereviews.org/", "https://r2.openplacereviews.org/", 12705, 12800);
-//		generateEditPatchOperation("https://openplacereviews.org", DISCOVERED_OBJECTS_TO_PATCH, true);
-//		generateEditPatchOperation("https://r2.openplacereviews.org", DISCOVERED_OBJECTS_TO_PATCH, false);
+//		scanCompareObjects("https://openplacereviews.org/", "https://r2.openplacereviews.org/", 12705, 12800);
+		compareObjects(DOUBLE_CHECK_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
+//		compareObjects(DISCOVERED_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
+//		generateEditTouchPatchOperation("https://openplacereviews.org/", DOUBLE_CHECK_OBJECTS_TO_PATCH, "version", 1);
+		
+		
+//		generateEditTouchPatchOperation("https://openplacereviews.org/", DISCOVERED_OBJECTS_TO_PATCH, "source.osm[0].changeset", null);
+//		generateEditSwapPatchOperation("https://r2.openplacereviews.org", DISCOVERED_OBJECTS_TO_PATCH);
+	}
+	
+	private static void compareObjects(String[][] ids, String host1, String host2 )
+			throws JsonSyntaxException, IOException {
+		JsonFormatter fmt = new JsonFormatter();
+		for (String[] objId : ids) {
+			OpObject obj1 = loadObject(host1, fmt, objId);
+			OpObject obj2 = loadObject(host2, fmt, objId);
+			// [8GG4JX, zqgpgg]
+			// [4RJ768, b2pr1l]
+//			System.out.println(fmt.objToJson(obj1));
+//			System.out.println(fmt.objToJson(obj2));
+			boolean equal = fmt.objToJson(obj1).equals(fmt.objToJson(obj2));
+			if (equal) {
+				System.out.println(Arrays.toString(objId) + " - OK. ");
+			} else {
+				OpObject editObject = new OpObject();
+				editObject.putObjectValue(F_ID, obj1.getId());
+				
+				Map<String, Object> changeTagMap = new TreeMap<>();
+				Map<String, Object> currentTagMap = new TreeMap<>();
+				generateDiff(editObject, "", changeTagMap, currentTagMap, obj1.getAllFields(), 
+						obj2.getAllFields());
+				System.out.println(changeTagMap);
+				System.out.println(Arrays.toString(objId) + " - FAILED. ");
+			}
+		}
 	}
 
-	//76H3X2,uqbg6o
 	@SuppressWarnings("unchecked")
-	private static void compareObjects(String host1, String host2, int blockStart, int blockEnd)
+	protected static void scanCompareObjects(String host1, String host2, int blockStart, int blockEnd)
 			throws JsonSyntaxException, IOException {
 		JsonFormatter fmt = new JsonFormatter();
 		List<String> failedObjects = new ArrayList<>();
@@ -67,9 +99,30 @@ public class PatchReplicatedIncorrectObjects {
 		// URL u2 = new URL("https://r2.openplacereviews.org/api/objects-by-id?type=opr.place&key=" + id[0] + "," + id[1]);
 
 	}
+	
+	protected static void generateEditTouchPatchOperation(String host, String[][] ids, String touchField, Object def)
+			throws MalformedURLException, IOException {
+		JsonFormatter fmt = new JsonFormatter();
+		OpOperation op = null;
+		for (String[] id : ids) {
+			OpObject obj = loadObject(host, fmt, id);
+			if (op == null) {
+				op = new OpOperation();
+				op.setType("opr.place");
+			}
+			OpObjectDiffBuilder bld = new OpObjectDiffBuilder(obj);
+			if (obj.getFieldByExpr(touchField) == null && def != null) {
+				bld.setNewTag(touchField, def);
+			} else {
+				bld.setNewTag(touchField, obj.getFieldByExpr(touchField));
+			}
+			bld.add(op);
+		}
+		System.out.println(fmt.fullObjectToJson(op));
+	}
 
 	@SuppressWarnings("unchecked")
-	private static void generateEditPatchOperation(String host, String[][] ids, boolean mainServerEdit) throws MalformedURLException, IOException {
+	protected static void generateEditSwapPatchOperation(String host, String[][] ids) throws MalformedURLException, IOException {
 		JsonFormatter fmt = new JsonFormatter();
 		OpOperation op = null;
 		for (String[] id : ids) {
@@ -79,16 +132,7 @@ public class PatchReplicatedIncorrectObjects {
 				op.setType("opr.place");
 			}
 			
-			// 0. generate edit touch operation
-			if (mainServerEdit) {
-				OpObjectDiffBuilder bld = new OpObjectDiffBuilder(obj);
-				bld.setNewTag("source.osm[0].changeset", obj.getFieldByExpr("source.osm[0].changeset"));
-				bld.add(op);
-				continue;
-			}
-
-			// 1. generate swap operation
-			List<Map<String, Object>> osms = obj.getField(null, "source", "osm");
+			List<Map<String, Object>> osms = obj.getField(null, F_SOURCE, F_OSM);
 			if (osms.size() > 2) {
 				// 3 Manually patched
 				//57V4WV,ejpw65 + 
@@ -145,21 +189,43 @@ public class PatchReplicatedIncorrectObjects {
 		return obj;
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected static void generateDiff(OpObject editObject, String field, Map<String, Object> change,
 			Map<String, Object> current, Map<String, Object> oldM, Map<String, Object> newM) {
 		TreeSet<String> removedTags = new TreeSet<>(oldM.keySet());
 		removedTags.removeAll(newM.keySet());
-		for(String removedTag : removedTags) {
+		for (String removedTag : removedTags) {
 			change.put(field + addQuotes(removedTag), OpBlockChain.OP_CHANGE_DELETE);
 			current.put(field + addQuotes(removedTag), oldM.get(removedTag));
 		}
-		for(String tag : newM.keySet()) {
-			Object po = oldM.get(tag);
-			Object no = newM.get(tag);
-			if(!OUtils.equals(po, no)) {
-				change.put(field + addQuotes(tag), set(no));
-				if(po != null) {
-					current.put(field + addQuotes(tag), po);
+		for (String tag : newM.keySet()) {
+			Object fOld = oldM.get(tag);
+			Object fNew = newM.get(tag);
+			if (fOld instanceof Map && fNew instanceof Map) {
+				generateDiff(editObject, field + tag + ".", change, current, (Map) fOld, (Map) fNew);
+			} else if(fOld instanceof List && fNew instanceof List) {
+				List<Map<String, Object>> lOld = (List<Map<String, Object>>) fOld;
+				List<Map<String, Object>> lNew = (List<Map<String, Object>>) fNew;
+				int i = 0;
+				for(; i < lOld.size() && i < lNew.size(); i++ ) {
+					if(lOld.get(i) instanceof Map && lNew.get(i) instanceof Map) {
+						generateDiff(editObject, field.substring(0, field.length() - 1) + 
+								"["+i+"].", change, current, lOld.get(i), lNew.get(i));
+					} else if (!OUtils.equals(lOld.get(i), lNew.get(i))) {
+						throw new UnsupportedOperationException();
+					}
+				}
+				for (; i < lOld.size(); i++) {
+					throw new UnsupportedOperationException();
+				}
+				for (; i < lNew.size(); i++) {
+					throw new UnsupportedOperationException();
+				}
+				
+			} else if (!OUtils.equals(fOld, fNew)) {
+				change.put(field + addQuotes(tag), set(fNew));
+				if (fOld != null) {
+					current.put(field + addQuotes(tag), fOld);
 				}
 			}
 		}
@@ -218,6 +284,28 @@ public class PatchReplicatedIncorrectObjects {
 			op.addEdited(editObj);
 		}
 	}
+	
+	public static String[][] DOUBLE_CHECK_OBJECTS_TO_PATCH = new String[][] {
+		{"4RJ768","b2pr1l"},
+		{"76H3X2","uqbg6o"},
+		{"76VVWF","mxxkqs"},
+		{"87C4WJ","gcy45v"},
+		{"87G8Q2","akhleh"},
+		{"8CGV6W","2lmmhu"},
+		{"8CMV67","zczljq"},
+		{"8FF5H9","facwtr"},
+		{"8FRP4X","yigaoc"},
+		{"8FV29M","6unsca"},
+		{"8FXR5J","5wki0b"},
+		{"8GG4JX","umfw24"},
+		{"8GG4JX","wnvabs"},
+		{"8GG4JX","zqgpgg"},
+		{"8H46J2","i5so3d"},
+		{"8Q336F","gsi6ce"},
+		{"9F25J3","zdrmpw"},
+		{"9F2PV3","427sui"},
+		{"9GPF4G","66zbs8"}
+	};
 	
 	public static String[][] DISCOVERED_OBJECTS_TO_PATCH = new String[][] {
 		{"47G9PQ","biuobd"},

@@ -298,6 +298,14 @@ public class OpObject {
 	}
 	
 	@SuppressWarnings("unchecked")
+	public Map<String, Object> getAllFields() {
+		if (isImmutable) {
+			return (Map<String, Object>) copyingObjects(fields, false);
+		}
+		return fields;
+	}
+	
+	@SuppressWarnings("unchecked")
 	public <T> T getField(T def, String... fields) {
 		Map<String, Object> fieldMap = this.fields;
 		for (int i = 0; i < fields.length - 1; i++) {
