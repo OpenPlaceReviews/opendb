@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -31,17 +32,48 @@ public class PatchReplicatedIncorrectObjects {
 	public static final String F_OSM_VALUE = "osm_value";
 
 	public static void main(String[] args) throws JsonSyntaxException, IOException {
-		generateEditPatchOperation(DISCOVERED_OBJECTS_TO_PATCH, false);
+		
+		compareObjects("https://openplacereviews.org/", "https://r2.openplacereviews.org/", 12705, 12800);
+//		generateEditPatchOperation("https://openplacereviews.org", DISCOVERED_OBJECTS_TO_PATCH, true);
+//		generateEditPatchOperation("https://r2.openplacereviews.org", DISCOVERED_OBJECTS_TO_PATCH, false);
+	}
+
+	//76H3X2,uqbg6o
+	@SuppressWarnings("unchecked")
+	private static void compareObjects(String host1, String host2, int blockStart, int blockEnd)
+			throws JsonSyntaxException, IOException {
+		JsonFormatter fmt = new JsonFormatter();
+		List<String> failedObjects = new ArrayList<>();
+		for (int blockId = blockStart; blockId <= blockEnd; blockId++) {
+			System.out.println("\n\n\n>>> BLOCK " + blockId);
+			URL u = new URL(host1 + "api/objects-from-edit-op-by-block-id?blockId=" + blockId);
+//			URL u = new URL(host1 + "api/edited-objects-by-block?type=opr.place&blockId=" + blockId);
+			List<String> objs = fmt.fromJson(new InputStreamReader(u.openStream()), List.class);
+			for (String objId : objs) {
+				OpObject obj1 = loadObject(host1, fmt, objId.split(","));
+				OpObject obj2 = loadObject(host2, fmt, objId.split(","));
+				boolean equal = fmt.objToJson(obj1).equals(fmt.objToJson(obj2));
+				if (equal) {
+					System.out.println(objId + " - OK. ");
+				} else {
+					failedObjects.add(objId);
+					System.out.println(objId + " - FAILED. ");
+					System.err.println("!!!! " + objId + " - FAILED. ");
+				}
+			}
+		}
+		System.out.println("FAILED: " + failedObjects);
+		// URL u1 = new URL("https://r2.openplacereviews.org/api/objects-by-id?type=opr.place&key=" + id[0] + "," +id[1]);
+		// URL u2 = new URL("https://r2.openplacereviews.org/api/objects-by-id?type=opr.place&key=" + id[0] + "," + id[1]);
+
 	}
 
 	@SuppressWarnings("unchecked")
-	private static void generateEditPatchOperation(String[][] ids, boolean mainServerEdit) throws MalformedURLException, IOException {
+	private static void generateEditPatchOperation(String host, String[][] ids, boolean mainServerEdit) throws MalformedURLException, IOException {
 		JsonFormatter fmt = new JsonFormatter();
 		OpOperation op = null;
 		for (String[] id : ids) {
-			URL u = new URL("https://r2.openplacereviews.org/api/objects-by-id?type=opr.place&key=" + id[0] + "," + id[1]);
-			ObjectsResult objs = fmt.fromJson(new InputStreamReader(u.openStream()), ObjectsResult.class);
-			OpObject obj = objs.objects.iterator().next();
+			OpObject obj = loadObject(host, fmt, id);
 			if (op == null) {
 				op = new OpOperation();
 				op.setType("opr.place");
@@ -101,6 +133,16 @@ public class PatchReplicatedIncorrectObjects {
 			}
 		}
 		System.out.println(fmt.fullObjectToJson(op));
+	}
+
+	private static OpObject loadObject(String host, JsonFormatter fmt, String[] id) throws MalformedURLException, IOException {
+		URL u = new URL(host + "api/objects-by-id?type=opr.place&key=" + id[0] + "," + id[1]);
+		ObjectsResult objs = fmt.fromJson(new InputStreamReader(u.openStream()), ObjectsResult.class);
+		if (objs.objects.isEmpty()) {
+			return null;
+		}
+		OpObject obj = objs.objects.iterator().next();
+		return obj;
 	}
 	
 	protected static void generateDiff(OpObject editObject, String field, Map<String, Object> change,

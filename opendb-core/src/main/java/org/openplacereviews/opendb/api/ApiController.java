@@ -418,16 +418,24 @@ public class ApiController {
 		return formatter.fullObjectToJson(publicDataManager.getEndpoints());
 	}
 
-	@GetMapping(path = "/objects-from-edit-op-by-block-id", produces = "text/json;charset=UTF-8")
+	@GetMapping(path = "/edited-objects-by-block", produces = "text/json;charset=UTF-8")
 	@ResponseBody
-	public String objectsFromEditOpByBlockId(@RequestParam() int blockId) {
+	public String objectsFromEditOpByBlockId(@RequestParam(required = true) String type, @RequestParam(required = true) int blockId) {
 		OpBlock opBlock = manager.getBlockchain().getFullBlockByBlockId(blockId);
 		List<String> objectIds = new ArrayList<>();
 		if (opBlock != null) {
 			for (OpOperation operation : opBlock.getOperations()) {
-				if (operation.getType().equals("opr.place")) {
+				if (operation.getType().equals(type)) {
 					for (OpObject opObject : operation.getEdited()) {
 						String objId = String.join(",", opObject.getId());
+						objectIds.add(objId);
+					}
+					for (OpObject opObject : operation.getCreated()) {
+						String objId = String.join(",", opObject.getId());
+						objectIds.add(objId);
+					}
+					for (List<String> opObject : operation.getDeleted()) {
+						String objId = String.join(",", opObject);
 						objectIds.add(objId);
 					}
 				}
