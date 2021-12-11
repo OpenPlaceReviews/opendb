@@ -36,7 +36,7 @@ public class PatchReplicatedIncorrectObjects {
 		
 //		scanCompareObjects("https://openplacereviews.org/", "https://r2.openplacereviews.org/", 12705, 12800);
 		compareObjects(DOUBLE_CHECK_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
-//		compareObjects(DISCOVERED_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
+		compareObjects(DISCOVERED_OBJECTS_TO_PATCH, "https://openplacereviews.org/", "https://r2.openplacereviews.org/");
 //		generateEditTouchPatchOperation("https://openplacereviews.org/", DOUBLE_CHECK_OBJECTS_TO_PATCH, "version", 1);
 		
 		
@@ -50,8 +50,6 @@ public class PatchReplicatedIncorrectObjects {
 		for (String[] objId : ids) {
 			OpObject obj1 = loadObject(host1, fmt, objId);
 			OpObject obj2 = loadObject(host2, fmt, objId);
-			// [8GG4JX, zqgpgg]
-			// [4RJ768, b2pr1l]
 //			System.out.println(fmt.objToJson(obj1));
 //			System.out.println(fmt.objToJson(obj2));
 			boolean equal = fmt.objToJson(obj1).equals(fmt.objToJson(obj2));
@@ -189,7 +187,7 @@ public class PatchReplicatedIncorrectObjects {
 		return obj;
 	}
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	protected static void generateDiff(OpObject editObject, String field, Map<String, Object> change,
 			Map<String, Object> current, Map<String, Object> oldM, Map<String, Object> newM) {
 		TreeSet<String> removedTags = new TreeSet<>(oldM.keySet());
@@ -215,10 +213,10 @@ public class PatchReplicatedIncorrectObjects {
 						throw new UnsupportedOperationException();
 					}
 				}
-				for (; i < lOld.size(); i++) {
+				for (; i < lOld.size(); ) {
 					throw new UnsupportedOperationException();
 				}
-				for (; i < lNew.size(); i++) {
+				for (; i < lNew.size(); ) {
 					throw new UnsupportedOperationException();
 				}
 				
