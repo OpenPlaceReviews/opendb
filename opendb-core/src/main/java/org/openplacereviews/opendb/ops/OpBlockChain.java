@@ -617,10 +617,14 @@ public class OpBlockChain {
 	}
 
 	public OpOperation getOperationByHash(String rawHash) throws DBStaleException {
-		return getOperationByHash(rawHash, true);
+		OpBlock opBlock = getOperationByHash(rawHash, true);
+		if (opBlock != null) {
+			return opBlock.getOperations().get(0);
+		}
+		return null;
 	}
 	
-	public OpOperation getOperationByHash(String rawHash, boolean strict) throws DBStaleException {
+	public OpBlock getOperationByHash(String rawHash, boolean strict) throws DBStaleException {
 		if (nullObject) {
 			return null;
 		}
@@ -632,13 +636,21 @@ public class OpBlockChain {
 			if (o == null) {
 				for (OpOperation ops : queueOperations) {
 					if (ops.getRawHash().equals(rawHash) || (!strict && ops.getRawHash().startsWith(rawHash))) {
-						return ops;
+						o = ops;
+						break;
 					}
 				}
 			}
 		}
 		if (o != null) {
-			return o;
+			OpBlock opBlock =
+					blocks.getFirstBlockHeader() == null ? new OpBlock() : 
+					OpBlock.copy(blocks.getFirstBlockHeader());
+			opBlock.putObjectValue("superblock_depth", getDepth());
+			opBlock.putObjectValue("superblock_size", getSuperblockSize());
+			opBlock.putObjectValue("superblock_hash", getSuperBlockHash());
+			opBlock.addOperation(o);
+			return opBlock;
 		}
 		return parent.getOperationByHash(rawHash, strict);
 	}
