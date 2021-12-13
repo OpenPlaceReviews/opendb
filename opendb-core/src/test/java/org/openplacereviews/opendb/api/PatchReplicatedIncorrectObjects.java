@@ -44,7 +44,7 @@ public class PatchReplicatedIncorrectObjects {
 //		generateEditSwapPatchOperation("https://r2.openplacereviews.org", DISCOVERED_OBJECTS_TO_PATCH);
 	}
 	
-	private static void compareObjects(String[][] ids, String host1, String host2 )
+	protected static void compareObjects(String[][] ids, String host1, String host2 )
 			throws JsonSyntaxException, IOException {
 		JsonFormatter fmt = new JsonFormatter();
 		for (String[] objId : ids) {
@@ -76,7 +76,6 @@ public class PatchReplicatedIncorrectObjects {
 		List<String> failedObjects = new ArrayList<>();
 		for (int blockId = blockStart; blockId <= blockEnd; blockId++) {
 			System.out.println("\n>>> BLOCK " + blockId);
-//			URL u = new URL(host1 + "api/objects-from-edit-op-by-block-id?blockId=" + blockId);
 			URL u = new URL(host1 + "api/edited-objects-by-block?type=opr.place&blockId=" + blockId);
 			List<String> objs = fmt.fromJson(new InputStreamReader(u.openStream()), List.class);
 			boolean ok = true;
